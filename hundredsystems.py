@@ -107,7 +107,7 @@ observed_imgs = jnp.array([f[key] for key in keys])
 
 # print(f"Simulating systems {start_idx} to {end_idx-1} (inclusive)")
 save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard80px")
-finished_systems = [int(f.split('/')[-1].split('.')[0]) for f in os.listdir(save_dir)]
+# finished_systems = [int(f.split('/')[-1].split('.')[0]) for f in os.listdir(save_dir)]
 
 # idxes = list(range(start_idx, end_idx))
 # idxes = [4, 18, 52, 54, 56, 94]
@@ -120,7 +120,7 @@ for i in idxes:
 
     results = simulate_system(
         observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-        map_steps=1000, map_n_samples=500,
+        map_steps=1000, map_n_samples=2000,
         precision_parameterization=False, n_vi=1000, svi_steps=5000,
         n_hmc=64, hmc_num_results=750,
         init_eps=0.3, init_l=3

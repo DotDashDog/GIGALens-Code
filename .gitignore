@@ -5,3 +5,4 @@ pipeline_results/
 .ipynb_checkpoints/
 __pycache__/
 jax-trace/
+FitSaves/
