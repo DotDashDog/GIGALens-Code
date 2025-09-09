@@ -1,0 +1,69 @@
+2025-06-14 08:54:00,294 - INFO - Initial mean shape: (22,)
+2025-06-14 08:54:00,375 - INFO - Initial mean min/max: -1.5081013441085815 / 6.069222927093506
+2025-06-14 08:54:00,375 - INFO - Initial cov shape: (253,)
+2025-06-14 08:54:00,459 - INFO - Initial cov min/max: -6.908755779266357 / 0.0
+2025-06-14 08:54:00,535 - INFO - Initial cov contains NaN: False
+2025-06-14 08:54:00,574 - INFO - Initial cov contains Inf: False
+2025-06-14 08:54:00,756 - INFO - Initial forward cov condition number: 1.0
+2025-06-14 08:54:00,909 - INFO - Initial forward cov determinant: 0.0
+2025-06-14 08:54:00,965 - INFO - --- STEP 0 ---
+2025-06-14 08:54:01,151 - INFO - STEP 0 - Before update - mean norm: 8.273164749145508
+2025-06-14 08:54:01,199 - INFO - STEP 0 - Before update - cov norm: 32.404937744140625
+2025-06-14 08:54:13,810 - INFO - UPDATE - loss: -35.783119201660156
+2025-06-14 08:54:13,810 - INFO - UPDATE - loss is NaN: False
+2025-06-14 08:54:13,811 - INFO - UPDATE - loss is Inf: False
+2025-06-14 08:54:13,820 - INFO - UPDATE - grad_mean contains NaN: False
+2025-06-14 08:54:13,820 - INFO - UPDATE - grad_mean contains Inf: False
+2025-06-14 08:54:13,821 - INFO - UPDATE - grad_mean norm: 407.08636474609375
+2025-06-14 08:54:13,827 - INFO - UPDATE - grad_cov contains NaN: False
+2025-06-14 08:54:13,827 - INFO - UPDATE - grad_cov contains Inf: False
+2025-06-14 08:54:13,827 - INFO - UPDATE - grad_cov norm: 2905.818115234375
+2025-06-14 08:54:13,828 - INFO - UPDATE - update_mean contains NaN: False
+2025-06-14 08:54:13,828 - INFO - UPDATE - update_mean contains Inf: False
+2025-06-14 08:54:13,828 - INFO - UPDATE - update_mean norm: 4.690420610131696e-06
+2025-06-14 08:54:13,829 - INFO - UPDATE - update_cov contains NaN: False
+2025-06-14 08:54:13,829 - INFO - UPDATE - update_cov contains Inf: False
+2025-06-14 08:54:13,829 - INFO - UPDATE - update_cov norm: 1.590598731127102e-05
+2025-06-14 08:54:13,829 - INFO - UPDATE - updated_mean contains NaN: False
+2025-06-14 08:54:13,830 - INFO - UPDATE - updated_mean contains Inf: False
+2025-06-14 08:54:13,830 - INFO - UPDATE - updated_cov contains NaN: False
+2025-06-14 08:54:13,830 - INFO - UPDATE - updated_cov contains Inf: False
+2025-06-14 08:54:13,830 - INFO - ELBO - mean contains NaN: False
+2025-06-14 08:54:13,830 - INFO - ELBO - mean contains Inf: False
+2025-06-14 08:54:13,831 - INFO - ELBO - cov contains NaN: False
+2025-06-14 08:54:13,831 - INFO - ELBO - cov contains Inf: False
+2025-06-14 08:54:13,831 - INFO - ELBO - cov_forward contains NaN: False
+2025-06-14 08:54:13,831 - INFO - ELBO - cov_forward contains Inf: False
+2025-06-14 08:54:13,832 - INFO - ELBO - cov_forward condition number: 1.0
+2025-06-14 08:54:13,833 - INFO - ELBO - cov_forward determinant: 0.0
+2025-06-14 08:54:13,833 - INFO - ELBO - cov condition number: 1.0
+2025-06-14 08:54:13,834 - INFO - ELBO - cov determinant: 0.0
+2025-06-14 08:54:13,842 - INFO - ELBO - cov_eigenvalues min/max: 1.000808879325632e-06/1.000808879325632e-06
+2025-06-14 08:54:13,843 - INFO - ELBO - cov_eigenvalues mean: 1.0008086519519566e-06
+2025-06-14 08:54:13,843 - INFO - ELBO - cov_eigenvalues: [1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06
+ 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06
+ 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06
+ 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06 1.0008089e-06
+ 1.0008089e-06 1.0008089e-06]
+2025-06-14 08:54:13,843 - INFO - ELBO - z contains NaN: False
+2025-06-14 08:54:13,844 - INFO - ELBO - z contains Inf: False
+2025-06-14 08:54:13,844 - INFO - ELBO - z shape: (Array(500, dtype=int32), Array(22, dtype=int32))
+2025-06-14 08:54:13,845 - INFO - ELBO - z min/max: -1.5108329057693481/6.071932792663574
+2025-06-14 08:54:13,845 - INFO - ELBO - lps contains NaN: False
+2025-06-14 08:54:13,845 - INFO - ELBO - lps contains Inf: False
+2025-06-14 08:54:13,845 - INFO - ELBO - lps shape: (Array(500, dtype=int32),)
+2025-06-14 08:54:13,846 - INFO - ELBO - lps min/max: 107.56214904785156/128.01773071289062
+2025-06-14 08:54:13,846 - INFO - ELBO - lps mean: 120.59011840820312
+2025-06-14 08:54:13,846 - INFO - ELBO - model_log_prob contains NaN: False
+2025-06-14 08:54:13,846 - INFO - ELBO - model_log_prob contains Inf: False
+2025-06-14 08:54:13,847 - INFO - ELBO - model_log_prob shape: (Array(500, dtype=int32),)
+2025-06-14 08:54:13,847 - INFO - ELBO - model_log_prob min/max: 131.40048217773438/165.41448974609375
+2025-06-14 08:54:13,847 - INFO - ELBO - model_log_prob mean: 156.3732452392578
+2025-06-14 08:54:13,847 - INFO - ELBO - diff contains NaN: False
+2025-06-14 08:54:13,848 - INFO - ELBO - diff contains Inf: False
+2025-06-14 08:54:13,848 - INFO - ELBO - diff min/max: -49.84614562988281/-18.035888671875
+2025-06-14 08:54:13,848 - INFO - ELBO - diff mean: -35.783119201660156
+2025-06-14 08:54:13,848 - INFO - ELBO - final result: -35.783119201660156
+2025-06-14 08:54:13,856 - INFO - STEP 0 - After update - mean norm: 8.273165702819824
+2025-06-14 08:54:13,909 - INFO - STEP 0 - After update - cov norm: 32.40493392944336
+2025-06-14 08:54:14,263 - INFO - SVI completed. Final loss: -35.783119201660156

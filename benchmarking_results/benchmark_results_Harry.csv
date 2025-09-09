@@ -1,0 +1,2 @@
+Unnamed: 0,map_time_1epoch,svi_time_1epoch,map_time,svi_time,hmc_time,map_n_samples,n_vi,n_hmc,devices,process_id,slurm_job_id
+,7.690682401997037,9.56345474300906,7.647107716999017,17.115347002982162,18.57914890302345,1000.0,1000.0,75.0,32.0,16.0,41167858

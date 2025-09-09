@@ -1,0 +1,7 @@
+
+#* Directories to ignot
+pipeline_results/
+.vscode/
+.ipynb_checkpoints/
+__pycache__/
+jax-trace/
