@@ -665,9 +665,9 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         fig.colorbar(im, cax=cax)
     if title is not None:
         ax.set_title(title)
-    
-    ax.set_xlim((extent[0], extent[1]))
-    ax.set_ylim((extent[2], extent[3]))
+    if extent is not None:
+        ax.set_xlim((extent[0], extent[1]))
+        ax.set_ylim((extent[2], extent[3]))
     ax.axis('off')
 import lenstronomy.Util.simulation_util as sim_util
 from lenstronomy.LensModel.lens_model import LensModel
@@ -947,16 +947,16 @@ def make_default_prior():
         [
             tfd.JointDistributionNamed(
                 dict(
-                    theta_E=tfd.LogNormal(jnp.log(1.25), 0.25),
-                    gamma=tfd.TruncatedNormal(2, 0.25, 1, 3),
-                    e1=tfd.Normal(0, 0.1),
-                    e2=tfd.Normal(0, 0.1),
-                    center_x=tfd.Normal(0, 0.05),
-                    center_y=tfd.Normal(0, 0.05),
+                    theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+                    gamma=tfd.TruncatedNormal(2, 0.5, 1, 3),
+                    e1=tfd.Normal(0, 0.2),
+                    e2=tfd.Normal(0, 0.2),
+                    center_x=tfd.Normal(0, 0.06),
+                    center_y=tfd.Normal(0, 0.06),
                 )
             ),
             tfd.JointDistributionNamed(
-                dict(gamma1=tfd.Normal(0, 0.05), gamma2=tfd.Normal(0, 0.05))
+                dict(gamma1=tfd.Normal(0, 0.1), gamma2=tfd.Normal(0, 0.1))
             ),
         ]
     )
@@ -964,13 +964,13 @@ def make_default_prior():
         [
             tfd.JointDistributionNamed(
                 dict(
-                    R_sersic=tfd.LogNormal(jnp.log(1.0), 0.15),
-                    n_sersic=tfd.Uniform(2, 6),
-                    e1=tfd.TruncatedNormal(0, 0.1, -0.3, 0.3),
-                    e2=tfd.TruncatedNormal(0, 0.1, -0.3, 0.3),
-                    center_x=tfd.Normal(0, 0.05),
-                    center_y=tfd.Normal(0, 0.05),
-                    Ie=tfd.LogNormal(jnp.log(300.0), 0.3),
+                    R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+                    n_sersic=tfd.Uniform(0.5, 8),
+                    e1=tfd.TruncatedNormal(0, 0.1, -0.15, 0.15),
+                    e2=tfd.TruncatedNormal(0, 0.1, -0.15, 0.15),
+                    center_x=tfd.Normal(0, 0.02),
+                    center_y=tfd.Normal(0, 0.02),
+                    Ie=tfd.LogNormal(jnp.log(300.0), 0.5),
                 )
             )
         ]
@@ -980,13 +980,13 @@ def make_default_prior():
         [
             tfd.JointDistributionNamed(
                 dict(
-                    R_sersic=tfd.LogNormal(jnp.log(0.25), 0.15),
-                    n_sersic=tfd.Uniform(0.5, 4),
-                    e1=tfd.TruncatedNormal(0, 0.15, -0.5, 0.5),
-                    e2=tfd.TruncatedNormal(0, 0.15, -0.5, 0.5),
-                    center_x=tfd.Normal(0, 0.25),
-                    center_y=tfd.Normal(0, 0.25),
-                    Ie=tfd.LogNormal(jnp.log(150.0), 0.5),
+                    R_sersic=tfd.LogNormal(jnp.log(0.25), 0.25),
+                    n_sersic=tfd.Uniform(0.5, 8),
+                    e1=tfd.TruncatedNormal(0, 0.3, -0.5, 0.5),
+                    e2=tfd.TruncatedNormal(0, 0.3, -0.5, 0.5),
+                    center_x=tfd.Normal(0, 0.5),
+                    center_y=tfd.Normal(0, 0.5),
+                    Ie=tfd.LogNormal(jnp.log(150.0), 0.9),
                 )
             )
         ]
