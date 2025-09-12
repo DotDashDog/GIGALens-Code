@@ -89,27 +89,18 @@ final_save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard
 # idxes = list(range(100))
 
 rhat_df = pd.read_csv(os.path.join(prev_save_dir, 'rhat_results.csv')).set_index('system')
-refine_more = [4, 18, 53, 56, 81, 98] #* Systems that didn't go below 1.01 on the first rounf
-for i in refine_more:#rhat_df.index:
+for i in rhat_df.index:
     max_rhat = rhat_df['rhat'][i]
     observed_img = observed_imgs[i]
     if max_rhat < 1.01:
         print(f"System {i} already has passable rhat, skipping")
         continue
-    elif i in refine_more:
-        results = simulate_system(
-            observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-            map_steps=1000, map_n_samples=4000,
-            precision_parameterization=False, n_vi=4000, svi_steps=4998,
-            n_hmc=64, hmc_num_results=20000,
-            init_eps=0.3, init_l=3
-        )
     elif max_rhat < 1.1:
         results = simulate_system(
             observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-            map_steps=1000, map_n_samples=1000,
+            map_steps=1000, map_n_samples=2000,
             precision_parameterization=False, n_vi=1000, svi_steps=5000,
-            n_hmc=64, hmc_num_results=7000,
+            n_hmc=64, hmc_num_results=7000, hmc_burnin_steps=2000,
             init_eps=0.3, init_l=3
         )
     else:
@@ -117,7 +108,7 @@ for i in refine_more:#rhat_df.index:
             observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
             map_steps=1000, map_n_samples=2000,
             precision_parameterization=False, n_vi=2000, svi_steps=4999,
-            n_hmc=64, hmc_num_results=10000,
+            n_hmc=64, hmc_num_results=10000,hmc_burnin_steps=3000,
             init_eps=0.3, init_l=3
         )
     

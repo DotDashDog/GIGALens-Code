@@ -47,7 +47,8 @@ jax.distributed.initialize(
     process_id=0
 )
 
-save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard80px")
+# jax.distributed.initialize()
+save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard80px_refined")
 finished_systems = []
 for fname in os.listdir(save_dir):
     try:
@@ -131,7 +132,7 @@ lens_sim = LensSimulator(phys_model, sim_config, bs=1)
 #idxes = list(range(100))#[4, 18, 52, 54, 56, 94]
 # finished_systems = list(range(100))
 rhat_maxes = []
-for sysnum in [56]:#finished_systems:
+for sysnum in finished_systems:
     results = {}
     # for sysnum in np.sort(finished_systems):
     # if sysnum in skip:
@@ -147,7 +148,7 @@ for sysnum in [56]:#finished_systems:
     results["SVI"] = SVIResults.load(results_dir, model_seq)
     results["HMC"] = HMCResults.load(results_dir, model_seq)
     print(f"System {sysnum}:")
-    print(f"Loaded from:", results_dir)
+    # print(f"Loaded from:", results_dir)
     rhat_max = np.max(results["HMC"].HMC_rhat)
     print("Final MAP chisq:", results["MAP"].MAP_chisq_hist[-1], 
         "Final ELBO:",results["SVI"].SVI_loss_hist[-1], 
@@ -155,13 +156,11 @@ for sysnum in [56]:#finished_systems:
 
     rhat_maxes.append(rhat_max)
     
-    # show_with_caustic(results['HMC'].HMC_median)
-    # plt.show()
-    display_results(results, observed_img, lens_sim, save_dir=results_dir, show=True, make_cornerplot=False, 
+    display_results(results, observed_img, lens_sim, save_dir=results_dir, show=False, make_cornerplot=False, 
         true_params=index_params(true_params, sysnum), plot_caustics=True, model_seq=model_seq)
         
 
-# df = pd.DataFrame({'system' : finished_systems, 'rhat': rhat_maxes})
+df = pd.DataFrame({'system' : finished_systems, 'rhat': rhat_maxes})
 # df.to_csv(os.path.join(save_dir, 'rhat_results.csv'))
 # %%
 # result_dirs = [os.path.join(save_dir, f"{sysnum}") for sysnum in finished_systems]
@@ -184,10 +183,10 @@ source_Ie_prior = tfd.LogNormal(jnp.log(150.0), 0.5)
 lens_Ie = true_params[1][0]['Ie']
 source_Ie = true_params[2][0]['Ie']
 
-lens_Ie_56 = true_params[1][0]['Ie'][56]
-source_Ie_56 = true_params[2][0]['Ie'][56]
-plt.axvline(lens_Ie_56, color='C0', linestyle='--', alpha=0.7, label='System 56 Lens Ie')
-plt.axvline(source_Ie_56, color='C1', linestyle='--', alpha=0.7, label='System 56 Source Ie')
+lens_Ie_60 = true_params[1][0]['Ie'][60]
+source_Ie_60 = true_params[2][0]['Ie'][60]
+plt.axvline(lens_Ie_60, color='C0', linestyle='--', alpha=0.7, label='System 60 Lens Ie')
+plt.axvline(source_Ie_60, color='C1', linestyle='--', alpha=0.7, label='System 60 Source Ie')
 
 dummy_x = np.linspace(0, np.maximum(np.max(lens_Ie), np.max(source_Ie)))
 

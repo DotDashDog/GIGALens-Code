@@ -683,7 +683,7 @@ def add_caustics(ax, params, model_seq, lens_objects=['EPL', 'SHEAR']):
     params = jax.tree.map(lambda a : np.array(a), params)
     kwargs_lens = params[0] #the values for the above parameters
     
-
+    print(kwargs_lens)
     lens_plot.caustics_plot(ax, _coords, lensModel, kwargs_lens, fast_caustic=True, color_crit='red', color_caustic='green')
 
 

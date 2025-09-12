@@ -122,8 +122,8 @@ for i in idxes:
         observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
         map_steps=1000, map_n_samples=2000,
         precision_parameterization=False, n_vi=1000, svi_steps=5000,
-        n_hmc=64, hmc_num_results=750,
-        init_eps=0.3, init_l=3
+        n_hmc=64, hmc_num_results=1500,
+        init_eps=0.3, init_l=3, hmc_burnin_steps=500
     )
 
     #* Intensive settings are n_vi = 10000, svi_steps = 5000, hmc_num_results = 5000
