@@ -3,6 +3,9 @@
 pipeline_results/
 .vscode/
 .ipynb_checkpoints/
+sys60_converged/
+sys60_work/
+sys60_converged_4e4_burnin/
 __pycache__/
 jax-trace/
 FitSaves/

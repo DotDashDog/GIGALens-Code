@@ -12,6 +12,15 @@ This module provides utility functions for:
 4. Parameter manipulation and indexing
 
 The functions here streamline the workflow of fitting lens models and analyzing their results.
+
+
+NOTES FOR ELDEN:
+- The precision_parameterization parameter I use for SVI means that gradient descent is done on the precision matrix rather than the covariance matrix.
+    It's implemented in my inference.py file
+    I'll ask about whether we should use it at the next meeting. If we decide not to, just don't pass it to SVI
+- I have my ModellingSequence objects named ModellingSequence (the default GIGALens one) and HarryModellingSequence (Harry's multinode one). 
+    If you do things differently, you'll have to change the references to the ModellingSequence class names in the results objects
+- The way residualplot_params (used for hundred systems) works is very dependent on the way I store the modelling results. So probably don't use it for now.
 """
 
 from jax import numpy as jnp
@@ -26,22 +35,30 @@ import tensorflow_probability.substrates.jax as tfp
 tfd = tfp.distributions
 
 from scipy.stats import norm, kstest
-import corner as corner
+import corner
 import matplotlib
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import time
 import os
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
+
+import lenstronomy.Util.simulation_util as sim_util
+from lenstronomy.LensModel.lens_model import LensModel
+from lenstronomy.Plots import lens_plot
+from lenstronomy.Data.imaging_data import ImageData
 
 def params_jax_to_lists(params_jax):
     """Convert nested parameter structure of JAX arrays to nested Python lists"""
-    params_list = []
-    for i in range(len(params_jax)):
-        params_list.append([])
-        for j in range(len(params_jax[i])):
-            params_list[i].append({})
-            for key in params_jax[i][j]:
-                params_list[i][j][key] = params_jax[i][j][key].tolist()
-    return params_list
+    # params_list = []
+    # for i in range(len(params_jax)):
+    #     params_list.append([])
+    #     for j in range(len(params_jax[i])):
+    #         params_list[i].append({})
+    #         for key in params_jax[i][j]:
+    #             params_list[i][j][key] = params_jax[i][j][key].tolist()
+    # return params_list
+    return jax.tree.map(lambda a : list(a), params_jax)
 
 def params_lists_to_jax(params_list):
     """Convert nested parameter structure of Python lists back to JAX arrays"""
@@ -53,20 +70,21 @@ def params_lists_to_jax(params_list):
             for key in params_list[i][j]:
                 params[i][j][key] = jnp.array(params_list[i][j][key])
     return params
+    # return jax.tree.map(lambda a : jnp.array(a), params_list, is_leaf=lambda x : isinstance(x, list) and isinstance(x[0], int))
 
-def index_params(pars, i):
+def index_params(params, i):
     #* gets the params just for the ith system
-    o1 = []
-    for i1 in pars:
-        o2 = []
-        for i2 in i1:
-            out_d = {}
-            for k in i2:
-                out_d[k] = i2[k][i:i+1]
-            o2.append(out_d)
-        o1.append(o2)
+    # o1 = []
+    # for i1 in params:
+    #     o2 = []
+    #     for i2 in i1:
+    #         out_d = {}
+    #         for k in i2:
+    #             out_d[k] = i2[k][i:i+1]
+    #         o2.append(out_d)
+    #     o1.append(o2)
             
-    return o1
+    return jax.tree.map(lambda a : a[i], params)
 
 class PipelineConfig:
     """
@@ -78,62 +96,41 @@ class PipelineConfig:
     - Optimizers for MAP and SVI stages
     - Other parameters for the three stages of the pipeline
     """
-    def __init__(self, steps=["MAP", "SVI", "HMC"], 
-            map_steps=350, map_n_samples=500, map_optimizer=None,
-            n_vi=1000, svi_steps=1500, svi_start=None, tree_struct=None, precision_parameterization=False, svi_optimizer=None,
-            hmc_burnin_steps=250, hmc_num_results=750, n_hmc=50, qz=None, init_eps=0.3, init_l=3):
+    # def __init__(self, steps=["MAP", "SVI", "HMC"], 
+    #         map_steps=350, map_n_samples=500, map_optimizer=None,
+    #         n_vi=1000, svi_steps=1500, svi_start=None, precision_parameterization=False, svi_optimizer=None,
+    #         hmc_burnin_steps=250, hmc_num_results=750, n_hmc=50, qz=None, init_eps=0.3, init_l=3):
+    
+    def __init__(self, steps=["MAP", "SVI", "HMC"],
+        map_kwargs={}, map_func=None, svi_kwargs={}, svi_func=None, hmc_kwargs={}, hmc_func=None):
         
         self.total_devices = jax.device_count()
-        self.tree_struct = tree_struct
-        
+        self.map_kwargs = map_kwargs
+        self.svi_kwargs = svi_kwargs
+        self.hmc_kwargs = hmc_kwargs
         self.steps = steps
-        if "MAP" in steps:
-            self.map_steps = map_steps
-            self.map_n_samples = map_n_samples
-            # Default MAP optimizer
-            if map_optimizer is None:
-                # schedule_fn = optax.polynomial_schedule(init_value=-1e-2, end_value=-1e-2/3,
-                #                                 power=0.5, transition_steps=500)
-                # self.map_optimizer = optax.chain(
-                #     optax.scale_by_adam(),
-                #     optax.scale_by_schedule(schedule_fn),
-                # )
+        self.map_func = map_func
+        self.svi_func = svi_func
+        self.hmc_func = hmc_func
 
-                self.map_optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99, nesterov=True)
-            else:
-                self.map_optimizer = map_optimizer
+        if "MAP" in steps:
+            # Default MAP optimizer
+            if 'optimizer' not in map_kwargs or map_kwargs['optimizer'] is None:
+                map_kwargs['optimizer'] = optax.adabelief(1e-2, b1=0.95, b2=0.99, nesterov=True)
                 
         if "SVI" in steps:
-            self.n_vi = n_vi
-            self.svi_steps = svi_steps
-            self.precision_parameterization = precision_parameterization
             # Default SVI optimizer
-            if svi_optimizer is None:
-                # schedule_fn = optax.polynomial_schedule(init_value=-1e-6, end_value=-3e-3,
-                #                                     power=2, transition_steps=300)
-                # self.svi_optimizer = optax.chain(
-                #     optax.scale_by_adam(),
-                #     optax.scale_by_schedule(schedule_fn),
-                # )
-                self.svi_optimizer = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-            else:
-                self.svi_optimizer = svi_optimizer
+            if 'optimizer' not in svi_kwargs or svi_kwargs['optimizer'] is None:
+                svi_kwargs['optimizer'] = optax.adabelief(1e-4, b1=0.95, b2=0.99)
 
             if "MAP" not in steps:
-                if svi_start is None:
-                    raise ValueError("svi_start must be provided if MAP is not run")
-                self.svi_start = svi_start
+                if 'start' not in svi_kwargs:
+                    raise ValueError("SVI must be given a starting point if MAP is not run")
 
         if "HMC" in steps:
-            self.hmc_burnin_steps = hmc_burnin_steps
-            self.hmc_num_results = hmc_num_results
-            self.n_hmc = n_hmc
-            self.init_eps = init_eps
-            self.init_l = init_l
             if "SVI" not in steps:
-                if qz is None:
+                if 'qz' not in hmc_kwargs:
                     raise ValueError("qz must be provided if SVI is not run")
-                self.qz = qz
 
 #* All result objects should be simple and pickleable automatically
 class MAPResults:
@@ -148,124 +145,15 @@ class MAPResults:
     It detects the implementation, and extracts these results from the returned values of the MAP function, which differ between implementations.
     """
 
-
-    def __init__(self, MAP_estimate, MAP_chisq_hist, time_taken, model_seq, pipeline_config, from_save=False):
-        if from_save:
-            if type(model_seq).__name__ == "ModellingSequenceMultinode":
-                _, tree_struct = jax.tree.flatten(model_seq.prob_model.prior.sample(1,seed=jax.random.PRNGKey(0)))
-                best_z = jax.tree.unflatten(tree_struct, list(MAP_estimate.reshape((-1, 22)).T))
-                select_index = lambda x: x[0]
-                best_z = jax.tree.map(select_index, best_z)
-                best_x = model_seq.prob_model.bijector.forward(best_z)
-            else:
-                best_z = MAP_estimate.reshape((-1, 22))
-                best_x = model_seq.prob_model.bij.forward(list(best_z.T))
-        elif type(model_seq).__name__ == "ModellingSequence":
-            best_z, best_x = self.init_GL1(MAP_estimate, MAP_chisq_hist, model_seq, pipeline_config)
-        elif type(model_seq).__name__ == "ModellingSequenceMultinode":
-            best_z, best_x = self.init_GL2(MAP_estimate, MAP_chisq_hist, model_seq, pipeline_config)
-        elif type(model_seq).__name__ == "HarryModellingSequence":
-            best_z, best_x, MAP_chisq_hist = self.init_GLH(MAP_estimate, MAP_chisq_hist, model_seq, pipeline_config)
-        else:
-            raise ValueError(f"Invalid model sequence type {type(model_seq).__name__}")
+    def __init__(self, MAP_estimate, MAP_chisq_hist, time_taken, model_seq, from_save=False):
+        best_z = MAP_estimate.reshape((-1, 22))
+        best_x = model_seq.prob_model.bij.forward(list(best_z.T))
 
         self.MAP_chisq_hist = MAP_chisq_hist
 
         self.best_z = best_z
         self.MAP_best = best_x
         self.time_taken = time_taken
-
-    def init_GL1(self, MAP_estimate, MAP_chisq_hist, model_seq, pipeline_config):
-        """
-        Process the MAP results from GIGALens 1.0. (Original implementation)
-
-        This function takes in the parameter values for each of the MAP particles, and pick the one with the highest log probability.
-        It then converts the best-fit parameters to the physical space
-        Args:
-            MAP_estimate: 2-D array of shape (n_particles, n_params). The parameters for each particle in the unconstrained space
-            MAP_chisq_hist: 1-D array of shape (n_steps) Not currently used
-            model_seq: The model sequence object, used to get the prob_model and phys_model
-            pipeline_config: The pipeline configuration object, used to get the number of samples
-
-        Returns:
-            best: 1-D array of shape (n_params) The parameters for the best-fit particle in the unconstrained space
-            map_best_x: pytree of the normal parameter structure with leaves of shape (1,). The best-fit parameters in the physical space
-        """
-        prob_model = model_seq.prob_model
-        phys_model = model_seq.phys_model
-        sim_config = model_seq.sim_config
-
-        lps = prob_model.log_prob(LensSimulator(phys_model, sim_config, bs=pipeline_config.map_n_samples), MAP_estimate)[0]
-        best = MAP_estimate[jnp.nanargmax(lps)][jnp.newaxis,:] #! nanargmax is very important
-        map_best_x = prob_model.bij.forward(list(best.T))
-
-        return best, map_best_x
-    
-    def init_GL2(self, MAP_estimate, MAP_chisq_hist, model_seq, pipeline_config):
-        """
-        Process the MAP results from GIGALens 2.0 2024. (Nico's multi-node implementation)
-
-        This function takes in the parameter values for each of the MAP particles, and pick the one with the highest log probability.
-        It then converts the best-fit parameters to the physical space
-
-        Args:
-            MAP_estimate: 2-D array of shape (n_particles, n_params). The parameters for each particle in the unconstrained space
-            MAP_chisq_hist: 1-D array of shape (n_steps) Not currently used
-            model_seq: The model sequence object, used to get the prob_model and phys_model
-            pipeline_config: The pipeline configuration object, used to get the number of samples and number of devices
-
-        Returns:
-            best: 1-D array of shape (n_params) The parameters for the best-fit particle in the unconstrained space
-            map_best_x: pytree of the normal parameter structure with leaves of shape (1,). The best-fit parameters in the physical space
-        """
-        prob_model = model_seq.prob_model
-        phys_model = model_seq.phys_model
-        sim_config = model_seq.sim_config
-
-        n_samples_s = (pipeline_config.map_n_samples // pipeline_config.total_devices) * pipeline_config.total_devices
-        lps = prob_model.log_prob(LensSimulator(phys_model, sim_config, bs=n_samples_s), MAP_estimate)[0] 
-        select_index = lambda x: x[jnp.nanargmax(lps)]
-        best = jax.tree.map(select_index, MAP_estimate)
-        map_best_x = prob_model.bijector.forward(best)
-
-        return best, map_best_x
-    
-    def init_GLH(self, MAP_estimate, MAP_chisq_hist, model_seq, pipeline_config):
-        """
-        Process the MAP results from GIGALens 2.0 2025. (Harry's implementation)
-
-        This function takes in the parameter values for each of the MAP particles AT EACH STEP, and picks the one with the highest log probability.
-        It then converts the best-fit parameters to the physical space
-
-        Args:
-            MAP_estimate: 3-D array of shape (n_steps, n_particles, n_params). The parameters for each particle in the unconstrained space
-            MAP_chisq_hist: 2-D array of shape (n_steps, n_particles). The chi-squared loss for each particle at each step
-            model_seq: The model sequence object, used to get the prob_model and phys_model
-            pipeline_config: The pipeline configuration object, used to get the number of samples and number of devices
-        
-        Returns:
-            best: 1-D array of shape (n_params) The parameters for the best-fit particle in the unconstrained space
-            map_best_x: pytree of the normal parameter structure with leaves of shape (1,). The best-fit parameters in the physical space
-            map_loss_history: 1-D array of shape (n_steps). The minimum chi-squared loss for each step
-        """
-        prob_model = model_seq.prob_model
-        phys_model = model_seq.phys_model
-        sim_config = model_seq.sim_config
-
-        map_loss_history = jnp.min(MAP_chisq_hist, axis=1)
-        best_step_idx = jnp.argmin(map_loss_history)
-        best_sample_idx = jnp.argmin(MAP_chisq_hist[best_step_idx])
-
-        best = MAP_estimate[best_step_idx][best_sample_idx][jnp.newaxis, :].reshape((-1, 22))
-        map_best_x = prob_model.bij.forward(list(best.T))
-
-        # MAP_estimate = MAP_estimate[-1]
-
-        # lps = prob_model.log_prob(LensSimulator(phys_model, sim_config, bs=pipeline_config.map_n_samples), MAP_estimate)[0]
-        # best = MAP_estimate[jnp.nanargmax(lps)][jnp.newaxis,:] #! nanargmax is very important
-        # map_best_x = prob_model.bij.forward(list(best.T))
-
-        return best, map_best_x, map_loss_history
     
     def save(self, results_dir):
         best_z = jax.experimental.multihost_utils.process_allgather(self.best_z)
@@ -278,7 +166,7 @@ class MAPResults:
     def load(cls, results_dir, model_seq):
         map_best_z = np.load(os.path.join(results_dir, 'map_best_z.npy'))
         map_losses = np.squeeze(np.load(os.path.join(results_dir, 'map_losses.npy')))
-        return cls(map_best_z, map_losses, 0, model_seq, None, from_save=True)
+        return cls(map_best_z, map_losses, -1, model_seq, from_save=True)
 
 class SVIResults:
     """
@@ -293,40 +181,9 @@ class SVIResults:
 
     It detects the implementation, and extracts these results from the returned values of the SVI function, which differ between implementations.
     """
-    def __init__(self, qz, SVI_loss_hist, time_taken, model_seq, pipeline_config, n_samples=1000, from_save=False):
+    def __init__(self, qz, SVI_loss_hist, time_taken, model_seq, n_samples=1000):
+        # svi_samples_x, SVI_mean = self.init_GL1(qz, model_seq, n_samples)
 
-        if from_save and type(model_seq).__name__ == "ModellingSequenceMultinode":
-            #* Too much of a pain to pass the tree struct through right now.
-            SVI_mean = None
-            svi_samples_x = None
-        elif type(model_seq).__name__ == "ModellingSequenceMultinode":
-            svi_samples_x, SVI_mean = self.init_GL2(qz, model_seq, pipeline_config, n_samples)
-        elif type(model_seq).__name__ == "ModellingSequence" or type(model_seq).__name__ == "HarryModellingSequence":
-            svi_samples_x, SVI_mean = self.init_GL1(qz, model_seq, pipeline_config, n_samples)
-        else:
-            raise ValueError(f"Invalid model sequence type {type(model_seq).__name__}")
-        
-        self.qz = qz
-        self.SVI_mean = SVI_mean
-        self.SVI_samples = svi_samples_x
-        self.SVI_loss_hist = SVI_loss_hist
-        self.time_taken = time_taken
-    
-    def init_GL1(self, qz, model_seq, pipeline_config, n_samples=1000):
-        """
-        Process the SVI results from GIGALens 1.0. (Original implementation).
-        Also used for Harry's implementation, as the SVI returns the same format as GIGALens 1.0.
-
-        Args:
-            qz: The surrogate posterior distribution returned by the SVI function
-            model_seq: The model sequence object, used to get the prob_model
-            pipeline_config: The pipeline configuration object (not used)
-            n_samples: The number of samples to draw from the surrogate posterior distribution
-
-        Returns:
-            svi_samples_x: A pytree of the normal parameter structure with leaves of shape (n_samples,). The samples from the surrogate posterior distribution
-            SVI_mean: A pytree of the normal parameter structure with leaves of shape (1,). The mean of the surrogate posterior distribution
-        """
         prob_model = model_seq.prob_model
 
         svi_samples_z = qz.sample(n_samples, seed=jax.random.PRNGKey(0))
@@ -334,32 +191,12 @@ class SVIResults:
 
         SVI_mean = prob_model.bij.forward(list(qz.mean().T))
 
-        return svi_samples_x, SVI_mean
-    
-    def init_GL2(self, qz, model_seq, pipeline_config, n_samples=1000):
-        """
-        Process the SVI results from GIGALens 2.0 2024. (Nico's multi-node implementation)
-        Differs from the original implementation in that the unconstrained parameters are also expected to be in the tree structure.
-
-        Args:
-            qz: The surrogate posterior distribution returned by the SVI function
-            model_seq: The model sequence object, used to get the prob_model
-            pipeline_config: The pipeline configuration object, used to get the parameter tree structure
-            n_samples: The number of samples to draw from the surrogate posterior distribution
-
-        Returns:
-            svi_samples_x: A pytree of the normal parameter structure with leaves of shape (n_samples,). The samples from the surrogate posterior distribution
-            SVI_mean: A pytree of the normal parameter structure with leaves of shape (1,). The mean of the surrogate posterior distribution
-        """
-        prob_model = model_seq.prob_model
-
-        mean = prob_model.bijector.forward(jax.tree.unflatten(pipeline_config.tree_struct, qz.mean()))
-
-        svi_samples_z = qz.sample(n_samples, seed=jax.random.PRNGKey(0))
-        svi_samples_x = prob_model.bijector.forward(jax.tree.unflatten(pipeline_config.tree_struct, svi_samples_z.T))
-
-        return svi_samples_x, mean
-    
+        self.qz = qz
+        self.SVI_mean = SVI_mean
+        self.SVI_samples = svi_samples_x
+        self.SVI_loss_hist = SVI_loss_hist
+        self.time_taken = time_taken
+        
     def save(self, results_dir):
         if jax.process_index() == 0:
             jnp.save(os.path.join(results_dir, 'loss_history.npy'), jnp.array(self.SVI_loss_hist))
@@ -372,7 +209,7 @@ class SVIResults:
         qz_scale_tril = np.load(os.path.join(results_dir, 'qz_scale_tril.npy'))
         qz_loc = np.load(os.path.join(results_dir, 'qz_loc.npy'))
         qz = tfd.MultivariateNormalTriL(loc=qz_loc, scale_tril=qz_scale_tril)
-        return cls(qz, loss_hist, 0, model_seq, None, from_save=True)
+        return cls(qz, loss_hist, -1, model_seq)
 
 class HMCResults:
     """
@@ -387,66 +224,24 @@ class HMCResults:
 
     It detects the implementation, and extracts these results from the returned values of the HMC function, which differ between implementations.
     """
-    def __init__(self, samples, time_taken, model_seq):
+    def __init__(self, samples_z, time_taken, model_seq):
 
+        # HMC_samples, HMC_median, rhat, HMC_samples_z = self.init_GL2(samples, model_seq)
         prob_model = model_seq.prob_model
-        if type(model_seq).__name__ == "ModellingSequence":
-            HMC_samples, HMC_median, rhat, HMC_samples_z = self.init_GL1(samples, model_seq)
-        elif type(model_seq).__name__ == "ModellingSequenceMultinode":
-            HMC_samples, HMC_median, rhat, HMC_samples_z = self.init_GL2(samples, model_seq)
-            # print("Multinode HMC Result Processing isn't implemented yet")
-        elif type(model_seq).__name__ == "HarryModellingSequence":
-            HMC_samples, HMC_median, rhat, HMC_samples_z = self.init_GLH(samples, model_seq)
-        else:
-            raise ValueError(f"Invalid model sequence type {type(model_seq).__name__}")
+
+        rhat= tfp.mcmc.potential_scale_reduction(jnp.transpose(samples_z, (2, 0, 1 ,3)), independent_chain_ndims=2)
+    
+        #* Return the results of HMC
+        smp = samples_z.reshape((-1, 22))
+        HMC_samples = prob_model.bij.forward(list(smp.T))
+
+        HMC_median = prob_model.bij.forward(list(np.median(smp,axis=0)))
 
         self.HMC_samples = HMC_samples
         self.HMC_median = HMC_median
         self.HMC_rhat = rhat
         self.time_taken = time_taken
-        self.HMC_samples_z = HMC_samples_z
-
-    def init_GLH(self, samples, model_seq):
-        """
-        Process the HMC results from GIGALens 2.0 2025. (Harry's implementation)
-
-        Args:
-            samples: The samples from the HMC chain. 4-D array of shape (num_devices, num_chains_per_device, num_steps, n_params)
-            model_seq: The model sequence object, used to get the prob_model
-
-        Returns:
-            HMC_samples: A pytree of the normal parameter structure with leaves of shape (total_hmc_samples,). The samples from the posterior distribution in the physical space
-            HMC_median: A pytree of the normal parameter structure with leaves of shape (1,). The median of the posterior distribution in the physical space
-            rhat: And array of shape (n_params). The R-hat statistic for each parameter
-            HMC_samples_z: The samples from the posterior distribution in the unconstrained space. 4-D array of shape (num_devices, num_chains_per_device, num_steps, n_params)
-        """
-        prob_model = model_seq.prob_model
-        phys_model = model_seq.phys_model
-        sim_config = model_seq.sim_config
-
-        rhat= tfp.mcmc.potential_scale_reduction(jnp.transpose(samples, (1,2,0,3)), independent_chain_ndims=2)
-    
-        #* Return the results of HMC
-        smp = jnp.transpose(samples, (1, 2, 0, 3)).reshape((-1, 22))
-        HMC_samples = prob_model.bij.forward(list(smp.T))
-
-        HMC_median = prob_model.bij.forward(list(np.median(smp,axis=0)))
-        # lps = prob_model.log_prob(LensSimulator(phys_model, sim_config, bs=smp.shape[0]), smp)[0]
-        # best = smp[jnp.nanargmax(lps)][jnp.newaxis,:] #! nanargmax is very important
-        # HMC_best = prob_model.bij.forward(list(best.T))
-
-        return HMC_samples, HMC_median, rhat, samples
-
-    def init_GL1(self, samples, model_seq):
-        """
-        Process the HMC results from GIGALens 1.0. (Original implementation)
-        Works the same as for Harry's implementation, except that samples is an object which has an attribute (all_states) containing the samples.
-        """
-        return self.init_GLH(samples.all_states, model_seq)
-    
-    def init_GL2(self, samples, model_seq):
-        print("Multinode HMC Result Processing isn't implemented yet")
-        return None, None, None, None
+        self.HMC_samples_z = samples_z
     
     def save(self, results_dir):
         if jax.process_index() == 0:
@@ -455,21 +250,10 @@ class HMCResults:
     @classmethod
     def load(cls, results_dir, model_seq):
         samples = np.load(os.path.join(results_dir, 'hmc_samples_z.npy'))
-        return cls(samples, 0, model_seq)
-
-
-def gather_Nico_HMC_samples(samples, tree_struct, num_results, total_devices, n_hmc_gpu):
-    mesh = jax.sharding.Mesh(jax.devices(), 'devices') 
-    partition_spec_hmc = jax.sharding.PartitionSpec(None, 'devices')
-    sharding_hmc = jax.sharding.NamedSharding(mesh, partition_spec_hmc) 
-    shard_hmc_fn = lambda samples_gpu: jax.make_array_from_single_device_arrays((num_results, total_devices * n_hmc_gpu), sharding_hmc, [samples_gpu])
-
-    samples = samples.all_states.transpose((2, 0, 1)) # (22, 750, 8)
-    samples_gpu = jax.tree.unflatten(tree_struct, samples)
-
-    sharded_samples_hmc = jax.tree.map(shard_hmc_fn, samples_gpu)
-
-    return jax.experimental.multihost_utils.process_allgather(sharded_samples_hmc)
+        if len(samples.shape) == 3:
+            #* If it was saved with the shape (num_hmc, num_steps, n_params)
+            samples = samples[np.newaxis] #* Add devices dimension
+        return cls(samples, -1, model_seq)
 
 def run_pipeline(model_seq, pipeline_config):
     """
@@ -515,51 +299,64 @@ def run_pipeline(model_seq, pipeline_config):
     #* RUNNING MAP---------------------------------
     if run_map:
         print("Starting MAP")
+
+        if cfg.map_func is None:
+            map_func = model_seq.MAP_multi
+        else:
+            map_func = cfg.map_func
+        
+        map_kwargs = cfg.map_kwargs.copy()
+        optimizer = map_kwargs['optimizer']
+        map_kwargs.pop('optimizer')
         
         start = time.perf_counter()
-        map_estimate, map_chisq_hist = model_seq.MAP(cfg.map_optimizer, seed=0, num_steps=cfg.map_steps, n_samples=cfg.map_n_samples) #num_steps=350
+        map_estimate, map_chisq_hist = map_func(**cfg.map_kwargs)
         end = time.perf_counter()
         
-        results["MAP"] = MAPResults(map_estimate, map_chisq_hist, end - start, model_seq, pipeline_config)
+        results["MAP"] = MAPResults(map_estimate, map_chisq_hist, end - start, model_seq)
     
     #* RUNNING SVI---------------------------------
     if run_svi:
         print("Starting SVI")
         
-        best_z = results["MAP"].best_z if run_map else cfg.svi_start
+        if cfg.svi_func is None:
+            svi_func = model_seq.SVI_multi
+        else:
+            svi_func = cfg.svi_func
+        
+        svi_kwargs = cfg.svi_kwargs.copy()
+        if not run_map:
+            best_z = svi_kwargs['start']
+            svi_kwargs.pop('start')
+        else:
+            best_z = results["MAP"].best_z
 
-        if type(model_seq).__name__ == "ModellingSequenceMultinode":
-            _, tree_struct = jax.tree.flatten(best_z)
-            pipeline_config.tree_struct = tree_struct
-
+        optimizer = svi_kwargs['optimizer']
+        svi_kwargs.pop('optimizer')
+            
         start = time.perf_counter()
-        qz, svi_loss_hist = model_seq.SVI(best_z, cfg.svi_optimizer, n_vi=cfg.n_vi, num_steps=cfg.svi_steps, 
-                                          precision_parameterization=cfg.precision_parameterization)
+        qz, svi_loss_hist = svi_func(best_z, optimizer, **svi_kwargs)
         end = time.perf_counter()
         
-        results["SVI"] = SVIResults(qz, svi_loss_hist, end - start, model_seq, pipeline_config)
+        results["SVI"] = SVIResults(qz, svi_loss_hist, end - start, model_seq)
     
     #* RUNNING HMC---------------------------------
     if run_hmc:
         print("Starting HMC")
 
-        qz = qz if run_svi else cfg.qz
-
-        start = time.perf_counter()
-        if type(model_seq).__name__ == "ModellingSequenceMultinode":
-
-            mean = jax.device_get(qz.loc)
-            scale_tril = jax.device_get(qz.scale_tril)
-
-            qz_unsharded = tfd.MultivariateNormalTriL(loc=mean, scale_tril=scale_tril)
-
-            samples = model_seq.HMC(
-                qz_unsharded, tree_struct=cfg.tree_struct, num_burnin_steps=cfg.hmc_burnin_steps, num_results=cfg.hmc_num_results, n_hmc=cfg.n_hmc,
-                init_eps=cfg.init_eps, init_l=cfg.init_l
-            )
-            samples = gather_Nico_HMC_samples(samples, cfg.tree_struct, cfg.hmc_num_results, jax.device_count(), cfg.n_hmc//jax.device_count())
+        if cfg.hmc_func is None:
+            hmc_func = model_seq.HMC_multi
         else:
-            samples = model_seq.HMC(qz, num_burnin_steps=cfg.hmc_burnin_steps, num_results=cfg.hmc_num_results, n_hmc=cfg.n_hmc)
+            hmc_func = cfg.hmc_func
+
+        hmc_kwargs = cfg.hmc_kwargs.copy()
+        if not run_svi:
+            qz = hmc_kwargs['qz']
+            hmc_kwargs.pop('qz')
+        
+        start = time.perf_counter()
+
+        samples = hmc_func(qz, **hmc_kwargs)
         end = time.perf_counter()
 
         results["HMC"] = HMCResults(samples, end - start, model_seq)
@@ -568,10 +365,8 @@ def run_pipeline(model_seq, pipeline_config):
     
 
 
-def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys_model, 
-    map_steps=350, map_n_samples=500, map_optimizer=None, 
-    n_vi=1000, svi_steps=1500, precision_parameterization=False, svi_optimizer=None, 
-    n_hmc=50, hmc_burnin_steps=250, hmc_num_results=750, init_eps=0.3, init_l=3):
+def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys_model,
+    map_kwargs={}, svi_kwargs={}, hmc_kwargs={}, background_rms=0.2, exp_time=100, hmc_alt_multi=False):
     """
     Run the complete typical GigaLens inference pipeline on a gravitational lensing system.
     
@@ -592,26 +387,12 @@ def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys
         Configuration settings for the lens simulator.
     phys_model : PhysicalModel object
         Physical model describing the lens system.
-    map_steps : int, optional
-        Number of optimization steps for MAP (default: 350)
-    map_n_samples : int, optional
-        Number of parallel particles for MAP optimization (default: 500)
-    map_optimizer : optax.GradientTransformation, optional
-        Optimizer for MAP stage. If None, uses default polynomial schedule with Adam (default: None)
-    n_vi : int, optional
-        In SVI, number of samples to draw from the surrogate posterior for the ELBO calculation (default: 1000)
-    svi_steps : int, optional
-        Number of optimization steps for SVI (default: 1500)
-    precision_parameterization : bool, optional
-        In SVI, whether to parameterize the surrogate posterior using the precision matrix instead of the covariance matrix (default: False)
-    svi_optimizer : optax.GradientTransformation, optional
-        Optimizer for SVI stage. If None, uses default polynomial schedule with Adam (default: None)
-    n_hmc : int, optional
-        Number of HMC chains to run in parallel (default: 50)
-    hmc_burnin_steps : int, optional
-        Number of burn-in steps for HMC (default: 250)
-    hmc_num_results : int, optional
-        Number of posterior samples to collect from HMC per chain (default: 750)
+    map_kwargs : dict
+        Keyword arguments for the MAP stage
+    svi_kwargs : dict
+        Keyword arguments for the SVI stage
+    hmc_kwargs : dict
+        Keyword arguments for the HMC stage
      
     Returns
     -------
@@ -621,12 +402,10 @@ def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys
         - SVI: SVIResults object
         - HMC: HMCResults object
     """
-    prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
+    prob_model = ForwardProbModel(prior, observed_img, background_rms=background_rms, exp_time=exp_time)
     model_seq = ModellingSequenceType(phys_model, prob_model, sim_config)
     
-    pipeline_config = PipelineConfig(map_steps=map_steps, map_n_samples=map_n_samples, map_optimizer=map_optimizer,
-                                     n_vi=n_vi, svi_steps=svi_steps, precision_parameterization=precision_parameterization, svi_optimizer=svi_optimizer,
-                                     hmc_burnin_steps=hmc_burnin_steps, hmc_num_results=hmc_num_results, n_hmc=n_hmc, init_eps=init_eps, init_l=init_l)
+    pipeline_config = PipelineConfig(map_kwargs = map_kwargs, svi_kwargs = svi_kwargs, hmc_kwargs = hmc_kwargs, hmc_func = model_seq.HMC_alt_multi if hmc_alt_multi else None)
     
     results = run_pipeline(model_seq, pipeline_config)
     
@@ -648,7 +427,9 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
     """
     if not residual:
         #* Meaning actual lensing image
-        cnorm = matplotlib.colors.Normalize(vmin=0)
+        # cnorm = matplotlib.colors.Normalize(vmin=0)
+        # Use LogNorm for logarithmic scaling with inferno colormap
+        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), 1e0), vmax=img.max())
         cmap = 'inferno'
     else:
         #* Meaning residual image
@@ -669,11 +450,7 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         ax.set_xlim((extent[0], extent[1]))
         ax.set_ylim((extent[2], extent[3]))
     ax.axis('off')
-import lenstronomy.Util.simulation_util as sim_util
-from lenstronomy.LensModel.lens_model import LensModel
-from lenstronomy.Plots import lens_plot
-from lenstronomy.Data.imaging_data import ImageData
-from astropy.visualization.mpl_normalize import simple_norm
+
 
 def add_caustics(ax, params, model_seq, lens_objects=['EPL', 'SHEAR']):
     kwargs_data = sim_util.data_configure_simple(model_seq.sim_config.num_pix*40, model_seq.sim_config.delta_pix/20)
@@ -682,7 +459,6 @@ def add_caustics(ax, params, model_seq, lens_objects=['EPL', 'SHEAR']):
     lensModel = LensModel(lens_model_list=lens_objects) #just need a list of the mass parameters, something like ['EPL', 'SHEAR']
     params = jax.tree.map(lambda a : np.array(a), params)
     kwargs_lens = params[0] #the values for the above parameters
-    
 
     lens_plot.caustics_plot(ax, _coords, lensModel, kwargs_lens, fast_caustic=True, color_crit='red', color_caustic='green')
 
@@ -756,7 +532,7 @@ def plot_loss_histories(fig, axs, map_chisq_hist, svi_loss_hist):
     axs[1].set_xlabel("Step")
     axs[1].set_ylabel("ELBO")
 
-def cornerplot_labels(example_params):
+def cornerplot_labels(example_params, latex=False):
     """
     Generate the labels for the cornerplot based on the tree structure of the parameters.
     """
@@ -767,58 +543,100 @@ def cornerplot_labels(example_params):
     
     for (i, j), label_prefix in zip(tups, label_prefixes):
         labels.extend((label_prefix + key for key in example_params[i][j].keys()))
+
+    if latex:
+        labels = [latex_label(label) for label in labels]
+
     return labels
 
-def flatten_label_order(tree):
+def flatten_params_to_labeled_dict(params):
     tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
-    flat = []
-    for (i, j) in tups:
-       flat.extend((arr.item() for arr in tree[i][j].values()))
-    flat = np.array(flat)
-    return flat
+    label_prefixes = ['', '', 'lens_', 'src_']
 
-def cornerplot_posterior(labels, raw_samples, fig=None, truth=None, overplots=None, color='black', truth_color='black', overplot_color='red'):
+    flat_dict = {}
+    for (i, j), label_prefix in zip(tups, label_prefixes):
+        flat_dict.update({label_prefix + key: params[i][j][key] for key in params[i][j].keys()})
+    return flat_dict
+
+# def flatten_label_order(tree):
+#     tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
+#     flat = []
+#     for (i, j) in tups:
+#        flat.extend((arr.item() for arr in tree[i][j].values()))
+#     flat = np.array(flat)
+#     return flat
+
+def cornerplot_posterior(raw_samples, fig=None, truth=None, overplots=None, color='black', truth_color='black', overplot_color='red', plot_params=None):
     """
-    Create a cornerplot of the a set of samples in the physical space.
+    Create a cornerplot of a set of samples in the physical space.
     Option to overplot a single point, such as the MAP best fit
     Can also overplot a second point as crossed vertical and horizontal lines (most often the truth or median of the samples)
     """
-    tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
+    flat_samples = flatten_params_to_labeled_dict(raw_samples)
+    if plot_params is None:
+        plot_params = flat_samples.keys()
+        # flat_samples = {k:flat_samples[k] for k in plot_params}
+        
 
     if overplots is not None:
-        overplot_pts = []
-        for (i, j) in tups:
-            overplot_pts.extend((arr.item() for arr in overplots[i][j].values()))
-        overplot_pts = np.array(overplot_pts)
+        flat_overplots = flatten_params_to_labeled_dict(overplots)
+            #flat_overplots = {k:flat_overplots[k] for k in plot_params}
+        overplot_pts = np.squeeze(np.stack([flat_overplots[key] for key in plot_params]))
 
     if truth is not None:
-        truth_overplot_pts = []
-        for (i,j) in tups:
-            truth_overplot_pts.extend((arr.item() for arr in truth[i][j].values()))
-        truth_overplot_pts = np.array(truth_overplot_pts)
+        flat_truth = flatten_params_to_labeled_dict(truth)
+        # if plot_params is not None:
+        #     flat_truth = {k:flat_truth[k] for k in plot_params}
+        truth_overplot_pts = np.squeeze(np.stack([flat_truth[key] for key in plot_params]))
     else:
         truth_overplot_pts = None
 
-    samples = np.vstack([np.array(list(raw_samples[i][j].values())) for i, j in tups]).T
+    samples = np.vstack([flat_samples[key] for key in plot_params]).T
     histargs = {'density': True, 'color': color}
-    
+    labels = [latex_label(label) for label in flat_samples.keys()]
     fig = corner.corner(samples, fig=fig, truths=truth_overplot_pts, truth_color=truth_color, 
         show_titles=True, title_fmt='.3f',
         labels=labels, hist_kwargs=histargs, color=color)
 
     if overplots is not None:
-        corner.overplot_points(fig, overplot_pts[np.newaxis], marker='*', markersize=12, mfc=overplot_color, mec=overplot_color)
+        corner.overplot_points(fig, overplot_pts[np.newaxis], marker='*', markersize=20, mfc=overplot_color, mec=overplot_color)
     
     return fig
 
-def cornerplot_results(map_best, svi_samples=None, HMC_samples=None, true_params=None, hmc_median=None):
+def cornerplot_results(map_best, svi_samples=None, HMC_samples=None, true_params=None, hmc_median=None, plot_params=None, svi_label='SVI', hmc_label='HMC', legend_loc='upper right', legend_kwargs=None, truth_label='Truth', map_label='MAP'):
     """
     Cornerplot of the results of the inference pipeline, including MAP, SVI, and HMC.
     """
-    labels = cornerplot_labels(map_best)
 
-    fig = cornerplot_posterior(labels, svi_samples, truth=true_params, overplots=map_best, color='blue', truth_color='green', overplot_color='red')
-    cornerplot_posterior(labels, HMC_samples, fig=fig, truth=hmc_median)
+    svi_color = 'blue'
+    hmc_color = 'black'
+
+    fig = cornerplot_posterior(svi_samples, truth=true_params, overplots=map_best, color=svi_color, truth_color='black', overplot_color='red', plot_params=plot_params)
+    cornerplot_posterior(HMC_samples, fig=fig, color=hmc_color, plot_params=plot_params)
+
+    # Build a single consolidated legend
+    handles = []
+    if (svi_label is not None):
+        handles.append(Patch(facecolor=svi_color, edgecolor='none', alpha=0.6, label=svi_label))
+    if (hmc_label is not None):
+        handles.append(Patch(facecolor=hmc_color, edgecolor='none', alpha=0.6, label=hmc_label))
+    if (true_params is not None) and (truth_label is not None):
+        handles.append(Line2D([0], [0], color='black', lw=1.5, label=truth_label))
+    if (map_best is not None) and (map_label is not None):
+        handles.append(Line2D([0], [0], marker='*', markersize=12, linestyle='none', markerfacecolor='red', markeredgecolor='red', label=map_label))
+
+    if legend_kwargs is None:
+        legend_kwargs = {}
+    if 'fontsize' not in legend_kwargs:
+        legend_kwargs['fontsize'] = 12
+    prev_leg = getattr(fig, "_corner_legend_obj", None)
+    if prev_leg is not None:
+        try:
+            prev_leg.remove()
+        except Exception:
+            pass
+    new_leg = fig.legend(handles=handles, loc=legend_loc, frameon=False, **legend_kwargs)
+    setattr(fig, "_corner_legend_obj", new_leg)
 
 def get_errors_diff(HMC_samples, true_params):
     
@@ -828,11 +646,12 @@ def get_errors_diff(HMC_samples, true_params):
 
     median_diff = jax.tree.map(lambda x, y: x-y, median, true_params)
 
-    flat_lower_err = flatten_label_order(lower_err)
-    flat_upper_err = flatten_label_order(upper_err)
-    flat_median_diff = flatten_label_order(median_diff)
+    # flat_lower_err, _ = jax.tree.flatten(lower_err)
+    # flat_upper_err, _ = jax.tree.flatten(upper_err)
+    # flat_median_diff, _ = jax.tree.flatten(median_diff)
+    # flat_true_params, _ = jax.tree.flatten(true_params)
 
-    return flat_median_diff, flat_lower_err, flat_upper_err
+    return median_diff, lower_err, upper_err
 
 def normalize_residuals(median_diff, upper_err, lower_err):
     pos_res = median_diff > 0
@@ -844,51 +663,71 @@ def normalize_residuals(median_diff, upper_err, lower_err):
     chisq = 1/(residual_norm.shape[0]-1) * np.sum(np.square(residual_norm))
     return residual_norm, chisq
 
-def residualplot_params(save_dirs, true_params_all, prob_models):
+def residualplot_params(save_dirs, true_params_all, prob_models, make_hist=False, figsize=(20,15), plot_kwargs={}):
+
     median_diffs = []
     upper_errs = []
     lower_errs = []
     for i, save_dir in enumerate(save_dirs):
-        select_index = lambda a : a[i]
-        true_params = jax.tree.map(select_index, true_params_all)
-        samples = np.load(os.path.join(save_dir, 'hmc_samples_z.npy'))
-        smp = jnp.transpose(samples, (1, 2, 0, 3)).reshape((-1, 22))
-        HMC_samples = prob_models[i].bij.forward(list(smp.T))
+        true_params = jax.tree.map(lambda a : a[i], true_params_all)
+
+        samples = np.load(os.path.join(save_dir, 'hmc_samples_z.npy')).reshape((-1, 22))
+        HMC_samples = prob_models[i].bij.forward(list(samples.T))
+
         diff, low, high = get_errors_diff(HMC_samples, true_params)
+
         median_diffs.append(diff)
         lower_errs.append(low)
         upper_errs.append(high)
+
     
-    median_diffs = jnp.array(median_diffs)
-    upper_errs = jnp.array(upper_errs)
-    lower_errs = jnp.array(lower_errs)
+    #* Turn list of trees into a single tree of jnp arrays
+    def list_to_tree(list_of_trees):
+        return jax.tree.map(lambda *xs: jnp.array(xs), *list_of_trees)
 
+    median_diffs = flatten_params_to_labeled_dict(list_to_tree(median_diffs))
+    upper_errs = flatten_params_to_labeled_dict(list_to_tree(upper_errs))
+    lower_errs = flatten_params_to_labeled_dict(list_to_tree(lower_errs))
+    true_params_flat = flatten_params_to_labeled_dict(true_params_all)
 
-
-    labels = cornerplot_labels(HMC_samples)
-    n_params = len(labels)
-    fig, axs = plt.subplots(n_params//3 + 1, 3)
-    fig.set_size_inches(40,50)
+    # labels = cornerplot_labels(true_params_all, latex=True)
+    # n_params = len(labels)
+    n_params = len(median_diffs)
+    ncols = 5
+    fig, axs = plt.subplots(n_params//ncols + 1, ncols)
+    fig.set_size_inches(*figsize)
+    fig.tight_layout()
     axs = axs.flatten()
 
     num_systems = len(save_dirs)
-    for i, label in enumerate(labels):
-        axs[i].errorbar(jnp.arange(num_systems), median_diffs[:, i], yerr=[lower_errs[:, i], upper_errs[:, i]], fmt='o', linestyle='')
-        axs[i].axhline(y=0, color='black', linestyle=':', alpha=0.5)
-        axs[i].set_title(label)
 
-    plt.show()
+    for i, label in enumerate(median_diffs.keys()):
+        axs[i].axhline(y=0, color='red', linestyle=':', alpha=0.5)
+        axs[i].errorbar(true_params_flat[label], median_diffs[label], yerr=[lower_errs[label], upper_errs[label]], **(plot_kwargs |  dict(fmt='o', linestyle='')))
+        axs[i].set_title(latex_label(label))
+        yabs_max = abs(max(axs[i].get_ylim(), key=abs))
+        axs[i].set_ylim(ymin=-yabs_max, ymax=yabs_max)
 
-    fig, axs = plt.subplots(n_params//3 + 1, 3)
-    fig.set_size_inches(20,25)
-    axs = axs.flatten()
+    # Turn off unused axes in the subplot grid
+    for j in range(len(median_diffs.keys()), len(axs)):
+        axs[j].axis('off')
+    if not make_hist:
+        return fig, axs
+    else:
+        plt.show()
 
-    for i, label in enumerate(labels):
-        z_scores, chisq = normalize_residuals(median_diffs[:, i], upper_errs[:, i], lower_errs[:, i])
-        outliers = jnp.where(jnp.abs(z_scores) > 5)[0]
-        if len(outliers) > 0:
-            print(f"{label} has outliers at indices: {outliers}")
-        histogram_residuals(fig, axs[i], z_scores, f'{label}, chisq: {chisq:.3f}', bins=10)
+    if make_hist:
+        fig, axs = plt.subplots(n_params//3 + 1, 3)
+        fig.set_size_inches(20,25)
+        axs = axs.flatten()
+
+        
+        for i, label in enumerate(median_diffs.keys()):
+            z_scores, chisq = normalize_residuals(median_diffs[label], upper_errs[label], lower_errs[label])
+            outliers = jnp.where(jnp.abs(z_scores) > 5)[0]
+            if len(outliers) > 0:
+                print(f"{label} has outliers at indices: {outliers}")
+            histogram_residuals(fig, axs[i], z_scores, f'{label}, chisq: {chisq:.3f}', bins=10)
 
 
 def display_results(r, true_img, lens_sim, true_params=None, save_dir=None, 
@@ -996,3 +835,37 @@ def make_default_prior():
         [lens_prior, lens_light_prior, source_light_prior]
     )
     return prior
+
+def latex_label(label):
+
+    latex_label_map = {
+        # Mass
+        "theta_E": r"$\theta_E$",
+        "gamma": r"$\gamma_{epl}$",
+        "e1": r"$\epsilon_{epl,1}$",
+        "e2": r"$\epsilon_{epl,2}$",
+        "center_x": r"$x_{epl}$",
+        "center_y": r"$y_{epl}$",
+        "gamma1": r"$\gamma_{ext,1}$",
+        "gamma2": r"$\gamma_{ext,2}$",
+
+        # Lens Light
+        "lens_R_sersic": r"$R_{l}$",
+        "lens_n_sersic": r"$n_{l}$",
+        "lens_e1": r"$\epsilon_{l,1}$",
+        "lens_e2": r"$\epsilon_{l,2}$",
+        "lens_center_x": r"$x_{l}$",
+        "lens_center_y": r"$y_{l}$",
+        "lens_Ie": r"$I_l$",
+
+        # Source Light
+        "src_R_sersic": r"$R_{s}$",
+        "src_n_sersic": r"$n_{s}$",
+        "src_e1": r"$\epsilon_{s,1}$",
+        "src_e2": r"$\epsilon_{s,2}$",
+        "src_center_x": r"$x_{s}$",
+        "src_center_y": r"$y_{s}$",
+        "src_Ie": r"$I_s$",
+    }
+
+    return latex_label_map[label]

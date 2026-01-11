@@ -1,0 +1,173 @@
+[
+    [
+        {
+            "name": "EPL",
+            "params": {
+                "theta_E": {
+                    "mean": 2,
+                    "stdev": 0.5
+                },
+                "gamma": {
+                    "mean": 2,
+                    "stdev": 0.5,
+                    "lowerBound": 1,
+                    "upperBound": 3
+                },
+                "e1": {
+                    "mean": 0,
+                    "stdev": 0.25,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "e2": {
+                    "mean": 0,
+                    "stdev": 0.25,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "center_x": {
+                    "mean": 0,
+                    "stdev": 0.1
+                },
+                "center_y": {
+                    "mean": 0,
+                    "stdev": 0.1
+                }
+            }
+        },
+        {
+            "name": "SHEAR",
+            "params": {
+                "gamma1": {
+                    "mean": 0,
+                    "stdev": 0.1
+                },
+                "gamma2": {
+                    "mean": 0,
+                    "stdev": 0.1
+                }
+            }
+        }
+    ],
+    [
+        {
+            "name": "SERSIC_ELLIPSE",
+            "params": {
+                "R_sersic": {
+                    "mean": 0.25,
+                    "stdev": 0.1
+                },
+                "n_sersic": {
+                    "lowerBound": 1,
+                    "upperBound": 10
+                },
+                "e1": {
+                    "mean": 0,
+                    "stdev": 0.05,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "e2": {
+                    "mean": 0,
+                    "stdev": 0.1,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "center_x": {
+                    "mean": 0,
+                    "stdev": 0.05
+                },
+                "center_y": {
+                    "mean": 0,
+                    "stdev": 0.05
+                }
+            }
+        },
+        {
+            "name": "SERSIC_ELLIPSE",
+            "params": {
+                "R_sersic": {
+                    "mean": 0.25,
+                    "stdev": 0.1
+                },
+                "n_sersic": {
+                    "lowerBound": 1,
+                    "upperBound": 10
+                },
+                "e1": {
+                    "mean": 0,
+                    "stdev": 0.1,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "e2": {
+                    "mean": 0,
+                    "stdev": 0.05,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "center_x": {
+                    "mean": 0,
+                    "stdev": 0.05
+                },
+                "center_y": {
+                    "mean": 0,
+                    "stdev": 0.05
+                }
+            }
+        },
+        {
+            "name": "SERSIC_ELLIPSE",
+            "params": {
+                "R_sersic": {
+                    "mean": 0.05,
+                    "stdev": 0.05
+                },
+                "n_sersic": {
+                    "lowerBound": 1,
+                    "upperBound": 10
+                },
+                "e1": {
+                    "mean": 0,
+                    "stdev": 0.1,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "e2": {
+                    "mean": 0,
+                    "stdev": 0.1,
+                    "lowerBound": -0.3,
+                    "upperBound": 0.3
+                },
+                "center_x": {
+                    "mean": -3.25,
+                    "stdev": 0.05
+                },
+                "center_y": {
+                    "mean": -3.25,
+                    "stdev": 0.05
+                }
+            }
+        }
+    ],
+    [
+        {
+            "name": "SHAPELETS",
+            "n_max": 4,
+            "params": {
+                "beta": {
+                    "mean": 0.2,
+                    "stdev": 0.5
+                },
+                "center_x": {
+                    "mean": 0,
+                    "stdev": 0.5
+                },
+                "center_y": {
+                    "mean": 0,
+                    "stdev": 0.5
+                }
+            }
+        }
+    ]
+]

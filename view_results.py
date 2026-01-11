@@ -15,16 +15,6 @@ sys.path.insert(0, home+'/GIGALens-Code')
 print('MASTER BRANCH GIGALENS')
 
 import jax
-# jax.config.update("jax_enable_x64", True)
-
-from gigalens.jax.inference import HarryModellingSequence
-from gigalens.jax.model import ForwardProbModel, BackwardProbModel
-from gigalens.jax.simulator import LensSimulator
-from gigalens.simulator import SimulatorConfig
-from gigalens.model import PhysicalModel
-from gigalens.jax.profiles.light import sersic
-from gigalens.jax.profiles.mass import epl, shear
-
 import tensorflow_probability.substrates.jax as tfp
 from jax import random
 from jax import numpy as jnp
@@ -41,11 +31,25 @@ from helpers import *
 import pandas as pd
 import yaml
 
+# jax.config.update("jax_enable_x64", True)
+
 jax.distributed.initialize(
     coordinator_address="localhost:12346",
     num_processes=1,
     process_id=0
 )
+
+# jax.distributed.initialize()
+
+from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.model import ForwardProbModel, BackwardProbModel
+from gigalens.jax.simulator import LensSimulator
+from gigalens.simulator import SimulatorConfig
+from gigalens.model import PhysicalModel
+from gigalens.jax.profiles.light import sersic
+from gigalens.jax.profiles.mass import epl, shear
+
+
 
 save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard80px")
 finished_systems = []
@@ -69,12 +73,13 @@ for fname in os.listdir(refined_save_dir):
     else:
         refined_systems.append(int(fname.split('/')[-1].split('.')[0]))
 
-refined_systems.sort()
+# refined_systems.sort()
+# refined_systems = []
 
 # finished_systems = [4, 18, 53, 56, 81, 98]
 
 results_dirs = {n : os.path.join(refined_save_dir if n in refined_systems else save_dir, f"{n}") for n in finished_systems}
-
+results_dirs[60] = os.path.join(home, "GIGALens-Code/sys60_converged_4e4_burnin")
 print(results_dirs)
 # skip = []
 # for num in finished_systems:
@@ -95,9 +100,6 @@ observed_imgs = jnp.array([f[key] for key in keys])
 filename = os.path.join(systems_dir, '100SystemsStandardParams.yaml')
 with open(filename, 'r') as file:
     true_params = params_lists_to_jax(yaml.safe_load(file))
-
-select_index = lambda a : a[np.array(finished_systems)]
-true_params = jax.tree.map(select_index, true_params)
 
 prior = helpers.make_default_prior()
 
@@ -131,7 +133,9 @@ lens_sim = LensSimulator(phys_model, sim_config, bs=1)
 #idxes = list(range(100))#[4, 18, 52, 54, 56, 94]
 # finished_systems = list(range(100))
 rhat_maxes = []
-for sysnum in [56]:#finished_systems:
+# finished_systems = [0] 
+finished_systems.remove(60)
+for sysnum in finished_systems:
     results = {}
     # for sysnum in np.sort(finished_systems):
     # if sysnum in skip:
@@ -139,55 +143,55 @@ for sysnum in [56]:#finished_systems:
     #     continue
     observed_img = observed_imgs[sysnum]
     prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
-    model_seq = HarryModellingSequence(phys_model, prob_model, sim_config)
+    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
 
     
     results_dir = results_dirs[sysnum]
-    results["MAP"] = MAPResults.load(results_dir, model_seq)
+    results["MAP"] = MAPResults.load(os.path.join(save_dir, str(sysnum)), model_seq)
     results["SVI"] = SVIResults.load(results_dir, model_seq)
     results["HMC"] = HMCResults.load(results_dir, model_seq)
-    print(f"System {sysnum}:")
-    print(f"Loaded from:", results_dir)
+    # print(f"System {sysnum}:")
+    # print(f"Loaded from:", results_dir)
     rhat_max = np.max(results["HMC"].HMC_rhat)
     print("Final MAP chisq:", results["MAP"].MAP_chisq_hist[-1], 
         "Final ELBO:",results["SVI"].SVI_loss_hist[-1], 
         "Worst HMC rhat:", np.max(results["HMC"].HMC_rhat), "SVI steps:", results["SVI"].SVI_loss_hist.shape[0])
 
     rhat_maxes.append(rhat_max)
-    
-    # show_with_caustic(results['HMC'].HMC_median)
-    # plt.show()
-    display_results(results, observed_img, lens_sim, save_dir=results_dir, show=True, make_cornerplot=False, 
-        true_params=index_params(true_params, sysnum), plot_caustics=True, model_seq=model_seq)
+
+    shape = results["HMC"].HMC_samples_z.shape
+    print("System", sysnum, "Min ESS:", np.min(tfp.mcmc.effective_sample_size(results["HMC"].HMC_samples_z.reshape((shape[0]*shape[1], *shape[2:])).transpose((1, 0, 2)), cross_chain_dims=1)))
+    # print(jax.tree.map(lambda x: tfp.mcmc.effective_sample_size(x,cross_chain_dims=1), prob_model.bij.forward(results["HMC"].HMC_samples_z)))
+    # break
+    # display_results(results, observed_img, lens_sim, save_dir=results_dir, show=True, make_cornerplot=False, 
+    #     true_params=index_params(true_params, sysnum), plot_caustics=False, model_seq=model_seq)
         
 
 # df = pd.DataFrame({'system' : finished_systems, 'rhat': rhat_maxes})
 # df.to_csv(os.path.join(save_dir, 'rhat_results.csv'))
 # %%
-# result_dirs = [os.path.join(save_dir, f"{sysnum}") for sysnum in finished_systems]
+# from helpers import residualplot_params
 prob_models = [ForwardProbModel(prior, observed_imgs[sysnum], background_rms=0.2, exp_time=100) for sysnum in finished_systems]
 
-# true_file = os.path.join(home, "GIGALens-Code", 'SystemSaves', '100SystemsStandardParams.yaml')
-# with open(true_file, 'r') as file:
-#     loaded_params_list = yaml.safe_load(file)
-    
-# true_params = params_lists_to_jax(loaded_params_list)
+plot_kwargs = {'markersize': 3, 'color': 'black', 'elinewidth': 1, 'capsize': 2}
+fig, axs = residualplot_params(list(results_dirs.values()), true_params, prob_models, figsize=(20,13), plot_kwargs=plot_kwargs)
+# You can add a single x and y label for the entire figure by using fig.supxlabel and fig.supylabel
 
-
-residualplot_params(list(results_dirs.values()), true_params, prob_models)
+fig.supxlabel("Ground Truth", size='xx-large')
+fig.supylabel("Recovered - Ground Truth", size='xx-large', x=-0.02)  # shift label right to avoid overlap
 
 # %%
 
-lens_Ie_prior = tfd.LogNormal(jnp.log(300.0), 0.3)
-source_Ie_prior = tfd.LogNormal(jnp.log(150.0), 0.5)
+lens_Ie_prior = tfd.LogNormal(jnp.log(300.0), 0.5)
+source_Ie_prior = tfd.LogNormal(jnp.log(150.0), 0.9)
 
 lens_Ie = true_params[1][0]['Ie']
 source_Ie = true_params[2][0]['Ie']
 
-lens_Ie_56 = true_params[1][0]['Ie'][56]
-source_Ie_56 = true_params[2][0]['Ie'][56]
-plt.axvline(lens_Ie_56, color='C0', linestyle='--', alpha=0.7, label='System 56 Lens Ie')
-plt.axvline(source_Ie_56, color='C1', linestyle='--', alpha=0.7, label='System 56 Source Ie')
+lens_Ie_60 = true_params[1][0]['Ie'][60]
+source_Ie_60 = true_params[2][0]['Ie'][60]
+# plt.axvline(lens_Ie_60, color='C0', linestyle='--', alpha=0.7, label='System 60 Lens Ie')
+# plt.axvline(source_Ie_60, color='C1', linestyle='--', alpha=0.7, label='System 60 Source Ie')
 
 dummy_x = np.linspace(0, np.maximum(np.max(lens_Ie), np.max(source_Ie)))
 

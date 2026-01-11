@@ -1,30 +1,35 @@
 #%%
-import corner
 import time
 import os
 import sys
 import json
+import socket
 import argparse
 from datetime import datetime
 from os.path import expanduser
 
+conda_env = sys.path[1]
+del sys.path[1]
+
 home = expanduser("~/")
 srcdir = os.path.join(home, 'gigalens/src/')
 # srcdir = os.path.join(home, "gigalens-multinode/gigalens_hackathon/src/")
-sys.path.insert(0, srcdir)
-sys.path.insert(0, home+'/GIGALens-Code')
+sys.path.append(home+'/gigalens'+'/src')
+sys.path.append(home+'/GIGALens-Code')
 print('MASTER BRANCH GIGALENS')
 
 import jax
-# jax.config.update("jax_enable_x64", True)
+# jax.config.update("jax_enable_x64", True) 
 
-from gigalens.jax.inference import HarryModellingSequence
-from gigalens.jax.model import ForwardProbModel, BackwardProbModel
-from gigalens.jax.simulator import LensSimulator
-from gigalens.simulator import SimulatorConfig
-from gigalens.model import PhysicalModel
-from gigalens.jax.profiles.light import sersic
-from gigalens.jax.profiles.mass import epl, shear
+sys.path.append(f'{os.environ['HOME']}/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages')
+jax.distributed.initialize(local_device_ids=None)
+
+if jax.process_index() == 0:
+    print(sys.path)
+    print(f"Hostname: {socket.gethostname()}")
+    # print(f"SLURM_PROCID: {os.environ.get('SLURM_PROCID')}")
+    print(f"Visible JAX devices: {jax.devices()}")
+    print(f"Local device count: {jax.local_device_count()}")
 
 import tensorflow_probability.substrates.jax as tfp
 from jax import random
@@ -44,12 +49,15 @@ import os
 import yaml
 
 
-jax.distributed.initialize()
-# jax.distributed.initialize(
-#     coordinator_address="localhost:12346",
-#     num_processes=1,
-#     process_id=0
-# )
+
+from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.model import ForwardProbModel, BackwardProbModel
+from gigalens.jax.simulator import LensSimulator
+from gigalens.simulator import SimulatorConfig
+from gigalens.model import PhysicalModel
+from gigalens.jax.profiles.light import sersic
+from gigalens.jax.profiles.mass import epl, shear
+
 
 jax.experimental.multihost_utils.sync_global_devices("run_start")
 kernel = np.load(os.path.join(srcdir, 'gigalens/assets/psf.npy')).astype(np.float32)
@@ -89,37 +97,27 @@ final_save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard
 # idxes = list(range(100))
 
 rhat_df = pd.read_csv(os.path.join(prev_save_dir, 'rhat_results.csv')).set_index('system')
-refine_more = [4, 18, 53, 56, 81, 98] #* Systems that didn't go below 1.01 on the first rounf
-for i in refine_more:#rhat_df.index:
+for i in rhat_df.index:
     max_rhat = rhat_df['rhat'][i]
     observed_img = observed_imgs[i]
     if max_rhat < 1.01:
         print(f"System {i} already has passable rhat, skipping")
         continue
-    elif i in refine_more:
-        results = simulate_system(
-            observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-            map_steps=1000, map_n_samples=4000,
-            precision_parameterization=False, n_vi=4000, svi_steps=4998,
-            n_hmc=64, hmc_num_results=20000,
-            init_eps=0.3, init_l=3
-        )
-    elif max_rhat < 1.1:
-        results = simulate_system(
-            observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-            map_steps=1000, map_n_samples=1000,
-            precision_parameterization=False, n_vi=1000, svi_steps=5000,
-            n_hmc=64, hmc_num_results=7000,
-            init_eps=0.3, init_l=3
-        )
     else:
+        print(f"System {i} has rhat > 1.01, refining")
         results = simulate_system(
-            observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-            map_steps=1000, map_n_samples=2000,
-            precision_parameterization=False, n_vi=2000, svi_steps=4999,
-            n_hmc=64, hmc_num_results=10000,
-            init_eps=0.3, init_l=3
-        )
+            observed_img, prior, ModellingSequence, sim_config, phys_model, 
+            map_kwargs=dict(num_steps=1000, n_samples=2000),
+            svi_kwargs=dict(num_steps=5000, n_vi=2000),
+            hmc_kwargs=dict(n_hmc=64, num_results=10000, num_burnin_steps=2000)
+        ) #* Default n_vi = 1000, map_n_samples = 2000
+    # else:
+    #     results = simulate_system(
+    #         observed_img, prior, ModellingSequence, sim_config, phys_model, 
+    #         map_kwargs=dict(num_steps=1000, n_samples=2000),
+    #         svi_kwargs=dict(num_steps=4999, n_vi=2000),
+    #         hmc_kwargs=dict(n_hmc=64, num_results=10000, num_burnin_steps=3000)
+    #     )
     
     # if i in finished_systems:
     #     print(f"System {i} already finished, skipping")

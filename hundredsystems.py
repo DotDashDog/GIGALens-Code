@@ -1,5 +1,4 @@
 #%%
-import corner
 import time
 import os
 import sys
@@ -7,18 +6,32 @@ import json
 import argparse
 from datetime import datetime
 from os.path import expanduser
+import socket
+
+conda_env = sys.path[1]
+del sys.path[1]
 
 home = expanduser("~/")
 srcdir = os.path.join(home, 'gigalens/src/')
 # srcdir = os.path.join(home, "gigalens-multinode/gigalens_hackathon/src/")
-sys.path.insert(0, srcdir)
-sys.path.insert(0, home+'/GIGALens-Code')
+sys.path.append(home+'/gigalens'+'/src')
+sys.path.append(home+'/GIGALens-Code')
+sys.path.append(conda_env)
 print('MASTER BRANCH GIGALENS')
 
 import jax
-# jax.config.update("jax_enable_x64", True)
 
-from gigalens.jax.inference import HarryModellingSequence
+sys.path.append(f'{os.environ['HOME']}/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages')
+jax.distributed.initialize(local_device_ids=None)
+
+if jax.process_index() == 0:
+    print(sys.path)
+    print(f"Hostname: {socket.gethostname()}")
+    # print(f"SLURM_PROCID: {os.environ.get('SLURM_PROCID')}")
+    print(f"Visible JAX devices: {jax.devices()}")
+    print(f"Local device count: {jax.local_device_count()}")
+
+from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.model import ForwardProbModel, BackwardProbModel
 from gigalens.jax.simulator import LensSimulator
 from gigalens.simulator import SimulatorConfig
@@ -43,57 +56,13 @@ import pandas as pd
 import os
 import yaml
 
-
-# def parse_arguments():
-#     """Parse command line arguments for system range."""
-#     parser = argparse.ArgumentParser(description='Simulate a range of lensing systems')
-#     parser.add_argument('start', type=int, 
-#                       help='Starting system index (inclusive)')
-#     parser.add_argument('end', type=int,
-#                       help='Ending system index (exclusive)')
-    
-#     args = parser.parse_args()
-    
-#     # Validate arguments
-#     if args.start < 0:
-#         raise ValueError("Start index must be non-negative")
-#     if args.end <= args.start:
-#         raise ValueError("End index must be greater than start index")
-#     if args.start >= 100:
-#         raise ValueError("Start index must be less than 100")
-#     if args.end > 100:
-#         raise ValueError("End index must be less than or equal to 100")
-    
-#     return args.start, args.end
-
-
-# # Parse command line arguments
-# start_idx, end_idx = parse_arguments()
-
-jax.distributed.initialize()
-# jax.distributed.initialize(
-#     coordinator_address="localhost:12346",
-#     num_processes=1,
-#     process_id=0
-# )
-
 jax.experimental.multihost_utils.sync_global_devices("run_start")
 kernel = np.load(os.path.join(srcdir, 'gigalens/assets/psf.npy')).astype(np.float32)
-# observed_img = np.load(os.path.join(srcdir, 'gigalens/assets/demo.npy'))
 
 prior = helpers.make_default_prior()
 
 phys_model = PhysicalModel([epl.EPL(50), shear.Shear()], [sersic.SersicEllipse(use_lstsq=False)], [sersic.SersicEllipse(use_lstsq=False)])
-# prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
 sim_config = SimulatorConfig(delta_pix=0.065, num_pix=80, supersample=2, kernel=kernel) 
-
-# model_seq = HarryModellingSequence(phys_model, prob_model, sim_config)
-
-# pipeline_config = PipelineConfig(
-#     steps=["MAP", "SVI", "HMC"], map_steps=350, map_n_samples=500, n_vi=1000, 
-#     svi_steps=1500, hmc_burnin_steps=250, hmc_num_results=750, n_hmc=50)
-
-# results = run_pipeline(model_seq, pipeline_config)
 
 systems_dir = os.path.join(home, "GIGALens-Code/SystemSaves")
 
@@ -111,7 +80,7 @@ save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard80px")
 
 # idxes = list(range(start_idx, end_idx))
 # idxes = [4, 18, 52, 54, 56, 94]
-idxes = list(range(100))
+idxes = list(range(4, 100))
 for i in idxes:
     # if i in finished_systems:
     #     print(f"System {i} already finished, skipping")
@@ -119,11 +88,11 @@ for i in idxes:
     observed_img = observed_imgs[i]
 
     results = simulate_system(
-        observed_img, prior, HarryModellingSequence, sim_config, phys_model, 
-        map_steps=1000, map_n_samples=2000,
-        precision_parameterization=False, n_vi=1000, svi_steps=5000,
-        n_hmc=64, hmc_num_results=750,
-        init_eps=0.3, init_l=3
+        observed_img, prior, ModellingSequence, sim_config, phys_model, 
+        map_kwargs=dict(num_steps=1000, n_samples=2000),
+        svi_kwargs=dict(num_steps=5000, n_vi=1000),
+        hmc_kwargs=dict(n_hmc=64, num_results=1500, num_burnin_steps=500),
+        background_rms=0.2, exp_time=100
     )
 
     #* Intensive settings are n_vi = 10000, svi_steps = 5000, hmc_num_results = 5000
