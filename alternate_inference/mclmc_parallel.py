@@ -89,7 +89,7 @@ def _single_kernel(
 
 def _make_mapper(map_factory: Optional[Callable], in_axes):
     if map_factory is not None:
-        return map_factory
+        return lambda fn: map_factory(fn, in_axes=in_axes)
     return lambda fn: jax.vmap(fn, in_axes=in_axes)
 
 
@@ -139,7 +139,7 @@ def build_kernel_multi(
         desired_energy_var_max_ratio=desired_energy_var_max_ratio,
         desired_energy_var=desired_energy_var,
     )
-    mapper = _make_mapper(map_factory, in_axes=(0, 0, None, None))
+    mapper = _make_mapper(map_factory, in_axes=(0, 0, 0, 0))
     kernel = mapper(single_kernel)
     return _maybe_jit(map_factory, kernel)
 
@@ -169,6 +169,11 @@ def mclmc_multi(
         desired_energy_var_max_ratio=desired_energy_var_max_ratio,
         map_factory=map_factory,
     )
+
+    if len(jnp.shape(L)) == 0:
+        L = jnp.full(num_chains, L)
+    if len(jnp.shape(step_size)) == 0:
+        step_size = jnp.full(num_chains, step_size)
 
     def init_fn(positions: ArrayLike, rng_keys: PRNGKey):
         return init_multi(

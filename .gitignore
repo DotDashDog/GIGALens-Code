@@ -6,6 +6,12 @@ pipeline_results/
 sys60_converged/
 sys60_work/
 sys60_converged_4e4_burnin/
+hmc_samples_z.npy
 __pycache__/
 jax-trace/
 FitSaves/
+
+#* Should clean up these, but for now just ignore on git
+desi238data/
+samples.npy
+svi_samples.npy

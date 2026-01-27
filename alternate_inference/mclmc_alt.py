@@ -1,10 +1,12 @@
 
 import jax.numpy as jnp
 import jax
+import blackjax
 from blackjax.mcmc.integrators import GeneralIntegrator, IntegratorState, ArrayTree, Callable, euclidean_position_update_fn
 from blackjax.mcmc.integrators import generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
 from blackjax.mcmc.integrators import mclachlan_coefficients, yoshida_coefficients, omelyan_coefficients
 
+import time
 #* Define new isokinetic mclachlan. Only difference is it now takes in 2D, non-diagonal inverse matrix
 
 def generate_isokinetic_integrator_smart(coefficients):
@@ -88,15 +90,17 @@ def mclmc_find_L_and_step_size_smart(
     num_steps,
     state,
     rng_key,
+    multi_chain=False,
+    num_chains=8,
     frac_tune1=0.1,
     frac_tune2=0.1,
     frac_tune3=0.1,
     desired_energy_var=5e-4,
     trust_in_estimate=1.5,
     num_effective_samples=150,
-    diagonal_preconditioning=True,
     params=None,
     Lfactor=0.4,
+    mass_matrix_adapt=True,
 ):
     """
     Finds the optimal value of the parameters for the MCLMC algorithm.
@@ -154,7 +158,7 @@ def mclmc_find_L_and_step_size_smart(
             diagonal_preconditioning=preconditioning,
         )
     """
-    dim = pytree_size(state.position)
+    dim = state.position.shape[-1]
     if params is None:
         raise ValueError("Must specify a starting point for adaptation")
         # params = MCLMCAdaptationState(
@@ -167,7 +171,7 @@ def mclmc_find_L_and_step_size_smart(
     num_steps1, num_steps2 = round(num_steps * frac_tune1), round(
         num_steps * frac_tune2
     )
-    num_steps2 += diagonal_preconditioning * (num_steps2 // 3)
+    num_steps2 += num_steps2 // 3
     num_steps3 = round(num_steps * frac_tune3)
 
     state, params = make_L_step_size_adaptation(
@@ -178,13 +182,15 @@ def mclmc_find_L_and_step_size_smart(
         desired_energy_var=desired_energy_var,
         trust_in_estimate=trust_in_estimate,
         num_effective_samples=num_effective_samples,
-        diagonal_preconditioning=diagonal_preconditioning,
+        multi_chain=multi_chain,
+        num_chains=num_chains,
+        mass_matrix_adapt=mass_matrix_adapt
     )(state, params, num_steps, part1_key)
     total_num_tuning_integrator_steps += num_steps1 + num_steps2
 
     if num_steps3 >= 2:  # at least 2 samples for ESS estimation
         state, params = make_adaptation_L(
-            mclmc_kernel(params.inverse_mass_matrix), frac=frac_tune3, Lfactor=Lfactor
+            mclmc_kernel(params.inverse_mass_matrix), frac=frac_tune3, Lfactor=Lfactor, multi_chain=multi_chain, num_chains=num_chains,
         )(state, params, num_steps, part2_key)
         total_num_tuning_integrator_steps += num_steps3
 
@@ -197,10 +203,12 @@ def make_L_step_size_adaptation(
     dim,
     frac_tune1,
     frac_tune2,
-    diagonal_preconditioning,
     desired_energy_var=1e-3,
     trust_in_estimate=1.5,
     num_effective_samples=150,
+    multi_chain=True,
+    num_chains=8,
+    mass_matrix_adapt=True
 ):
     """Adapts the stepsize and L of the MCLMC kernel. Designed for unadjusted MCLMC"""
 
@@ -268,49 +276,51 @@ def make_L_step_size_adaptation(
 
         x = ravel_pytree(state.position)[0]
         # update the running average of x, x^2
-        streaming_avg = incremental_value_update(
-            expectation=jnp.array([x, jnp.square(x)]),
-            incremental_val=streaming_avg,
-            weight=mask * success * params.step_size,
-        )
-
-        # x_average, x_squared_average = streaming_average[0], streaming_average[1]
-        # variances = x_squared_average - jnp.square(x_average)
-        # inv_mass_mat_new = jnp.diag(variances/jnp.diag(params.inverse_mass_matrix)) @ params.inverse_mass_matrix
-        # params = params._replace(inverse_mass_matrix=mask
+        # streaming_avg = incremental_value_update(
+        #     expectation=jnp.array([x, jnp.square(x)]),
+        #     incremental_val=streaming_avg,
+        #     weight=mask * success * params.step_size,
+        # )
 
         return (state, params, adaptive_state, streaming_avg), state.position
 
-    run_steps = lambda xs, state, params: jax.lax.scan(
-        step,
-        init=(
-            state,
-            params,
-            (0.0, 0.0, jnp.inf),
-            (0.0, jnp.array([jnp.zeros(dim), jnp.zeros(dim)])),
-        ),
-        xs=xs,
-    )
-
     def L_step_size_adaptation(state, params, num_steps, rng_key):
+
+        run_steps = lambda xs, state, params: jax.lax.scan(
+            step,
+            init=(
+                state,
+                params,
+                (0.0, 0.0, jnp.inf),
+                (0.0, jnp.array([jnp.zeros(dim), jnp.zeros(dim)])),
+            ),
+            xs=xs,
+        )
         num_steps1, num_steps2 = round(num_steps * frac_tune1), round(
             num_steps * frac_tune2
         )
 
-        L_step_size_adaptation_keys = jax.random.split(
-            rng_key, num_steps1 + num_steps2 + 1
-        )
-        L_step_size_adaptation_keys, final_key = (
-            L_step_size_adaptation_keys[:-1],
-            L_step_size_adaptation_keys[-1],
-        )
-
         # we use the last num_steps2 to compute the diagonal preconditioner
         mask = jnp.concatenate((jnp.zeros(num_steps1), jnp.ones(num_steps2)))
-
+        num_steps_net = num_steps1 + num_steps2
         # run the steps
+        if multi_chain:
+            run_key, final_key = jax.random.split(rng_key, 2)
+            L_step_size_adaptation_keys = jax.random.split(run_key, (num_chains, num_steps1 + num_steps2))
+
+            run_steps = jax.jit(jax.vmap(run_steps, in_axes=((None, 0), 0, None)))
+        else:
+            #* Original behavior for only one chain
+            L_step_size_adaptation_keys = jax.random.split(
+                rng_key, num_steps1 + num_steps2 + 1
+            )
+            L_step_size_adaptation_keys, final_key = (
+                L_step_size_adaptation_keys[:-1],
+                L_step_size_adaptation_keys[-1],
+            )
+
         carry, samples = run_steps(
-            xs=(mask, L_step_size_adaptation_keys), state=state, params=params
+            (mask, L_step_size_adaptation_keys), state, params
         )
         state, params, _, (_, average) = carry
 
@@ -318,37 +328,54 @@ def make_L_step_size_adaptation(
         # determine L
         inverse_mass_matrix = params.inverse_mass_matrix
         if num_steps2 > 1:
-            covariance = jnp.cov(samples.T, aweights=mask)
+            #* Samples should be of shape (num_chains, num_steps, dim)
+            if multi_chain:
+                #* Merge all samples to take covariance of all of them
+
+                samples = jnp.transpose(samples, (2, 0, 1)) #* Now of shape (dim, num_chains, num_steps)
+                mask = jnp.tile(mask, (num_chains, 1)) #* Should be of shape (num_chains, num_steps)
+                samples = samples.reshape((dim, num_chains * num_steps_net))
+                mask = mask.reshape((num_chains* num_steps_net,))
+
+                #* Take means of each chain's params
+                params = params._replace(
+                    step_size=jnp.mean(params.step_size), 
+                    L = jnp.mean(params.L),
+                )
+            else:
+                samples = samples.T
+            
             #* Guess at how to replace old calculation of L
             #* Using eigenvalues instead of elements of diagonal matrix
-            L = jnp.sqrt(jnp.sum(jnp.real(jnp.linalg.eig(covariance)[0])))
-            
-            # x_average, x_squared_average = average[0], average[1]
-            # variances = x_squared_average - jnp.square(x_average)
-            # L = jnp.sqrt(jnp.sum(variances))
+            # L = jnp.sqrt(jnp.sum(jnp.real(jnp.linalg.eig(inverse_mass_matrix)[0])))
 
-            if diagonal_preconditioning:
-                inverse_mass_matrix = covariance
+            L = jnp.sqrt(dim)
+
+            if mass_matrix_adapt:
+                inverse_mass_matrix = jnp.cov(samples, aweights=mask)
+                egval, egvec = jnp.linalg.eig(inverse_mass_matrix)
+                print(f"Stage 2 Cov Egval Mean: {jnp.mean(egval)}, Min: {jnp.min(egval)}, Max: {jnp.max(egval)}")
                 params = params._replace(inverse_mass_matrix=inverse_mass_matrix)
-                L = jnp.sqrt(dim)
 
-                # readjust the stepsize
-                steps = round(num_steps2 / 3)  # we do some small number of steps
+            # readjust the stepsize
+            steps = round(num_steps2 / 3)  # we do some small number of steps
+            if multi_chain:
+                keys = jax.random.split(final_key, (num_chains, steps))
+            else:
                 keys = jax.random.split(final_key, steps)
-                state, params, _, (_, average) = run_steps(
-                    xs=(jnp.ones(steps), keys), state=state, params=params
-                )[0]
+            state, params, _, (_, average) = run_steps(
+                (jnp.ones(steps), keys), state, params
+            )[0]
 
-        return state, MCLMCAdaptationState(L, params.step_size, inverse_mass_matrix)
+        return state, MCLMCAdaptationState(L, jnp.mean(params.step_size), inverse_mass_matrix)
 
     return L_step_size_adaptation
 
-def make_adaptation_L(kernel, frac, Lfactor):
+def make_adaptation_L(kernel, frac, Lfactor, multi_chain=True, num_chains=8):
     """determine L by the autocorrelations (around 10 effective samples are needed for this to be accurate)"""
 
     def adaptation_L(state, params, num_steps, key):
         num_steps_3 = round(num_steps * frac)
-        adaptation_L_keys = jax.random.split(key, num_steps_3)
 
         def step(state, key):
             next_state, _ = kernel(
@@ -360,18 +387,130 @@ def make_adaptation_L(kernel, frac, Lfactor):
 
             return next_state, next_state.position
 
-        state, samples = jax.lax.scan(
-            f=step,
-            init=state,
-            xs=adaptation_L_keys,
-        )
+        if multi_chain:
+            adaptation_L_keys = jax.random.split(key, (num_chains, num_steps_3))
+            mapped_scan = jax.vmap(lambda state_in, keys : jax.lax.scan(f=step, init=state_in, xs=keys), in_axes=(0, 0))
 
-        flat_samples = jax.vmap(lambda x: ravel_pytree(x)[0])(samples)
-        ess = effective_sample_size(flat_samples[None, ...])
+            state, samples = mapped_scan(state, adaptation_L_keys)
+
+            #* Calculate per-chain ESS, 
+            #* ESS fucntion squeezes shapes so the .reshape just ensures that any 1s in the shape are preserved 
+            ess = effective_sample_size(samples[None, ...], chain_axis=0, sample_axis=2).reshape((num_chains, samples.shape[-1])) 
+            chain_mean_ess = jnp.mean(ess, axis=0) #* Take mean along chain axis
+            L_new = Lfactor * params.step_size * jnp.max(num_steps_3 / chain_mean_ess)
+
+            samples_flat = jnp.transpose(samples, (2, 0, 1)).reshape(samples.shape[-1], num_chains*num_steps_3)
+
+        else:
+            adaptation_L_keys = jax.random.split(key, num_steps_3)
+            state, samples = jax.lax.scan(
+                f=step,
+                init=state,
+                xs=adaptation_L_keys,
+            )
+
+        
+            ess = effective_sample_size(samples[None, ...])
+            print(f"Stage 3 ESS Mean: {jnp.mean(ess)}, Min: {jnp.min(ess)}, Max: {jnp.max(ess)}")
+            print("L Before Final Update:", params.L)
+            L_new=Lfactor * params.step_size * num_steps_3 / jnp.mean(ess) #! Essentially now focusing on the worst parameter
+        
+            samples_flat = samples.T
+
+        inverse_mass_matrix = jnp.cov(samples_flat)
 
         return state, params._replace(
-            L=Lfactor * params.step_size * jnp.max(num_steps_3 / ess), #! Changed mean to max
-            inverse_mass_matrix = jnp.cov(flat_samples.T) #! My change: recondition mass matrix again
+            L=L_new,
+            #inverse_mass_matrix = inverse_mass_matrix #! My change: recondition mass matrix again
         )
 
     return adaptation_L
+
+
+#* ------ GIGALens-like wrapper for MCLMC
+from mclmc_parallel import init_multi, build_kernel_multi, mclmc_multi
+
+def MCLMC(qz, log_prob, n_hmc=16, num_burnin_steps=5000, num_results=10000, 
+        init_L=None, init_step_size=None, progress_bar=False, print_adapt_params=False,seed=0):
+    rng_key = jax.random.key(0)
+    init_key, tune_key, run_key = jax.random.split(rng_key, 3)
+
+
+    n_chains = n_hmc
+    desired_energy_variance= 5e-4 #* Tuning parameter. Keep as is for now
+    transform = lambda state, info: state.position #* For final chain outputs, just output locations
+
+    integrator = isokinetic_mclachlan_smart
+
+    # build the kernel
+    kernel = lambda inverse_mass_matrix : blackjax.mcmc.mclmc.build_kernel(
+        logdensity_fn=log_prob,
+        integrator=integrator,
+        inverse_mass_matrix=inverse_mass_matrix,
+    )
+
+    #* Initialize states for burnin from surrogate
+    state_multi = init_multi(qz.sample((n_chains,), seed=init_key), init_key, log_prob)
+    dim = state_multi.position.shape[-1]
+
+    #* Start hyperparameters at default guesses based on dimensionality
+    init_L = jnp.sqrt(dim) if init_L is None else init_L
+    init_step_size = (jnp.sqrt(dim) * 0.25) if init_step_size is None else init_step_size
+    starting_adapt_state = blackjax.adaptation.mclmc_adaptation.MCLMCAdaptationState(
+        L=init_L, step_size=init_step_size, inverse_mass_matrix=qz.covariance()
+    )
+
+    #* Run burnin, which adapts L, step size, and the mass matrix
+    starttime = time.perf_counter()
+    (
+        blackjax_state_after_tuning, #* The final positions (and other state info) of the chains
+        blackjax_mclmc_sampler_params, #* The tuned hyperparameters
+        _
+    ) = mclmc_find_L_and_step_size_smart(
+        mclmc_kernel=kernel,
+        num_steps=num_burnin_steps,
+        state=state_multi,
+        rng_key=tune_key,
+        frac_tune1=0.1, #* initial step size tuning
+        frac_tune2=0.7, #* Used for mass matrix adaptation
+        frac_tune3=0.2, #! Tuning L. ~10 effective samples are needed for this to be accurate
+        params=starting_adapt_state,
+        desired_energy_var=desired_energy_variance,
+        multi_chain=True,
+        num_chains=n_chains
+    )
+    total_time = time.perf_counter()-starttime
+    print("Burnin Time:", total_time)
+
+
+    L = blackjax_mclmc_sampler_params.L
+    step_size = blackjax_mclmc_sampler_params.step_size
+    if print_adapt_params:
+        print(f"ADAPTED. L: {L}, step_size: {step_size}, L/step: {L/step_size}")
+
+
+    sampling_alg = mclmc_multi(
+        log_prob,
+        L=L,
+        step_size=step_size,
+        num_chains=n_chains,
+        inverse_mass_matrix=blackjax_mclmc_sampler_params.inverse_mass_matrix,
+        integrator=integrator,
+    )
+
+    starttime = time.perf_counter()
+    _, multi_chain_samples = blackjax.util.run_inference_algorithm(
+        rng_key=run_key,
+        initial_state=blackjax_state_after_tuning,
+        inference_algorithm=sampling_alg,
+        num_steps=num_results,
+        transform=transform,
+        progress_bar=progress_bar,
+    )
+    total_time = time.perf_counter()-starttime
+    print(f"Sampling took {total_time} s")
+
+    #* Transpose to (num_chains, num_results, dim)
+    multi_chain_samples = jnp.transpose(multi_chain_samples, axes=(1, 0, 2))
+
+    return multi_chain_samples

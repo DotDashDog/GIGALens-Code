@@ -536,20 +536,22 @@ def cornerplot_labels(example_params, latex=False):
     """
     Generate the labels for the cornerplot based on the tree structure of the parameters.
     """
-    tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
-    # get labels and pts for the MAP
-    label_prefixes = ['', '', 'lens_', 'src_']
-    labels = []
+    # tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
+    # # get labels and pts for the MAP
+    # label_prefixes = ['', '', 'lens_', 'src_']
+    # labels = []
     
-    for (i, j), label_prefix in zip(tups, label_prefixes):
-        labels.extend((label_prefix + key for key in example_params[i][j].keys()))
+    # for (i, j), label_prefix in zip(tups, label_prefixes):
+    #     labels.extend((label_prefix + key for key in example_params[i][j].keys()))
 
-    if latex:
-        labels = [latex_label(label) for label in labels]
+    # if latex:
+    #     labels = [latex_label(label) for label in labels]
 
-    return labels
+    
 
-def flatten_params_to_labeled_dict(params):
+    return list(flatten_params_to_labeled_dict(example_params).keys())
+
+def flatten_params_to_labeled_dict_sim(params):
     tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
     label_prefixes = ['', '', 'lens_', 'src_']
 
@@ -558,15 +560,21 @@ def flatten_params_to_labeled_dict(params):
         flat_dict.update({label_prefix + key: params[i][j][key] for key in params[i][j].keys()})
     return flat_dict
 
-# def flatten_label_order(tree):
-#     tups = [(0, 0), (0, 1), (1, 0), (2, 0)]
-#     flat = []
-#     for (i, j) in tups:
-#        flat.extend((arr.item() for arr in tree[i][j].values()))
-#     flat = np.array(flat)
-#     return flat
+def flatten_params_to_labeled_dict(params):
+    tups = []
+    prefix = ['mass', 'lens', 'src']
+    label_prefixes = []
+    for i in range(len(params)):
+        for j in range(len(params[i])):
+            tups.append((i, j))
+            label_prefixes.append(f"{prefix[i]}_{str(j)}")
 
-def cornerplot_posterior(raw_samples, fig=None, truth=None, overplots=None, color='black', truth_color='black', overplot_color='red', plot_params=None):
+    flat_dict = {}
+    for (i, j), label_prefix in zip(tups, label_prefixes):
+        flat_dict.update({label_prefix + key: params[i][j][key] for key in params[i][j].keys()})
+    return flat_dict
+
+def cornerplot_posterior(raw_samples, fig=None, truth=None, overplots=None, color='black', truth_color='black', overplot_color='red', plot_params=None, latex=False):
     """
     Create a cornerplot of a set of samples in the physical space.
     Option to overplot a single point, such as the MAP best fit
@@ -574,7 +582,7 @@ def cornerplot_posterior(raw_samples, fig=None, truth=None, overplots=None, colo
     """
     flat_samples = flatten_params_to_labeled_dict(raw_samples)
     if plot_params is None:
-        plot_params = flat_samples.keys()
+        plot_params = list(flat_samples.keys())
         # flat_samples = {k:flat_samples[k] for k in plot_params}
         
 
@@ -593,7 +601,11 @@ def cornerplot_posterior(raw_samples, fig=None, truth=None, overplots=None, colo
 
     samples = np.vstack([flat_samples[key] for key in plot_params]).T
     histargs = {'density': True, 'color': color}
-    labels = [latex_label(label) for label in flat_samples.keys()]
+    if latex:
+        labels = [latex_label(label) for label in plot_params]
+    else:
+        labels = plot_params
+        
     fig = corner.corner(samples, fig=fig, truths=truth_overplot_pts, truth_color=truth_color, 
         show_titles=True, title_fmt='.3f',
         labels=labels, hist_kwargs=histargs, color=color)
