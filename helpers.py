@@ -85,6 +85,7 @@ def index_params(params, i):
     #     o1.append(o2)
             
     return jax.tree.map(lambda a : a[i], params)
+    
 
 class PipelineConfig:
     """
@@ -429,7 +430,7 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         #* Meaning actual lensing image
         # cnorm = matplotlib.colors.Normalize(vmin=0)
         # Use LogNorm for logarithmic scaling with inferno colormap
-        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), 1e0), vmax=img.max())
+        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), 1e0), vmax=img.max(), clip=True)
         cmap = 'inferno'
     else:
         #* Meaning residual image
