@@ -1,6 +1,8 @@
 
+import blackjax.progress_bar
 import jax.numpy as jnp
 import jax
+from jax.sharding import NamedSharding, PartitionSpec as P
 import blackjax
 from blackjax.mcmc.integrators import GeneralIntegrator, IntegratorState, ArrayTree, Callable, euclidean_position_update_fn
 from blackjax.mcmc.integrators import generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
@@ -121,8 +123,8 @@ def MCLMC(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000, mass
     total_time = time.perf_counter()-starttime
     print(f"Sampling took {total_time} s")
 
-    # #* Transpose to (num_chains, num_results, dim)
-    # multi_chain_samples = jnp.transpose(multi_chain_samples, axes=(1, 0, 2))
+    #* Transpose to (num_chains, num_results, dim)
+    multi_chain_samples = jnp.transpose(multi_chain_samples, axes=(1, 0, 2))
 
     #* Final shape should be (num_results, num_chains, dim)
     return multi_chain_samples
@@ -233,7 +235,7 @@ def init_multi(
     return init_fn(positions, rng_keys)
 
 
-def build_kernel_multi(
+def build_kernel_multi( 
     logdensity_fn: Callable,
     inverse_mass_matrix: ArrayTree,
     integrator: Callable,
@@ -390,6 +392,221 @@ from blackjax.adaptation.mclmc_adaptation import pytree_size, MCLMCAdaptationSta
 from blackjax.mcmc.integrators import generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
 from blackjax.diagnostics import effective_sample_size
 
+def full_mclmc_with_adapt(
+    kernel,
+    num_burnin_steps,
+    num_results,
+    state_init,
+    params_init,
+    rng_key,
+    frac_tune1=0.1,
+    frac_tune2=0.1,
+    frac_tune3=0.1,
+    desired_energy_var=5e-4,
+    trust_in_estimate=1.5,
+    num_effective_samples=150,
+    Lfactor=0.4,
+    num_chains=8,
+    svi_mass_matrix_weight=20.,
+):
+    dim = state_init.position.shape[-1]
+    decay_rate = (num_effective_samples - 1.0) / (num_effective_samples + 1.0)
+
+    welford_init, welford_update, welford_cov = welford_algorithm(is_diagonal_matrix=False)
+
+    svi_inverse_mass_matrix = params_init.inverse_mass_matrix
+
+    total_steps = num_burnin_steps + num_results
+    num_steps1, num_steps2, num_steps3 = round(num_burnin_steps * frac_tune1), round(num_burnin_steps * frac_tune2), round(num_burnin_steps * frac_tune3)
+    tuning_steps = num_steps1 + num_steps2 + num_steps3
+
+    step_size_sync_step = num_steps1 + num_steps2
+    L_adaptation_step = tuning_steps
+    
+    def step_size_adapt(previous_state, next_state, info, params, adaptive_state, nan_key):
+        time, x_average, step_size_max = adaptive_state
+
+        # step updating
+        success, state, step_size_max, energy_change = handle_nans(
+            previous_state,
+            next_state,
+            params.step_size,
+            step_size_max,
+            info.energy_change,
+            nan_key,
+        )
+
+
+        # Warning: var = 0 if there were nans, but we will give it a very small weight
+        xi = (
+            jnp.square(energy_change) / (dim * desired_energy_var)
+        ) + 1e-8  # 1e-8 is added to avoid divergences in log xi
+        weight = jnp.exp(
+            -0.5 * jnp.square(jnp.log(xi) / (6.0 * trust_in_estimate))
+        )  # the weight reduces the impact of stepsizes which are much larger on much smaller than the desired one.
+
+        weighted_x = weight * (xi / jnp.power(params.step_size, 6.0))
+        
+        x_average = decay_rate * x_average + weighted_x#jax.lax.psum(weighted_x, axis_name='chain')
+        
+        time = decay_rate * time + weight#jax.lax.psum(weight, axis_name='chain')
+        step_size = jnp.power(
+            x_average / time, -1.0 / 6.0
+        )  # We use the Var[E] = O(eps^6) relation here.
+        
+        step_size = (step_size < step_size_max) * step_size + (
+            step_size > step_size_max
+        ) * step_size_max  # if the proposed stepsize is above the stepsize where we have seen divergences
+        params_new = params._replace(step_size=step_size)
+
+        adaptive_state = (time, x_average, step_size_max)
+
+        return state, params_new, adaptive_state, success
+    
+    def mass_matrix_adapt(state, params, welford_state):
+        #* Do mass matrix adaptation if in stage 2
+        #* Aggregate welford states across chains to get full covariance. 
+        x = ravel_pytree(state.position)[0]
+        n = jax.lax.axis_size('chain')
+        x_mean = jax.lax.pmean(x, axis_name='chain')
+        delta = x - x_mean
+        m2_step = jax.lax.psum(jnp.outer(delta, delta), axis_name='chain')
+        update_state = WelfordAlgorithmState(x_mean, m2_step, n)
+
+        welford_state = welford_combine(welford_state, update_state)
+
+        # #! Right now using a dumb criterion for mass matrix adaptation (start after 50 samples per chain)
+        # params_new = jax.lax.cond(welford_state.sample_size > num_chains*50, #! CHANGE IF YOU WANT THIS TO WORK FOR OTHER CASES
+        #     lambda : params._replace(inverse_mass_matrix=welford_cov(welford_state)[0]),
+        #     lambda : params,
+        # )
+        sample_cov = welford_cov(welford_state)[0]
+        weighted_mean_mat = (sample_cov * welford_state.sample_size + svi_inverse_mass_matrix * svi_mass_matrix_weight)/(welford_state.sample_size+svi_mass_matrix_weight)
+        params_new = params._replace(inverse_mass_matrix=weighted_mean_mat)
+        return params_new, welford_state
+
+    def step(iteration_state, mode_and_key):
+        """does one step of the dynamics and updates the estimate of the optimal step size, continuously updating the mass matrix instead of just tracking"""
+        mode, rng_key, i = mode_and_key
+        do_step_size_adapt = jnp.logical_or(mode==1, mode==2)
+        do_mass_matrix_adapt = mode == 2
+        rng_key, nan_key = jax.random.split(rng_key)
+
+        previous_state, params, adaptive_state, welford_state, sample_buffer = iteration_state
+
+        state, info = kernel(params.inverse_mass_matrix)(
+            rng_key=rng_key,
+            state=previous_state,
+            L=params.L,
+            step_size=params.step_size,
+        )
+
+        sample_buffer = sample_buffer.at[i].set(state.position)
+
+        #* Do step size adaptation if in stage 1 or 2
+        state, params, adaptive_state, success = jax.lax.cond(
+            do_step_size_adapt,
+            (lambda : step_size_adapt(previous_state, state, info, params, adaptive_state, nan_key)),
+            (lambda : (state, params, adaptive_state, True)),
+        )
+
+        #* Do mass matrix adaptation if in stage 2
+        params, welford_state = jax.lax.cond(
+            do_mass_matrix_adapt, 
+            (lambda : mass_matrix_adapt(state, params, welford_state)),
+            (lambda : (params, welford_state)),
+        )
+
+        params = jax.lax.cond(
+            i == step_size_sync_step,
+            lambda : params._replace(step_size=jax.lax.pmax(params.step_size, axis_name='chain')),
+            lambda : params
+        )
+
+        def calc_new_L():
+            ess = effective_sample_size(sample_buffer[jnp.newaxis, L_adaptation_step-num_steps3:L_adaptation_step], chain_axis=0, sample_axis=1)
+            return Lfactor* num_steps3 * params.step_size/jax.lax.pmin(jnp.min(ess), axis_name='chain')
+
+        params = jax.lax.cond(
+            i == L_adaptation_step,
+            lambda : params._replace(L=calc_new_L()),
+            lambda : params
+        )
+        
+        
+        #! Still need to add ESS-based L adaptation and sync step sizes at end of step size adaptation
+        
+        return (state, params, adaptive_state, welford_state, sample_buffer), state.position
+    
+
+    # step_vmapped = jax.vmap(step, in_axes=(0, (None, 0)), axis_name='chain')
+
+    # pbar_scan_fn = blackjax.progress_bar.gen_scan_fn(total_steps, progress_bar)
+
+    # def tile_params(p):
+    #     return jax.tree.map(lambda x: jnp.repeat(jnp.array(x)[jnp.newaxis, ...], num_chains, axis=0), p)
+
+    # run_steps_multi = lambda xs, state_init, params_init : pbar_scan_fn(
+    #     step_vmapped,
+    #     init=(
+    #         state_init,
+    #         tile_params(params_init),#! NEED TO TILE RIGHT
+    #         tile_params((0.0, 0.0, jnp.inf)),
+    #         tile_params(welford_start)
+    #     ),
+    #     xs=xs,
+    # )
+    # print(mode.shape)
+    # print(keys.shape)
+    # print(tile_params(params_init))
+    # print(tile_params((0.0, 0.0, jnp.inf)))
+    # print(tile_params(welford_start))
+
+    mode = jnp.concatenate((
+        jnp.ones(num_steps1, dtype=jnp.int32), 
+        2*jnp.ones(round(0.67 * num_steps2), dtype=jnp.int32), 
+        1*jnp.ones(round(0.33*num_steps2), dtype=jnp.int32), #! Not doing any step adapt after mass matrix
+        3*jnp.ones(num_steps3, dtype=jnp.int32), 
+        jnp.zeros(total_steps-tuning_steps, dtype=jnp.int32),
+    ))
+
+    num_devices = len(jax.devices())
+    num_chains_per_device = num_chains//num_devices
+    keys = jax.random.split(rng_key, (num_devices, num_chains_per_device, total_steps))
+
+    welford_start = welford_init(dim)
+
+    sample_buffer_init = jnp.zeros((total_steps, dim))
+    run_steps = lambda xs, state_init, params_init : jax.lax.scan(
+        step,
+        init=(
+            state_init,
+            params_init,
+            (0.0, 0.0, jnp.inf),
+            welford_start,
+            sample_buffer_init,
+        ),
+        xs=xs,
+    )
+    run_steps_vmap = jax.jit(jax.vmap(run_steps, in_axes=((None, 0, None), 0, None), axis_name='chain'))
+
+    # mesh = jax.make_mesh((len(jax.devices()),), ('device',))
+    # in_specs = ((None, P('device'), None), P('device'), None)
+
+
+    run_steps_multi = jax.pmap(run_steps_vmap, in_axes=((None, 0, None), 0, None), out_axes=0, axis_name='device')
+
+    reshape_pmap = lambda x : x.reshape(num_devices, num_chains_per_device, *x.shape[1:])
+    state_init = jax.tree.map(reshape_pmap, state_init)
+
+    carry, samples = run_steps_multi(
+        (mode, keys, jnp.arange(total_steps, dtype=jnp.int32)), state_init, params_init
+    )
+    state, params, _, welford_state, samples_buffered = carry
+    result_samples = samples[:, -num_results:, :]
+    return result_samples, params
+    
+
 def mclmc_find_L_and_step_size_smart(
     mclmc_kernel,
     num_steps,
@@ -406,7 +623,7 @@ def mclmc_find_L_and_step_size_smart(
     multi_chain=False,
     num_chains=8,
     mass_matrix_adapt=True,
-    continuous_adaptation=False,
+    continuous_adaptation=True,
 ):
     """
     Modified version of burnin from blackjax that runs over 
@@ -590,7 +807,7 @@ def make_L_step_size_adaptation(
     def step(iteration_state, weight_and_key):
         """does one step of the dynamics and updates the estimate of the optimal step size, tracking updates to the covariance"""
 
-        mask, rng_key = weight_and_key
+        mask, rng_key, svi_inverse_mass_matrix = weight_and_key
         state, params, adaptive_state, welford_state = iteration_state
 
         state, params, adaptive_state, success = predictor(
@@ -646,7 +863,7 @@ def make_L_step_size_adaptation(
         )
 
         #! Right now using a dumb criterion for mass matrix adaptation (start after 100+ adapt samples)
-        params_new = jax.lax.cond(jnp.logical_and(mask, welford_state.sample_size > num_chains*20),
+        params_new = jax.lax.cond(jnp.logical_and(mask, welford_state.sample_size > num_chains*50), #! CHANGE IF YOU WANT THIS TO WORK FOR OTHER CASES
             lambda welford_state_in : params._replace(inverse_mass_matrix=welford_cov(welford_state_in)[0]),
             lambda welford_state_in : params,
             welford_state
@@ -680,7 +897,6 @@ def make_L_step_size_adaptation(
             ),
             xs=xs,
         )
-        
         num_steps1, num_steps2 = round(num_steps * frac_tune1), round(
             num_steps * frac_tune2
         )
@@ -729,15 +945,20 @@ def make_L_step_size_adaptation(
                 #! Should change this in a smart way??
                 inverse_mass_matrix = params.inverse_mass_matrix[0]
             params = params._replace(inverse_mass_matrix=inverse_mass_matrix)
+
+            print(params.step_size)
+            
+            #* Take means of each chain's params
+            params = params._replace(
+                step_size=jnp.mean(params.step_size), 
+                L = jnp.mean(params.L),
+            )
+
+
+
         
         if num_steps2 > 1:
             #* Samples should be of shape (num_chains, num_steps, dim)
-            if multi_chain:
-                #* Take means of each chain's params
-                params = params._replace(
-                    step_size=jnp.mean(params.step_size), 
-                    L = jnp.mean(params.L),
-                )
             
             #* Guess at how to replace old calculation of L
             #* Using eigenvalues instead of elements of diagonal matrix
@@ -772,7 +993,8 @@ def make_L_step_size_adaptation(
                 egval, egvec = jnp.linalg.eig(inverse_mass_matrix_smp)
                 print(f"Stage 2 Cov Egval Mean: {jnp.mean(egval)}, Min: {jnp.min(egval)}, Max: {jnp.max(egval)}")
                 print(f"Stage 2 Step Size: {params.step_size}, L: {params.L}")
-                params = params._replace(inverse_mass_matrix=inverse_mass_matrix)
+                # if not continuous_adaptation:
+                #     params = params._replace(inverse_mass_matrix=inverse_mass_matrix)
 
             # readjust the stepsize
             steps = round(num_steps2 / 3)  # we do some small number of steps
@@ -787,7 +1009,6 @@ def make_L_step_size_adaptation(
                 (jnp.zeros(steps), keys, inverse_mass_matrix_tiled), state, params 
             )[0]
 
-        print(params.step_size)
         return state, MCLMCAdaptationState(L, jnp.mean(params.step_size), inverse_mass_matrix)
 
     return L_step_size_adaptation
