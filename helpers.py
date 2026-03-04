@@ -147,7 +147,7 @@ class MAPResults:
     """
 
     def __init__(self, MAP_estimate, MAP_chisq_hist, time_taken, model_seq, from_save=False):
-        best_z = MAP_estimate.reshape((-1, 22))
+        best_z = jnp.squeeze(MAP_estimate)[jnp.newaxis]
         best_x = model_seq.prob_model.bij.forward(list(best_z.T))
 
         self.MAP_chisq_hist = MAP_chisq_hist
@@ -302,7 +302,7 @@ def run_pipeline(model_seq, pipeline_config):
         print("Starting MAP")
 
         if cfg.map_func is None:
-            map_func = model_seq.MAP_multi
+            map_func = model_seq.MAP
         else:
             map_func = cfg.map_func
         
@@ -311,17 +311,17 @@ def run_pipeline(model_seq, pipeline_config):
         map_kwargs.pop('optimizer')
         
         start = time.perf_counter()
-        map_estimate, map_chisq_hist = map_func(**cfg.map_kwargs)
+        map_estimate, map_chisq, lp = map_func(**cfg.map_kwargs)
         end = time.perf_counter()
         
-        results["MAP"] = MAPResults(map_estimate, map_chisq_hist, end - start, model_seq)
+        results["MAP"] = MAPResults(map_estimate, map_chisq, end - start, model_seq)
     
     #* RUNNING SVI---------------------------------
     if run_svi:
         print("Starting SVI")
         
         if cfg.svi_func is None:
-            svi_func = model_seq.SVI_multi
+            svi_func = model_seq.SVI
         else:
             svi_func = cfg.svi_func
         
@@ -346,7 +346,7 @@ def run_pipeline(model_seq, pipeline_config):
         print("Starting HMC")
 
         if cfg.hmc_func is None:
-            hmc_func = model_seq.HMC_multi
+            hmc_func = model_seq.HMC
         else:
             hmc_func = cfg.hmc_func
 
@@ -414,14 +414,14 @@ def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys
 
 
 def get_noise_image(image, background_rms, exp_time):
-    return np.sqrt(image / exp_time + background_rms**2)
+    return np.sqrt(np.abs(image / exp_time) + background_rms**2)
 
 def get_chisq(true_img, predicted_img, background_rms=0.2, exp_time=100):
     emap = get_noise_image(predicted_img, background_rms, exp_time)
 
     return np.sum(np.square((true_img-predicted_img)/emap))
 
-def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True):
+def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True, remove_axis=True):
     """
     Plot an image using my chosen standards for coloring, 
     which changes depending on whether the image is a residual or not.
@@ -430,7 +430,7 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         #* Meaning actual lensing image
         # cnorm = matplotlib.colors.Normalize(vmin=0)
         # Use LogNorm for logarithmic scaling with inferno colormap
-        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), 1e0), vmax=img.max(), clip=True)
+        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), 1e-2), vmax=img.max(), clip=True)
         cmap = 'inferno'
     else:
         #* Meaning residual image
@@ -450,11 +450,12 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
     if extent is not None:
         ax.set_xlim((extent[0], extent[1]))
         ax.set_ylim((extent[2], extent[3]))
-    ax.axis('off')
+    if remove_axis:
+        ax.axis('off')
 
 
-def add_caustics(ax, params, model_seq, lens_objects=['EPL', 'SHEAR']):
-    kwargs_data = sim_util.data_configure_simple(model_seq.sim_config.num_pix*40, model_seq.sim_config.delta_pix/20)
+def add_caustics(ax, params, sim_config, lens_objects=['EPL', 'SHEAR']):
+    kwargs_data = sim_util.data_configure_simple(sim_config.num_pix*40, sim_config.delta_pix/20)
     data = ImageData(**kwargs_data)
     _coords = data
     lensModel = LensModel(lens_model_list=lens_objects) #just need a list of the mass parameters, something like ['EPL', 'SHEAR']
@@ -477,7 +478,7 @@ def histogram_residuals(fig, ax, flat_residual, title, bins=50):
 
 def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None, 
                        predicted_img=None, resimulate=True, display_true_chisq=False, true_params=None, prefix="",
-                       plot_caustics=False, model_seq=None):
+                       plot_caustics=False, model_seq=None, background_rms=0.2, exp_time=100.0):
     """
     Plot the results of a lensing fit. Given a set of predicted parameters, compare the predicted image to the true image.
     Displays normalized residuals, and a histogram of the residuals to check that they are gaussian noise
@@ -492,16 +493,19 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
     if display_true_chisq:
         true_chisq = get_chisq(true_img, lens_sim.simulate(true_params))
     
-    noise_map = get_noise_image(true_img, 0.2, 100)
+    noise_map = get_noise_image(true_img, background_rms, exp_time)
 
     residual = (true_img - predicted_img)/noise_map
 
     chisq = np.sum(np.square(residual))
     dof = true_img.shape[0]*true_img.shape[1] - 22 #! Change if number of params changes
-    #! Do I want to do sqrt curve cmap for the images?\
-    numPix = model_seq.sim_config.num_pix
-    deltaPix = model_seq.sim_config.delta_pix
-    extent = (-numPix/2*deltaPix, numPix/2*deltaPix, -numPix/2*deltaPix, numPix/2*deltaPix)
+    #! Do I want to do sqrt curve cmap for the images?
+    if plot_caustics:
+        numPix = model_seq.sim_config.num_pix
+        deltaPix = model_seq.sim_config.delta_pix
+        extent = (-numPix/2*deltaPix, numPix/2*deltaPix, -numPix/2*deltaPix, numPix/2*deltaPix)
+    else:
+        extent =None
     plot_image(fig, axs[0], true_img, extent=extent,
                title=f"True Image" + (f"(Red Chisq:{true_chisq/dof:.3f})" if display_true_chisq else ""))
     if plot_caustics and (true_params is not None):
@@ -882,3 +886,69 @@ def latex_label(label):
     }
 
     return latex_label_map[label]
+
+
+def log_prob_image(prob_model, simulator, z):
+    z = list(z.T)
+    x = prob_model.bij.forward(z)
+    im_sim = simulator.simulate(x)
+    err_map = jnp.sqrt(prob_model.background_rms ** 2 + im_sim / prob_model.exp_time)
+    # log_like = tfd.Independent(
+    #     tfd.Normal(im_sim, err_map), reinterpreted_batch_ndims=2
+    # ).log_prob(prob_model.observed_image)
+    return tfd.Normal(im_sim, err_map).log_prob(prob_model.observed_image)
+    # log_prior = prob_model.prior.log_prob(x) + prob_model.bij.forward_log_det_jacobian(z)
+    # return log_like + log_prior, jnp.mean(
+    #     ((im_sim - prob_model.observed_image) / err_map) ** 2, axis=(-2, -1)
+    # )
+
+def bridge_sampler(rng_key, samples, log_posterior_fn, n_iter=50):
+    """
+    Estimates the log-marginal likelihood using the Meng-Wong bridge sampler.
+    
+    Args:
+        rng_key: JAX random key.
+        samples: MCMC samples of shape (n_samples, n_dim).
+        log_posterior_fn: Function mapping (theta) -> log_posterior(theta).
+        n_iter: Number of iterations for the Meng-Wong algorithm.
+    """
+    n_samples, n_dim = samples.shape
+    
+    # 1. Fit a Gaussian proposal to the MCMC samples
+    mu = jnp.mean(samples, axis=0)
+    cov = jnp.cov(samples, rowvar=False)
+    proposal = tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov)
+    
+    # 2. Draw 'fake' samples from the proposal
+    prop_key, _ = jax.random.split(rng_key)
+    gen_samples = proposal.sample(n_samples, seed=prop_key)
+    
+    l1 = log_posterior_fn(samples)
+    l2 = log_posterior_fn(gen_samples)
+    
+
+    q1 = proposal.log_prob(samples)
+    q2 = proposal.log_prob(gen_samples)
+    
+    # 4. Iterative Meng-Wong Algorithm
+    log_r_guess = jnp.log(1/n_samples) + jax.nn.logsumexp(l2-q2, axis=0)
+    log_r = log_r_guess
+
+    
+    h = []
+    s1 = 0.5 # Proportion of samples from posterior (assuming n1 == n2)
+    s2 = 0.5 # Proportion of samples from proposal
+    
+    for _ in range(n_iter):
+        l_num = l2 - jnp.logaddexp(jnp.log(s1) + l2, jnp.log(s2) + log_r + q2)
+        
+        l_den = q1 - jnp.logaddexp(jnp.log(s1) + l1, jnp.log(s2) + log_r + q1)
+        
+        # Update log_r
+        log_r_new = jax.nn.logsumexp(l_num, axis=0) - jax.nn.logsumexp(l_den, axis=0)
+        
+        # For stability, we can track the delta or use a small dampening factor if needed
+        log_r = log_r_new
+        h.append(log_r)
+
+    return log_r, h

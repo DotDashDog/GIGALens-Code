@@ -24,7 +24,7 @@ import time
 # from mclmc_parallel import init_multi, mclmc_multi
 
 def MCLMC(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000, mass_matrix_adapt=True, 
-          continuous_adaptation=True, init_L=None, init_step_size=None, 
+          continuous_adaptation=True, desired_energy_variance=5e-4, init_L=None, init_step_size=None, 
           progress_bar=False, print_adapt_params=False,seed=0):
     
     """GIGALens-like wrapper for MCLMC sampling (modifed from blackjax). 
@@ -48,7 +48,7 @@ def MCLMC(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000, mass
 
 
     n_chains = n_hmc
-    desired_energy_variance= 5e-4 #* Tuning parameter. Keep as is for now
+    # desired_energy_variance= 5e-4 #* Tuning parameter. Keep as is for now
     transform = lambda state, info: state.position #* For final chain outputs, just output locations
 
     integrator = isokinetic_mclachlan_smart
@@ -519,7 +519,7 @@ def full_mclmc_with_adapt(
 
         params = jax.lax.cond(
             i == step_size_sync_step,
-            lambda : params._replace(step_size=jax.lax.pmax(params.step_size, axis_name='chain')),
+            lambda : params._replace(step_size=jax.lax.pmean(params.step_size, axis_name='chain')),
             lambda : params
         )
 
@@ -570,9 +570,7 @@ def full_mclmc_with_adapt(
         jnp.zeros(total_steps-tuning_steps, dtype=jnp.int32),
     ))
 
-    num_devices = len(jax.devices())
-    num_chains_per_device = num_chains//num_devices
-    keys = jax.random.split(rng_key, (num_devices, num_chains_per_device, total_steps))
+    keys = jax.random.split(rng_key, (num_chains, total_steps))
 
     welford_start = welford_init(dim)
 
@@ -594,12 +592,12 @@ def full_mclmc_with_adapt(
     # in_specs = ((None, P('device'), None), P('device'), None)
 
 
-    run_steps_multi = jax.pmap(run_steps_vmap, in_axes=((None, 0, None), 0, None), out_axes=0, axis_name='device')
+    # run_steps_multi = jax.pmap(run_steps_vmap, in_axes=((None, 0, None), 0, None), out_axes=0, axis_name='device')
 
-    reshape_pmap = lambda x : x.reshape(num_devices, num_chains_per_device, *x.shape[1:])
-    state_init = jax.tree.map(reshape_pmap, state_init)
+    # reshape_pmap = lambda x : x.reshape(num_devices, num_chains_per_device, *x.shape[1:])
+    # state_init = jax.tree.map(reshape_pmap, state_init)
 
-    carry, samples = run_steps_multi(
+    carry, samples = run_steps_vmap(
         (mode, keys, jnp.arange(total_steps, dtype=jnp.int32)), state_init, params_init
     )
     state, params, _, welford_state, samples_buffered = carry
@@ -862,20 +860,20 @@ def make_L_step_size_adaptation(
             welford_state, update_state
         )
 
-        #! Right now using a dumb criterion for mass matrix adaptation (start after 100+ adapt samples)
-        params_new = jax.lax.cond(jnp.logical_and(mask, welford_state.sample_size > num_chains*50), #! CHANGE IF YOU WANT THIS TO WORK FOR OTHER CASES
-            lambda welford_state_in : params._replace(inverse_mass_matrix=welford_cov(welford_state_in)[0]),
-            lambda welford_state_in : params,
-            welford_state
-        )
+        # #! Right now using a dumb criterion for mass matrix adaptation (start after 100+ adapt samples)
+        # params_new = jax.lax.cond(jnp.logical_and(mask, welford_state.sample_size > num_chains*50), #! CHANGE IF YOU WANT THIS TO WORK FOR OTHER CASES
+        #     lambda welford_state_in : params._replace(inverse_mass_matrix=welford_cov(welford_state_in)[0]),
+        #     lambda welford_state_in : params,
+        #     welford_state
+        # )
 
 
-        # smp_cov, smp_n, smp_mean = welford_cov(welford_state)
+        smp_cov, smp_n, smp_mean = welford_cov(welford_state)
 
         
-        # svi_n = 50
-        # joined_covariance = ((smp_n * smp_cov) + (svi_n* svi_inverse_mass_matrix))/(svi_n+smp_n)
-        # params_new = params._replace(inverse_mass_matrix=joined_covariance)
+        svi_n = 100
+        joined_covariance = ((smp_n * smp_cov) + (svi_n* svi_inverse_mass_matrix))/(svi_n+smp_n)
+        params_new = params._replace(inverse_mass_matrix=joined_covariance)
         
         return (state, params_new, adaptive_state, welford_state), state.position
         
