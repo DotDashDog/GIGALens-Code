@@ -414,14 +414,14 @@ def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys
 
 
 def get_noise_image(image, background_rms, exp_time):
-    return np.sqrt(np.abs(image / exp_time) + background_rms**2)
+    return np.sqrt(image / exp_time + background_rms**2)
 
 def get_chisq(true_img, predicted_img, background_rms=0.2, exp_time=100):
     emap = get_noise_image(predicted_img, background_rms, exp_time)
 
     return np.sum(np.square((true_img-predicted_img)/emap))
 
-def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True, remove_axis=True):
+def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True, remove_axis=True, log_vmin=1e-2):
     """
     Plot an image using my chosen standards for coloring, 
     which changes depending on whether the image is a residual or not.
@@ -430,7 +430,7 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         #* Meaning actual lensing image
         # cnorm = matplotlib.colors.Normalize(vmin=0)
         # Use LogNorm for logarithmic scaling with inferno colormap
-        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), 1e-2), vmax=img.max(), clip=True)
+        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), log_vmin), vmax=img.max(), clip=True)
         cmap = 'inferno'
     else:
         #* Meaning residual image
@@ -510,7 +510,7 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
                title=f"True Image" + (f"(Red Chisq:{true_chisq/dof:.3f})" if display_true_chisq else ""))
     if plot_caustics and (true_params is not None):
         add_caustics(axs[0], true_params, model_seq)
-    plot_image(fig, axs[1], predicted_img, extent=extent, title=f"{prefix} Model Fit (Red Chisq:{chisq/dof:.3f})")
+    plot_image(fig, axs[1], predicted_img, extent=extent, title=f"{prefix} Model Fit (Red Chisq:{chisq/dof:.5f})")
     if plot_caustics and (predicted_params is not None):
         add_caustics(axs[1], predicted_params, model_seq)
     plot_image(fig, axs[2], residual, extent=extent, title=f"{prefix} Normalized Residual", residual=True)
@@ -901,6 +901,17 @@ def log_prob_image(prob_model, simulator, z):
     # return log_like + log_prior, jnp.mean(
     #     ((im_sim - prob_model.observed_image) / err_map) ** 2, axis=(-2, -1)
     # )
+
+def log_prob_image_patched(prob_model, simulator, z, kernel_size=3):
+    z = list(z.T)
+    x = prob_model.bij.forward(z)
+    im_sim = simulator.simulate(x)
+    err_map = jnp.sqrt(prob_model.background_rms ** 2 + im_sim / prob_model.exp_time)
+    log_prob_img = tfd.Normal(im_sim, err_map).log_prob(prob_model.observed_image)
+
+    window = jnp.ones((kernel_size, kernel_size))
+
+    return jax.scipy.signal.convolve(log_prob_img, window, mode='full')
 
 def bridge_sampler(rng_key, samples, log_posterior_fn, n_iter=50):
     """

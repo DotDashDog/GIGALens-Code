@@ -1,0 +1,38 @@
+{
+  "sim": "vela10",
+  "camera": "cam00",
+  "scale_factor": "a0.500",
+  "filter": "f814w",
+  "instrument": "acs",
+  "fits_path": "vela_downloads/cam00/hst/acs/f814w/hlsp_vela_hst_acs_vela10-cam00-a0.500_f814w_v3_sim.fits",
+  "source_image_shape": [
+    800,
+    800
+  ],
+  "source_image_unit": "nanoJanskies",
+  "source_pixel_scale_arcsec": 0.007718915158538387,
+  "source_pixel_scale_kpc": 0.0625,
+  "source_fov_arcsec": 6.17513212683071,
+  "instrument_pixel_scale_arcsec": 0.03,
+  "psf_shape": [
+    25,
+    25
+  ],
+  "psf_fwhm_arcsec": 0.13,
+  "psf_pixel_scale_arcsec": 0.03,
+  "psf_method": "Gaussian (FWHM=0.130\", \u03c3=0.0552\")",
+  "redshift": 1.0,
+  "luminosity_distance_mpc": 6679.982601,
+  "angular_diameter_distance_mpc": 1669.99565,
+  "distance_modulus_mag": 44.123877,
+  "effective_wavelength_um": 0.828942,
+  "photfnu_Jy": 1.52e-07,
+  "ab_zeropoint": 31.505436,
+  "AB_mag_apparent": 22.041954,
+  "AB_mag_absolute": -22.081922,
+  "cosmology": {
+    "H0": 70.4,
+    "Omega_m": 0.2726,
+    "Omega_Lambda": 0.7274
+  }
+}

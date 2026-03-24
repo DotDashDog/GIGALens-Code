@@ -1,8 +1,15 @@
 
+import functools
+
 import blackjax.progress_bar
 import jax.numpy as jnp
 import jax
 from jax.sharding import NamedSharding, PartitionSpec as P
+
+try:
+    _shard_map = jax.shard_map  # type: ignore[attr-defined]
+except AttributeError:
+    from jax.experimental.shard_map import shard_map as _shard_map
 import blackjax
 from blackjax.mcmc.integrators import GeneralIntegrator, IntegratorState, ArrayTree, Callable, euclidean_position_update_fn
 from blackjax.mcmc.integrators import generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
@@ -13,7 +20,9 @@ from typing import Callable, NamedTuple, Optional
 from blackjax.base import SamplingAlgorithm
 from blackjax.mcmc.integrators import IntegratorState, with_isokinetic_maruyama
 from blackjax.types import ArrayLike, PRNGKey
+from blackjax.mcmc.mclmc import MCLMCInfo
 from blackjax.util import generate_unit_vector, pytree_size
+from collections import namedtuple
 
 import gigalens.jax.simulator as sim
 
@@ -130,6 +139,110 @@ def MCLMC(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000, mass
     return multi_chain_samples
 
 
+def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
+    """shard_map-compatible version of blackjax.mcmc.mclmc.build_kernel.
+    Replaces jax.lax.cond with jnp.where to avoid varying-annotation mismatch.
+    """
+    step = with_isokinetic_maruyama(
+        integrator(logdensity_fn=logdensity_fn, inverse_mass_matrix=inverse_mass_matrix)
+    )
+
+    def kernel(rng_key, state, L, step_size):
+        (position, momentum, logdensity, logdensitygrad), kinetic_change = step(
+            state, step_size, L, rng_key
+        )
+        energy_error = kinetic_change - logdensity + state.logdensity
+
+        reject = jnp.isinf(energy_error) | jnp.isnan(energy_error)
+        select = lambda a, b: jax.tree.map(lambda x, y: jnp.where(reject, x, y), a, b)
+
+        new_state = IntegratorState(
+            *select(
+                (state.position, state.momentum, state.logdensity, state.logdensity_grad),
+                (position, momentum, logdensity, logdensitygrad),
+            )
+        )
+        new_info = MCLMCInfo(
+            logdensity=jnp.where(reject, state.logdensity, logdensity),
+            energy_change=jnp.where(reject, jnp.zeros_like(energy_error), energy_error),
+            kinetic_change=jnp.where(reject, jnp.zeros_like(kinetic_change), kinetic_change),
+        )
+        return new_state, new_info
+
+    return kernel
+
+
+def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
+          desired_energy_variance=5e-4, init_L=None, init_step_size=None, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
+          progress_bar=False, seed=0, debug_output=False, step_size_adapt_use_psmile=False,
+          use_shard_map=False,# mass_matrix_num_effective_samples=1000,
+          windowed_mass_matrix=False):
+
+    lens_sim = sim.LensSimulator(
+        model_seq.phys_model,
+        model_seq.sim_config,
+        bs=1,
+    )
+    
+    def log_prob(z):
+        return model_seq.prob_model.log_prob(lens_sim, z)[0]
+    
+    integrator = isokinetic_mclachlan_smart
+    
+    build_kernel_fn = _build_kernel_shardmap if use_shard_map else blackjax.mcmc.mclmc.build_kernel
+    kernel = lambda inverse_mass_matrix : build_kernel_fn(
+        logdensity_fn=log_prob,
+        integrator=integrator,
+        inverse_mass_matrix=inverse_mass_matrix,
+    )
+    
+    
+    rng_key = jax.random.key(seed)
+    init_key, tune_key, run_key = jax.random.split(rng_key, 3)
+    
+    n_chains = n_hmc
+    state_multi = init_multi(qz.sample((n_chains,), seed=init_key), init_key, log_prob)
+    dim=state_multi.position.shape[-1]
+    
+    init_L = jnp.sqrt(dim) if init_L is None else init_L
+    init_step_size = (jnp.sqrt(dim) * 0.25) if init_step_size is None else init_step_size
+    starting_adapt_state = blackjax.adaptation.mclmc_adaptation.MCLMCAdaptationState(
+        L=init_L, step_size=init_step_size, inverse_mass_matrix=qz.covariance()
+    )
+    
+    
+    
+    adapt_fn = full_mclmc_with_adapt_sharded if use_shard_map else full_mclmc_with_adapt
+
+    starttime = time.perf_counter()
+    debug_hist, params = adapt_fn(
+        kernel=kernel,
+        num_burnin_steps=num_burnin_steps,
+        num_results=num_results,
+        state_init=state_multi,
+        params_init=starting_adapt_state,
+        svi_mean=qz.mean(),
+        rng_key=tune_key,
+        frac_tune1=frac_tune1,
+        frac_tune2=frac_tune2,
+        frac_tune3=frac_tune3,
+        desired_energy_var=desired_energy_variance,
+        num_chains=n_chains,
+        num_effective_samples=100,
+        svi_mass_matrix_weight=10.0 * n_chains,
+        # mass_matrix_num_effective_samples=mass_matrix_num_effective_samples,
+        step_size_adapt_use_psmile=step_size_adapt_use_psmile,
+        windowed_mass_matrix=windowed_mass_matrix,
+    )
+    
+    total_time = time.perf_counter()-starttime
+    print(f"Sampling took {total_time} s")
+    if debug_output:
+        return debug_hist
+    else:
+        all_samples=debug_hist.position
+        result_samples = all_samples[:, -num_results:, :]
+        return result_samples
 
 
 #* ----- MODIFICATIONS TO MCLMC BASE FUNCTIONS SUPPORTING MULTIPLE PARALLEL CHAINS
@@ -391,6 +504,88 @@ isokinetic_omelyan_smart = generate_isokinetic_integrator_smart(omelyan_coeffici
 from blackjax.adaptation.mclmc_adaptation import pytree_size, MCLMCAdaptationState, handle_nans, incremental_value_update
 from blackjax.mcmc.integrators import generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
 from blackjax.diagnostics import effective_sample_size
+from scipy.fftpack import next_fast_len
+
+
+def _ess_shardmap(input_array, chain_axis=0, sample_axis=1):
+    """shard_map-compatible effective_sample_size.
+    Replaces jax.lax.scan with associative_scan and jax.lax.cond with jnp.where.
+    """
+    input_shape = input_array.shape
+    sample_axis = sample_axis if sample_axis >= 0 else len(input_shape) + sample_axis
+    num_chains = input_shape[chain_axis]
+    num_samples = input_shape[sample_axis]
+
+    mean_across_chain = input_array.mean(axis=sample_axis, keepdims=True)
+    centered_array = input_array - mean_across_chain
+    m = next_fast_len(2 * num_samples)
+    ifft_ary = jnp.fft.rfft(centered_array, n=m, axis=sample_axis)
+    ifft_ary *= jnp.conjugate(ifft_ary)
+    autocov_value = jnp.fft.irfft(ifft_ary, n=m, axis=sample_axis)
+    autocov_value = (
+        jnp.take(autocov_value, jnp.arange(num_samples), axis=sample_axis) / num_samples
+    )
+    mean_autocov_var = autocov_value.mean(chain_axis, keepdims=True)
+    mean_var0 = (
+        jnp.take(mean_autocov_var, jnp.array([0]), axis=sample_axis)
+        * num_samples / (num_samples - 1.0)
+    )
+    weighted_var = mean_var0 * (num_samples - 1.0) / num_samples
+    weighted_var = jnp.where(
+        num_chains > 1,
+        weighted_var + mean_across_chain.var(axis=chain_axis, ddof=1, keepdims=True),
+        weighted_var,
+    )
+
+    num_samples_even = num_samples - num_samples % 2
+    mean_autocov_var_tp1 = jnp.take(
+        mean_autocov_var, jnp.arange(1, num_samples_even), axis=sample_axis
+    )
+    rho_hat = jnp.concatenate(
+        [
+            jnp.ones_like(mean_var0),
+            1.0 - (mean_var0 - mean_autocov_var_tp1) / weighted_var,
+        ],
+        axis=sample_axis,
+    )
+
+    rho_hat = jnp.moveaxis(rho_hat, sample_axis, 0)
+    rho_hat_even = rho_hat[0::2]
+    rho_hat_odd = rho_hat[1::2]
+
+    mask0 = (rho_hat_even + rho_hat_odd) > 0.0
+
+    # Initial positive sequence via prefix-AND (replaces scan)
+    cumulative_mask = jax.lax.associative_scan(jnp.logical_and, mask0, axis=0)
+    max_t = jnp.sum(cumulative_mask, axis=0).astype(int) - 1
+    max_t = jnp.maximum(max_t, 0)
+
+    indices = jnp.indices(max_t.shape)
+    indices = tuple([max_t + 1] + [indices[i] for i in range(max_t.ndim)])
+
+    rho_hat_odd = jnp.where(cumulative_mask, rho_hat_odd, jnp.zeros_like(rho_hat_odd))
+    mask_even = cumulative_mask.at[indices].set(rho_hat_even[indices] > 0)
+    rho_hat_even = jnp.where(mask_even, rho_hat_even, jnp.zeros_like(rho_hat_even))
+
+    # Monotone sequence via prefix-min (replaces scan)
+    rho_hat_sum = rho_hat_even + rho_hat_odd
+    rho_hat_sum_monotone = jax.lax.associative_scan(jnp.minimum, rho_hat_sum, axis=0)
+    update_mask = rho_hat_sum > rho_hat_sum_monotone
+
+    rho_hat_even_final = jnp.where(update_mask, rho_hat_sum_monotone / 2.0, rho_hat_even)
+    rho_hat_odd_final = jnp.where(update_mask, rho_hat_sum_monotone / 2.0, rho_hat_odd)
+
+    ess_raw = num_chains * num_samples
+    tau_hat = (
+        -1.0
+        + 2.0 * jnp.sum(rho_hat_even_final + rho_hat_odd_final, axis=0)
+        - rho_hat_even_final[indices]
+    )
+    tau_hat = jnp.maximum(tau_hat, 1 / jnp.log10(ess_raw))
+    ess = ess_raw / tau_hat
+
+    return ess.squeeze()
+
 
 def full_mclmc_with_adapt(
     kernel,
@@ -398,6 +593,7 @@ def full_mclmc_with_adapt(
     num_results,
     state_init,
     params_init,
+    svi_mean,
     rng_key,
     frac_tune1=0.1,
     frac_tune2=0.1,
@@ -408,6 +604,9 @@ def full_mclmc_with_adapt(
     Lfactor=0.4,
     num_chains=8,
     svi_mass_matrix_weight=20.,
+    step_size_adapt_use_psmile=False,
+    mass_matrix_num_effective_samples=1000,
+    windowed_mass_matrix=False,
 ):
     dim = state_init.position.shape[-1]
     decay_rate = (num_effective_samples - 1.0) / (num_effective_samples + 1.0)
@@ -461,7 +660,67 @@ def full_mclmc_with_adapt(
 
         adaptive_state = (time, x_average, step_size_max)
 
-        return state, params_new, adaptive_state, success
+        return state, params_new, adaptive_state, success, xi
+
+    def step_size_adapt_psmile_continuous(previous_state, next_state, info, params, adaptive_state, nan_key):
+        """
+        Does one step with the dynamics and updates the prediction for the optimal stepsize.
+        Designed for the unadjusted MCHMC using the pSMILE energy-variance tuner.
+        """
+        # Unpack the new pSMILE adaptive state
+        mu, sigma2, count, step_size_max = adaptive_state
+    
+        # Step updating and NaN handling
+        success, state, step_size_max, energy_change = handle_nans(
+            previous_state,
+            next_state,
+            params.step_size,
+            step_size_max,
+            info.energy_change,
+            nan_key,
+        )
+
+        xi = (
+            jnp.square(energy_change) / (dim * desired_energy_var) #* Term in the sum
+        ) + 1e-8  # 1e-8 is added to avoid divergences in log xi
+    
+        # --- pSMILE Adaptation Logic ---
+        # Default parameters from Section 4.2 of the SMILE paper
+        beta = 1-decay_rate#0.01          # EMA smoothing factor
+        delta = 0.1 #0.02         # Step size multiplier
+        # alpha_param = 0.4 #0.1    # Adaptation probability parameter
+        eps = 1e-8           # Small constant to prevent division by zero
+        
+        abs_dE = jnp.abs(energy_change)
+        count = count + 1
+    
+        # 1. Exponential Moving Averages (Eq. 3)
+        mu_next = (1.0 - beta) * mu + beta * abs_dE
+        sigma2_next = (1.0 - beta) * sigma2 + beta * jnp.square(abs_dE - mu_next)
+    
+        # Bias correction for the variance estimate in early tuning stages
+        bias_correction = 1.0 - jnp.power(1.0 - beta, count)
+        mu_hat = mu_next / bias_correction
+        sigma2_hat = sigma2_next / bias_correction
+    
+        # 2. Gamma Distribution Moment Matching (Eq. 4)
+        shape = jnp.square(mu_hat) / (sigma2_hat + eps)
+        scale = sigma2_hat / (mu_hat + eps)
+    
+        cdf_value = jax.scipy.stats.gamma.cdf(abs_dE, shape, loc=0.0, scale=scale)
+        #* If cdf_value>0.5, lower the step size, if less, raise it
+        adjustment = (0.5-cdf_value)*delta
+        step_size = params.step_size * (1+adjustment)
+        
+        # Prevent step size from exceeding the historical divergence threshold
+        step_size = jnp.minimum(step_size, step_size_max)
+    
+        params_new = params._replace(step_size=step_size)
+        
+        # Repack the updated adaptive state
+        adaptive_state_new = (mu_next, sigma2_next, count, step_size_max)
+    
+        return state, params_new, adaptive_state_new, success, xi
     
     def mass_matrix_adapt(state, params, welford_state):
         #* Do mass matrix adaptation if in stage 2
@@ -481,10 +740,13 @@ def full_mclmc_with_adapt(
         #     lambda : params,
         # )
         sample_cov = welford_cov(welford_state)[0]
-        weighted_mean_mat = (sample_cov * welford_state.sample_size + svi_inverse_mass_matrix * svi_mass_matrix_weight)/(welford_state.sample_size+svi_mass_matrix_weight)
-        params_new = params._replace(inverse_mass_matrix=weighted_mean_mat)
+        # weighted_mean_mat = (sample_cov * welford_state.sample_size + svi_inverse_mass_matrix * svi_mass_matrix_weight)/(welford_state.sample_size+svi_mass_matrix_weight)
+        params_new = params._replace(inverse_mass_matrix=sample_cov)
         return params_new, welford_state
 
+    mass_matrix_adapt_func = mass_matrix_adapt
+    step_size_adapt_func = step_size_adapt_psmile_continuous if step_size_adapt_use_psmile else step_size_adapt
+    Hist = namedtuple("hist", ["position", "step_size", "L", "inverse_mass_matrix", "nonan", "xi"])
     def step(iteration_state, mode_and_key):
         """does one step of the dynamics and updates the estimate of the optimal step size, continuously updating the mass matrix instead of just tracking"""
         mode, rng_key, i = mode_and_key
@@ -504,16 +766,16 @@ def full_mclmc_with_adapt(
         sample_buffer = sample_buffer.at[i].set(state.position)
 
         #* Do step size adaptation if in stage 1 or 2
-        state, params, adaptive_state, success = jax.lax.cond(
+        state, params, adaptive_state, success, xi = jax.lax.cond(
             do_step_size_adapt,
-            (lambda : step_size_adapt(previous_state, state, info, params, adaptive_state, nan_key)),
-            (lambda : (state, params, adaptive_state, True)),
+            (lambda : step_size_adapt_func(previous_state, state, info, params, adaptive_state, nan_key)),
+            (lambda : (state, params, adaptive_state, True, -1.0)),
         )
 
         #* Do mass matrix adaptation if in stage 2
         params, welford_state = jax.lax.cond(
-            do_mass_matrix_adapt, 
-            (lambda : mass_matrix_adapt(state, params, welford_state)),
+            jnp.logical_and(do_mass_matrix_adapt, success), #* Don't double-count if the step failed due to a NaN
+            (lambda : mass_matrix_adapt_func(state, params, welford_state)),
             (lambda : (params, welford_state)),
         )
 
@@ -535,8 +797,10 @@ def full_mclmc_with_adapt(
         
         
         #! Still need to add ESS-based L adaptation and sync step sizes at end of step size adaptation
+
         
-        return (state, params, adaptive_state, welford_state, sample_buffer), state.position
+        h = Hist(position = state.position, step_size=params.step_size, L=params.L, inverse_mass_matrix=params.inverse_mass_matrix, nonan=success, xi=xi)
+        return (state, params, adaptive_state, welford_state, sample_buffer), h
     
 
     # step_vmapped = jax.vmap(step, in_axes=(0, (None, 0)), axis_name='chain')
@@ -572,7 +836,13 @@ def full_mclmc_with_adapt(
 
     keys = jax.random.split(rng_key, (num_chains, total_steps))
 
-    welford_start = welford_init(dim)
+    welford_start = WelfordAlgorithmState(svi_mean, svi_inverse_mass_matrix*svi_mass_matrix_weight, svi_mass_matrix_weight)# welford_init(dim)
+
+    if step_size_adapt_use_psmile:
+        start_adapt_state = (jnp.array(0.0), jnp.array(0.0), jnp.array(0, dtype=jnp.int32), jnp.inf)
+    else:
+        start_adapt_state = (0.0, 0.0, jnp.inf)
+        
 
     sample_buffer_init = jnp.zeros((total_steps, dim))
     run_steps = lambda xs, state_init, params_init : jax.lax.scan(
@@ -580,7 +850,7 @@ def full_mclmc_with_adapt(
         init=(
             state_init,
             params_init,
-            (0.0, 0.0, jnp.inf),
+            start_adapt_state,
             welford_start,
             sample_buffer_init,
         ),
@@ -601,9 +871,294 @@ def full_mclmc_with_adapt(
         (mode, keys, jnp.arange(total_steps, dtype=jnp.int32)), state_init, params_init
     )
     state, params, _, welford_state, samples_buffered = carry
-    result_samples = samples[:, -num_results:, :]
+    # result_samples = samples[:, -num_results:, :]
+    result_samples = samples
     return result_samples, params
+
+
+def full_mclmc_with_adapt_sharded(
+    kernel,
+    num_burnin_steps,
+    num_results,
+    state_init,
+    params_init,
+    svi_mean,
+    rng_key,
+    frac_tune1=0.1,
+    frac_tune2=0.1,
+    frac_tune3=0.1,
+    desired_energy_var=5e-4,
+    trust_in_estimate=1.5,
+    num_effective_samples=150,
+    Lfactor=0.4,
+    num_chains=8,
+    svi_mass_matrix_weight=20.,
+    # mass_matrix_num_effective_samples=1000,
+    step_size_adapt_use_psmile=False,
+    windowed_mass_matrix=False,
+):
+    """Sharded version of full_mclmc_with_adapt. Distributes chains across
+    devices via shard_map with explicit batching (no vmap axis_name).
+    Cross-chain reductions use jnp ops locally + psum/pmin('device').
+    """
+    num_devices = len(jax.devices())
+    num_chains = (num_chains // num_devices) * num_devices
+    if num_chains == 0:
+        raise ValueError(f"num_chains must be >= num_devices ({num_devices})")
+    chains_per_device = num_chains // num_devices
+
+    dim = state_init.position.shape[-1]
+    decay_rate = (num_effective_samples - 1.0) / (num_effective_samples + 1.0)
+    # decay_rate_mass_matrix = (mass_matrix_num_effective_samples - 1.0) / (mass_matrix_num_effective_samples + 1.0)
+
+    welford_init_fn, _, welford_cov = welford_algorithm(is_diagonal_matrix=False)
+
+    svi_inverse_mass_matrix = params_init.inverse_mass_matrix
+
+    total_steps = num_burnin_steps + num_results
+    num_steps1, num_steps2, num_steps3 = round(num_burnin_steps * frac_tune1), round(num_burnin_steps * frac_tune2), round(num_burnin_steps * frac_tune3)
+    tuning_steps = num_steps1 + num_steps2 + num_steps3
+
+    step_size_sync_step = num_steps1 + num_steps2
+    L_adaptation_step = tuning_steps
+
+    # --- Per-chain step size adaptation (unchanged, called via vmap without axis_name) ---
+
+    def step_size_adapt(previous_state, next_state, info, params, adaptive_state, nan_key):
+        time, x_average, step_size_max = adaptive_state
+        success, state, step_size_max, energy_change = handle_nans(
+            previous_state, next_state, params.step_size, step_size_max, info.energy_change, nan_key,
+        )
+        xi = jnp.square(energy_change) / (dim * desired_energy_var) + 1e-8
+        weight = jnp.exp(-0.5 * jnp.square(jnp.log(xi) / (6.0 * trust_in_estimate)))
+        weighted_x = weight * (xi / jnp.power(params.step_size, 6.0))
+        x_average = decay_rate * x_average + weighted_x
+        time = decay_rate * time + weight
+        step_size = jnp.power(x_average / time, -1.0 / 6.0)
+        step_size = jnp.minimum(step_size, step_size_max)
+        adaptive_state = (time, x_average, step_size_max)
+        return state, params._replace(step_size=step_size), adaptive_state, success, xi
+
+    def step_size_adapt_psmile_continuous(previous_state, next_state, info, params, adaptive_state, nan_key):
+        mu, sigma2, count, step_size_max = adaptive_state
+        success, state, step_size_max, energy_change = handle_nans(
+            previous_state, next_state, params.step_size, step_size_max, info.energy_change, nan_key,
+        )
+        xi = jnp.square(energy_change) / (dim * desired_energy_var) + 1e-8
+        beta = 1 - decay_rate
+        delta = 0.1
+        eps = 1e-8
+        abs_dE = jnp.abs(energy_change)
+        count = count + 1
+        mu_next = (1.0 - beta) * mu + beta * abs_dE
+        sigma2_next = (1.0 - beta) * sigma2 + beta * jnp.square(abs_dE - mu_next)
+        bias_correction = 1.0 - jnp.power(1.0 - beta, count)
+        mu_hat = mu_next / bias_correction
+        sigma2_hat = sigma2_next / bias_correction
+        shape = jnp.square(mu_hat) / (sigma2_hat + eps)
+        scale = sigma2_hat / (mu_hat + eps)
+        # Wilson-Hilferty normal approximation to gamma CDF
+        # (avoids igamma's internal while_loop which triggers VMA mismatches in shard_map)
+        x_std = abs_dE / (scale * shape + eps)
+        z = (jnp.cbrt(x_std) - (1.0 - 1.0 / (9.0 * shape))) / jnp.sqrt(1.0 / (9.0 * shape + eps))
+        cdf_value = jax.scipy.special.ndtr(z)
+        step_size = params.step_size * (1 + (0.5 - cdf_value) * delta)
+        step_size = jnp.minimum(step_size, step_size_max)
+        adaptive_state_new = (mu_next, sigma2_next, count, step_size_max)
+        return state, params._replace(step_size=step_size), adaptive_state_new, success, xi
+
+    step_size_adapt_func = step_size_adapt_psmile_continuous if step_size_adapt_use_psmile else step_size_adapt
+
+    # --- Windowed mass matrix setup (STAN-style expanding windows) ---
+    if windowed_mass_matrix:
+        n_windows = 3
+        num_mm_steps = round(0.67 * num_steps2)
+        mm_start = num_steps1
+        ratios = [2**k for k in range(n_windows)]
+        total_ratio = sum(ratios)
+        w_sizes = [max(1, round(num_mm_steps * r / total_ratio)) for r in ratios]
+        w_sizes[-1] = num_mm_steps - sum(w_sizes[:-1])
+        _pos, window_ends = mm_start, []
+        for _ws in w_sizes:
+            _pos += _ws
+            window_ends.append(_pos - 1)
+        _mask = [False] * total_steps
+        for _we in window_ends:
+            if 0 <= _we < total_steps:
+                _mask[_we] = True
+        window_end_mask = jnp.array(_mask)
+        welford_empty = WelfordAlgorithmState(
+            jnp.zeros(dim), jnp.zeros((dim, dim)), jnp.array(0.0))
+        if step_size_adapt_use_psmile:
+            def _make_adapt_reset(cur):
+                return (jnp.zeros_like(cur[0]), jnp.zeros_like(cur[1]),
+                        jnp.zeros_like(cur[2]), cur[3])
+        else:
+            def _make_adapt_reset(cur):
+                return (jnp.zeros_like(cur[0]), jnp.zeros_like(cur[1]), cur[2])
+
+    # --- Batched scan body: explicit batch dim, collectives only use 'device' ---
+
+    Hist = namedtuple("hist", ["position", "step_size", "L", "inverse_mass_matrix", "nonan", "xi"])
+
+    def step_batched(carry, mode_and_key):
+        mode, rng_keys_batch, i = mode_and_key
+
+        states, params, step_sizes, adapt_states, welford_state, sample_bufs = carry
+
+        do_ssa = jnp.logical_or(mode == 1, mode == 2)
+        do_mm_adapt = mode == 2
+
+        key_pairs = jax.vmap(jax.random.split)(rng_keys_batch)
+        chain_keys = key_pairs[:, 0]
+        nan_keys = key_pairs[:, 1]
+
+        # Per-chain: kernel + step_size_adapt (vmap, NO axis_name)
+        kernel_fn = kernel(params.inverse_mass_matrix)
+
+        def per_chain(prev_state, rng_key, nan_key, step_size, adapt_state):
+            new_state, info = kernel_fn(
+                rng_key=rng_key, state=prev_state, L=params.L, step_size=step_size)
+            pseudo_params = params._replace(step_size=step_size)
+            a_state, a_params, a_adapt, a_success, a_xi = \
+                step_size_adapt_func(prev_state, new_state, info, pseudo_params, adapt_state, nan_key)
+            _s = lambda a, b: jax.tree.map(lambda x, y: jnp.where(do_ssa, x, y), a, b)
+            out_state = _s(a_state, new_state)
+            out_ss = jnp.where(do_ssa, a_params.step_size, step_size)
+            out_adapt = _s(a_adapt, adapt_state)
+            out_success = jnp.where(do_ssa, a_success, True)
+            out_xi = jnp.where(do_ssa, a_xi, -1.0)
+            return out_state, out_ss, out_adapt, out_success, out_xi
+
+        new_states, new_step_sizes, new_adapt_states, successes, xis = \
+            jax.vmap(per_chain)(states, chain_keys, nan_keys, step_sizes, adapt_states)
+
+        sample_bufs = sample_bufs.at[:, i].set(new_states.position)
+
+        _sel = lambda c, a, b: jax.tree.map(lambda x, y: jnp.where(c, x, y), a, b)
+
+        # Cross-chain mass matrix adaptation (jnp locally, psum across devices)
+        xs_pos = jax.vmap(lambda s: ravel_pytree(s.position)[0])(new_states)
+        n_dev = jax.lax.axis_size('device')
+        n_total = chains_per_device * n_dev
+
+        local_sum_x = jnp.sum(xs_pos, axis=0)
+        global_sum_x = jax.lax.psum(local_sum_x, axis_name='device')
+        x_mean = global_sum_x / n_total
+
+        deltas = xs_pos - x_mean[jnp.newaxis, :]
+        local_m2 = jnp.einsum('ci,cj->ij', deltas, deltas)
+        m2_step = jax.lax.psum(local_m2, axis_name='device')
+
+        update = WelfordAlgorithmState(x_mean, m2_step, n_total)
+
+        if windowed_mass_matrix:
+            new_welford = welford_combine(welford_state, update)
+            welford_state = _sel(do_mm_adapt, new_welford, welford_state)
+            at_boundary = window_end_mask[i]
+            update_mm = jnp.logical_and(do_mm_adapt, at_boundary)
+            sample_cov = welford_cov(welford_state)[0]
+            mm_params = params._replace(inverse_mass_matrix=sample_cov)
+            params = _sel(update_mm, mm_params, params)
+            welford_state = _sel(update_mm, welford_empty, welford_state)
+            new_adapt_states = _sel(update_mm, _make_adapt_reset(new_adapt_states), new_adapt_states)
+        else:
+            new_welford = welford_combine(welford_state, update)
+            # new_welford = new_welford._replace(
+            #     m2=new_welford.m2*decay_rate_mass_matrix,
+            #     sample_size=new_welford.sample_size * decay_rate_mass_matrix
+            # )
+            sample_cov = welford_cov(new_welford)[0]
+            mm_params = params._replace(inverse_mass_matrix=sample_cov)
+            params = _sel(do_mm_adapt, mm_params, params)
+            welford_state = _sel(do_mm_adapt, new_welford, welford_state)
+
+        # Step size sync
+        local_ss_sum = jnp.sum(new_step_sizes)
+        global_ss_sum = jax.lax.psum(local_ss_sum, axis_name='device')
+        synced_ss = global_ss_sum / n_total
+        new_step_sizes = jnp.where(
+            i == step_size_sync_step,
+            jnp.full_like(new_step_sizes, synced_ss),
+            new_step_sizes,
+        )
+
+        # L adaptation
+        per_chain_ess = jax.vmap(lambda buf: _ess_shardmap(
+            buf[jnp.newaxis, L_adaptation_step - num_steps3:L_adaptation_step, :],
+            chain_axis=0, sample_axis=1,
+        ))(sample_bufs)
+        local_min_ess = jnp.min(per_chain_ess)
+        global_min_ess = jax.lax.pmin(local_min_ess, axis_name='device')
+        new_L = Lfactor * num_steps3 * synced_ss / global_min_ess
+        params = _sel(i == L_adaptation_step, params._replace(L=new_L), params)
+
+        h = Hist(
+            position=new_states.position,
+            step_size=new_step_sizes,
+            L=jnp.broadcast_to(params.L, new_step_sizes.shape),
+            inverse_mass_matrix=jnp.broadcast_to(params.inverse_mass_matrix[jnp.newaxis], (chains_per_device, dim, dim)),
+            nonan=successes,
+            xi=xis,
+        )
+        return (new_states, params, new_step_sizes, new_adapt_states, welford_state, sample_bufs), h
+
+    # --- Setup inputs ---
+
+    mode = jnp.concatenate((
+        jnp.ones(num_steps1, dtype=jnp.int32),
+        2 * jnp.ones(round(0.67 * num_steps2), dtype=jnp.int32),
+        1 * jnp.ones(round(0.33 * num_steps2), dtype=jnp.int32),
+        3 * jnp.ones(num_steps3, dtype=jnp.int32),
+        jnp.zeros(total_steps - tuning_steps, dtype=jnp.int32),
+    ))
+
+    keys = jax.random.split(rng_key, (num_chains, total_steps))
+    keys = jnp.moveaxis(keys, 0, 1)  # (total_steps, num_chains, key_shape)
+
+    welford_start = WelfordAlgorithmState(svi_mean, svi_inverse_mass_matrix*svi_mass_matrix_weight, svi_mass_matrix_weight)#welford_init_fn(dim)
     
+
+    if step_size_adapt_use_psmile:
+        adapt_single = (jnp.array(0.0), jnp.array(0.0), jnp.array(0, dtype=jnp.int32), jnp.array(jnp.inf))
+    else:
+        adapt_single = (jnp.array(0.0), jnp.array(0.0), jnp.array(jnp.inf))
+
+    _tile = lambda x: jnp.broadcast_to(jnp.asarray(x)[jnp.newaxis], (num_chains,) + jnp.asarray(x).shape)
+    step_sizes_init = jnp.full((num_chains,), params_init.step_size)
+    adapt_states_init = jax.tree.map(_tile, adapt_single)
+    sample_bufs_init = jnp.zeros((num_chains, total_steps, dim))
+
+    # --- shard_map (no vmap axis_name — collectives only use 'device') ---
+
+    mesh = jax.make_mesh((num_devices,), ('device',))
+
+    carry_out_specs = (P('device'), P(), P('device'), P('device'), P(), P('device'))
+    samples_out_specs = P('device')
+
+    @jax.jit
+    @functools.partial(_shard_map, mesh=mesh,
+        in_specs=(
+            (None, P(None, 'device'), None),
+            P('device'), None, P('device'), P('device'), None, P('device'),
+        ),
+        out_specs=(carry_out_specs, samples_out_specs))
+    def run_sharded(xs, state_init, params_init, step_sizes, adapt_states, welford_start, sample_bufs):
+        carry, samples = jax.lax.scan(
+            step_batched,
+            init=(state_init, params_init, step_sizes, adapt_states, welford_start, sample_bufs),
+            xs=xs,
+        )
+        samples = jax.tree.map(lambda x: jnp.moveaxis(x, 0, 1), samples)
+        return carry, samples
+
+    carry, samples = run_sharded(
+        (mode, keys, jnp.arange(total_steps, dtype=jnp.int32)),
+        state_init, params_init, step_sizes_init, adapt_states_init, welford_start, sample_bufs_init,
+    )
+    _, params_final, _, _, _, _ = carry
+    return samples, params_final
+
 
 def mclmc_find_L_and_step_size_smart(
     mclmc_kernel,
