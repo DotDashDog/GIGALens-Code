@@ -1,10 +1,13 @@
 
 import functools
+from threading import Lock
 
 import blackjax.progress_bar
 import jax.numpy as jnp
 import jax
 from jax.sharding import NamedSharding, PartitionSpec as P
+from jax.experimental import io_callback
+from fastprogress.fastprogress import progress_bar as fastprogress_bar
 
 try:
     _shard_map = jax.shard_map  # type: ignore[attr-defined]
@@ -13,7 +16,7 @@ except AttributeError:
 import blackjax
 from blackjax.mcmc.integrators import GeneralIntegrator, IntegratorState, ArrayTree, Callable, euclidean_position_update_fn
 from blackjax.mcmc.integrators import generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
-from blackjax.mcmc.integrators import mclachlan_coefficients, yoshida_coefficients, omelyan_coefficients
+from blackjax.mcmc.integrators import mclachlan_coefficients, velocity_verlet_coefficients, yoshida_coefficients, omelyan_coefficients
 from blackjax.adaptation.mass_matrix import welford_algorithm, WelfordAlgorithmState
 
 from typing import Callable, NamedTuple, Optional
@@ -50,7 +53,8 @@ def MCLMC(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000, mass
     )
 
     def log_prob(z):
-        return model_seq.prob_model.log_prob(lens_sim, z)[0]
+        with jax.named_scope("mclmc_log_prob"):
+            return model_seq.prob_model.log_prob(lens_sim, z)[0]
 
     rng_key = jax.random.key(seed)
     init_key, tune_key, run_key = jax.random.split(rng_key, 3)
@@ -172,35 +176,93 @@ def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
     return kernel
 
 
+def _gen_scan_fn_one_bar(num_samples, progress_bar, print_rate=None, axis_name=None):
+    if not progress_bar:
+        return jax.lax.scan
+
+    if print_rate is None:
+        print_rate = int(num_samples / 20) if num_samples > 20 else 1
+
+    bar_state = {"bar": None}
+    lock = Lock()
+
+    def _update_bar(iter_num):
+        iter_num = int(iter_num)
+        with lock:
+            if bar_state["bar"] is None:
+                bar_state["bar"] = fastprogress_bar(range(num_samples))
+                bar_state["bar"].update(0)
+            bar_state["bar"].update_bar(iter_num + 1)
+        return jnp.int32(0)
+
+    def _close_bar(_):
+        with lock:
+            if bar_state["bar"] is not None:
+                bar_state["bar"].on_iter_end()
+
+    def scan_wrap(f, init, *args, **kwargs):
+        def wrapped(carry, x):
+            if type(x) is tuple:
+                iter_num, *_ = x
+            else:
+                iter_num = x
+
+            should_render = True if axis_name is None else (jax.lax.axis_index(axis_name) == 0)
+            should_update = should_render & (
+                (iter_num % print_rate == 0) | (iter_num == (num_samples - 1))
+            )
+
+            _ = jax.lax.cond(
+                should_update,
+                lambda _: io_callback(_update_bar, jnp.int32(0), iter_num),
+                lambda _: jnp.int32(0),
+                operand=None,
+            )
+
+            carry, y = f(carry, x)
+
+            _ = jax.lax.cond(
+                should_render & (iter_num == num_samples - 1),
+                lambda _: io_callback(_close_bar, None, iter_num),
+                lambda _: None,
+                operand=None,
+            )
+
+            return carry, y
+
+        return jax.lax.scan(wrapped, init, *args, **kwargs)
+
+    return scan_wrap
+
+
 def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
           desired_energy_variance=5e-4, init_L=None, init_step_size=None, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
           progress_bar=False, seed=0, debug_output=False, step_size_adapt_use_psmile=False,
           use_shard_map=False,# mass_matrix_num_effective_samples=1000,
           windowed_mass_matrix=False):
-
     lens_sim = sim.LensSimulator(
         model_seq.phys_model,
         model_seq.sim_config,
         bs=1,
     )
-    
+
     def log_prob(z):
         return model_seq.prob_model.log_prob(lens_sim, z)[0]
-    
+
+    n_chains = n_hmc
     integrator = isokinetic_mclachlan_smart
-    
+
     build_kernel_fn = _build_kernel_shardmap if use_shard_map else blackjax.mcmc.mclmc.build_kernel
     kernel = lambda inverse_mass_matrix : build_kernel_fn(
         logdensity_fn=log_prob,
         integrator=integrator,
         inverse_mass_matrix=inverse_mass_matrix,
     )
-    
+
     
     rng_key = jax.random.key(seed)
     init_key, tune_key, run_key = jax.random.split(rng_key, 3)
     
-    n_chains = n_hmc
     state_multi = init_multi(qz.sample((n_chains,), seed=init_key), init_key, log_prob)
     dim=state_multi.position.shape[-1]
     
@@ -233,6 +295,7 @@ def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
         # mass_matrix_num_effective_samples=mass_matrix_num_effective_samples,
         step_size_adapt_use_psmile=step_size_adapt_use_psmile,
         windowed_mass_matrix=windowed_mass_matrix,
+        progress_bar=progress_bar,
     )
     
     total_time = time.perf_counter()-starttime
@@ -495,6 +558,7 @@ def esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix):
 
 #* Define integrators that work with non-diagonal mass matrices
 isokinetic_mclachlan_smart = generate_isokinetic_integrator_smart(mclachlan_coefficients)
+isokinetic_velocity_verlet_smart = generate_isokinetic_integrator_smart(velocity_verlet_coefficients)
 isokinetic_yoshida_smart = generate_isokinetic_integrator_smart(yoshida_coefficients)
 isokinetic_omelyan_smart = generate_isokinetic_integrator_smart(omelyan_coefficients)
 
@@ -607,6 +671,7 @@ def full_mclmc_with_adapt(
     step_size_adapt_use_psmile=False,
     mass_matrix_num_effective_samples=1000,
     windowed_mass_matrix=False,
+    progress_bar=False,
 ):
     dim = state_init.position.shape[-1]
     decay_rate = (num_effective_samples - 1.0) / (num_effective_samples + 1.0)
@@ -749,7 +814,7 @@ def full_mclmc_with_adapt(
     Hist = namedtuple("hist", ["position", "step_size", "L", "inverse_mass_matrix", "nonan", "xi"])
     def step(iteration_state, mode_and_key):
         """does one step of the dynamics and updates the estimate of the optimal step size, continuously updating the mass matrix instead of just tracking"""
-        mode, rng_key, i = mode_and_key
+        i, mode, rng_key = mode_and_key
         do_step_size_adapt = jnp.logical_or(mode==1, mode==2)
         do_mass_matrix_adapt = mode == 2
         rng_key, nan_key = jax.random.split(rng_key)
@@ -805,7 +870,7 @@ def full_mclmc_with_adapt(
 
     # step_vmapped = jax.vmap(step, in_axes=(0, (None, 0)), axis_name='chain')
 
-    # pbar_scan_fn = blackjax.progress_bar.gen_scan_fn(total_steps, progress_bar)
+    pbar_scan_fn = _gen_scan_fn_one_bar(total_steps, progress_bar, axis_name='chain')
 
     # def tile_params(p):
     #     return jax.tree.map(lambda x: jnp.repeat(jnp.array(x)[jnp.newaxis, ...], num_chains, axis=0), p)
@@ -845,7 +910,7 @@ def full_mclmc_with_adapt(
         
 
     sample_buffer_init = jnp.zeros((total_steps, dim))
-    run_steps = lambda xs, state_init, params_init : jax.lax.scan(
+    run_steps = lambda xs, state_init, params_init : pbar_scan_fn(
         step,
         init=(
             state_init,
@@ -856,7 +921,7 @@ def full_mclmc_with_adapt(
         ),
         xs=xs,
     )
-    run_steps_vmap = jax.jit(jax.vmap(run_steps, in_axes=((None, 0, None), 0, None), axis_name='chain'))
+    run_steps_vmap = jax.jit(jax.vmap(run_steps, in_axes=((None, None, 0), 0, None), axis_name='chain'))
 
     # mesh = jax.make_mesh((len(jax.devices()),), ('device',))
     # in_specs = ((None, P('device'), None), P('device'), None)
@@ -868,7 +933,7 @@ def full_mclmc_with_adapt(
     # state_init = jax.tree.map(reshape_pmap, state_init)
 
     carry, samples = run_steps_vmap(
-        (mode, keys, jnp.arange(total_steps, dtype=jnp.int32)), state_init, params_init
+        (jnp.arange(total_steps, dtype=jnp.int32), mode, keys), state_init, params_init
     )
     state, params, _, welford_state, samples_buffered = carry
     # result_samples = samples[:, -num_results:, :]
@@ -896,6 +961,7 @@ def full_mclmc_with_adapt_sharded(
     # mass_matrix_num_effective_samples=1000,
     step_size_adapt_use_psmile=False,
     windowed_mass_matrix=False,
+    progress_bar=False,
 ):
     """Sharded version of full_mclmc_with_adapt. Distributes chains across
     devices via shard_map with explicit batching (no vmap axis_name).
@@ -1001,107 +1067,162 @@ def full_mclmc_with_adapt_sharded(
 
     Hist = namedtuple("hist", ["position", "step_size", "L", "inverse_mass_matrix", "nonan", "xi"])
 
+    l_buffer_start = L_adaptation_step - num_steps3
+
     def step_batched(carry, mode_and_key):
-        mode, rng_keys_batch, i = mode_and_key
+        with jax.named_scope("mclmc_step_batched"):
+            i, mode, rng_keys_batch = mode_and_key
 
-        states, params, step_sizes, adapt_states, welford_state, sample_bufs = carry
+            states, params, step_sizes, adapt_states, welford_state, l_stage_bufs = carry
 
-        do_ssa = jnp.logical_or(mode == 1, mode == 2)
-        do_mm_adapt = mode == 2
+            do_ssa = jnp.logical_or(mode == 1, mode == 2)
+            do_mm_adapt = mode == 2
 
-        key_pairs = jax.vmap(jax.random.split)(rng_keys_batch)
-        chain_keys = key_pairs[:, 0]
-        nan_keys = key_pairs[:, 1]
+            key_pairs = jax.vmap(jax.random.split)(rng_keys_batch)
+            chain_keys = key_pairs[:, 0]
+            nan_keys = key_pairs[:, 1]
 
-        # Per-chain: kernel + step_size_adapt (vmap, NO axis_name)
-        kernel_fn = kernel(params.inverse_mass_matrix)
+            kernel_fn = kernel(params.inverse_mass_matrix)
 
-        def per_chain(prev_state, rng_key, nan_key, step_size, adapt_state):
-            new_state, info = kernel_fn(
-                rng_key=rng_key, state=prev_state, L=params.L, step_size=step_size)
-            pseudo_params = params._replace(step_size=step_size)
-            a_state, a_params, a_adapt, a_success, a_xi = \
-                step_size_adapt_func(prev_state, new_state, info, pseudo_params, adapt_state, nan_key)
-            _s = lambda a, b: jax.tree.map(lambda x, y: jnp.where(do_ssa, x, y), a, b)
-            out_state = _s(a_state, new_state)
-            out_ss = jnp.where(do_ssa, a_params.step_size, step_size)
-            out_adapt = _s(a_adapt, adapt_state)
-            out_success = jnp.where(do_ssa, a_success, True)
-            out_xi = jnp.where(do_ssa, a_xi, -1.0)
-            return out_state, out_ss, out_adapt, out_success, out_xi
+            def per_chain(prev_state, rng_key, nan_key, step_size, adapt_state):
+                with jax.named_scope("per_chain_kernel"):
+                    new_state, info = kernel_fn(
+                        rng_key=rng_key, state=prev_state, L=params.L, step_size=step_size)
 
-        new_states, new_step_sizes, new_adapt_states, successes, xis = \
-            jax.vmap(per_chain)(states, chain_keys, nan_keys, step_sizes, adapt_states)
+                def adapt_one(_):
+                    with jax.named_scope("step_size_adapt"):
+                        pseudo_params = params._replace(step_size=step_size)
+                        a_state, a_params, a_adapt, a_success, a_xi = step_size_adapt_func(
+                            prev_state, new_state, info, pseudo_params, adapt_state, nan_key
+                        )
+                        return (
+                            a_state,
+                            a_params.step_size,
+                            a_adapt,
+                            a_success,
+                            a_xi,
+                        )
 
-        sample_bufs = sample_bufs.at[:, i].set(new_states.position)
+                def skip_adapt(_):
+                    success_placeholder = jnp.isfinite(new_state.position.reshape(-1)[0])
+                    xi_placeholder = jnp.sum(new_state.position) * 0.0 - 1.0
+                    return (
+                        new_state,
+                        step_size,
+                        adapt_state,
+                        success_placeholder,
+                        xi_placeholder.astype(step_size.dtype),
+                    )
 
-        _sel = lambda c, a, b: jax.tree.map(lambda x, y: jnp.where(c, x, y), a, b)
+                return jax.lax.cond(
+                    do_ssa,
+                    adapt_one,
+                    skip_adapt,
+                    operand=None,
+                )
 
-        # Cross-chain mass matrix adaptation (jnp locally, psum across devices)
-        xs_pos = jax.vmap(lambda s: ravel_pytree(s.position)[0])(new_states)
-        n_dev = jax.lax.axis_size('device')
-        n_total = chains_per_device * n_dev
+            new_states, new_step_sizes, new_adapt_states, successes, xis = jax.vmap(per_chain)(
+                states, chain_keys, nan_keys, step_sizes, adapt_states
+            )
 
-        local_sum_x = jnp.sum(xs_pos, axis=0)
-        global_sum_x = jax.lax.psum(local_sum_x, axis_name='device')
-        x_mean = global_sum_x / n_total
+            with jax.named_scope("history_write"):
+                def write_l_stage_buffer(buf):
+                    buf_index = i - l_buffer_start
+                    return buf.at[:, buf_index].set(new_states.position)
 
-        deltas = xs_pos - x_mean[jnp.newaxis, :]
-        local_m2 = jnp.einsum('ci,cj->ij', deltas, deltas)
-        m2_step = jax.lax.psum(local_m2, axis_name='device')
+                l_stage_bufs = jax.lax.cond(
+                    mode == 3,
+                    write_l_stage_buffer,
+                    lambda buf: buf,
+                    l_stage_bufs,
+                )
 
-        update = WelfordAlgorithmState(x_mean, m2_step, n_total)
+            _sel = lambda c, a, b: jax.tree.map(lambda x, y: jnp.where(c, x, y), a, b)
 
-        if windowed_mass_matrix:
-            new_welford = welford_combine(welford_state, update)
-            welford_state = _sel(do_mm_adapt, new_welford, welford_state)
-            at_boundary = window_end_mask[i]
-            update_mm = jnp.logical_and(do_mm_adapt, at_boundary)
-            sample_cov = welford_cov(welford_state)[0]
-            mm_params = params._replace(inverse_mass_matrix=sample_cov)
-            params = _sel(update_mm, mm_params, params)
-            welford_state = _sel(update_mm, welford_empty, welford_state)
-            new_adapt_states = _sel(update_mm, _make_adapt_reset(new_adapt_states), new_adapt_states)
-        else:
-            new_welford = welford_combine(welford_state, update)
-            # new_welford = new_welford._replace(
-            #     m2=new_welford.m2*decay_rate_mass_matrix,
-            #     sample_size=new_welford.sample_size * decay_rate_mass_matrix
-            # )
-            sample_cov = welford_cov(new_welford)[0]
-            mm_params = params._replace(inverse_mass_matrix=sample_cov)
-            params = _sel(do_mm_adapt, mm_params, params)
-            welford_state = _sel(do_mm_adapt, new_welford, welford_state)
+            # Cross-chain mass matrix adaptation (jnp locally, psum across devices)
+            with jax.named_scope("mass_matrix_adapt"):
+                def run_mass_matrix_adapt(_):
+                    xs_pos = jax.vmap(lambda s: ravel_pytree(s.position)[0])(new_states)
+                    n_dev = jax.lax.axis_size('device')
+                    n_total = chains_per_device * n_dev
 
-        # Step size sync
-        local_ss_sum = jnp.sum(new_step_sizes)
-        global_ss_sum = jax.lax.psum(local_ss_sum, axis_name='device')
-        synced_ss = global_ss_sum / n_total
-        new_step_sizes = jnp.where(
-            i == step_size_sync_step,
-            jnp.full_like(new_step_sizes, synced_ss),
-            new_step_sizes,
-        )
+                    local_sum_x = jnp.sum(xs_pos, axis=0)
+                    global_sum_x = jax.lax.psum(local_sum_x, axis_name='device')
+                    x_mean = global_sum_x / n_total
 
-        # L adaptation
-        per_chain_ess = jax.vmap(lambda buf: _ess_shardmap(
-            buf[jnp.newaxis, L_adaptation_step - num_steps3:L_adaptation_step, :],
-            chain_axis=0, sample_axis=1,
-        ))(sample_bufs)
-        local_min_ess = jnp.min(per_chain_ess)
-        global_min_ess = jax.lax.pmin(local_min_ess, axis_name='device')
-        new_L = Lfactor * num_steps3 * synced_ss / global_min_ess
-        params = _sel(i == L_adaptation_step, params._replace(L=new_L), params)
+                    deltas = xs_pos - x_mean[jnp.newaxis, :]
+                    local_m2 = jnp.einsum('ci,cj->ij', deltas, deltas)
+                    m2_step = jax.lax.psum(local_m2, axis_name='device')
 
-        h = Hist(
-            position=new_states.position,
-            step_size=new_step_sizes,
-            L=jnp.broadcast_to(params.L, new_step_sizes.shape),
-            inverse_mass_matrix=jnp.broadcast_to(params.inverse_mass_matrix[jnp.newaxis], (chains_per_device, dim, dim)),
-            nonan=successes,
-            xi=xis,
-        )
-        return (new_states, params, new_step_sizes, new_adapt_states, welford_state, sample_bufs), h
+                    update = WelfordAlgorithmState(x_mean, m2_step, n_total)
+
+                    if windowed_mass_matrix:
+                        new_welford = welford_combine(welford_state, update)
+                        updated_welford = _sel(do_mm_adapt, new_welford, welford_state)
+                        at_boundary = window_end_mask[i]
+                        update_mm = jnp.logical_and(do_mm_adapt, at_boundary)
+                        sample_cov = welford_cov(updated_welford)[0]
+                        mm_params = params._replace(inverse_mass_matrix=sample_cov)
+                        updated_params = _sel(update_mm, mm_params, params)
+                        updated_welford = _sel(update_mm, welford_empty, updated_welford)
+                        updated_adapt_states = _sel(
+                            update_mm, _make_adapt_reset(new_adapt_states), new_adapt_states
+                        )
+                        return updated_params, updated_welford, updated_adapt_states
+
+                    new_welford = welford_combine(welford_state, update)
+                    sample_cov = welford_cov(new_welford)[0]
+                    mm_params = params._replace(inverse_mass_matrix=sample_cov)
+                    updated_params = _sel(do_mm_adapt, mm_params, params)
+                    updated_welford = _sel(do_mm_adapt, new_welford, welford_state)
+                    return updated_params, updated_welford, new_adapt_states
+
+                params, welford_state, new_adapt_states = jax.lax.cond(
+                    do_mm_adapt,
+                    run_mass_matrix_adapt,
+                    lambda _: (params, welford_state, new_adapt_states),
+                    operand=None,
+                )
+
+            # Step size sync
+            with jax.named_scope("step_size_sync"):
+                local_ss_sum = jnp.sum(new_step_sizes)
+                global_ss_sum = jax.lax.psum(local_ss_sum, axis_name='device')
+                synced_ss = global_ss_sum / (chains_per_device * jax.lax.axis_size('device'))
+                new_step_sizes = jnp.where(
+                    i == step_size_sync_step,
+                    jnp.full_like(new_step_sizes, synced_ss),
+                    new_step_sizes,
+                )
+
+            # L adaptation
+            def calc_new_L(_):
+                with jax.named_scope("L_adaptation"):
+                    per_chain_ess = jax.vmap(lambda buf: _ess_shardmap(
+                        buf[jnp.newaxis, :, :],
+                        chain_axis=0, sample_axis=1,
+                    ))(l_stage_bufs)
+                    local_min_ess = jnp.min(per_chain_ess)
+                    global_min_ess = jax.lax.pmin(local_min_ess, axis_name='device')
+                    return Lfactor * num_steps3 * synced_ss / global_min_ess
+
+            new_L = jax.lax.cond(
+                i == L_adaptation_step,
+                calc_new_L,
+                lambda _: params.L,
+                operand=None,
+            )
+            params = params._replace(L=new_L)
+
+            h = Hist(
+                position=new_states.position,
+                step_size=new_step_sizes,
+                L=jnp.broadcast_to(params.L, new_step_sizes.shape),
+                inverse_mass_matrix=jnp.broadcast_to(params.inverse_mass_matrix[jnp.newaxis], (chains_per_device, dim, dim)),
+                nonan=successes,
+                xi=xis,
+            )
+            return (new_states, params, new_step_sizes, new_adapt_states, welford_state, l_stage_bufs), h
 
     # --- Setup inputs ---
 
@@ -1127,7 +1248,7 @@ def full_mclmc_with_adapt_sharded(
     _tile = lambda x: jnp.broadcast_to(jnp.asarray(x)[jnp.newaxis], (num_chains,) + jnp.asarray(x).shape)
     step_sizes_init = jnp.full((num_chains,), params_init.step_size)
     adapt_states_init = jax.tree.map(_tile, adapt_single)
-    sample_bufs_init = jnp.zeros((num_chains, total_steps, dim))
+    l_stage_bufs_init = jnp.zeros((num_chains, num_steps3, dim))
 
     # --- shard_map (no vmap axis_name — collectives only use 'device') ---
 
@@ -1136,25 +1257,28 @@ def full_mclmc_with_adapt_sharded(
     carry_out_specs = (P('device'), P(), P('device'), P('device'), P(), P('device'))
     samples_out_specs = P('device')
 
+    pbar_scan_fn = _gen_scan_fn_one_bar(total_steps, progress_bar, axis_name='device')
+
     @jax.jit
     @functools.partial(_shard_map, mesh=mesh,
         in_specs=(
-            (None, P(None, 'device'), None),
+            (None, None, P(None, 'device')),
             P('device'), None, P('device'), P('device'), None, P('device'),
         ),
         out_specs=(carry_out_specs, samples_out_specs))
-    def run_sharded(xs, state_init, params_init, step_sizes, adapt_states, welford_start, sample_bufs):
-        carry, samples = jax.lax.scan(
-            step_batched,
-            init=(state_init, params_init, step_sizes, adapt_states, welford_start, sample_bufs),
-            xs=xs,
-        )
-        samples = jax.tree.map(lambda x: jnp.moveaxis(x, 0, 1), samples)
-        return carry, samples
+    def run_sharded(xs, state_init, params_init, step_sizes, adapt_states, welford_start, l_stage_bufs):
+        with jax.named_scope("mclmc_run_sharded"):
+            carry, samples = pbar_scan_fn(
+                step_batched,
+                init=(state_init, params_init, step_sizes, adapt_states, welford_start, l_stage_bufs),
+                xs=xs,
+            )
+            samples = jax.tree.map(lambda x: jnp.moveaxis(x, 0, 1), samples)
+            return carry, samples
 
     carry, samples = run_sharded(
-        (mode, keys, jnp.arange(total_steps, dtype=jnp.int32)),
-        state_init, params_init, step_sizes_init, adapt_states_init, welford_start, sample_bufs_init,
+        (jnp.arange(total_steps, dtype=jnp.int32), mode, keys),
+        state_init, params_init, step_sizes_init, adapt_states_init, welford_start, l_stage_bufs_init,
     )
     _, params_final, _, _, _, _ = carry
     return samples, params_final

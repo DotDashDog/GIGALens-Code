@@ -10,6 +10,11 @@ hmc_samples_z.npy
 __pycache__/
 jax-trace/
 FitSaves/
+vela_sim_systems/
+vela_sources/
+profiling_outputs/
+papers/
+
 
 #* Should clean up these, but for now just ignore on git
 desi238data/

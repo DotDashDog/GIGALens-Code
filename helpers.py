@@ -421,7 +421,7 @@ def get_chisq(true_img, predicted_img, background_rms=0.2, exp_time=100):
 
     return np.sum(np.square((true_img-predicted_img)/emap))
 
-def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True, remove_axis=True, log_vmin=1e-2):
+def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True, remove_axis=True, log_vmin=1e-2, log_norm=True):
     """
     Plot an image using my chosen standards for coloring, 
     which changes depending on whether the image is a residual or not.
@@ -430,7 +430,10 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         #* Meaning actual lensing image
         # cnorm = matplotlib.colors.Normalize(vmin=0)
         # Use LogNorm for logarithmic scaling with inferno colormap
-        cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), log_vmin), vmax=img.max(), clip=True)
+        if log_norm == True:
+            cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), log_vmin), vmax=img.max(), clip=True)
+        else:
+            cnorm = cnorm = matplotlib.colors.Normalize()
         cmap = 'inferno'
     else:
         #* Meaning residual image
@@ -451,7 +454,11 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         ax.set_xlim((extent[0], extent[1]))
         ax.set_ylim((extent[2], extent[3]))
     if remove_axis:
-        ax.axis('off')
+        # ax.axis('off')
+        ax.set_xticks([])
+        ax.set_xticks([], minor=True)
+        ax.set_yticks([])
+        ax.set_yticks([], minor=True)
 
 
 def add_caustics(ax, params, sim_config, lens_objects=['EPL', 'SHEAR']):
@@ -478,7 +485,7 @@ def histogram_residuals(fig, ax, flat_residual, title, bins=50):
 
 def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None, 
                        predicted_img=None, resimulate=True, display_true_chisq=False, true_params=None, prefix="",
-                       plot_caustics=False, model_seq=None, background_rms=0.2, exp_time=100.0):
+                       plot_caustics=False, model_seq=None, background_rms=0.2, exp_time=100.0, use_backward=False, log_vmin=1e-3):
     """
     Plot the results of a lensing fit. Given a set of predicted parameters, compare the predicted image to the true image.
     Displays normalized residuals, and a histogram of the residuals to check that they are gaussian noise
@@ -486,14 +493,18 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
     if resimulate:
         if lens_sim is None:
             raise ValueError("lens_sim must be provided if resimulate is True")
-        predicted_img = lens_sim.simulate(predicted_params)
+        if not use_backward:
+            predicted_img = lens_sim.simulate(predicted_params)
+        else:
+            orig_err_map = get_noise_image(true_img, background_rms, exp_time)
+            predicted_img = lens_sim.lstsq_simulate(predicted_params, true_img, orig_err_map)[0]
     elif predicted_img is None:
         raise ValueError("predicted_img must be provided if resimulate is False")
 
     if display_true_chisq:
         true_chisq = get_chisq(true_img, lens_sim.simulate(true_params))
     
-    noise_map = get_noise_image(true_img, background_rms, exp_time)
+    noise_map = get_noise_image(predicted_img, background_rms, exp_time)
 
     residual = (true_img - predicted_img)/noise_map
 
@@ -507,10 +518,10 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
     else:
         extent =None
     plot_image(fig, axs[0], true_img, extent=extent,
-               title=f"True Image" + (f"(Red Chisq:{true_chisq/dof:.3f})" if display_true_chisq else ""))
+               title=f"True Image" + (f"(Red Chisq:{true_chisq/dof:.3f})" if display_true_chisq else ""), log_vmin=log_vmin)
     if plot_caustics and (true_params is not None):
         add_caustics(axs[0], true_params, model_seq)
-    plot_image(fig, axs[1], predicted_img, extent=extent, title=f"{prefix} Model Fit (Red Chisq:{chisq/dof:.5f})")
+    plot_image(fig, axs[1], predicted_img, extent=extent, title=f"{prefix} Model Fit (Red Chisq:{chisq/dof:.5f})", log_vmin=log_vmin)
     if plot_caustics and (predicted_params is not None):
         add_caustics(axs[1], predicted_params, model_seq)
     plot_image(fig, axs[2], residual, extent=extent, title=f"{prefix} Normalized Residual", residual=True)
