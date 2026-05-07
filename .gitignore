@@ -14,6 +14,7 @@ vela_sim_systems/
 vela_sources/
 profiling_outputs/
 papers/
+logs/
 
 
 #* Should clean up these, but for now just ignore on git

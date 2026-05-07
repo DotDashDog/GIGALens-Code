@@ -1276,11 +1276,40 @@ def full_mclmc_with_adapt_sharded(
             samples = jax.tree.map(lambda x: jnp.moveaxis(x, 0, 1), samples)
             return carry, samples
 
+    # JAX 0.10+ no longer auto-reshards shard_map inputs to match in_specs.
+    # Pre-shard only the inputs whose in_specs is a PartitionSpec (skipping
+    # None-spec inputs, since those bypass the strict check inside shard_map
+    # and remain plain replicated arrays — important to avoid the
+    # "Closing over inputs sharded on Explicit axes" follow-on error).
+    _sharded_chain = NamedSharding(mesh, P('device'))
+    _sharded_keys = NamedSharding(mesh, P(None, 'device'))
+    _reshard = getattr(jax, 'reshard', jax.device_put)
+
+    xs = (
+        jnp.arange(total_steps, dtype=jnp.int32),
+        mode,
+        _reshard(keys, _sharded_keys),
+    )
+    state_init = _reshard(state_init, _sharded_chain)
+    step_sizes_init = _reshard(step_sizes_init, _sharded_chain)
+    adapt_states_init = _reshard(adapt_states_init, _sharded_chain)
+    l_stage_bufs_init = _reshard(l_stage_bufs_init, _sharded_chain)
+
     carry, samples = run_sharded(
-        (jnp.arange(total_steps, dtype=jnp.int32), mode, keys),
+        xs,
         state_init, params_init, step_sizes_init, adapt_states_init, welford_start, l_stage_bufs_init,
     )
     _, params_final, _, _, _, _ = carry
+
+    # Gather sharded outputs back to fully-replicated arrays. Without this,
+    # JAX 0.10's strict gather/sharding rules raise ShardingTypeError on
+    # innocuous indexing like `samples.step_size[0, -1]` because the chain
+    # axis is sharded across 'device'. Replicating after sampling restores
+    # the pre-0.10 UX without changing semantics. No-op on older JAX.
+    _replicated = NamedSharding(mesh, P())
+    samples = jax.tree.map(lambda x: _reshard(x, _replicated), samples)
+    params_final = jax.tree.map(lambda x: _reshard(x, _replicated), params_final)
+
     return samples, params_final
 
 

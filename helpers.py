@@ -414,7 +414,11 @@ def simulate_system(observed_img, prior, ModellingSequenceType, sim_config, phys
 
 
 def get_noise_image(image, background_rms, exp_time):
-    return np.sqrt(image / exp_time + background_rms**2)
+    # Clip to non-negative before adding the Poisson term so a single noise-induced
+    # negative pixel cannot drive the radicand below zero (which would produce a NaN
+    # err_map and, via 1/err_map in lstsq_simulate, poison every entry of the
+    # Gram matrix). Matches the convention used in BackwardProbModel.__init__.
+    return np.sqrt(np.clip(image, 0, np.inf) / exp_time + background_rms**2)
 
 def get_chisq(true_img, predicted_img, background_rms=0.2, exp_time=100):
     emap = get_noise_image(predicted_img, background_rms, exp_time)
@@ -431,7 +435,7 @@ def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=T
         # cnorm = matplotlib.colors.Normalize(vmin=0)
         # Use LogNorm for logarithmic scaling with inferno colormap
         if log_norm == True:
-            cnorm = matplotlib.colors.LogNorm(vmin=max(img.min(), log_vmin), vmax=img.max(), clip=True)
+            cnorm = matplotlib.colors.LogNorm(vmin=jnp.fmax(img.min(), log_vmin), vmax=jnp.abs(jnp.nanmax(img)), clip=True)
         else:
             cnorm = cnorm = matplotlib.colors.Normalize()
         cmap = 'inferno'
