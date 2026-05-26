@@ -1,0 +1,42 @@
+=== TAG=no-prio-fusion host=nid003029 date=2026-05-05T15:36:04-07:00
+=== EXTRA_ENV= export XLA_FLAGS=--xla_gpu_enable_priority_fusion=false
+--- env relevant ---
+CUDA_BASE_IMAGE=nvcr.io/nvidia/cuda-dl-base:25.03-cuda12.8-devel-ubuntu24.04
+CUDA_CACHE_DISABLE=1
+CUDA_DRIVER_VERSION=570.124.06
+CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9
+CUDA_VERSION=12.8.1.012
+REPRO_TAG=no-prio-fusion
+XLA_FLAGS=--xla_gpu_enable_priority_fusion=false
+--- nvidia-smi (before) ---
+0, 40442 MiB, 0 MiB
+1, 40442 MiB, 0 MiB
+2, 40442 MiB, 0 MiB
+3, 40442 MiB, 0 MiB
+--- starting python ---
+[repro:no-prio-fusion] start, pid=1658510
+[repro:no-prio-fusion] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:no-prio-fusion] importing jax...
+2026-05-05 15:36:07.193022: F external/xla/xla/parse_flags_from_env.cc:234] Unknown flag in XLA_FLAGS: --xla_gpu_enable_priority_fusion=false
+Fatal Python error: Aborted
+
+Current thread 0x00007f2597de3300 (most recent call first):
+  File "/opt/jaxlibs/jaxlib/jaxlib/xla_client.py", line 74 in make_cpu_client
+  File "/opt/jax/jax/_src/xla_bridge.py", line 284 in make_cpu_client
+  File "/opt/jax/jax/_src/xla_bridge.py", line 828 in _init_backend
+  File "/opt/jax/jax/_src/xla_bridge.py", line 742 in backends
+  File "/opt/jax/jax/_src/xla_bridge.py", line 855 in _get_backend_uncached
+  File "/opt/jax/jax/_src/xla_bridge.py", line 876 in get_backend
+  File "/opt/jax/jax/_src/xla_bridge.py", line 942 in devices
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 29 in <module>
+
+Extension modules: jaxlib.cpu_feature_guard, numpy._core._multiarray_umath, numpy.linalg._umath_linalg, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._mt19937, numpy.random.mtrand, numpy.random._philox, numpy.random._pcg64, numpy.random._sfc64, numpy.random._generator (total: 12)
+bash: line 11: 1658510 Aborted                 python -u /global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py
+--- python exit code: 134 ---
+--- nvidia-smi (after) ---
+0, 40442 MiB, 0 MiB
+1, 40442 MiB, 0 MiB
+2, 40442 MiB, 0 MiB
+3, 40442 MiB, 0 MiB
+=== exit code: 134
+=== signal name (if killed): ABRT

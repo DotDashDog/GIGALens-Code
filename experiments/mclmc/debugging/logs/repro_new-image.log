@@ -1,0 +1,32 @@
+=== TAG=new-image host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T15:53:21-07:00
+=== EXTRA_ENV=
+--- jax version ---
+jax 0.10.0.dev20260505
+jaxlib 0.10.0.dev20260505
+[repro:new-image] start, pid=1680672
+[repro:new-image] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:new-image] importing jax...
+[repro:new-image] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (7.4s)
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 33, in <module>
+    import tensorflow_probability.substrates.jax as tfp
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/substrates/jax/__init__.py", line 42, in <module>
+    from tensorflow_probability.substrates.jax import bijectors
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/substrates/jax/bijectors/__init__.py", line 19, in <module>
+    from tensorflow_probability.substrates.jax.bijectors.absolute_value import AbsoluteValue
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/substrates/jax/bijectors/absolute_value.py", line 17, in <module>
+    from tensorflow_probability.python.internal.backend.jax.compat import v2 as tf
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/python/internal/backend/jax/__init__.py", line 19, in <module>
+    from tensorflow_probability.python.internal.backend.jax import compat
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/python/internal/backend/jax/compat.py", line 17, in <module>
+    from tensorflow_probability.python.internal.backend.jax import v1
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/python/internal/backend/jax/v1.py", line 23, in <module>
+    from tensorflow_probability.python.internal.backend.jax import linalg_impl
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/python/internal/backend/jax/linalg_impl.py", line 23, in <module>
+    from tensorflow_probability.python.internal.backend.jax import ops
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/tensorflow_probability/python/internal/backend/jax/ops.py", line 681, in <module>
+    jax.interpreters.xla.pytype_aval_mappings[onp.ndarray])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'jax.interpreters.xla' has no attribute 'pytype_aval_mappings'
+--- python exit code: 1 ---
+=== exit code: 1

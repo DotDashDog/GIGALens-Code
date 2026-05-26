@@ -1,0 +1,102 @@
+=== TAG=svi-pcast-noop host=nid001073 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-06T11:49:22-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260506 jaxlib 0.10.0.dev20260506
+tfp 0.26.0-dev20260505
+optax 0.2.8
+--- starting python ---
+[repro:svi-pcast-noop] start, pid=570704
+[repro:svi-pcast-noop] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:svi-pcast-noop] importing jax...
+[repro:svi-pcast-noop] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (3.1s)
+[repro:svi-pcast-noop] imports done (7.8s)
+E0506 11:49:37.895024  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 29.62GiB (31804391424 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.895433  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 26.66GiB (28623951872 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.895780  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 23.99GiB (25761556480 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.896128  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 21.59GiB (23185399808 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.896483  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 19.43GiB (20866859008 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.896819  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 17.49GiB (18780172288 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.897163  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 15.74GiB (16902154240 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.897501  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 14.17GiB (15211938816 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.897836  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 12.75GiB (13690744832 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.898166  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 11.47GiB (12321670144 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.898497  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 10.33GiB (11089503232 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.898841  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 9.29GiB (9980552192 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:37.899176  570704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.37GiB (8982496256 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+[repro:svi-pcast-noop] model setup complete (10.0s)
+[repro:svi-pcast-noop] === MAP ===
+E0506 11:49:41.722580  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 29.62GiB (31804391424 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.723013  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 26.66GiB (28623951872 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.723406  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 23.99GiB (25761556480 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.723792  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 21.59GiB (23185399808 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.724165  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 19.43GiB (20866859008 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.724540  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 17.49GiB (18780172288 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.724918  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 15.74GiB (16902154240 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.725300  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 14.17GiB (15211938816 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.725671  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 12.75GiB (13690744832 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.726043  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 11.47GiB (12321670144 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.726413  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 10.33GiB (11089503232 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.726795  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 9.29GiB (9980552192 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.727175  570704 cuda_executor.cc:1206] [1] Failed to allocate device memory: INTERNAL: [1] Failed to allocate 8.37GiB (8982496256 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.752893  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 29.62GiB (31804391424 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.753379  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 26.66GiB (28623951872 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.753788  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 23.99GiB (25761556480 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.754189  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 21.59GiB (23185399808 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.754602  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 19.43GiB (20866859008 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.755003  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 17.49GiB (18780172288 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.755384  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 15.74GiB (16902154240 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.755757  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 14.17GiB (15211938816 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.756130  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 12.75GiB (13690744832 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.756514  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 11.47GiB (12321670144 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.756889  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 10.33GiB (11089503232 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.757270  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 9.29GiB (9980552192 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.757655  570704 cuda_executor.cc:1206] [2] Failed to allocate device memory: INTERNAL: [2] Failed to allocate 8.37GiB (8982496256 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.783734  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 29.62GiB (31804391424 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.784120  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 26.66GiB (28623951872 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.784472  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 23.99GiB (25761556480 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.784819  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 21.59GiB (23185399808 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.785162  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 19.43GiB (20866859008 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.785505  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 17.49GiB (18780172288 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.785842  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 15.74GiB (16902154240 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.786176  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 14.17GiB (15211938816 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.786520  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 12.75GiB (13690744832 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.786866  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 11.47GiB (12321670144 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.787200  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 10.33GiB (11089503232 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.787542  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 9.29GiB (9980552192 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0506 11:49:41.787884  570704 cuda_executor.cc:1206] [3] Failed to allocate device memory: INTERNAL: [3] Failed to allocate 8.37GiB (8982496256 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+Final Chi-squared: 12.65583
+[repro:svi-pcast-noop] MAP done in 21.4s; shapes=(64, 10, 38),(64, 10),(64, 10)
+[repro:svi-pcast-noop] MAP EXCEPTION after 22.1s: ShardingTypeError: Use `.at[...].get(out_sharding=)` to provide output PartitionSpec for the gather indexing as out sharding could not be resolved unambiguously (or would require collectives on inputs). Got operand=ShapedArray(float32[64@device,10,38]), indices=ShapedArray(int32[10,2])
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_svi_map.py", line 115, in <module>
+    bestrow = map_samples[best_lp_sample_idxs, jnp.arange(map_samples.shape[1])]
+              ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/array.py", line 341, in __getitem__
+    return indexing.rewriting_take(self, idx)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/indexing.py", line 1136, in rewriting_take
+    return internal_gather(arr, dynamic_idx)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/indexing.py", line 1212, in _gather
+    y = slicing.gather(
+        ^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/lax/slicing.py", line 425, in gather
+    return gather_p.bind(
+           ^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/core.py", line 654, in bind
+    return self.bind_with_trace(prev_trace, args, avals, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/core.py", line 662, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/core.py", line 1214, in process_primitive
+    return primitive.impl(*args, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dispatch.py", line 90, in apply_primitive
+    outs = fun(*args)
+           ^^^^^^^^^^
+jax._src.core.ShardingTypeError: Use `.at[...].get(out_sharding=)` to provide output PartitionSpec for the gather indexing as out sharding could not be resolved unambiguously (or would require collectives on inputs). Got operand=ShapedArray(float32[64@device,10,38]), indices=ShapedArray(int32[10,2])
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+--- python exit code: 2 ---
+=== exit code: 2

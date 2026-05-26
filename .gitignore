@@ -1,23 +1,32 @@
-
-#* Directories to ignot
-pipeline_results/
-.vscode/
+# Python build / cache artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+.pytest_cache/
 .ipynb_checkpoints/
+.vscode/
+
+# Editor / IDE
+*.swp
+.DS_Store
+
+# JAX / profiling output
+jax-trace/
+
+# Output directories (anything under results/ is reproducible; do not commit)
+results/
+
+# Large input data (regenerate from sources rather than committing)
+data/
+
+# Stragglers from the pre-migration layout; safe to keep ignored while attic/
+# is still around.
 sys60_converged/
 sys60_work/
 sys60_converged_4e4_burnin/
 hmc_samples_z.npy
-__pycache__/
-jax-trace/
-FitSaves/
-vela_sim_systems/
-vela_sources/
-profiling_outputs/
-papers/
-logs/
-
-
-#* Should clean up these, but for now just ignore on git
-desi238data/
 samples.npy
 svi_samples.npy

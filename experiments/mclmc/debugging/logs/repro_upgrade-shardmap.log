@@ -1,0 +1,30 @@
+=== TAG=upgrade-shardmap host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T16:47:40-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260505 jaxlib 0.10.0.dev20260505
+tfp 0.26.0-dev20260505
+blackjax 1.5
+--- starting python ---
+[repro:upgrade-shardmap] start, pid=1701080
+[repro:upgrade-shardmap] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:upgrade-shardmap] importing jax...
+[repro:upgrade-shardmap] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (4.4s)
+[repro:upgrade-shardmap] imports done (12.1s)
+[repro:upgrade-shardmap] model setup complete (14.3s); dim=38
+[repro:upgrade-shardmap] calling MCLMC_JIT n_hmc=8 nb=50 nr=20 use_shard_map=True
+[repro:upgrade-shardmap] EXCEPTION after 16.7s: ValueError: in_specs passed to shard_map: P(None, 'device') does not match the specs of the input: P(None, None) for arg: key<fry>[70,8]. `in_specs` is an optional argument so you can omit specifying it and shard_map will infer the in_specs from the arguments. If you want to reshard your inputs, you can use `jax.reshard` on the arguments and then pass those args to shard_map.
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 226, in <module>
+    debug_hist = MCLMC_JIT(
+                 ^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 280, in MCLMC_JIT
+    debug_hist, params = adapt_fn(
+                         ^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1279, in full_mclmc_with_adapt_sharded
+    carry, samples = run_sharded(
+                     ^^^^^^^^^^^^
+ValueError: in_specs passed to shard_map: P(None, 'device') does not match the specs of the input: P(None, None) for arg: key<fry>[70,8]. `in_specs` is an optional argument so you can omit specifying it and shard_map will infer the in_specs from the arguments. If you want to reshard your inputs, you can use `jax.reshard` on the arguments and then pass those args to shard_map.
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+--- python exit code: 2 ---
+=== exit code: 2

@@ -1,0 +1,18 @@
+=== TAG=upgrade-test3 host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T16:45:38-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260505 jaxlib 0.10.0.dev20260505
+tfp 0.26.0-dev20260505
+blackjax 1.5
+--- starting python ---
+[repro:upgrade-test3] start, pid=1698909
+[repro:upgrade-test3] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:upgrade-test3] importing jax...
+[repro:upgrade-test3] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (4.1s)
+[repro:upgrade-test3] imports done (10.9s)
+[repro:upgrade-test3] model setup complete (13.1s); dim=38
+[repro:upgrade-test3] calling MCLMC_JIT n_hmc=4 nb=10 nr=5 use_shard_map=False
+Sampling took 56.36324618989602 s
+[repro:upgrade-test3] DONE in 71.7s; samples shape=(4, 15, 38)
+--- python exit code: 0 ---
+=== exit code: 0

@@ -1,0 +1,62 @@
+=== TAG=cublas-fb-and-no-triton host=nid003029 date=2026-05-05T15:43:16-07:00
+=== EXTRA_ENV= export XLA_FLAGS=--xla_gpu_cublas_fallback=false --xla_gpu_enable_triton_gemm=false
+bash: line 5: export: `--xla_gpu_enable_triton_gemm=false': not a valid identifier
+--- env relevant ---
+CUDA_BASE_IMAGE=nvcr.io/nvidia/cuda-dl-base:25.03-cuda12.8-devel-ubuntu24.04
+CUDA_CACHE_DISABLE=1
+CUDA_DRIVER_VERSION=570.124.06
+CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9
+CUDA_VERSION=12.8.1.012
+REPRO_TAG=cublas-fb-and-no-triton
+XLA_FLAGS=--xla_gpu_cublas_fallback=false
+--- nvidia-smi (before) ---
+0, 40442 MiB, 0 MiB
+1, 40442 MiB, 0 MiB
+2, 40442 MiB, 0 MiB
+3, 40442 MiB, 0 MiB
+--- starting python ---
+[repro:cublas-fb-and-no-triton] start, pid=1668977
+[repro:cublas-fb-and-no-triton] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:cublas-fb-and-no-triton] importing jax...
+[repro:cublas-fb-and-no-triton] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (2.9s)
+[repro:cublas-fb-and-no-triton] imports done (11.8s)
+[repro:cublas-fb-and-no-triton] model setup complete (14.1s); dim=38
+[repro:cublas-fb-and-no-triton] calling MCLMC_JIT n_hmc=4 nb=10 nr=5 use_shard_map=False
+[repro:cublas-fb-and-no-triton] EXCEPTION after 6.2s: XlaRuntimeError: INTERNAL: There are no algorithm candidates for computing: 
+  %dot.84 = f32[4,5,5]{2,1,0} dot(%bitcast.2188, %bitcast.2192), lhs_batch_dims={0}, lhs_contracting_dims={2}, rhs_batch_dims={0}, rhs_contracting_dims={1}, metadata={op_name="jit(<lambda>)/jit(main)/vmap(jvp(jit(log_prob)))/backward_prob_model/lstsq_simulate/jit(lstsq_simulate)/lstsq_simulate/linear_solve/dot_general" source_file="/global/homes/l/linusu//gigalens/src/gigalens/jax/simulator.py" source_line=71}
+This likely means that the instruction shape is not supported by the target GPU library.
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 171, in <module>
+    debug_hist = MCLMC_JIT(
+                 ^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 266, in MCLMC_JIT
+    state_multi = init_multi(qz.sample((n_chains,), seed=init_key), init_key, log_prob)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 411, in init_multi
+    return init_fn(positions, rng_keys)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib._jax.XlaRuntimeError: INTERNAL: There are no algorithm candidates for computing: 
+  %dot.84 = f32[4,5,5]{2,1,0} dot(%bitcast.2188, %bitcast.2192), lhs_batch_dims={0}, lhs_contracting_dims={2}, rhs_batch_dims={0}, rhs_contracting_dims={1}, metadata={op_name="jit(<lambda>)/jit(main)/vmap(jvp(jit(log_prob)))/backward_prob_model/lstsq_simulate/jit(lstsq_simulate)/lstsq_simulate/linear_solve/dot_general" source_file="/global/homes/l/linusu//gigalens/src/gigalens/jax/simulator.py" source_line=71}
+This likely means that the instruction shape is not supported by the target GPU library.
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+--- python exit code: 2 ---
+--- nvidia-smi (after) ---
+0, 40442 MiB, 0 MiB
+1, 40442 MiB, 0 MiB
+2, 40442 MiB, 0 MiB
+3, 40442 MiB, 0 MiB
+=== exit code: 2
+=== signal name (if killed):  1) SIGHUP	 2) SIGINT	 3) SIGQUIT	 4) SIGILL	 5) SIGTRAP
+ 6) SIGABRT	 7) SIGBUS	 8) SIGFPE	 9) SIGKILL	10) SIGUSR1
+11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO	30) SIGPWR
+31) SIGSYS	34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+63) SIGRTMAX-1	64) SIGRTMAX	

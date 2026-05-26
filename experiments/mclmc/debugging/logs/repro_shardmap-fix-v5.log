@@ -1,0 +1,18 @@
+=== TAG=shardmap-fix-v5 host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T17:28:19-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260505 jaxlib 0.10.0.dev20260505
+tfp 0.26.0-dev20260505
+blackjax 1.5
+--- starting python ---
+[repro:shardmap-fix-v5] start, pid=1724209
+[repro:shardmap-fix-v5] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:shardmap-fix-v5] importing jax...
+[repro:shardmap-fix-v5] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (4.3s)
+[repro:shardmap-fix-v5] imports done (11.0s)
+[repro:shardmap-fix-v5] model setup complete (13.3s); dim=38
+[repro:shardmap-fix-v5] calling MCLMC_JIT n_hmc=8 nb=30 nr=20 use_shard_map=True
+Sampling took 36.0845874780789 s
+[repro:shardmap-fix-v5] DONE in 52.1s; samples shape=(8, 50, 38)
+--- python exit code: 0 ---
+=== exit code: 0

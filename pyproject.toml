@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gigalens_research"
+version = "0.1.0"
+description = "Research-side scripts and utilities built on top of gigalens for strong gravitational lens modeling."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Linus Underwood" }]
+license = { text = "Proprietary" }
+
+# Runtime dependencies are intentionally NOT listed here.
+#
+# This package targets a pinned Shifter container + conda env
+# (see docs/env_setup.md). Declaring dependencies in pyproject would let
+# `pip install -e .` upgrade JAX / TFP / NumPy out from under that pinned
+# stack, which would silently break the JAX 0.10 nightly setup. If you
+# need to use this package outside the canonical container, recreate the
+# env from environment.yml first, then `pip install -e .`.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "nbstripout",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["gigalens_research*"]
+exclude = ["gigalens_research.voronoi_src.tests*"]

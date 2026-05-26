@@ -1,0 +1,219 @@
+/global/homes/l/linusu/.bashrc: line 53: conda-jax-gigalens: command not found
+Hostname: nid001344
+GPU 0: NVIDIA A100-SXM4-40GB (UUID: GPU-df0e8c7d-9a82-1924-bf7d-9ac4532de957)
+GPU 1: NVIDIA A100-SXM4-40GB (UUID: GPU-61e5e530-1c13-d2a1-3e4e-a82387dbe71f)
+GPU 2: NVIDIA A100-SXM4-40GB (UUID: GPU-bc130e24-d328-d022-a09c-54986d3c3a96)
+GPU 3: NVIDIA A100-SXM4-40GB (UUID: GPU-c0cb96ba-57aa-f488-5488-1112fb672f56)
+JAX devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+local device count: 4
+sim_nums: ['01', '03', '04', '07', '08', '10', '15', '21', '22', '23', '25', '26']
+reps:     [0, 1, 2, 3, 4]
+n_max:    30
+supersample: 1, num_pix: 200
+
+--------------------- 01-00 (n_max=30) ---------------------
+save_dir: /global/homes/l/linusu/GIGALens-Code/source_modeling/vela_sim_systems/vela01_cam12_rep00_a0.500_f814w/n_max30
+Starting MAP
+  0%|          | 0/200 [00:00<?, ?it/s]  0%|          | 0/200 [00:20<?, ?it/s]Chi-squared: 1.066:   2%|▎         | 5/200 [06:29<4:13:20, 77.95s/it]Chi-squared: 1.065:   5%|▌         | 10/200 [06:31<2:03:50, 39.11s/it]Chi-squared: 1.064:   8%|▊         | 15/200 [06:32<1:20:39, 26.16s/it]Chi-squared: 1.064:  10%|█         | 20/200 [06:33<59:03, 19.69s/it]  Chi-squared: 1.063:  12%|█▎        | 25/200 [06:35<46:05, 15.80s/it]Chi-squared: 1.063:  15%|█▌        | 30/200 [06:36<37:26, 13.21s/it]Chi-squared: 1.063:  18%|█▊        | 35/200 [06:37<31:15, 11.36s/it]Chi-squared: 1.064:  20%|██        | 40/200 [06:39<26:36,  9.98s/it]Chi-squared: 1.064:  22%|██▎       | 45/200 [06:40<22:59,  8.90s/it]Chi-squared: 1.064:  25%|██▌       | 50/200 [06:41<20:05,  8.04s/it]Chi-squared: 1.064:  28%|██▊       | 55/200 [06:43<17:42,  7.33s/it]Chi-squared: 1.064:  30%|███       | 60/200 [06:44<15:43,  6.74s/it]Chi-squared: 1.064:  32%|███▎      | 65/200 [06:45<14:02,  6.24s/it]Chi-squared: 1.063:  35%|███▌      | 70/200 [06:47<12:36,  5.82s/it]Chi-squared: 1.063:  38%|███▊      | 75/200 [06:48<11:20,  5.45s/it]Chi-squared: 1.062:  40%|████      | 80/200 [06:49<10:14,  5.12s/it]Chi-squared: 1.063:  42%|████▎     | 85/200 [06:51<09:16,  4.84s/it]Chi-squared: 1.063:  45%|████▌     | 90/200 [06:52<08:24,  4.58s/it]Chi-squared: 1.064:  48%|████▊     | 95/200 [06:53<07:37,  4.36s/it]Chi-squared: 1.064:  50%|█████     | 100/200 [06:55<06:55,  4.15s/it]Chi-squared: 1.064:  52%|█████▎    | 105/200 [06:56<06:16,  3.97s/it]Chi-squared: 1.064:  55%|█████▌    | 110/200 [06:57<05:41,  3.80s/it]Chi-squared: 1.064:  57%|█████▊    | 115/200 [06:59<05:09,  3.64s/it]Chi-squared: 1.064:  60%|██████    | 120/200 [07:00<04:40,  3.50s/it]Chi-squared: 1.064:  62%|██████▎   | 125/200 [07:01<04:13,  3.37s/it]Chi-squared: 1.064:  65%|██████▌   | 130/200 [07:03<03:47,  3.25s/it]Chi-squared: 1.064:  68%|██████▊   | 135/200 [07:04<03:24,  3.14s/it]Chi-squared: 1.064:  70%|███████   | 140/200 [07:05<03:02,  3.04s/it]Chi-squared: 1.064:  72%|███████▎  | 145/200 [07:07<02:42,  2.95s/it]Chi-squared: 1.064:  75%|███████▌  | 150/200 [07:08<02:22,  2.86s/it]Chi-squared: 1.064:  78%|███████▊  | 155/200 [07:09<02:04,  2.77s/it]Chi-squared: 1.064:  80%|████████  | 160/200 [07:11<01:47,  2.69s/it]Chi-squared: 1.064:  82%|████████▎ | 165/200 [07:12<01:31,  2.62s/it]Chi-squared: 1.064:  85%|████████▌ | 170/200 [07:13<01:16,  2.55s/it]Chi-squared: 1.064:  88%|████████▊ | 175/200 [07:15<01:02,  2.49s/it]Chi-squared: 1.064:  90%|█████████ | 180/200 [07:16<00:48,  2.42s/it]Chi-squared: 1.064:  92%|█████████▎| 185/200 [07:17<00:35,  2.37s/it]Chi-squared: 1.064:  95%|█████████▌| 190/200 [07:19<00:23,  2.31s/it]Chi-squared: 1.064:  98%|█████████▊| 195/200 [07:20<00:11,  2.26s/it]Chi-squared: 1.064: 100%|██████████| 200/200 [07:21<00:00,  2.21s/it]Chi-squared: 1.064: 100%|██████████| 200/200 [07:21<00:00,  2.21s/it]
+Final Chi-squared: 1.06395
+Sampling took 742.6400805870071 s
+MCLMC wall time: 889.4 s
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1762: ComplexWarning: Casting complex values to real discards the imaginary part
+  return math.isfinite(val)
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1398: ComplexWarning: Casting complex values to real discards the imaginary part
+  return np.asarray(x, float)
+max R-hat: 1557336.6250
+min ESS:   4.0
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+WARNING:root:Too few points to create valid contours
+label : predicted | true | z-score
+[{'center_x': '0.0398 | 0.0255 | -0.8326', 'center_y': '-0.0171 | -0.0104 | 1.4403', 'e1': '0.0277 | 0.0710 | 0.3877', 'e2': '-0.1211 | -0.1176 | 0.0165', 'gamma': '2.4246 | 2.4061 | -0.0129', 'theta_E': '1.1990 | 1.2064 | 0.0262'}, {'gamma1': '-0.2363 | -0.2173 | 0.0379', 'gamma2': '-0.1389 | -0.1286 | 4.9774'}]
+
+--------------------- 01-01 (n_max=30) ---------------------
+save_dir: /global/homes/l/linusu/GIGALens-Code/source_modeling/vela_sim_systems/vela01_cam12_rep01_a0.500_f814w/n_max30
+Starting MAP
+  0%|          | 0/200 [00:00<?, ?it/s]  0%|          | 0/200 [00:10<?, ?it/s]Chi-squared: 1.087:   2%|▎         | 5/200 [00:29<18:51,  5.80s/it]Chi-squared: 1.084:   5%|▌         | 10/200 [00:30<09:34,  3.02s/it]Chi-squared: 1.081:   8%|▊         | 15/200 [00:31<06:27,  2.10s/it]Chi-squared: 1.079:  10%|█         | 20/200 [00:32<04:53,  1.63s/it]Chi-squared: 1.078:  12%|█▎        | 25/200 [00:33<03:56,  1.35s/it]Chi-squared: 1.079:  15%|█▌        | 30/200 [00:35<03:18,  1.17s/it]Chi-squared: 1.079:  18%|█▊        | 35/200 [00:36<02:51,  1.04s/it]Chi-squared: 1.079:  20%|██        | 40/200 [00:37<02:29,  1.07it/s]Chi-squared: 1.079:  22%|██▎       | 45/200 [00:38<02:13,  1.16it/s]Chi-squared: 1.078:  25%|██▌       | 50/200 [00:39<01:59,  1.25it/s]Chi-squared: 1.078:  28%|██▊       | 55/200 [00:41<01:48,  1.34it/s]Chi-squared: 1.079:  30%|███       | 60/200 [00:42<01:38,  1.42it/s]Chi-squared: 1.079:  32%|███▎      | 65/200 [00:43<01:30,  1.49it/s]Chi-squared: 1.079:  35%|███▌      | 70/200 [00:44<01:23,  1.56it/s]Chi-squared: 1.078:  38%|███▊      | 75/200 [00:45<01:16,  1.63it/s]Chi-squared: 1.078:  40%|████      | 80/200 [00:47<01:10,  1.70it/s]Chi-squared: 1.078:  42%|████▎     | 85/200 [00:48<01:05,  1.76it/s]Chi-squared: 1.078:  45%|████▌     | 90/200 [00:49<01:00,  1.81it/s]Chi-squared: 1.078:  48%|████▊     | 95/200 [00:50<00:56,  1.87it/s]Chi-squared: 1.078:  50%|█████     | 100/200 [00:52<00:52,  1.92it/s]Chi-squared: 1.078:  52%|█████▎    | 105/200 [00:53<00:48,  1.97it/s]Chi-squared: 1.078:  55%|█████▌    | 110/200 [00:54<00:44,  2.02it/s]Chi-squared: 1.078:  57%|█████▊    | 115/200 [00:55<00:41,  2.07it/s]Chi-squared: 1.078:  60%|██████    | 120/200 [00:56<00:37,  2.11it/s]Chi-squared: 1.078:  62%|██████▎   | 125/200 [00:58<00:34,  2.15it/s]Chi-squared: 1.078:  65%|██████▌   | 130/200 [00:59<00:31,  2.19it/s]Chi-squared: 1.078:  68%|██████▊   | 135/200 [01:00<00:29,  2.23it/s]Chi-squared: 1.078:  70%|███████   | 140/200 [01:01<00:26,  2.27it/s]Chi-squared: 1.078:  72%|███████▎  | 145/200 [01:02<00:23,  2.30it/s]Chi-squared: 1.078:  75%|███████▌  | 150/200 [01:04<00:21,  2.34it/s]Chi-squared: 1.078:  78%|███████▊  | 155/200 [01:05<00:18,  2.37it/s]Chi-squared: 1.078:  80%|████████  | 160/200 [01:06<00:16,  2.40it/s]Chi-squared: 1.078:  82%|████████▎ | 165/200 [01:07<00:14,  2.43it/s]Chi-squared: 1.078:  85%|████████▌ | 170/200 [01:08<00:12,  2.46it/s]Chi-squared: 1.078:  88%|████████▊ | 175/200 [01:10<00:10,  2.49it/s]Chi-squared: 1.078:  90%|█████████ | 180/200 [01:11<00:07,  2.52it/s]Chi-squared: 1.078:  92%|█████████▎| 185/200 [01:12<00:05,  2.55it/s]Chi-squared: 1.078:  95%|█████████▌| 190/200 [01:13<00:03,  2.57it/s]Chi-squared: 1.078:  98%|█████████▊| 195/200 [01:15<00:01,  2.60it/s]Chi-squared: 1.078: 100%|██████████| 200/200 [01:16<00:00,  2.62it/s]Chi-squared: 1.078: 100%|██████████| 200/200 [01:16<00:00,  2.62it/s]
+Final Chi-squared: 1.07837
+Sampling took 1155.7388417409966 s
+MCLMC wall time: 1184.6 s
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1762: ComplexWarning: Casting complex values to real discards the imaginary part
+  return math.isfinite(val)
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1398: ComplexWarning: Casting complex values to real discards the imaginary part
+  return np.asarray(x, float)
+max R-hat: 1.0003
+min ESS:   13764.1
+label : predicted | true | z-score
+[{'center_x': '0.0214 | 0.0168 | -2.7350', 'center_y': '-0.0309 | -0.0425 | -5.8030', 'e1': '0.1233 | 0.0918 | -5.1521', 'e2': '-0.0163 | 0.0152 | 4.8260', 'gamma': '2.0157 | 1.8579 | -6.3389', 'theta_E': '0.9606 | 0.9620 | 0.6968'}, {'gamma1': '-0.0581 | -0.0433 | 3.0422', 'gamma2': '0.1312 | 0.1233 | -1.7111'}]
+
+--------------------- 01-02 (n_max=30) ---------------------
+save_dir: /global/homes/l/linusu/GIGALens-Code/source_modeling/vela_sim_systems/vela01_cam12_rep02_a0.500_f814w/n_max30
+Starting MAP
+  0%|          | 0/200 [00:00<?, ?it/s]  0%|          | 0/200 [00:13<?, ?it/s]Chi-squared: 1.069:   2%|▎         | 5/200 [00:28<18:13,  5.61s/it]Chi-squared: 1.069:   5%|▌         | 10/200 [00:29<09:15,  2.92s/it]Chi-squared: 1.069:   8%|▊         | 15/200 [00:30<06:15,  2.03s/it]Chi-squared: 1.069:  10%|█         | 20/200 [00:31<04:44,  1.58s/it]Chi-squared: 1.069:  12%|█▎        | 25/200 [00:32<03:50,  1.32s/it]Chi-squared: 1.069:  15%|█▌        | 30/200 [00:34<03:13,  1.14s/it]Chi-squared: 1.069:  18%|█▊        | 35/200 [00:35<02:46,  1.01s/it]Chi-squared: 1.069:  20%|██        | 40/200 [00:36<02:26,  1.10it/s]Chi-squared: 1.069:  22%|██▎       | 45/200 [00:37<02:09,  1.19it/s]Chi-squared: 1.069:  25%|██▌       | 50/200 [00:38<01:56,  1.28it/s]Chi-squared: 1.069:  28%|██▊       | 55/200 [00:40<01:45,  1.37it/s]Chi-squared: 1.069:  30%|███       | 60/200 [00:41<01:36,  1.45it/s]Chi-squared: 1.069:  32%|███▎      | 65/200 [00:42<01:28,  1.53it/s]Chi-squared: 1.069:  35%|███▌      | 70/200 [00:43<01:21,  1.60it/s]Chi-squared: 1.069:  38%|███▊      | 75/200 [00:44<01:14,  1.67it/s]Chi-squared: 1.069:  40%|████      | 80/200 [00:46<01:09,  1.73it/s]Chi-squared: 1.069:  42%|████▎     | 85/200 [00:47<01:04,  1.79it/s]Chi-squared: 1.069:  45%|████▌     | 90/200 [00:48<00:59,  1.85it/s]Chi-squared: 1.069:  48%|████▊     | 95/200 [00:49<00:55,  1.91it/s]Chi-squared: 1.069:  50%|█████     | 100/200 [00:51<00:51,  1.96it/s]Chi-squared: 1.069:  52%|█████▎    | 105/200 [00:52<00:47,  2.01it/s]Chi-squared: 1.069:  55%|█████▌    | 110/200 [00:53<00:43,  2.06it/s]Chi-squared: 1.069:  57%|█████▊    | 115/200 [00:54<00:40,  2.10it/s]Chi-squared: 1.069:  60%|██████    | 120/200 [00:55<00:37,  2.15it/s]Chi-squared: 1.069:  62%|██████▎   | 125/200 [00:57<00:34,  2.19it/s]Chi-squared: 1.069:  65%|██████▌   | 130/200 [00:58<00:31,  2.23it/s]Chi-squared: 1.069:  68%|██████▊   | 135/200 [00:59<00:28,  2.27it/s]Chi-squared: 1.069:  70%|███████   | 140/200 [01:00<00:26,  2.30it/s]Chi-squared: 1.069:  72%|███████▎  | 145/200 [01:01<00:23,  2.34it/s]Chi-squared: 1.069:  75%|███████▌  | 150/200 [01:03<00:21,  2.37it/s]Chi-squared: 1.069:  78%|███████▊  | 155/200 [01:04<00:18,  2.41it/s]Chi-squared: 1.069:  80%|████████  | 160/200 [01:05<00:16,  2.44it/s]Chi-squared: 1.069:  82%|████████▎ | 165/200 [01:06<00:14,  2.47it/s]Chi-squared: 1.069:  85%|████████▌ | 170/200 [01:08<00:12,  2.50it/s]Chi-squared: 1.069:  88%|████████▊ | 175/200 [01:09<00:09,  2.53it/s]Chi-squared: 1.069:  90%|█████████ | 180/200 [01:10<00:07,  2.56it/s]Chi-squared: 1.069:  92%|█████████▎| 185/200 [01:11<00:05,  2.58it/s]Chi-squared: 1.069:  95%|█████████▌| 190/200 [01:12<00:03,  2.61it/s]Chi-squared: 1.069:  98%|█████████▊| 195/200 [01:14<00:01,  2.63it/s]Chi-squared: 1.069: 100%|██████████| 200/200 [01:15<00:00,  2.66it/s]Chi-squared: 1.069: 100%|██████████| 200/200 [01:15<00:00,  2.66it/s]
+Final Chi-squared: 1.06934
+Sampling took 1164.1223920709454 s
+MCLMC wall time: 1194.0 s
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1762: ComplexWarning: Casting complex values to real discards the imaginary part
+  return math.isfinite(val)
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1398: ComplexWarning: Casting complex values to real discards the imaginary part
+  return np.asarray(x, float)
+max R-hat: 7.0751
+min ESS:   4.1
+label : predicted | true | z-score
+[{'center_x': '0.0077 | 0.0099 | 1.1357', 'center_y': '0.0357 | 0.0286 | -3.6232', 'e1': '0.1175 | 0.1099 | -1.3316', 'e2': '-0.0518 | -0.0469 | 0.8934', 'gamma': '1.9491 | 1.9098 | -2.2377', 'theta_E': '1.1801 | 1.1874 | 2.4899'}, {'gamma1': '-0.1351 | -0.1258 | 1.8234', 'gamma2': '-0.0171 | -0.0166 | 0.1925'}]
+
+--------------------- 01-03 (n_max=30) ---------------------
+save_dir: /global/homes/l/linusu/GIGALens-Code/source_modeling/vela_sim_systems/vela01_cam12_rep03_a0.500_f814w/n_max30
+Starting MAP
+  0%|          | 0/200 [00:00<?, ?it/s]  0%|          | 0/200 [00:14<?, ?it/s]Chi-squared: 61.833:   2%|▎         | 5/200 [00:27<18:03,  5.56s/it]Chi-squared: 61.833:   5%|▌         | 10/200 [00:28<09:08,  2.89s/it]Chi-squared: 61.833:   8%|▊         | 15/200 [00:29<06:09,  2.00s/it]Chi-squared: 61.833:  10%|█         | 20/200 [00:31<04:39,  1.55s/it]Chi-squared: 61.833:  12%|█▎        | 25/200 [00:32<03:45,  1.29s/it]Chi-squared: 61.833:  15%|█▌        | 30/200 [00:33<03:08,  1.11s/it]Chi-squared: 61.833:  18%|█▊        | 35/200 [00:34<02:41,  1.02it/s]Chi-squared: 61.833:  20%|██        | 40/200 [00:35<02:21,  1.13it/s]Chi-squared: 61.833:  22%|██▎       | 45/200 [00:36<02:05,  1.23it/s]Chi-squared: 61.833:  25%|██▌       | 50/200 [00:37<01:52,  1.33it/s]Chi-squared: 61.833:  28%|██▊       | 55/200 [00:38<01:42,  1.42it/s]Chi-squared: 61.833:  30%|███       | 60/200 [00:39<01:32,  1.51it/s]Chi-squared: 61.833:  32%|███▎      | 65/200 [00:40<01:24,  1.59it/s]Chi-squared: 61.833:  35%|███▌      | 70/200 [00:41<01:17,  1.67it/s]Chi-squared: 61.833:  38%|███▊      | 75/200 [00:43<01:11,  1.74it/s]Chi-squared: 61.833:  40%|████      | 80/200 [00:44<01:06,  1.81it/s]Chi-squared: 61.833:  42%|████▎     | 85/200 [00:45<01:01,  1.88it/s]Chi-squared: 61.833:  45%|████▌     | 90/200 [00:46<00:56,  1.94it/s]Chi-squared: 61.833:  48%|████▊     | 95/200 [00:47<00:52,  2.00it/s]Chi-squared: 61.833:  50%|█████     | 100/200 [00:48<00:48,  2.06it/s]Chi-squared: 61.833:  52%|█████▎    | 105/200 [00:49<00:44,  2.12it/s]Chi-squared: 61.833:  55%|█████▌    | 110/200 [00:50<00:41,  2.17it/s]Chi-squared: 61.833:  57%|█████▊    | 115/200 [00:51<00:38,  2.22it/s]Chi-squared: 61.833:  60%|██████    | 120/200 [00:52<00:35,  2.27it/s]Chi-squared: 61.833:  62%|██████▎   | 125/200 [00:53<00:32,  2.32it/s]Chi-squared: 61.833:  65%|██████▌   | 130/200 [00:55<00:29,  2.36it/s]Chi-squared: 61.833:  68%|██████▊   | 135/200 [00:56<00:27,  2.40it/s]Chi-squared: 61.833:  70%|███████   | 140/200 [00:57<00:24,  2.44it/s]Chi-squared: 61.833:  72%|███████▎  | 145/200 [00:58<00:22,  2.48it/s]Chi-squared: 61.833:  75%|███████▌  | 150/200 [00:59<00:19,  2.52it/s]Chi-squared: 61.833:  78%|███████▊  | 155/200 [01:00<00:17,  2.56it/s]Chi-squared: 61.833:  80%|████████  | 160/200 [01:01<00:15,  2.60it/s]Chi-squared: 61.833:  82%|████████▎ | 165/200 [01:02<00:13,  2.63it/s]Chi-squared: 61.833:  85%|████████▌ | 170/200 [01:03<00:11,  2.66it/s]Chi-squared: 61.833:  88%|████████▊ | 175/200 [01:04<00:09,  2.70it/s]Chi-squared: 61.833:  90%|█████████ | 180/200 [01:05<00:07,  2.73it/s]Chi-squared: 61.833:  92%|█████████▎| 185/200 [01:07<00:05,  2.76it/s]Chi-squared: 61.833:  95%|█████████▌| 190/200 [01:08<00:03,  2.79it/s]Chi-squared: 61.833:  98%|█████████▊| 195/200 [01:09<00:01,  2.82it/s]Chi-squared: 61.833: 100%|██████████| 200/200 [01:10<00:00,  2.84it/s]Chi-squared: 61.833: 100%|██████████| 200/200 [01:10<00:00,  2.84it/s]
+Final Chi-squared: 61.83298
+Sampling took 390.99867782497313 s
+MCLMC wall time: 419.0 s
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1762: ComplexWarning: Casting complex values to real discards the imaginary part
+  return math.isfinite(val)
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1398: ComplexWarning: Casting complex values to real discards the imaginary part
+  return np.asarray(x, float)
+max R-hat: nan
+min ESS:   4.0
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/axes/_axes.py:6973: RuntimeWarning: All-NaN slice encountered
+  xmin = min(xmin, np.nanmin(xi))
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/axes/_axes.py:6974: RuntimeWarning: All-NaN slice encountered
+  xmax = max(xmax, np.nanmax(xi))
+[ERROR] vela01_rep03: Axis limits cannot be NaN or Inf
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/source_modeling/run_vela_modeling.py", line 334, in <module>
+    main()
+  File "/global/u1/l/linusu/GIGALens-Code/source_modeling/run_vela_modeling.py", line 319, in main
+    res = run_one_system(args, sim_num, rep)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/source_modeling/run_vela_modeling.py", line 273, in run_one_system
+    cornerplot_all(mclmc_samples, qz, prob_model, save_dir, true_params_shp)
+  File "/global/u1/l/linusu/GIGALens-Code/source_modeling/vela_utilities.py", line 397, in cornerplot_all
+    fig = cornerplot_posterior(
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/helpers.py", line 629, in cornerplot_posterior
+    fig = corner.corner(samples, fig=fig, truths=truth_overplot_pts, truth_color=truth_color, 
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/corner/corner.py", line 280, in corner
+    return arviz_corner(
+           ^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/corner/arviz_corner.py", line 136, in arviz_corner
+    fig = corner_impl(
+          ^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/corner/core.py", line 291, in corner_impl
+    _set_xlim(force_range, new_fig, ax, range[i])
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/corner/core.py", line 921, in _set_xlim
+    return ax.set_xlim(new_xlim)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/axes/_base.py", line 3739, in set_xlim
+    return self.xaxis._set_lim(left, right, emit=emit, auto=auto)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/axis.py", line 1236, in _set_lim
+    v0 = self.axes._validate_converted_limits(v0, self.convert_units)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/axes/_base.py", line 3660, in _validate_converted_limits
+    raise ValueError("Axis limits cannot be NaN or Inf")
+ValueError: Axis limits cannot be NaN or Inf
+srun: error: nid001344: task 0: Exited with exit code 1
+srun: Terminating StepId=52708168.0

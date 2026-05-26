@@ -1,0 +1,45 @@
+=== TAG=shardmap-fix-v4 host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T17:26:17-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260505 jaxlib 0.10.0.dev20260505
+tfp 0.26.0-dev20260505
+blackjax 1.5
+--- starting python ---
+[repro:shardmap-fix-v4] start, pid=1722206
+[repro:shardmap-fix-v4] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:shardmap-fix-v4] importing jax...
+[repro:shardmap-fix-v4] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (4.2s)
+[repro:shardmap-fix-v4] imports done (11.1s)
+[repro:shardmap-fix-v4] model setup complete (13.3s); dim=38
+[repro:shardmap-fix-v4] calling MCLMC_JIT n_hmc=8 nb=30 nr=20 use_shard_map=True
+[repro:shardmap-fix-v4] EXCEPTION after 17.2s: NotImplementedError: Closing over inputs to shard_map where the input is sharded on `Explicit` axes is not implemented. As a workaround, please pass those inputs as an argument to shard_map. Got input with shape i32[]({Explicit: ('device',)})
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 226, in <module>
+    debug_hist = MCLMC_JIT(
+                 ^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 280, in MCLMC_JIT
+    debug_hist, params = adapt_fn(
+                         ^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1300, in full_mclmc_with_adapt_sharded
+    carry, samples = run_sharded(
+                     ^^^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1271, in run_sharded
+    carry, samples = pbar_scan_fn(
+                     ^^^^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1078, in step_batched
+    do_ssa = jnp.logical_or(mode == 1, mode == 2)
+                            ^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/array_methods.py", line 1443, in op
+    return getattr(self.aval, f"_{name}")(self, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/array_methods.py", line 648, in _operator_eq
+    return ufuncs.equal(self, cast(ArrayLike, other))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufuncs.py", line 1484, in equal
+    return lax.eq(*promote_args("equal", x, y))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NotImplementedError: Closing over inputs to shard_map where the input is sharded on `Explicit` axes is not implemented. As a workaround, please pass those inputs as an argument to shard_map. Got input with shape i32[]({Explicit: ('device',)})
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+--- python exit code: 2 ---
+=== exit code: 2

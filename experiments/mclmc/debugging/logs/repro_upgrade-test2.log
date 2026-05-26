@@ -1,0 +1,76 @@
+=== TAG=upgrade-test2 host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T16:44:56-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260505 jaxlib 0.10.0.dev20260505
+tfp 0.26.0-dev20260505
+blackjax 1.5
+--- starting python ---
+[repro:upgrade-test2] start, pid=1697338
+[repro:upgrade-test2] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:upgrade-test2] importing jax...
+[repro:upgrade-test2] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (4.0s)
+[repro:upgrade-test2] imports done (10.3s)
+Traceback (most recent call last):
+  File "/opt/jax/jax/_src/numpy/array_constructors.py", line 271, in array
+    dtypes.lattice_result_type(*leaves)[0]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 1028, in lattice_result_type
+    dtypes, weak_types = zip(*(_dtype_and_weaktype(arg) for arg in args))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 1028, in <genexpr>
+    dtypes, weak_types = zip(*(_dtype_and_weaktype(arg) for arg in args))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 682, in _dtype_and_weaktype
+    return dtype(value), any(value is typ for typ in _weak_types) or is_weakly_typed(value)
+           ^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 1022, in dtype
+    raise TypeError(f"Value '{x}' with dtype {dt} is not a valid JAX array "
+TypeError: Value '[[ 0.04290754  0.05184787  0.04631247 ...  0.00012738  0.00045571
+  -0.00442174]
+ [ 0.04287623  0.0490127   0.04465859 ... -0.00068011 -0.00809673
+  -0.00475421]
+ [ 0.04110162  0.05260295  0.06108612 ...  0.00596467 -0.00563784
+  -0.00848083]
+ ...
+ [ 0.04817     0.04004944  0.01997739 ...  0.00922368  0.01534456
+   0.01282785]
+ [ 0.06380053  0.04851739  0.02493699 ... -0.0084326  -0.00155925
+   0.010933  ]
+ [ 0.05889726  0.04177393  0.0195487  ... -0.0060397   0.00261407
+   0.00901057]]' with dtype >f4 is not a valid JAX array type. Only arrays of numeric types are supported by JAX.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 154, in <module>
+    prob_model = BackwardProbModel(prior, jnp.array(observed_img), background_rms=0.007616264, exp_time=1197.699462)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/array_constructors.py", line 279, in array
+    dtype = dtypes.lattice_result_type(*leaves)[0]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 1028, in lattice_result_type
+    dtypes, weak_types = zip(*(_dtype_and_weaktype(arg) for arg in args))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 1028, in <genexpr>
+    dtypes, weak_types = zip(*(_dtype_and_weaktype(arg) for arg in args))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 682, in _dtype_and_weaktype
+    return dtype(value), any(value is typ for typ in _weak_types) or is_weakly_typed(value)
+           ^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/dtypes.py", line 1022, in dtype
+    raise TypeError(f"Value '{x}' with dtype {dt} is not a valid JAX array "
+TypeError: Value '[[ 0.04290754  0.05184787  0.04631247 ...  0.00012738  0.00045571
+  -0.00442174]
+ [ 0.04287623  0.0490127   0.04465859 ... -0.00068011 -0.00809673
+  -0.00475421]
+ [ 0.04110162  0.05260295  0.06108612 ...  0.00596467 -0.00563784
+  -0.00848083]
+ ...
+ [ 0.04817     0.04004944  0.01997739 ...  0.00922368  0.01534456
+   0.01282785]
+ [ 0.06380053  0.04851739  0.02493699 ... -0.0084326  -0.00155925
+   0.010933  ]
+ [ 0.05889726  0.04177393  0.0195487  ... -0.0060397   0.00261407
+   0.00901057]]' with dtype >f4 is not a valid JAX array type. Only arrays of numeric types are supported by JAX.
+--- python exit code: 1 ---
+=== exit code: 1

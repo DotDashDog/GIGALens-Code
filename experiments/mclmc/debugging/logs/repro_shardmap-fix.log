@@ -1,0 +1,69 @@
+=== TAG=shardmap-fix host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 date=2026-05-05T17:07:31-07:00
+=== EXTRA_ENV=
+--- versions ---
+jax 0.10.0.dev20260505 jaxlib 0.10.0.dev20260505
+tfp 0.26.0-dev20260505
+E0505 17:07:45.097319 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 29.62GiB (31804391424 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.097683 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 26.66GiB (28623951872 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.098011 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 23.99GiB (25761556480 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.098343 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 21.59GiB (23185399808 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.098672 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 19.43GiB (20866859008 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.099000 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 17.49GiB (18780172288 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.099321 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 15.74GiB (16902154240 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.099636 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 14.17GiB (15211938816 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.099952 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 12.75GiB (13690744832 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.100264 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 11.47GiB (12321670144 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.100576 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 10.33GiB (11089503232 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:45.100893 1710704 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 9.29GiB (9980552192 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+blackjax 1.5
+--- starting python ---
+[repro:shardmap-fix] start, pid=1711265
+[repro:shardmap-fix] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:shardmap-fix] importing jax...
+[repro:shardmap-fix] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (3.4s)
+[repro:shardmap-fix] imports done (9.3s)
+E0505 17:07:55.780151 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 29.62GiB (31804391424 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.780486 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 26.66GiB (28623951872 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.780839 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 23.99GiB (25761556480 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.781192 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 21.59GiB (23185399808 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.781595 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 19.43GiB (20866859008 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.781943 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 17.49GiB (18780172288 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.782299 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 15.74GiB (16902154240 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.782648 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 14.17GiB (15211938816 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.782993 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 12.75GiB (13690744832 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.783340 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 11.47GiB (12321670144 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.783686 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 10.33GiB (11089503232 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0505 17:07:55.784033 1711265 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 9.29GiB (9980552192 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+[repro:shardmap-fix] model setup complete (11.5s); dim=38
+[repro:shardmap-fix] calling MCLMC_JIT n_hmc=8 nb=30 nr=20 use_shard_map=True
+[repro:shardmap-fix] EXCEPTION after 16.6s: NotImplementedError: Closing over inputs to shard_map where the input is sharded on `Explicit` axes is not implemented. As a workaround, please pass those inputs as an argument to shard_map. Got input with shape i32[]({Explicit: ('device',)})
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 226, in <module>
+    debug_hist = MCLMC_JIT(
+                 ^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 280, in MCLMC_JIT
+    debug_hist, params = adapt_fn(
+                         ^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1298, in full_mclmc_with_adapt_sharded
+    carry, samples = run_sharded(
+                     ^^^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1271, in run_sharded
+    carry, samples = pbar_scan_fn(
+                     ^^^^^^^^^^^^^
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 1078, in step_batched
+    do_ssa = jnp.logical_or(mode == 1, mode == 2)
+                            ^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/array_methods.py", line 1443, in op
+    return getattr(self.aval, f"_{name}")(self, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/array_methods.py", line 648, in _operator_eq
+    return ufuncs.equal(self, cast(ArrayLike, other))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufuncs.py", line 1484, in equal
+    return lax.eq(*promote_args("equal", x, y))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NotImplementedError: Closing over inputs to shard_map where the input is sharded on `Explicit` axes is not implemented. As a workaround, please pass those inputs as an argument to shard_map. Got input with shape i32[]({Explicit: ('device',)})
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+--- python exit code: 2 ---
+=== exit code: 2

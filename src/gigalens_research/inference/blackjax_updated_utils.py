@@ -1,0 +1,334 @@
+import jax.numpy as jnp
+import jax
+from jax.sharding import NamedSharding, PartitionSpec as P
+from jax.experimental import io_callback
+from fastprogress.fastprogress import progress_bar as fastprogress_bar
+
+
+import blackjax
+from blackjax.mcmc.integrators import GeneralIntegrator, IntegratorState, ArrayTree, Callable, euclidean_position_update_fn
+from blackjax.mcmc.integrators import with_isokinetic_maruyama, generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
+from blackjax.mcmc.integrators import mclachlan_coefficients, velocity_verlet_coefficients, yoshida_coefficients, omelyan_coefficients
+from blackjax.adaptation.mass_matrix import welford_algorithm, WelfordAlgorithmState
+from blackjax.util import generate_unit_vector, pytree_size
+from blackjax.types import ArrayLike, PRNGKey
+from blackjax.mcmc.mclmc import MCLMCInfo
+from blackjax.adaptation.mclmc_adaptation import pytree_size, MCLMCAdaptationState, handle_nans, incremental_value_update
+
+
+from typing import Callable, NamedTuple, Optional
+
+from scipy.fftpack import next_fast_len
+
+import gigalens.jax.simulator as sim
+
+import time
+from threading import Lock
+
+
+#* ---- INTEGRATORS SUPPORTING NON-DIAGONAL MASS MATRICES ---------------------------------------------
+#  Define new isokinetic mclachlan. Only difference is it now takes in 2D, non-diagonal inverse matrix
+
+def generate_isokinetic_integrator_smart(coefficients):
+    """Make an isokinetic integrator. Exactly the same as the blackjax version, but works with non-diagonal mass matrices.
+
+    Args:
+        coefficients (jnp.array): The coefficents for the integrator
+    """
+    def isokinetic_integrator(
+        logdensity_fn: Callable, inverse_mass_matrix: ArrayTree = 1.0
+    ) -> GeneralIntegrator:
+        position_update_fn = euclidean_position_update_fn(logdensity_fn)
+        one_step = generalized_two_stage_integrator(
+            esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix),
+            position_update_fn,
+            coefficients,
+            format_output_fn=format_isokinetic_state_output,
+        )
+        return one_step
+
+    return isokinetic_integrator
+
+def esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix):
+    if len(inverse_mass_matrix.shape) != 2:
+        raise ValueError("inverse_mass_matrix must have 2 dimensions. If you're trying to just input the diagonal, switch to the unmodified blackjax version.")
+    
+    chol_inverse_mass_matrix = jnp.linalg.cholesky(inverse_mass_matrix)
+
+    def update(
+        momentum: ArrayTree,
+        logdensity_grad: ArrayTree,
+        step_size: float,
+        coef: float,
+        previous_kinetic_energy_change=None,
+        is_last_call=False,
+    ):
+        """Momentum update based on Esh dynamics.
+
+        The momentum updating map of the esh dynamics as derived in :cite:p:`steeg2021hamiltonian`
+        There are no exponentials e^delta, which prevents overflows when the gradient norm
+        is large.
+        """
+        del is_last_call
+
+        logdensity_grad = logdensity_grad
+        flatten_grads, unravel_fn = ravel_pytree(logdensity_grad)
+        flatten_grads = chol_inverse_mass_matrix.T @ flatten_grads
+        flatten_momentum, _ = ravel_pytree(momentum)
+        dims = flatten_momentum.shape[0]
+        normalized_gradient, gradient_norm = _normalized_flatten_array(flatten_grads)
+        momentum_proj = jnp.dot(flatten_momentum, normalized_gradient)
+        delta = step_size * coef * gradient_norm / (dims - 1)
+        zeta = jnp.exp(-delta)
+        new_momentum_raw = (
+            normalized_gradient * (1 - zeta) * (1 + zeta + momentum_proj * (1 - zeta))
+            + 2 * zeta * flatten_momentum
+        )
+        new_momentum_normalized, _ = _normalized_flatten_array(new_momentum_raw)
+        gr = unravel_fn(chol_inverse_mass_matrix@new_momentum_normalized)
+        next_momentum = unravel_fn(new_momentum_normalized)
+        kinetic_energy_change = (
+            delta
+            - jnp.log(2)
+            + jnp.log(1 + momentum_proj + (1 - momentum_proj) * zeta**2)
+        ) * (dims - 1)
+        if previous_kinetic_energy_change is not None:
+            kinetic_energy_change += previous_kinetic_energy_change
+        return next_momentum, gr, kinetic_energy_change
+
+    return update
+
+isokinetic_mclachlan_smart = generate_isokinetic_integrator_smart(mclachlan_coefficients)
+isokinetic_velocity_verlet_smart = generate_isokinetic_integrator_smart(velocity_verlet_coefficients)
+isokinetic_yoshida_smart = generate_isokinetic_integrator_smart(yoshida_coefficients)
+isokinetic_omelyan_smart = generate_isokinetic_integrator_smart(omelyan_coefficients)
+
+def _single_init(position: ArrayLike, logdensity_fn: Callable, rng_key: PRNGKey):
+    if pytree_size(position) < 2:
+        raise ValueError(
+            "The target distribution must have more than 1 dimension for MCLMC."
+        )
+    l, g = jax.value_and_grad(logdensity_fn)(position)
+
+    return IntegratorState(
+        position=position,
+        momentum=generate_unit_vector(rng_key, position),
+        logdensity=l,
+        logdensity_grad=g,
+    )
+
+def init_multi(
+    positions: ArrayLike,
+    rng_keys: PRNGKey,
+    logdensity_fn: Callable,
+    map_factory: Optional[Callable] = None,
+):
+    """Vectorized initializer for multiple chains.
+
+    `rng_keys` can be a single key (will be split) or an array of keys with
+    leading dimension equal to the number of chains.
+    """
+    mapper = _make_mapper(map_factory, in_axes=(0, 0))
+    if rng_keys.ndim == 0:
+        rng_keys = jax.random.split(rng_keys, positions.shape[0])
+    init_fn = mapper(lambda pos, key: _single_init(pos, logdensity_fn, key))
+    init_fn = _maybe_jit(map_factory, init_fn)
+    return init_fn(positions, rng_keys)
+
+def _make_mapper(map_factory: Optional[Callable], in_axes):
+    if map_factory is not None:
+        return lambda fn: map_factory(fn, in_axes=in_axes)
+    return lambda fn: jax.vmap(fn, in_axes=in_axes)
+
+
+def _maybe_jit(map_factory: Optional[Callable], fn: Callable) -> Callable:
+    """Jit when using the default mapper; leave as-is if user supplies a mapper."""
+    return fn if map_factory is not None else jax.jit(fn)
+
+def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
+    """shard_map-compatible version of blackjax.mcmc.mclmc.build_kernel.
+    Replaces jax.lax.cond with jnp.where to avoid varying-annotation mismatch.
+    """
+    step = with_isokinetic_maruyama(
+        integrator(logdensity_fn=logdensity_fn, inverse_mass_matrix=inverse_mass_matrix)
+    )
+
+    def kernel(rng_key, state, L, step_size):
+        (position, momentum, logdensity, logdensitygrad), kinetic_change = step(
+            state, step_size, L, rng_key
+        )
+        energy_error = kinetic_change - logdensity + state.logdensity
+
+        reject = jnp.isinf(energy_error) | jnp.isnan(energy_error)
+        select = lambda a, b: jax.tree.map(lambda x, y: jnp.where(reject, x, y), a, b)
+
+        new_state = IntegratorState(
+            *select(
+                (state.position, state.momentum, state.logdensity, state.logdensity_grad),
+                (position, momentum, logdensity, logdensitygrad),
+            )
+        )
+        new_info = MCLMCInfo(
+            logdensity=jnp.where(reject, state.logdensity, logdensity),
+            energy_change=jnp.where(reject, jnp.zeros_like(energy_error), energy_error),
+            kinetic_change=jnp.where(reject, jnp.zeros_like(kinetic_change), kinetic_change),
+        )
+        return new_state, new_info
+
+    return kernel
+
+def _gen_scan_fn_one_bar(num_samples, progress_bar, print_rate=None, axis_name=None):
+    if not progress_bar:
+        return jax.lax.scan
+
+    if print_rate is None:
+        print_rate = int(num_samples / 20) if num_samples > 20 else 1
+
+    bar_state = {"bar": None}
+    lock = Lock()
+
+    def _update_bar(iter_num):
+        iter_num = int(iter_num)
+        with lock:
+            if bar_state["bar"] is None:
+                bar_state["bar"] = fastprogress_bar(range(num_samples))
+                bar_state["bar"].update(0)
+            bar_state["bar"].update_bar(iter_num + 1)
+        return jnp.int32(0)
+
+    def _close_bar(_):
+        with lock:
+            if bar_state["bar"] is not None:
+                bar_state["bar"].on_iter_end()
+
+    def scan_wrap(f, init, *args, **kwargs):
+        def wrapped(carry, x):
+            if type(x) is tuple:
+                iter_num, *_ = x
+            else:
+                iter_num = x
+
+            should_render = True if axis_name is None else (jax.lax.axis_index(axis_name) == 0)
+            should_update = should_render & (
+                (iter_num % print_rate == 0) | (iter_num == (num_samples - 1))
+            )
+
+            _ = jax.lax.cond(
+                should_update,
+                lambda _: io_callback(_update_bar, jnp.int32(0), iter_num),
+                lambda _: jnp.int32(0),
+                operand=None,
+            )
+
+            carry, y = f(carry, x)
+
+            _ = jax.lax.cond(
+                should_render & (iter_num == num_samples - 1),
+                lambda _: io_callback(_close_bar, None, iter_num),
+                lambda _: None,
+                operand=None,
+            )
+
+            return carry, y
+
+        return jax.lax.scan(wrapped, init, *args, **kwargs)
+
+    return scan_wrap
+
+
+def _ess_shardmap(input_array, chain_axis=0, sample_axis=1):
+    """shard_map-compatible effective_sample_size.
+    Replaces jax.lax.scan with associative_scan and jax.lax.cond with jnp.where.
+    """
+    input_shape = input_array.shape
+    sample_axis = sample_axis if sample_axis >= 0 else len(input_shape) + sample_axis
+    num_chains = input_shape[chain_axis]
+    num_samples = input_shape[sample_axis]
+
+    mean_across_chain = input_array.mean(axis=sample_axis, keepdims=True)
+    centered_array = input_array - mean_across_chain
+    m = next_fast_len(2 * num_samples)
+    ifft_ary = jnp.fft.rfft(centered_array, n=m, axis=sample_axis)
+    ifft_ary *= jnp.conjugate(ifft_ary)
+    autocov_value = jnp.fft.irfft(ifft_ary, n=m, axis=sample_axis)
+    autocov_value = (
+        jnp.take(autocov_value, jnp.arange(num_samples), axis=sample_axis) / num_samples
+    )
+    mean_autocov_var = autocov_value.mean(chain_axis, keepdims=True)
+    mean_var0 = (
+        jnp.take(mean_autocov_var, jnp.array([0]), axis=sample_axis)
+        * num_samples / (num_samples - 1.0)
+    )
+    weighted_var = mean_var0 * (num_samples - 1.0) / num_samples
+    weighted_var = jnp.where(
+        num_chains > 1,
+        weighted_var + mean_across_chain.var(axis=chain_axis, ddof=1, keepdims=True),
+        weighted_var,
+    )
+
+    num_samples_even = num_samples - num_samples % 2
+    mean_autocov_var_tp1 = jnp.take(
+        mean_autocov_var, jnp.arange(1, num_samples_even), axis=sample_axis
+    )
+    rho_hat = jnp.concatenate(
+        [
+            jnp.ones_like(mean_var0),
+            1.0 - (mean_var0 - mean_autocov_var_tp1) / weighted_var,
+        ],
+        axis=sample_axis,
+    )
+
+    rho_hat = jnp.moveaxis(rho_hat, sample_axis, 0)
+    rho_hat_even = rho_hat[0::2]
+    rho_hat_odd = rho_hat[1::2]
+
+    mask0 = (rho_hat_even + rho_hat_odd) > 0.0
+
+    # Initial positive sequence via prefix-AND (replaces scan)
+    cumulative_mask = jax.lax.associative_scan(jnp.logical_and, mask0, axis=0)
+    max_t = jnp.sum(cumulative_mask, axis=0).astype(int) - 1
+    max_t = jnp.maximum(max_t, 0)
+
+    indices = jnp.indices(max_t.shape)
+    indices = tuple([max_t + 1] + [indices[i] for i in range(max_t.ndim)])
+
+    rho_hat_odd = jnp.where(cumulative_mask, rho_hat_odd, jnp.zeros_like(rho_hat_odd))
+    mask_even = cumulative_mask.at[indices].set(rho_hat_even[indices] > 0)
+    rho_hat_even = jnp.where(mask_even, rho_hat_even, jnp.zeros_like(rho_hat_even))
+
+    # Monotone sequence via prefix-min (replaces scan)
+    rho_hat_sum = rho_hat_even + rho_hat_odd
+    rho_hat_sum_monotone = jax.lax.associative_scan(jnp.minimum, rho_hat_sum, axis=0)
+    update_mask = rho_hat_sum > rho_hat_sum_monotone
+
+    rho_hat_even_final = jnp.where(update_mask, rho_hat_sum_monotone / 2.0, rho_hat_even)
+    rho_hat_odd_final = jnp.where(update_mask, rho_hat_sum_monotone / 2.0, rho_hat_odd)
+
+    ess_raw = num_chains * num_samples
+    tau_hat = (
+        -1.0
+        + 2.0 * jnp.sum(rho_hat_even_final + rho_hat_odd_final, axis=0)
+        - rho_hat_even_final[indices]
+    )
+    tau_hat = jnp.maximum(tau_hat, 1 / jnp.log10(ess_raw))
+    ess = ess_raw / tau_hat
+
+    return ess.squeeze()
+
+def welford_combine(wa_state1, wa_state2):
+    mean_a, m2_a, sample_size_a = wa_state1
+    mean_b, m2_b, sample_size_b = wa_state2
+
+    sample_size = sample_size_a + sample_size_b
+
+    delta = mean_b - mean_a
+    mean = mean_a + delta * (sample_size_b/sample_size)
+    updated_delta = mean_b - mean
+    m2 = m2_a + m2_b + (sample_size_a*sample_size_b/sample_size) * jnp.outer(updated_delta, delta)
+
+    # delta = value - mean
+    # mean = mean + delta / sample_size
+    # updated_delta = value - mean
+    # new_m2 = m2 + jnp.outer(updated_delta, delta)
+
+    return WelfordAlgorithmState(mean, m2, sample_size)

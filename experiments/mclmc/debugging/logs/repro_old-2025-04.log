@@ -1,0 +1,35 @@
+=== TAG=old-2025-04 host=nid003029 image=docker:ghcr.io/nvidia/jax:jax-2025-04-07 date=2026-05-05T15:54:07-07:00
+=== EXTRA_ENV=
+--- jax version ---
+jax 0.5.4.dev20260505
+jaxlib 0.5.4.dev20260505
+[repro:old-2025-04] start, pid=1681693
+[repro:old-2025-04] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:old-2025-04] importing jax...
+[repro:old-2025-04] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (3.1s)
+[repro:old-2025-04] imports done (18.7s)
+[repro:old-2025-04] model setup complete (21.5s); dim=38
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 160, in <module>
+    from alternate_inference.mclmc_alt import MCLMC_JIT
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 5, in <module>
+    import blackjax.progress_bar
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/__init__.py", line 6, in <module>
+    from .adaptation.adjusted_mclmc_adaptation import adjusted_mclmc_find_L_and_step_size
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/adaptation/__init__.py", line 1, in <module>
+    from . import (
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/adaptation/chees_adaptation.py", line 11, in <module>
+    import blackjax.mcmc.dynamic_hmc as dynamic_hmc
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/mcmc/__init__.py", line 1, in <module>
+    from . import (
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/mcmc/adjusted_mclmc.py", line 24, in <module>
+    import blackjax.mcmc.integrators as integrators
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/mcmc/integrators.py", line 22, in <module>
+    from blackjax.mcmc.metrics import KineticEnergy
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/mcmc/metrics.py", line 38, in <module>
+    from blackjax.util import generate_gaussian_noise, linear_map
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/util.py", line 8, in <module>
+    from jax import device_put, jit, lax, shard_map, vmap
+ImportError: cannot import name 'shard_map' from 'jax' (/opt/jaxlibs/jax/jax/__init__.py)
+--- python exit code: 1 ---
+=== exit code: 1

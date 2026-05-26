@@ -1,0 +1,53 @@
+=== TAG=no-multi-output-fusion host=nid003029 date=2026-05-05T15:48:34-07:00
+=== EXTRA_ENV= export XLA_FLAGS=--xla_disable_hlo_passes=multi_output_fusion
+--- env relevant ---
+CUDA_BASE_IMAGE=nvcr.io/nvidia/cuda-dl-base:25.03-cuda12.8-devel-ubuntu24.04
+CUDA_CACHE_DISABLE=1
+CUDA_DRIVER_VERSION=570.124.06
+CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/25.5/cuda/12.9
+CUDA_VERSION=12.8.1.012
+REPRO_TAG=no-multi-output-fusion
+XLA_FLAGS=--xla_disable_hlo_passes=multi_output_fusion
+--- nvidia-smi (before) ---
+0, 40442 MiB, 0 MiB
+1, 40442 MiB, 0 MiB
+2, 40442 MiB, 0 MiB
+3, 40442 MiB, 0 MiB
+--- starting python ---
+[repro:no-multi-output-fusion] start, pid=1674179
+[repro:no-multi-output-fusion] cwd=/global/u1/l/linusu/GIGALens-Code/alternate_inference
+[repro:no-multi-output-fusion] importing jax...
+[repro:no-multi-output-fusion] jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]  (3.4s)
+[repro:no-multi-output-fusion] imports done (15.0s)
+[repro:no-multi-output-fusion] model setup complete (17.3s); dim=38
+[repro:no-multi-output-fusion] calling MCLMC_JIT n_hmc=4 nb=10 nr=5 use_shard_map=False
+2026-05-05 15:49:09.273758: W external/xla/xla/service/gpu/autotuning/dot_search_space.cc:200] All configs were filtered out because none of them sufficiently match the hints. Maybe the hints set does not contain a good representative set of valid configs?Working around this by using the full hints set instead.
+2026-05-05 15:49:21.608323: F external/xla/xla/hlo/ir/hlo_instruction.cc:2929] target was not an operand: %fusion.2731 = f32[4]{0} fusion(%constant.3767.0, %fusion.2056), kind=kInput, calls=%fused_computation.2715, metadata={op_name="jit(<lambda>)/jit(main)/vmap(while)/body/jit(norm)/sqrt" source_file="/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/blackjax/mcmc/integrators.py" source_line=520}
+Fatal Python error: Aborted
+
+Current thread 0x00007f6d100e3300 (most recent call first):
+  File "/opt/jax/jax/_src/compiler.py", line 385 in backend_compile_and_load
+  File "/opt/jax/jax/_src/profiler.py", line 354 in wrapper
+  File "/opt/jax/jax/_src/compiler.py", line 768 in _compile_and_write_cache
+  File "/opt/jax/jax/_src/compiler.py", line 500 in compile_or_get_cached
+  File "/opt/jax/jax/_src/interpreters/pxla.py", line 2743 in _cached_compilation
+  File "/opt/jax/jax/_src/interpreters/pxla.py", line 2952 in from_hlo
+  File "/opt/jax/jax/_src/interpreters/pxla.py", line 2410 in compile
+  File "/opt/jax/jax/_src/pjit.py", line 1855 in _pjit_call_impl_python
+  File "/opt/jax/jax/_src/pjit.py", line 153 in _python_pjit_helper
+  File "/opt/jax/jax/_src/pjit.py", line 292 in cache_miss
+  File "/opt/jax/jax/_src/traceback_util.py", line 182 in reraise_with_filtered_traceback
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 935 in full_mclmc_with_adapt
+  File "/global/homes/l/linusu//GIGALens-Code/alternate_inference/mclmc_alt.py", line 280 in MCLMC_JIT
+  File "/global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py", line 219 in <module>
+
+Extension modules: jaxlib.cpu_feature_guard, numpy._core._multiarray_umath, numpy.linalg._umath_linalg, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._mt19937, numpy.random.mtrand, numpy.random._philox, numpy.random._pcg64, numpy.random._sfc64, numpy.random._generator, scipy._lib._ccallback_c, scipy.linalg._fblas, scipy.linalg._flapack, scipy.linalg.cython_lapack, scipy.linalg._cythonized_array_utils, charset_normalizer.md, scipy.linalg._solve_toeplitz, scipy.linalg._decomp_lu_cython, scipy.linalg._matfuncs_sqrtm_triu, scipy.linalg._matfuncs_expm, scipy.linalg._linalg_pythran, scipy.linalg.cython_blas, scipy.linalg._decomp_update, scipy.sparse._sparsetools, _csparsetools, scipy.sparse._csparsetools, scipy.sparse.linalg._dsolve._superlu, scipy.sparse.linalg._eigen.arpack._arpack, scipy.sparse.linalg._propack._spropack, scipy.sparse.linalg._propack._dpropack, scipy.sparse.linalg._propack._cpropack, scipy.sparse.linalg._propack._zpropack, scipy.sparse.csgraph._tools, scipy.sparse.csgraph._shortest_path, scipy.sparse.csgraph._traversal, scipy.sparse.csgraph._min_spanning_tree, scipy.sparse.csgraph._flow, scipy.sparse.csgraph._matching, scipy.sparse.csgraph._reordering, scipy.special._ufuncs_cxx, scipy.special._ufuncs, scipy.special._specfun, scipy.special._comb, scipy.special._ellip_harm_2, yaml._yaml, numba.core.typeconv._typeconv, numba._helperlib, numba._dynfunc, numba._dispatcher, numba.core.typing.builtins.itertools, numba.cpython.builtins.math, numba.core.runtime._nrt_python, numba.np.ufunc._internal, numba.experimental.jitclass._box, scipy.ndimage._nd_image, scipy.ndimage._rank_filter_1d, _ni_label, scipy.ndimage._ni_label, scipy.optimize._group_columns, scipy._lib.messagestream, scipy.optimize._trlib._trlib, scipy.optimize._lbfgsb, _moduleTNC, scipy.optimize._moduleTNC, scipy.optimize._cobyla, scipy.optimize._slsqp, scipy.optimize._minpack, scipy.optimize._lsq.givens_elimination, scipy.optimize._zeros, scipy.optimize._cython_nnls, scipy._lib._uarray._uarray, scipy.linalg._decomp_interpolative, scipy.optimize._bglu_dense, scipy.optimize._lsap, scipy.spatial._ckdtree, scipy.spatial._qhull, scipy.spatial._voronoi, scipy.spatial._distance_wrap, scipy.spatial._hausdorff, scipy.spatial.transform._rotation, scipy.optimize._direct, PIL._imaging, google._upb._message, scipy.integrate._odepack, scipy.integrate._quadpack, scipy.integrate._vode, scipy.integrate._dop, scipy.integrate._lsoda, scipy.interpolate._fitpack, scipy.interpolate._dfitpack, scipy.interpolate._dierckx, scipy.interpolate._ppoly, scipy.interpolate._interpnd, scipy.interpolate._rbfinterp_pythran, scipy.interpolate._rgi_cython, scipy.interpolate._bspl, scipy.special.cython_special, scipy.stats._stats, scipy.stats._sobol, scipy.stats._qmc_cy, scipy.stats._biasedurn, scipy.stats._stats_pythran, scipy.stats._levy_stable.levyst, scipy.stats._ansari_swilk_statistics, scipy.stats._mvn, scipy.stats._rcont.rcont, scipy.fftpack.convolve (total: 109)
+bash: line 11: 1674179 Aborted                 python -u /global/homes/l/linusu/GIGALens-Code/alternate_inference/repro_mclmc_238.py
+--- python exit code: 134 ---
+--- nvidia-smi (after) ---
+0, 40442 MiB, 0 MiB
+1, 40442 MiB, 0 MiB
+2, 40442 MiB, 0 MiB
+3, 40442 MiB, 0 MiB
+=== exit code: 134
+=== signal name (if killed): ABRT

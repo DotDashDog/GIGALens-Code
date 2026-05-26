@@ -1,0 +1,32 @@
+/global/homes/l/linusu/.bashrc: line 53: conda-jax-gigalens: command not found
+Hostname: nid001476
+GPU 0: NVIDIA A100-SXM4-40GB (UUID: GPU-350e65ba-e5d2-35a1-be3a-e3806bfb5c8a)
+GPU 1: NVIDIA A100-SXM4-40GB (UUID: GPU-f5e24677-4e5d-17a5-217f-6a18e1b368e2)
+GPU 2: NVIDIA A100-SXM4-40GB (UUID: GPU-647284e1-e119-7233-927e-3532bbd9d6c5)
+GPU 3: NVIDIA A100-SXM4-40GB (UUID: GPU-0fedb766-47ca-1955-f0fb-d86b97b24ffd)
+JAX devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+local device count: 4
+sim_nums: ['01']
+reps:     [0]
+n_max:    10
+supersample: 1, num_pix: 200
+
+--------------------- 01-00 (n_max=10) ---------------------
+save_dir: /global/homes/l/linusu/GIGALens-Code/source_modeling/vela_sim_systems/vela01_cam12_rep00_a0.500_f814w/n_max10
+Starting MAP
+  0%|          | 0/200 [00:00<?, ?it/s]  0%|          | 0/200 [00:20<?, ?it/s]Chi-squared: 1.234:   2%|▎         | 5/200 [01:02<40:50, 12.57s/it]Chi-squared: 1.212:   5%|▌         | 10/200 [01:03<20:01,  6.32s/it]Chi-squared: 1.189:   8%|▊         | 15/200 [01:03<13:04,  4.24s/it]Chi-squared: 1.182:  10%|█         | 20/200 [01:04<09:36,  3.20s/it]Chi-squared: 1.177:  12%|█▎        | 25/200 [01:04<07:31,  2.58s/it]Chi-squared: 1.174:  15%|█▌        | 30/200 [01:04<06:07,  2.16s/it]Chi-squared: 1.174:  18%|█▊        | 35/200 [01:05<05:07,  1.86s/it]Chi-squared: 1.173:  20%|██        | 40/200 [01:05<04:22,  1.64s/it]Chi-squared: 1.173:  22%|██▎       | 45/200 [01:06<03:47,  1.47s/it]Chi-squared: 1.174:  25%|██▌       | 50/200 [01:06<03:19,  1.33s/it]Chi-squared: 1.174:  28%|██▊       | 55/200 [01:06<02:56,  1.21s/it]Chi-squared: 1.173:  30%|███       | 60/200 [01:07<02:36,  1.12s/it]Chi-squared: 1.174:  32%|███▎      | 65/200 [01:07<02:20,  1.04s/it]Chi-squared: 1.174:  35%|███▌      | 70/200 [01:07<02:06,  1.03it/s]Chi-squared: 1.174:  38%|███▊      | 75/200 [01:08<01:53,  1.10it/s]Chi-squared: 1.174:  40%|████      | 80/200 [01:08<01:43,  1.16it/s]Chi-squared: 1.174:  42%|████▎     | 85/200 [01:09<01:33,  1.23it/s]Chi-squared: 1.174:  45%|████▌     | 90/200 [01:09<01:24,  1.30it/s]Chi-squared: 1.172:  48%|████▊     | 95/200 [01:09<01:17,  1.36it/s]Chi-squared: 1.172:  50%|█████     | 100/200 [01:10<01:10,  1.42it/s]Chi-squared: 1.172:  52%|█████▎    | 105/200 [01:10<01:03,  1.49it/s]Chi-squared: 1.173:  55%|█████▌    | 110/200 [01:11<00:58,  1.55it/s]Chi-squared: 1.174:  57%|█████▊    | 115/200 [01:11<00:52,  1.61it/s]Chi-squared: 1.174:  60%|██████    | 120/200 [01:11<00:47,  1.67it/s]Chi-squared: 1.173:  62%|██████▎   | 125/200 [01:12<00:43,  1.73it/s]Chi-squared: 1.173:  65%|██████▌   | 130/200 [01:12<00:39,  1.79it/s]Chi-squared: 1.173:  68%|██████▊   | 135/200 [01:12<00:35,  1.85it/s]Chi-squared: 1.172:  70%|███████   | 140/200 [01:13<00:31,  1.91it/s]Chi-squared: 1.173:  72%|███████▎  | 145/200 [01:13<00:27,  1.97it/s]Chi-squared: 1.174:  75%|███████▌  | 150/200 [01:14<00:24,  2.02it/s]Chi-squared: 1.174:  78%|███████▊  | 155/200 [01:14<00:21,  2.08it/s]Chi-squared: 1.174:  80%|████████  | 160/200 [01:14<00:18,  2.14it/s]Chi-squared: 1.174:  82%|████████▎ | 165/200 [01:15<00:15,  2.19it/s]Chi-squared: 1.174:  85%|████████▌ | 170/200 [01:15<00:13,  2.25it/s]Chi-squared: 1.174:  88%|████████▊ | 175/200 [01:15<00:10,  2.30it/s]Chi-squared: 1.174:  90%|█████████ | 180/200 [01:16<00:08,  2.36it/s]Chi-squared: 1.174:  92%|█████████▎| 185/200 [01:16<00:06,  2.41it/s]Chi-squared: 1.174:  95%|█████████▌| 190/200 [01:17<00:04,  2.46it/s]Chi-squared: 1.174:  98%|█████████▊| 195/200 [01:17<00:01,  2.52it/s]Chi-squared: 1.175: 100%|██████████| 200/200 [01:17<00:00,  2.57it/s]Chi-squared: 1.175: 100%|██████████| 200/200 [01:17<00:00,  2.56it/s]
+Final Chi-squared: 1.17498
+Sampling took 45.96400439699937 s
+MCLMC wall time: 78.9 s
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1762: ComplexWarning: Casting complex values to real discards the imaginary part
+  return math.isfinite(val)
+/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/matplotlib/cbook.py:1398: ComplexWarning: Casting complex values to real discards the imaginary part
+  return np.asarray(x, float)
+max R-hat: 1.1580
+min ESS:   16.6
+label : predicted | true | z-score
+[{'center_x': '0.0337 | 0.0255 | -1.9613', 'center_y': '-0.0091 | -0.0104 | -0.4726', 'e1': '0.1714 | 0.0710 | -7.2519', 'e2': '-0.0605 | -0.1176 | -5.4415', 'gamma': '2.6348 | 2.4061 | -5.0308', 'theta_E': '1.1852 | 1.2064 | 6.5805'}, {'gamma1': '-0.2574 | -0.2173 | 5.7002', 'gamma2': '-0.1288 | -0.1286 | 0.0564'}]
+
+=== Summary ===
+Total wall time: 176.4 s
+  vela01_rep00: max R-hat = 1.1580
