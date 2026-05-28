@@ -39,6 +39,10 @@ from gigalens.model import PhysicalModel
 from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear
 
+from gigalens_research.inference_utils import (
+    InferenceContext, Pipeline, MAPStage, SVIStage, HMCStage,
+)
+
 import tensorflow_probability.substrates.jax as tfp
 from jax import random
 from jax import numpy as jnp
@@ -82,35 +86,20 @@ save_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/100standard80px")
 # idxes = [4, 18, 52, 54, 56, 94]
 idxes = list(range(4, 100))
 for i in idxes:
-    # if i in finished_systems:
-    #     print(f"System {i} already finished, skipping")
-    #     continue
     observed_img = observed_imgs[i]
 
-    results = simulate_system(
-        observed_img, prior, ModellingSequence, sim_config, phys_model, 
-        map_kwargs=dict(num_steps=1000, n_samples=2000),
-        svi_kwargs=dict(num_steps=5000, n_vi=1000),
-        hmc_kwargs=dict(n_hmc=64, num_results=1500, num_burnin_steps=500),
-        background_rms=0.2, exp_time=100
-    )
+    prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
+    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
+    ctx = InferenceContext.from_modelling_sequence(model_seq)
+
+    pipeline = Pipeline(ctx, seed=0)
+    pipeline.add(MAPStage(num_steps=1000, n_samples=2000))
+    pipeline.add(SVIStage(num_steps=5000, n_vi=1000))
+    pipeline.add(HMCStage(n_hmc=64, num_results=1500, num_burnin_steps=500))
 
     #* Intensive settings are n_vi = 10000, svi_steps = 5000, hmc_num_results = 5000
 
-    if jax.process_index() == 0:
-        print(f"System {i}:")
-        print("MAP time taken: ", results["MAP"].time_taken)
-        print("SVI time taken: ", results["SVI"].time_taken)
-        print("HMC time taken: ", results["HMC"].time_taken)
+    results_dir = os.path.join(home, save_dir, f"{i}")
+    pipeline.run(out_dir=results_dir, resume=True)
 
-        # Create directory for saving results if it doesn't exist
-        results_dir = os.path.join(home, save_dir, f"{i}")
-        # results_dir = os.path.join(home, f"GIGALens-Code/pipeline_results/example")
-        if not os.path.exists(results_dir):
-            os.makedirs(results_dir)
-
-        results["MAP"].save(results_dir)
-        results["SVI"].save(results_dir)
-        results["HMC"].save(results_dir)
-        
 # %%

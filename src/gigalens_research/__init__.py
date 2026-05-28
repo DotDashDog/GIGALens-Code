@@ -9,6 +9,7 @@ Subpackages
 - inference      : Alternate inference algorithms / samplers.
 - inference_utils: MAP / SVI / HMC pipeline orchestration and diagnostics.
 - plotting       : Image, residual, loss, and corner-plot helpers.
+- simulations    : Source-plane constructors (e.g. ImageBasedLight, Vela loader).
 - voronoi_src    : Experimental pixelized (Delaunay/Voronoi) source reconstruction.
 
 This package is intentionally light at the top level. Import from the

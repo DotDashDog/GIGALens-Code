@@ -26,125 +26,6 @@ import time
 from threading import Lock
 
 
-#* ---- INTEGRATORS SUPPORTING NON-DIAGONAL MASS MATRICES ---------------------------------------------
-#  Define new isokinetic mclachlan. Only difference is it now takes in 2D, non-diagonal inverse matrix
-
-def generate_isokinetic_integrator_smart(coefficients):
-    """Make an isokinetic integrator. Exactly the same as the blackjax version, but works with non-diagonal mass matrices.
-
-    Args:
-        coefficients (jnp.array): The coefficents for the integrator
-    """
-    def isokinetic_integrator(
-        logdensity_fn: Callable, inverse_mass_matrix: ArrayTree = 1.0
-    ) -> GeneralIntegrator:
-        position_update_fn = euclidean_position_update_fn(logdensity_fn)
-        one_step = generalized_two_stage_integrator(
-            esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix),
-            position_update_fn,
-            coefficients,
-            format_output_fn=format_isokinetic_state_output,
-        )
-        return one_step
-
-    return isokinetic_integrator
-
-def esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix):
-    if len(inverse_mass_matrix.shape) != 2:
-        raise ValueError("inverse_mass_matrix must have 2 dimensions. If you're trying to just input the diagonal, switch to the unmodified blackjax version.")
-    
-    chol_inverse_mass_matrix = jnp.linalg.cholesky(inverse_mass_matrix)
-
-    def update(
-        momentum: ArrayTree,
-        logdensity_grad: ArrayTree,
-        step_size: float,
-        coef: float,
-        previous_kinetic_energy_change=None,
-        is_last_call=False,
-    ):
-        """Momentum update based on Esh dynamics.
-
-        The momentum updating map of the esh dynamics as derived in :cite:p:`steeg2021hamiltonian`
-        There are no exponentials e^delta, which prevents overflows when the gradient norm
-        is large.
-        """
-        del is_last_call
-
-        logdensity_grad = logdensity_grad
-        flatten_grads, unravel_fn = ravel_pytree(logdensity_grad)
-        flatten_grads = chol_inverse_mass_matrix.T @ flatten_grads
-        flatten_momentum, _ = ravel_pytree(momentum)
-        dims = flatten_momentum.shape[0]
-        normalized_gradient, gradient_norm = _normalized_flatten_array(flatten_grads)
-        momentum_proj = jnp.dot(flatten_momentum, normalized_gradient)
-        delta = step_size * coef * gradient_norm / (dims - 1)
-        zeta = jnp.exp(-delta)
-        new_momentum_raw = (
-            normalized_gradient * (1 - zeta) * (1 + zeta + momentum_proj * (1 - zeta))
-            + 2 * zeta * flatten_momentum
-        )
-        new_momentum_normalized, _ = _normalized_flatten_array(new_momentum_raw)
-        gr = unravel_fn(chol_inverse_mass_matrix@new_momentum_normalized)
-        next_momentum = unravel_fn(new_momentum_normalized)
-        kinetic_energy_change = (
-            delta
-            - jnp.log(2)
-            + jnp.log(1 + momentum_proj + (1 - momentum_proj) * zeta**2)
-        ) * (dims - 1)
-        if previous_kinetic_energy_change is not None:
-            kinetic_energy_change += previous_kinetic_energy_change
-        return next_momentum, gr, kinetic_energy_change
-
-    return update
-
-isokinetic_mclachlan_smart = generate_isokinetic_integrator_smart(mclachlan_coefficients)
-isokinetic_velocity_verlet_smart = generate_isokinetic_integrator_smart(velocity_verlet_coefficients)
-isokinetic_yoshida_smart = generate_isokinetic_integrator_smart(yoshida_coefficients)
-isokinetic_omelyan_smart = generate_isokinetic_integrator_smart(omelyan_coefficients)
-
-def _single_init(position: ArrayLike, logdensity_fn: Callable, rng_key: PRNGKey):
-    if pytree_size(position) < 2:
-        raise ValueError(
-            "The target distribution must have more than 1 dimension for MCLMC."
-        )
-    l, g = jax.value_and_grad(logdensity_fn)(position)
-
-    return IntegratorState(
-        position=position,
-        momentum=generate_unit_vector(rng_key, position),
-        logdensity=l,
-        logdensity_grad=g,
-    )
-
-def init_multi(
-    positions: ArrayLike,
-    rng_keys: PRNGKey,
-    logdensity_fn: Callable,
-    map_factory: Optional[Callable] = None,
-):
-    """Vectorized initializer for multiple chains.
-
-    `rng_keys` can be a single key (will be split) or an array of keys with
-    leading dimension equal to the number of chains.
-    """
-    mapper = _make_mapper(map_factory, in_axes=(0, 0))
-    if rng_keys.ndim == 0:
-        rng_keys = jax.random.split(rng_keys, positions.shape[0])
-    init_fn = mapper(lambda pos, key: _single_init(pos, logdensity_fn, key))
-    init_fn = _maybe_jit(map_factory, init_fn)
-    return init_fn(positions, rng_keys)
-
-def _make_mapper(map_factory: Optional[Callable], in_axes):
-    if map_factory is not None:
-        return lambda fn: map_factory(fn, in_axes=in_axes)
-    return lambda fn: jax.vmap(fn, in_axes=in_axes)
-
-
-def _maybe_jit(map_factory: Optional[Callable], fn: Callable) -> Callable:
-    """Jit when using the default mapper; leave as-is if user supplies a mapper."""
-    return fn if map_factory is not None else jax.jit(fn)
-
 def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
     """shard_map-compatible version of blackjax.mcmc.mclmc.build_kernel.
     Replaces jax.lax.cond with jnp.where to avoid varying-annotation mismatch.
@@ -172,6 +53,7 @@ def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
             logdensity=jnp.where(reject, state.logdensity, logdensity),
             energy_change=jnp.where(reject, jnp.zeros_like(energy_error), energy_error),
             kinetic_change=jnp.where(reject, jnp.zeros_like(kinetic_change), kinetic_change),
+            nonans=~reject,
         )
         return new_state, new_info
 
@@ -314,6 +196,125 @@ def _ess_shardmap(input_array, chain_axis=0, sample_axis=1):
     ess = ess_raw / tau_hat
 
     return ess.squeeze()
+
+#* ---- INTEGRATORS SUPPORTING NON-DIAGONAL MASS MATRICES ---------------------------------------------
+#  Define new isokinetic mclachlan. Only difference is it now takes in 2D, non-diagonal inverse matrix
+
+def generate_isokinetic_integrator_smart(coefficients):
+    """Make an isokinetic integrator. Exactly the same as the blackjax version, but works with non-diagonal mass matrices.
+
+    Args:
+        coefficients (jnp.array): The coefficents for the integrator
+    """
+    def isokinetic_integrator(
+        logdensity_fn: Callable, inverse_mass_matrix: ArrayTree = 1.0
+    ) -> GeneralIntegrator:
+        position_update_fn = euclidean_position_update_fn(logdensity_fn)
+        one_step = generalized_two_stage_integrator(
+            esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix),
+            position_update_fn,
+            coefficients,
+            format_output_fn=format_isokinetic_state_output,
+        )
+        return one_step
+
+    return isokinetic_integrator
+
+def esh_dynamics_momentum_update_one_step_smart(inverse_mass_matrix):
+    if len(inverse_mass_matrix.shape) != 2:
+        raise ValueError("inverse_mass_matrix must have 2 dimensions. If you're trying to just input the diagonal, switch to the unmodified blackjax version.")
+    
+    chol_inverse_mass_matrix = jnp.linalg.cholesky(inverse_mass_matrix)
+
+    def update(
+        momentum: ArrayTree,
+        logdensity_grad: ArrayTree,
+        step_size: float,
+        coef: float,
+        previous_kinetic_energy_change=None,
+        is_last_call=False,
+    ):
+        """Momentum update based on Esh dynamics.
+
+        The momentum updating map of the esh dynamics as derived in :cite:p:`steeg2021hamiltonian`
+        There are no exponentials e^delta, which prevents overflows when the gradient norm
+        is large.
+        """
+        del is_last_call
+
+        logdensity_grad = logdensity_grad
+        flatten_grads, unravel_fn = ravel_pytree(logdensity_grad)
+        flatten_grads = chol_inverse_mass_matrix.T @ flatten_grads
+        flatten_momentum, _ = ravel_pytree(momentum)
+        dims = flatten_momentum.shape[0]
+        normalized_gradient, gradient_norm = _normalized_flatten_array(flatten_grads)
+        momentum_proj = jnp.dot(flatten_momentum, normalized_gradient)
+        delta = step_size * coef * gradient_norm / (dims - 1)
+        zeta = jnp.exp(-delta)
+        new_momentum_raw = (
+            normalized_gradient * (1 - zeta) * (1 + zeta + momentum_proj * (1 - zeta))
+            + 2 * zeta * flatten_momentum
+        )
+        new_momentum_normalized, _ = _normalized_flatten_array(new_momentum_raw)
+        gr = unravel_fn(chol_inverse_mass_matrix@new_momentum_normalized)
+        next_momentum = unravel_fn(new_momentum_normalized)
+        kinetic_energy_change = (
+            delta
+            - jnp.log(2)
+            + jnp.log(1 + momentum_proj + (1 - momentum_proj) * zeta**2)
+        ) * (dims - 1)
+        if previous_kinetic_energy_change is not None:
+            kinetic_energy_change += previous_kinetic_energy_change
+        return next_momentum, gr, kinetic_energy_change
+
+    return update
+
+isokinetic_mclachlan_smart = generate_isokinetic_integrator_smart(mclachlan_coefficients)
+isokinetic_velocity_verlet_smart = generate_isokinetic_integrator_smart(velocity_verlet_coefficients)
+isokinetic_yoshida_smart = generate_isokinetic_integrator_smart(yoshida_coefficients)
+isokinetic_omelyan_smart = generate_isokinetic_integrator_smart(omelyan_coefficients)
+
+def _single_init(position: ArrayLike, logdensity_fn: Callable, rng_key: PRNGKey):
+    if pytree_size(position) < 2:
+        raise ValueError(
+            "The target distribution must have more than 1 dimension for MCLMC."
+        )
+    l, g = jax.value_and_grad(logdensity_fn)(position)
+
+    return IntegratorState(
+        position=position,
+        momentum=generate_unit_vector(rng_key, position),
+        logdensity=l,
+        logdensity_grad=g,
+    )
+
+def init_multi(
+    positions: ArrayLike,
+    rng_keys: PRNGKey,
+    logdensity_fn: Callable,
+    map_factory: Optional[Callable] = None,
+):
+    """Vectorized initializer for multiple chains.
+
+    `rng_keys` can be a single key (will be split) or an array of keys with
+    leading dimension equal to the number of chains.
+    """
+    mapper = _make_mapper(map_factory, in_axes=(0, 0))
+    if rng_keys.ndim == 0:
+        rng_keys = jax.random.split(rng_keys, positions.shape[0])
+    init_fn = mapper(lambda pos, key: _single_init(pos, logdensity_fn, key))
+    init_fn = _maybe_jit(map_factory, init_fn)
+    return init_fn(positions, rng_keys)
+
+def _make_mapper(map_factory: Optional[Callable], in_axes):
+    if map_factory is not None:
+        return lambda fn: map_factory(fn, in_axes=in_axes)
+    return lambda fn: jax.vmap(fn, in_axes=in_axes)
+
+
+def _maybe_jit(map_factory: Optional[Callable], fn: Callable) -> Callable:
+    """Jit when using the default mapper; leave as-is if user supplies a mapper."""
+    return fn if map_factory is not None else jax.jit(fn)
 
 def welford_combine(wa_state1, wa_state2):
     mean_a, m2_a, sample_size_a = wa_state1
