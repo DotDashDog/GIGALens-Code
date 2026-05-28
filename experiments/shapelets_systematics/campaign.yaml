@@ -1,0 +1,50 @@
+name: shapelets_systematics_v1
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/shapelets_systematics_v1
+
+plugins: []
+
+dataset:
+  # Adapts the existing vela_sim_systems directories in-place.
+  generator: vela_existing
+  vela_ids: ["01", "03", "04", "07", "08", "10", "15", "21", "22", "23", "25", "26"]
+  reps: 5
+  cam: "12"
+  filter_tag: "a0.500_f814w"
+  system_dir_root: ~/GIGALens-Code/data/vela_sim_systems
+  source_dir_root: ~/GIGALens-Code/data/vela_sources
+  # SimulatorConfig (must match how the systems were simulated in the notebook)
+  num_pix: 200
+  supersample: 1
+  # Noise (must match lens_vela_system.ipynb)
+  noise_kind: forward
+  background_rms: 0.002
+  exp_time: 2000
+
+inference:
+  builder: epl_shear_sersic_shapelets
+  pipeline: map_bootstrap_mclmc
+  pipeline_kwargs:
+    bootstrap_map_steps: 200
+    bootstrap_map_n_samples: 100
+    n_chains: 8
+    num_burnin_steps: 4000
+    num_results: 4000
+    desired_energy_variance: 5.0e-4
+
+# Sweep over shapelet order n_max.
+sweep:
+  axis: n_max
+  values: [10, 15, 20, 30]
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - mass_zscores
+  - all_zscores
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

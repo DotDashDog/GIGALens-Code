@@ -18,6 +18,8 @@ jax-trace/
 
 # Output directories (anything under results/ is reproducible; do not commit)
 results/
+simtests_results/
+slurm_logs/
 
 # Large input data (regenerate from sources rather than committing)
 data/

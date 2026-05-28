@@ -1,0 +1,52 @@
+name: hundred_sersic_v1
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/hundred_sersic_v1
+
+# The built-in gl2_sersic and vela_shapelets experiments are auto-imported.
+# Add extra plugin modules here if needed.
+plugins: []
+
+dataset:
+  # Adapts the existing SystemSaves dataset in-place (no re-simulation).
+  # To generate fresh systems instead, change generator to "parametric".
+  generator: gl2_existing
+  npz_path: ~/GIGALens-Code/data/simulated_systems/100SystemsStandard80px.npz
+  yaml_path: ~/GIGALens-Code/data/simulated_systems/100SystemsStandardParams.yaml
+  # SimulatorConfig params (must match the original simulation)
+  delta_pix: 0.065
+  num_pix: 80
+  supersample: 2
+  # Background noise params (must match original; used for ForwardProbModel)
+  noise_kind: forward
+  background_rms: 0.2
+  exp_time: 100
+
+inference:
+  builder: epl_shear_sersic_sersic
+  pipeline: map_svi_hmc
+  pipeline_kwargs:
+    map_num_steps: 1000
+    map_n_samples: 2000
+    svi_num_steps: 5000
+    svi_n_vi: 1000
+    hmc_n_hmc: 64
+    hmc_num_results: 1500
+    hmc_num_burnin: 500
+    hmc_init_eps: 0.3
+    hmc_init_l: 3
+
+sweep:
+  - {}  # single default run per system
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - mass_zscores
+  - percent_error
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

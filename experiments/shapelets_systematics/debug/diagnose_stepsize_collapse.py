@@ -97,6 +97,54 @@ def _src_model(use_shapelets, n_max):
             if use_shapelets else sersic.SersicEllipse(use_lstsq=True))
 
 
+def vela_priors():
+    lens_prior = tfd.JointDistributionSequential([
+        tfd.JointDistributionNamed(dict(
+            theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+            gamma=tfd.TruncatedNormal(2, 0.5, 1, 3),
+            e1=tfd.TruncatedNormal(0, 0.2, -0.5, 0.5),
+            e2=tfd.TruncatedNormal(0, 0.2, -0.5, 0.5),
+            center_x=tfd.Normal(0, 0.06),
+            center_y=tfd.Normal(0, 0.06),
+        )),
+        tfd.JointDistributionNamed(dict(
+            gamma1=tfd.TruncatedNormal(0, 0.1, -0.5, 0.5),
+            gamma2=tfd.Normal(0, 0.1, -0.5, 0.5),
+        )),
+    ])
+    lens_light_prior = tfd.JointDistributionSequential([
+        tfd.JointDistributionNamed(dict(
+            R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+            n_sersic=tfd.Uniform(0.5, 8),
+            e1=tfd.TruncatedNormal(0, 0.1, -0.2, 0.2),
+            e2=tfd.TruncatedNormal(0, 0.1, -0.2, 0.2),
+            center_x=tfd.Normal(0, 0.02),
+            center_y=tfd.Normal(0, 0.02),
+        )),
+    ])
+    source_light_prior = tfd.JointDistributionSequential([
+        tfd.JointDistributionNamed(dict(
+            beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+            center_x=tfd.Normal(0, 0.5),
+            center_y=tfd.Normal(0, 0.5),
+        )),
+    ])
+    return tfd.JointDistributionSequential([lens_prior, lens_light_prior, source_light_prior])
+
+
+def vela_system_model(sim_config, observed_img, background_rms=DEFAULT_BACKGROUND_RMS,
+                      exp_time=DEFAULT_EXP_TIME, use_shapelets=True, n_max=10):
+    """Free-lens / free-source model -- the one MCLMC actually samples."""
+    prior = vela_priors()
+    src_model = _src_model(use_shapelets, n_max)
+    phys_model = PhysicalModel([epl.EPL(50), shear.Shear()],
+                               [sersic.SersicEllipse(use_lstsq=True)], [src_model])
+    lens_sim = LensSimulator(phys_model, sim_config, bs=1)
+    prob_model = BackwardProbModel(prior, observed_img, background_rms=background_rms, exp_time=exp_time)
+    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
+    return model_seq, lens_sim
+
+
 def free_source_fixed_lens_model(sim_config, observed_img, fixed_params,
                                  background_rms=DEFAULT_BACKGROUND_RMS,
                                  exp_time=DEFAULT_EXP_TIME, use_shapelets=True, n_max=10):
@@ -224,36 +272,39 @@ def make_logpost_fn(lens_sim, prob_model, mode):
 # at center=0, so we sit in a data-supported (arc-reconstructing) region -- the
 # regime the chains actually occupy.
 # ---------------------------------------------------------------------------
-def pick_z0(lens_sim, prob_model, refine_steps=200):
-    """Pick z0 near the actual posterior mode the chains start from: truth lens
-    + truth lens-light (pinned by the fixed-lens prior) + the best shapelet
-    source. Beta scan for a good init, then Adam refine all dims in float64."""
+def pick_z0(lens_sim, prob_model, true_params, refine_steps=300):
+    """Build z0 at the chains' actual starting point on the FREE-lens model:
+    truth lens + truth lens-light (minus Ie) + best-fit shapelet source. Beta
+    scan, then Adam-refine all 17 dims in float64 toward the mode."""
     import optax
-    sample = prob_model.prior.sample(seed=jax.random.PRNGKey(0))
+    lens_light_no_Ie = dict(true_params[1][0])
+    lens_light_no_Ie.pop("Ie", None)
+
+    def build_z(beta, cx=0.0, cy=0.0):
+        src = dict(beta=jnp.asarray(np.float32(beta)),
+                   center_x=jnp.asarray(np.float32(cx)),
+                   center_y=jnp.asarray(np.float32(cy)))
+        params = [list(true_params[0]), [lens_light_no_Ie], [src]]
+        params = jax.tree.map(lambda x: jnp.asarray(x).reshape(()), params)  # scalars
+        return jnp.stack(prob_model.bij.inverse(params)).reshape(1, -1)
+
     logpost = make_logpost_fn(lens_sim, prob_model, "f64")
     chi_j = jax.jit(lambda z: logpost(z)[1])
     best = None
     for beta in np.linspace(0.08, 1.2, 24):
-        shp = dict(sample[2][0])
-        shp["beta"] = jnp.asarray(np.float32(beta))
-        shp["center_x"] = jnp.asarray(np.float32(0.0))
-        shp["center_y"] = jnp.asarray(np.float32(0.0))
-        twp = build_true_params_shp_from_sample(prob_model, sample, shp)
-        z = jnp.stack(prob_model.bij.inverse(twp)).T  # (1, n_dim)
+        z = build_z(beta)
         c = float(chi_j(z))
         if best is None or c < best[0]:
             best = (c, np.asarray(z), float(beta))
     z = jnp.asarray(best[1])
-    # Adam refine toward the mode (maximize log-post).
     val_grad = jax.jit(jax.value_and_grad(lambda zz: logpost(zz)[0]))
     opt = optax.adam(3e-3)
     st = opt.init(z)
     for _ in range(refine_steps):
         v, g = val_grad(z)
-        updates, st = opt.update(-g, st)  # ascent
+        updates, st = opt.update(-g, st)
         z = optax.apply_updates(z, updates)
-    chi_final = float(chi_j(z))
-    return z, chi_final, best[2]
+    return z, float(chi_j(z)), best[2]
 
 
 def build_true_params_shp_from_sample(prob_model, sample, shp):
@@ -351,8 +402,20 @@ def compute_hessian_metrics(lens_sim, prob_model, z0):
     covariance = inv(H_pos)."""
     lp = make_logpost_fn(lens_sim, prob_model, "f64")
     f = lambda zf: lp(zf.reshape(1, -1))[0]
-    H = jax.hessian(f)(z0.reshape(-1))      # Hessian of +log post
-    H = np.asarray(H)
+    z0f = z0.reshape(-1)
+    n = z0f.shape[0]
+    grad_f = jax.grad(f)
+    # Build the Hessian column-by-column via HVPs (jvp of grad) in a Python
+    # loop -- avoids jax.hessian's vmap that materializes (n * n_comp) conv
+    # channels at once and OOMs at n_max=30.
+    def hvp(v):
+        return jax.jvp(grad_f, (z0f,), (v,))[1]
+    hvp_j = jax.jit(hvp)
+    cols = []
+    for i in range(n):
+        e = jnp.zeros(n, dtype=z0f.dtype).at[i].set(1.0)
+        cols.append(np.asarray(hvp_j(e)))
+    H = np.stack(cols, axis=1)              # Hessian of +log post
     Hneg = -0.5 * (H + H.T)                 # metric ~ Hessian of -log post
     evals, evecs = np.linalg.eigh(Hneg)
     # Regularize to PD for a usable mass matrix (clip tiny/neg eigenvalues).
@@ -364,17 +427,34 @@ def compute_hessian_metrics(lens_sim, prob_model, z0):
     return evals, cov
 
 
-def test_E_curvature(lens_sim, prob_model, z0, n_max):
-    evals, cov = compute_hessian_metrics(lens_sim, prob_model, z0)
+def test_E_curvature(lens_sim, prob_model, z0, n_max, z_labels=None):
+    lp = make_logpost_fn(lens_sim, prob_model, "f64")
+    f = lambda zf: lp(zf.reshape(1, -1))[0]
+    z0f = z0.reshape(-1)
+    n = z0f.shape[0]
+    grad_f = jax.grad(f)
+    hvp_j = jax.jit(lambda v: jax.jvp(grad_f, (z0f,), (v,))[1])
+    H = np.stack([np.asarray(hvp_j(jnp.zeros(n, z0f.dtype).at[i].set(1.0))) for i in range(n)], axis=1)
+    Hneg = -0.5 * (H + H.T)
+    evals, evecs = np.linalg.eigh(Hneg)
     pos = evals[evals > 0]
+    floor = (pos.min() if pos.size else 1.0) * 1e-3
+    cov = (evecs * (1.0 / np.clip(evals, floor, None))) @ evecs.T
+    cov = 0.5 * (cov + cov.T)
+
     print(f"  Hessian(-logpost) eigenvalues (curvatures):")
     print(f"    n_pos={pos.size}/{evals.size}  min(+)={pos.min():.3e}  max={evals.max():.3e}")
     print(f"    curvature condition number = {evals.max()/pos.min():.3e}")
-    print(f"    sqrt(1/max_eig) (stiffest length scale) = {1.0/np.sqrt(evals.max()):.3e}")
-    print(f"    sqrt(1/min+_eig) (loosest length scale)  = {1.0/np.sqrt(pos.min()):.3e}")
-    print(f"  -> a single scalar step size must straddle a {np.sqrt(evals.max()/pos.min()):.1e}x"
-          f" range of length scales")
-    print(f"  run's metric is isotropic cov=diag(1e-6) i.e. length scale 1e-3 in every dim")
+    print(f"    stiffest length scale 1/sqrt(max_eig) = {1.0/np.sqrt(evals.max()):.3e}")
+    print(f"    loosest length scale 1/sqrt(min+_eig)  = {1.0/np.sqrt(pos.min()):.3e}")
+    print(f"  run's metric is isotropic cov=diag(1e-6): length scale 1e-3 in every dim")
+    # which params dominate the stiffest (largest-curvature) eigenvectors?
+    if z_labels is not None:
+        for k in range(min(3, n)):
+            v = np.abs(evecs[:, -1 - k])
+            top = np.argsort(v)[::-1][:3]
+            lab = ", ".join(f"{z_labels[t]}({v[t]:.2f})" for t in top)
+            print(f"    stiff dir #{k+1} (curv={evals[-1-k]:.2e}, len={1/np.sqrt(max(evals[-1-k],1e-30)):.2e}): {lab}")
     return evals, cov
 
 
@@ -499,6 +579,300 @@ def test_D_beta_sweep(lens_sim, prob_model, z0, n_max, out_prefix):
     return rows
 
 
+def _largest_eps_xi_below_1(lens_sim, prob_model, z_point, dim, inv_mm, n_keys=8,
+                            step_sizes=None):
+    """Median (over random momenta) energy-error xi vs step size; return the
+    largest eps with median xi < 1 (what the controller would settle near)."""
+    from gigalens_research.inference.blackjax_updated_utils import (
+        _build_kernel_shardmap, isokinetic_mclachlan_smart, _single_init,
+    )
+    if step_sizes is None:
+        step_sizes = np.logspace(-7, 1.0, 30)
+    target = 5e-4
+    L = float(np.sqrt(dim))
+    zf = z_point.reshape(-1).astype(jnp.float32)
+    lp = make_logpost_fn(lens_sim, prob_model, "f32_default")
+    logdensity = lambda z: lp(z.reshape(1, -1))[0]
+    kernel = _build_kernel_shardmap(logdensity, jnp.asarray(inv_mm, jnp.float32),
+                                    isokinetic_mclachlan_smart)
+
+    def one(key, ss):
+        st = _single_init(zf, logdensity, key)
+        _, info = kernel(rng_key=key, state=st, L=L, step_size=ss)
+        return info.energy_change
+    one_j = jax.jit(jax.vmap(lambda k, ss: one(k, ss), in_axes=(0, None)))
+    keys = jax.random.split(jax.random.key(0), n_keys)
+    med_xi = []
+    for ss in step_sizes:
+        dE = np.asarray(one_j(keys, jnp.float32(ss)))
+        xi = (dE ** 2) / (dim * target)
+        xi = xi[np.isfinite(xi)]
+        med_xi.append(np.median(xi) if xi.size else np.inf)
+    med_xi = np.array(med_xi)
+    below = step_sizes[med_xi < 1.0]
+    return (below.max() if below.size else np.nan), step_sizes, med_xi
+
+
+def test_F_along_beta(lens_sim, prob_model, z0, dim, n_max, out_prefix):
+    """Scan beta (chains' escape direction toward prior mean 0.7) and report,
+    at each point: cond(X), curvature condition number, gradient norm, and the
+    largest workable step size under (a) the run's isotropic metric and (b) a
+    LOCAL Hessian-cov metric. Distinguishes preconditioning vs pathology."""
+    basis_fn = make_basis_fn(lens_sim, prob_model)
+    W = (1.0 / np.asarray(prob_model.err_map))
+    lp64 = make_logpost_fn(lens_sim, prob_model, "f64")
+    f = lambda zf: lp64(zf.reshape(1, -1))[0]
+    grad_f = jax.jit(jax.grad(f))
+    hvp_j = jax.jit(lambda zf, v: jax.jvp(grad_f, (zf,), (v,))[1])
+
+    z0np = np.asarray(z0)
+    betas = [0.13, 0.20, 0.30, 0.50, 0.70, 1.00]
+    iso = np.eye(dim) * 1e-6
+
+    print("  beta   cond(X)    curv_cond   ||g||     eps<1(iso)  eps<1(Hess)")
+    for b in betas:
+        z = z0np.copy(); z[0, -3] = np.log(b)
+        zj = jnp.asarray(z); zf = jnp.asarray(z.reshape(-1))
+
+        ret = np.asarray(basis_fn(zj))
+        X = (ret[0] * W[..., None]).reshape(-1, ret.shape[-1]).astype(np.float64)
+        s = np.linalg.svd(X, compute_uv=False)
+        condX = float(s[0] / s[-1]) if s[-1] > 0 else np.inf
+
+        n = zf.shape[0]
+        H = np.stack([np.asarray(hvp_j(zf, jnp.zeros(n, zf.dtype).at[i].set(1.0))) for i in range(n)], axis=1)
+        Hneg = -0.5 * (H + H.T)
+        evals, evecs = np.linalg.eigh(Hneg)
+        pos = evals[evals > 0]
+        curv_cond = float(evals.max() / pos.min()) if pos.size else np.inf
+        floor = (pos.min() if pos.size else 1.0) * 1e-3
+        cov = (evecs * (1.0 / np.clip(evals, floor, None))) @ evecs.T
+        cov = 0.5 * (cov + cov.T)
+        gnorm = float(np.linalg.norm(np.asarray(grad_f(zf))))
+
+        eps_iso, _, _ = _largest_eps_xi_below_1(lens_sim, prob_model, zj, dim, iso)
+        eps_hess, _, _ = _largest_eps_xi_below_1(lens_sim, prob_model, zj, dim, cov)
+        print(f"  {b:4.2f}  {condX:.2e}  {curv_cond:.2e}  {gnorm:.2e}  "
+              f"{eps_iso:.2e}    {eps_hess:.2e}")
+
+
+def _real_logdensity_fn(lens_sim, prob_model):
+    """The EXACT float32 logdensity the production run tunes on:
+    BackwardProbModel.log_prob (Independent-Normal sum over all pixels)."""
+    def logdensity(z):
+        return jnp.squeeze(prob_model.log_prob(lens_sim, z.reshape(1, -1))[0])
+    return logdensity
+
+
+def test_G_energy_floor(lens_sim, prob_model, z0, dim, n_max, out_prefix, cov_good=None):
+    """THE decisive test for the user's stated mechanism ("EEVPD-vs-eps far from
+    eps^6"). Sweep step size and record the integrator energy error dE that the
+    controller actually sees, for:
+        - 'real_f32' : production BackwardProbModel.log_prob (float32)
+        - 'manual_f64': identical math but gram/solve/likelihood in float64
+    under BOTH the run's isotropic diag(1e-6) metric and a Hessian-cov metric.
+
+    If real_f32 dE *floors* (flat) at small eps while f64 keeps following the
+    eps^3 integrator law, the floor is float32 catastrophic cancellation in the
+    ~2.5e5-magnitude log-likelihood sum -> xi has a constant floor -> the
+    eps^6 controller drives eps to zero. That is a numerical-precision bug, not
+    a sampling pathology, and is fixable without touching the statistics.
+    """
+    from gigalens_research.inference.blackjax_updated_utils import (
+        _build_kernel_shardmap, isokinetic_mclachlan_smart, _single_init,
+    )
+    target = 5e-4
+    L = float(np.sqrt(dim))
+    step_sizes = np.logspace(-4.0, 0.7, 32)
+    key = jax.random.key(0)
+
+    # quantify the raw logdensity cancellation floor directly
+    lp_f32 = make_logpost_fn(lens_sim, prob_model, "f32_default")
+    lp_f64 = make_logpost_fn(lens_sim, prob_model, "f64")
+    real_lp = _real_logdensity_fn(lens_sim, prob_model)
+    L32 = float(jax.jit(lambda z: lp_f32(z)[0])(z0.astype(jnp.float32)))
+    L64 = float(jax.jit(lambda z: lp_f64(z)[0])(z0.astype(jnp.float64)))
+    Lreal = float(jax.jit(real_lp)(z0.astype(jnp.float32)))
+    ulp32 = abs(L64) * np.finfo(np.float32).eps
+    print(f"  logdensity@z0   real_f32={Lreal:.6f}  manual_f32={L32:.6f}  f64={L64:.8f}")
+    print(f"  |logdensity|~{abs(L64):.3e}  =>  float32 ULP(energy) ~ {ulp32:.3e}"
+          f"  -> xi floor ~ {(ulp32**2)/(dim*target):.3e}")
+
+    configs = {
+        "real_f32": (real_lp, jnp.float32),
+        "manual_f32": (lambda z: lp_f32(z.reshape(1, -1))[0], jnp.float32),
+        "manual_f64": (lambda z: lp_f64(z.reshape(1, -1))[0], jnp.float64),
+    }
+    metrics = {"iso diag(1e-6)": np.eye(dim) * 1e-6}
+    if cov_good is not None:
+        metrics["Hessian cov"] = np.asarray(cov_good)
+
+    curves = {}  # (metric, cfg) -> array of dE
+    for mname, inv_mm in metrics.items():
+        for cname, (lp, dt) in configs.items():
+            inv_mm_c = jnp.asarray(inv_mm, dt)
+            z0d = z0.reshape(-1).astype(dt)
+            state = _single_init(z0d, lp, key)
+            kernel = _build_kernel_shardmap(lp, inv_mm_c, isokinetic_mclachlan_smart)
+            kj = jax.jit(lambda st, ss: kernel(rng_key=key, state=st, L=L, step_size=ss))
+            dEs = []
+            for ss in step_sizes:
+                _, info = kj(state, dt(ss))
+                dEs.append(float(info.energy_change))
+            curves[(mname, cname)] = np.array(dEs)
+
+    # report floor + small-eps log-log slope (3 => integrator law, 0 => floor)
+    def slope_small(dE):
+        m = np.isfinite(dE) & (step_sizes < 1e-2) & (np.abs(dE) > 0)
+        if m.sum() < 3:
+            return np.nan
+        return np.polyfit(np.log10(step_sizes[m]), np.log10(np.abs(dE[m])), 1)[0]
+
+    for mname in metrics:
+        print(f"  --- metric: {mname} ---")
+        for cname in configs:
+            dE = curves[(mname, cname)]
+            fin = np.abs(dE[np.isfinite(dE) & (np.abs(dE) > 0)])
+            floor = fin.min() if fin.size else np.nan
+            xi = (dE ** 2) / (dim * target)
+            below = step_sizes[np.isfinite(xi) & (xi < 1.0)]
+            print(f"    {cname:11s}  |dE| floor={floor:.3e}  slope(eps<1e-2)={slope_small(dE):+.2f}"
+                  f"  xi_max={np.nanmax(xi):.2e}  largest eps(xi<1)={below.max() if below.size else np.nan:.2e}")
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        fig, axes = plt.subplots(1, len(metrics), figsize=(7.5 * len(metrics), 5), squeeze=False)
+        col = {"real_f32": "tab:red", "manual_f32": "tab:orange", "manual_f64": "tab:green"}
+        for ax, mname in zip(axes[0], metrics):
+            for cname in configs:
+                dE = np.abs(curves[(mname, cname)])
+                ax.loglog(step_sizes, dE, "o-", ms=4, color=col[cname], label=cname)
+            ref = step_sizes ** 3
+            ref = ref / ref[10] * np.abs(curves[(mname, "manual_f64")])[10]
+            ax.loglog(step_sizes, ref, "k--", lw=1, alpha=0.6, label=r"$\propto\epsilon^3$")
+            dE_target = np.sqrt(dim * target)
+            ax.axhline(dE_target, color="gray", ls=":", lw=1, label=r"$\xi=1$ target $|\Delta E|$")
+            ax.set_xlabel("step size"); ax.set_ylabel(r"$|\Delta E|$")
+            ax.set_title(f"{mname}"); ax.legend(fontsize=8)
+        fig.suptitle(f"Energy-error floor: f32 vs f64 ({out_prefix})")
+        fig.tight_layout()
+        fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"energy_floor_{out_prefix}.png")
+        fig.savefig(fn, dpi=110); print(f"  saved {fn}")
+    except Exception as e:
+        print(f"  (plot skipped: {e})")
+    return curves
+
+
+def test_H_realistic_start(lens_sim, prob_model, z0, dim, n_max, out_prefix, cov_good=None,
+                           init_scale=1e-3, n_start=8, n_mom=4):
+    """Reproduce the controller's view at the run's ACTUAL initial condition:
+    chains drawn from qz = N(best, scale_tril=diag(1e-3)) (=> cov diag(1e-6)),
+    initial metric M^{-1}=diag(1e-6), L=sqrt(dim), eps0=sqrt(dim)*0.25.
+
+    For a sweep of eps we form the energy error xi over many (start point x
+    momentum) draws -- i.e. exactly the population the step-size controller
+    averages over -- and ask:
+      (1) Does mean xi(eps) follow the eps^6 law the controller assumes
+          (slope of xi vs eps == 6), or is it shallow / floored above 1?
+      (2) Does a Hessian preconditioner restore the steep law & a workable eps?
+    Compared across n_max to explain the high-order-shapelet specificity.
+    """
+    from gigalens_research.inference.blackjax_updated_utils import (
+        _build_kernel_shardmap, isokinetic_mclachlan_smart, _single_init,
+    )
+    target = 5e-4
+    L = float(np.sqrt(dim))
+    eps0 = float(np.sqrt(dim) * 0.25)
+    step_sizes = np.logspace(-6.0, 0.7, 28)
+
+    # the run's exact initialisation scatter (isotropic std=init_scale in z-space)
+    rng = np.random.default_rng(0)
+    starts = np.asarray(z0).reshape(1, -1) + init_scale * rng.standard_normal((n_start, dim))
+    starts = jnp.asarray(starts, jnp.float32)
+
+    lp = make_logpost_fn(lens_sim, prob_model, "f32_default")
+    logdensity = lambda z: lp(z.reshape(1, -1))[0]
+    gnorm_j = jax.jit(lambda z: jnp.linalg.norm(jax.grad(lambda zz: lp(zz.reshape(1, -1))[0])(z)))
+    gmode = float(gnorm_j(jnp.asarray(z0).reshape(-1).astype(jnp.float32)))
+    gstart = np.array([float(gnorm_j(starts[k])) for k in range(n_start)])
+    print(f"  ||grad||  mode={gmode:.3e}   start pts: median={np.median(gstart):.3e}"
+          f"  max={gstart.max():.3e}  (init scatter std={init_scale:g})")
+
+    metrics = {"iso diag(1e-6)": np.eye(dim) * 1e-6}
+    if cov_good is not None:
+        metrics["Hessian precond"] = np.asarray(cov_good)
+
+    mom_keys = jax.random.split(jax.random.key(7), n_mom)
+
+    def xi_pop_at(inv_mm):
+        inv_mm = jnp.asarray(inv_mm, jnp.float32)
+        kernel = _build_kernel_shardmap(logdensity, inv_mm, isokinetic_mclachlan_smart)
+
+        @jax.jit
+        def one(pos, mkey, ss):
+            st = _single_init(pos, logdensity, mkey)
+            _, info = kernel(rng_key=mkey, state=st, L=L, step_size=ss)
+            return info.energy_change
+
+        mean_xi, max_xi, nan_frac = [], [], []
+        for ss in step_sizes:
+            dEs = []
+            for k in range(n_start):
+                for mk in mom_keys:
+                    dEs.append(float(one(starts[k], mk, jnp.float32(ss))))
+            dEs = np.array(dEs)
+            xi = (dEs ** 2) / (dim * target)
+            fin = np.isfinite(xi)
+            nan_frac.append(1.0 - fin.mean())
+            mean_xi.append(np.mean(xi[fin]) if fin.any() else np.inf)
+            max_xi.append(np.max(xi[fin]) if fin.any() else np.inf)
+        return np.array(mean_xi), np.array(max_xi), np.array(nan_frac)
+
+    def slope(x, y):
+        m = np.isfinite(y) & (y > 0) & (step_sizes < 1e-2)
+        if m.sum() < 3:
+            return np.nan
+        return np.polyfit(np.log10(x[m]), np.log10(y[m]), 1)[0]
+
+    results = {}
+    for mname, inv_mm in metrics.items():
+        mean_xi, max_xi, nan_frac = xi_pop_at(inv_mm)
+        results[mname] = mean_xi
+        below = step_sizes[np.isfinite(mean_xi) & (mean_xi < 1.0)]
+        i0 = int(np.argmin(np.abs(step_sizes - eps0)))
+        print(f"  metric={mname:16s}  mean-xi slope(eps<1e-2)={slope(step_sizes, mean_xi):+.2f}"
+              f"  mean-xi@eps0({eps0:.2f})={mean_xi[i0]:.2e}"
+              f"  largest eps(mean-xi<1)={below.max() if below.size else np.nan:.2e}"
+              f"  max nan-frac={nan_frac.max():.2f}")
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(8, 5.5))
+        col = {"iso diag(1e-6)": "tab:red", "Hessian precond": "tab:green"}
+        for mname, mean_xi in results.items():
+            ax.loglog(step_sizes, mean_xi, "o-", ms=4, color=col.get(mname), label=f"mean xi [{mname}]")
+        ref = (step_sizes / eps0) ** 6.0
+        anchor = results["iso diag(1e-6)"]
+        a_i = int(np.argmin(np.abs(step_sizes - eps0)))
+        ref = ref * max(anchor[a_i], 1e-12)
+        ax.loglog(step_sizes, ref, "k--", lw=1, alpha=0.6, label=r"controller assumption $\propto\epsilon^6$")
+        ax.axhline(1.0, color="gray", ls=":", label="target xi=1")
+        ax.axvline(eps0, color="purple", ls="-.", lw=1, label=f"init eps={eps0:.2f}")
+        ax.set_xlabel("step size"); ax.set_ylabel(r"mean $\xi=\Delta E^2/(d\cdot\mathrm{target})$")
+        ax.set_title(f"Controller's view at realistic start (n_max={n_max}, {out_prefix})")
+        ax.legend(fontsize=8)
+        fig.tight_layout()
+        fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"realistic_start_{out_prefix}.png")
+        fig.savefig(fn, dpi=110); print(f"  saved {fn}")
+    except Exception as e:
+        print(f"  (plot skipped: {e})")
+    return results
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--sim", default="01")
@@ -512,18 +886,22 @@ def main():
 
     observed_img, true_params, sim_config, _ = load_vela_sim_system(args.sim, args.rep, cam="12")
 
+    z_labels = ["theta_E", "gamma", "lens_e1", "lens_e2", "lens_cx", "lens_cy",
+                "gamma1", "gamma2", "ll_Rsersic", "ll_nsersic", "ll_e1", "ll_e2",
+                "ll_cx", "ll_cy", "src_beta", "src_cx", "src_cy"]
+
     for n_max in args.n_max_list:
-        print(f"\n{'='*78}\n n_max = {n_max}\n{'='*78}")
-        model_seq, lens_sim = free_source_fixed_lens_model(
-            sim_config, observed_img, true_params,
+        print(f"\n{'='*78}\n n_max = {n_max}  (FREE-lens model -- what MCLMC samples)\n{'='*78}")
+        model_seq, lens_sim = vela_system_model(
+            sim_config, observed_img,
             background_rms=DEFAULT_BACKGROUND_RMS, exp_time=DEFAULT_EXP_TIME,
             use_shapelets=True, n_max=n_max,
         )
         prob_model = model_seq.prob_model
         dim = int(jnp.stack(prob_model.bij.inverse(prob_model.prior.sample(seed=jax.random.PRNGKey(0)))).shape[0])
 
-        z0, chi0, beta0 = pick_z0(lens_sim, prob_model)
-        print(f" z0 chosen: beta={beta0:.3f}  chi^2/pix(f64)={chi0:.3e}  dim={dim}")
+        z0, chi0, beta0 = pick_z0(lens_sim, prob_model, true_params)
+        print(f" z0 (mode) beta_init={beta0:.3f}  chi^2/pix(f64)={chi0:.3e}  dim={dim}")
 
         if "A" in args.tests:
             print("\n--- TEST A: conditioning ---")
@@ -534,16 +912,31 @@ def main():
         if "D" in args.tests:
             print("\n--- TEST D: gradient breakdown vs beta ---")
             test_D_beta_sweep(lens_sim, prob_model, z0, n_max, f"{args.sim}_rep{args.rep:02d}_nmax{n_max}")
+        if "F" in args.tests:
+            print("\n--- TEST F: conditioning/curvature/workable-eps vs beta ---")
+            test_F_along_beta(lens_sim, prob_model, z0, dim, n_max, f"{args.sim}_rep{args.rep:02d}_nmax{n_max}")
         cov_good = None
         if "E" in args.tests:
             print("\n--- TEST E: curvature / anisotropy ---")
-            _, cov_good = test_E_curvature(lens_sim, prob_model, z0, n_max)
+            _, cov_good = test_E_curvature(lens_sim, prob_model, z0, n_max, z_labels=z_labels)
         if "C" in args.tests:
             print("\n--- TEST C: energy error vs step size (metric comparison) ---")
             if cov_good is None:
                 _, cov_good = compute_hessian_metrics(lens_sim, prob_model, z0)
             test_C_energy_vs_stepsize(lens_sim, prob_model, z0, dim,
                                       f"{args.sim}_rep{args.rep:02d}_nmax{n_max}", cov_good=cov_good)
+        if "G" in args.tests:
+            print("\n--- TEST G: float32 vs float64 energy-error floor ---")
+            if cov_good is None:
+                _, cov_good = compute_hessian_metrics(lens_sim, prob_model, z0)
+            test_G_energy_floor(lens_sim, prob_model, z0, dim, n_max,
+                                f"{args.sim}_rep{args.rep:02d}_nmax{n_max}", cov_good=cov_good)
+        if "H" in args.tests:
+            print("\n--- TEST H: controller's view at realistic (qz-sampled) start ---")
+            if cov_good is None:
+                _, cov_good = compute_hessian_metrics(lens_sim, prob_model, z0)
+            test_H_realistic_start(lens_sim, prob_model, z0, dim, n_max,
+                                   f"{args.sim}_rep{args.rep:02d}_nmax{n_max}", cov_good=cov_good)
 
 
 if __name__ == "__main__":

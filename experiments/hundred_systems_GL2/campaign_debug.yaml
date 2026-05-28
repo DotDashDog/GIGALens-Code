@@ -1,0 +1,45 @@
+name: hundred_sersic_debug
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/hundred_sersic_debug
+
+plugins: []
+
+dataset:
+  # Reuse the already-generated dataset from the main campaign.
+  generator: gl2_existing
+  npz_path: ~/GIGALens-Code/data/simulated_systems/100SystemsStandard80px.npz
+  yaml_path: ~/GIGALens-Code/data/simulated_systems/100SystemsStandardParams.yaml
+  delta_pix: 0.065
+  num_pix: 80
+  supersample: 2
+  noise_kind: forward
+  background_rms: 0.2
+  exp_time: 100
+
+inference:
+  builder: epl_shear_sersic_sersic
+  pipeline: map_svi_hmc
+  pipeline_kwargs:
+    # Reduced parameters: fits on 1 GPU, runs in < 10 min per system.
+    map_num_steps: 200
+    map_n_samples: 200
+    svi_num_steps: 1000
+    svi_n_vi: 200
+    hmc_n_hmc: 8
+    hmc_num_results: 200
+    hmc_num_burnin: 100
+
+sweep:
+  - {}
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - mass_zscores
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1
