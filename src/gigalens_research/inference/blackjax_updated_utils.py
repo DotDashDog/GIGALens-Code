@@ -26,9 +26,45 @@ import time
 from threading import Lock
 
 
+class KernelExtras(NamedTuple):
+    """Extra diagnostic fields returned alongside MCLMCInfo.
+
+    These fields are for instrumentation only and do NOT affect sampler
+    behavior.  They are threaded out of the kernel so that per-step
+    diagnostics can distinguish:
+      - energy_change_raw: the raw integrator energy error BEFORE NaN-zeroing.
+        When nan_reject is True, MCLMCInfo.energy_change is zeroed; this field
+        retains the original (possibly NaN/Inf) value for diagnostic use.
+      - kernel_nonan: True when the step was NOT nan/Inf-rejected by the
+        kernel (i.e. ~nan_reject).  Distinct from step_size_adapt's
+        `successes` (which may also reflect handle_nans logic downstream).
+    """
+    energy_change_raw: jnp.ndarray
+    kernel_nonan: jnp.ndarray
+
+
+class MCLMCInfoWithExtras(NamedTuple):
+    """Drop-in replacement for MCLMCInfo that carries KernelExtras alongside.
+
+    The four fields (logdensity, energy_change, kinetic_change, nonans) are
+    identical in meaning to blackjax.mcmc.mclmc.MCLMCInfo; extras is the
+    additional diagnostic payload.  We cannot mutate the upstream namedtuple,
+    so we wrap it here.
+    """
+    logdensity: jnp.ndarray
+    energy_change: jnp.ndarray
+    kinetic_change: jnp.ndarray
+    nonans: jnp.ndarray
+    extras: KernelExtras
+
+
 def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
     """shard_map-compatible version of blackjax.mcmc.mclmc.build_kernel.
     Replaces jax.lax.cond with jnp.where to avoid varying-annotation mismatch.
+
+    Returns MCLMCInfoWithExtras which carries the standard four MCLMCInfo
+    fields plus a KernelExtras bundle for diagnostic instrumentation.
+    The extras do NOT influence sampler behavior.
     """
     step = with_isokinetic_maruyama(
         integrator(logdensity_fn=logdensity_fn, inverse_mass_matrix=inverse_mass_matrix)
@@ -40,8 +76,9 @@ def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
         )
         energy_error = kinetic_change - logdensity + state.logdensity
 
-        reject = jnp.isinf(energy_error) | jnp.isnan(energy_error)
-        select = lambda a, b: jax.tree.map(lambda x, y: jnp.where(reject, x, y), a, b)
+        # Baseline behavior: reject (revert state) on NaN/Inf energy error only.
+        nan_reject = jnp.isinf(energy_error) | jnp.isnan(energy_error)
+        select = lambda a, b: jax.tree.map(lambda x, y: jnp.where(nan_reject, x, y), a, b)
 
         new_state = IntegratorState(
             *select(
@@ -49,11 +86,22 @@ def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
                 (position, momentum, logdensity, logdensitygrad),
             )
         )
-        new_info = MCLMCInfo(
-            logdensity=jnp.where(reject, state.logdensity, logdensity),
-            energy_change=jnp.where(reject, jnp.zeros_like(energy_error), energy_error),
-            kinetic_change=jnp.where(reject, jnp.zeros_like(kinetic_change), kinetic_change),
-            nonans=~reject,
+        # NaN/Inf: report a zero energy change (the value is meaningless and
+        # zeroing keeps it out of the step-size controller).
+        energy_change_zeroed = jnp.where(nan_reject, jnp.zeros_like(energy_error), energy_error)
+        new_info = MCLMCInfoWithExtras(
+            logdensity=jnp.where(nan_reject, state.logdensity, logdensity),
+            energy_change=energy_change_zeroed,
+            kinetic_change=jnp.where(nan_reject, jnp.zeros_like(kinetic_change), kinetic_change),
+            nonans=~nan_reject,
+            extras=KernelExtras(
+                # Raw energy error BEFORE zeroing — carries the true NaN/Inf
+                # value when nan_reject is True.  Useful for distinguishing
+                # "zeroed because NaN" from "truly small dE" in diagnostics.
+                energy_change_raw=energy_error,
+                # kernel_nonan: True iff this step was NOT nan/Inf-rejected.
+                kernel_nonan=~nan_reject,
+            ),
         )
         return new_state, new_info
 
