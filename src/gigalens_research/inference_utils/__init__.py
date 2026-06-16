@@ -7,6 +7,7 @@ design and ``Pipeline.run`` for the user-facing entry point.
 
 from .pipeline import (
     BridgeStage,
+    HessianSurrogateStage,
     HMCStage,
     InferenceContext,
     InferenceStage,
@@ -14,8 +15,10 @@ from .pipeline import (
     MCLMCStage,
     Pipeline,
     PipelineMismatchError,
+    StageDiagnostics,
     StageResult,
     SVIStage,
+    diagnostics_from_disk,
     posterior_from_disk,
     register_stage,
     stable_hash,
@@ -42,6 +45,7 @@ from .diagnostics import (
 
 __all__ = [
     "BridgeStage",
+    "HessianSurrogateStage",
     "HMCStage",
     "InferenceContext",
     "InferenceStage",
@@ -52,9 +56,11 @@ __all__ = [
     "PointEstimate",
     "Posterior",
     "SamplerPosterior",
+    "StageDiagnostics",
     "StageResult",
     "SurrogatePosterior",
     "SVIStage",
+    "diagnostics_from_disk",
     "filter_labels_by_group",
     "posterior_from_disk",
     "register_stage",

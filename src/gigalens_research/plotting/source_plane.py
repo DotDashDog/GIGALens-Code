@@ -58,8 +58,9 @@ def plot_source_plane(
     fov_arcsec: Optional[float] = None,
     center: Optional[tuple] = None,
     title: Optional[str] = None,
+    scale: str = "asinh",
+    linear_width: Optional[float] = None,
     log_vmin: float = 1e-2,
-    log_norm: bool = True,
     with_caustics: bool = True,
     caustic_color: str = "green",
 ) -> None:
@@ -77,7 +78,7 @@ def plot_source_plane(
         ax, img,
         extent=extent,
         title=title or f"Source plane ({point})",
-        log_vmin=log_vmin, log_norm=log_norm,
+        scale=scale, linear_width=linear_width, log_vmin=log_vmin,
         colorbar=True, remove_axis=False,
     )
     ax.set_xlabel("x [arcsec]"); ax.set_ylabel("y [arcsec]")

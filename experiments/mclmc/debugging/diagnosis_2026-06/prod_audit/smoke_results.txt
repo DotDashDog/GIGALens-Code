@@ -1,0 +1,12 @@
+Production compilation-seam audit — CPU smoke confirmations (float32, JAX_PLATFORMS=cpu)
+shifter docker:ghcr.io/nvidia/jax:jax-2026-04-13
+
+TEST1 (compilation count): rebuilding kernel(params.inverse_mass_matrix) each scan
+  step with a TRACED metric, inside a single @jax.jit scan, compiles the inner
+  kernel exactly ONCE. => metric-as-arg, single XLA program. Window swaps do NOT
+  re-jit. The structural enabler of a cross-compilation dE is ABSENT in production.
+
+TEST2 (seam magnitude on CPU): standalone jit(value_and_grad) vs in-kernel
+  value_and_grad over 200 float32 points (|logp|~tens): max diff = 0.00 ulp.
+  => the seam offset that produced +3.86/+4.20/+2.67/-3581 is a GPU-compilation
+  phenomenon, not reproducible on CPU. Consistent with E-series.

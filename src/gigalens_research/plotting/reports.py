@@ -107,6 +107,8 @@ class PosteriorReport:
         *,
         point: str = "median",
         with_caustics: bool = False,
+        scale: str = "asinh",
+        linear_width: Optional[float] = None,
         log_vmin: float = 1e-3,
     ) -> Figure:
         """1×4 panel: observed, model, normalized residual, residual histogram.
@@ -133,10 +135,11 @@ class PosteriorReport:
                   -sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix)
 
         fig, axs = plt.subplots(1, 4, figsize=(13, 3.2))
-        plot_image(axs[0], observed, extent=extent, title="Observed", log_vmin=log_vmin)
+        plot_image(axs[0], observed, extent=extent, title="Observed",
+                   scale=scale, linear_width=linear_width, log_vmin=log_vmin)
         plot_image(axs[1], predicted, extent=extent,
                    title=f"{self.prefix}Model ({point}, χ²/ν={red_chisq:.3f})",
-                   log_vmin=log_vmin)
+                   scale=scale, linear_width=linear_width, log_vmin=log_vmin)
         plot_image(axs[2], residual, extent=extent,
                    title=f"{self.prefix}Normalized residual", residual=True)
         plot_residual_histogram(axs[3], residual,
@@ -198,7 +201,8 @@ class PosteriorReport:
         sc = self.posterior.ctx.sim_config
         extent = (-sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix,
                   -sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix)
-        plot_image(axs[1], np.asarray(observed), extent=extent, title="Observed")
+        plot_image(axs[1], np.asarray(observed), extent=extent, title="Observed",
+                   scale="asinh")
         if with_caustics_on_image:
             plot_caustics_critical(axs[1], self.posterior, point=point)
         fig.tight_layout()
@@ -263,6 +267,8 @@ class PosteriorReport:
         truth_source_extent: Optional[tuple] = None,
         truth_source_fn=None,
         point: str = "median",
+        scale: str = "asinh",
+        linear_width: Optional[float] = None,
         log_vmin: float = 1e-2,
         grid_pix: Optional[int] = None,
         fov_arcsec: Optional[float] = None,
@@ -304,7 +310,8 @@ class PosteriorReport:
         plot_source_comparison(
             fig, self.posterior, truth_source,
             extent=ext if fn is None else None,
-            point=point, log_vmin=log_vmin,
+            point=point, scale=scale, linear_width=linear_width,
+            log_vmin=log_vmin,
             grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center,
         )
         fig.tight_layout()
@@ -372,6 +379,10 @@ class PipelineReport:
     """
 
     def __init__(self, pipeline=None, *, ctx=None, stages: Optional[Dict[str, Any]] = None):
+        # Source for debug diagnostics: either the live pipeline or an out_dir
+        # (set by from_disk). Resolved lazily in :meth:`diagnostics`.
+        self._pipeline = pipeline
+        self._out_dir: Optional[str] = None
         if pipeline is not None:
             self.ctx = pipeline.ctx
             self.stages = {}
@@ -405,7 +416,9 @@ class PipelineReport:
             except TypeError:
                 # stage with no posterior view (e.g. bridge); skip silently
                 continue
-        return cls(ctx=ctx, stages=stages)
+        report = cls(ctx=ctx, stages=stages)
+        report._out_dir = out_dir
+        return report
 
     # -- loss histories ------------------------------------------------------
 
@@ -428,6 +441,30 @@ class PipelineReport:
             plot_loss_history(ax, hist, title=title, ylabel=ylabel, log_y=log_y)
         fig.tight_layout()
         return fig
+
+    # -- debug diagnostics ---------------------------------------------------
+
+    def diagnostics(self, stage: str, **kwargs) -> Figure:
+        """Render a stage's captured debug diagnostics (e.g. an MCLMC tuning
+        history). Requires that the stage was run with ``debug=True``.
+
+        Works whether this report wraps a live pipeline or was built via
+        :meth:`from_disk`. Extra kwargs are forwarded to the stage's plotter
+        (e.g. ``chain=`` for MCLMC). See
+        :func:`gigalens_research.plotting.plot_stage_diagnostics`."""
+        from .diagnostics import plot_stage_diagnostics
+
+        if self._pipeline is not None:
+            diag = self._pipeline.diagnostics(stage)
+        elif self._out_dir is not None:
+            from ..inference_utils.pipeline import diagnostics_from_disk
+            diag = diagnostics_from_disk(self._out_dir, stage, self.ctx)
+        else:
+            raise RuntimeError(
+                "This report has no pipeline or out_dir to read diagnostics "
+                "from; build it from a Pipeline or via PipelineReport.from_disk."
+            )
+        return plot_stage_diagnostics(diag, **kwargs)
 
     # -- compound corner -----------------------------------------------------
 
@@ -494,9 +531,10 @@ class PipelineReport:
             residual = normalized_residual(observed, predicted, p.err_map_at(predicted))
             chisq = float(np.sum(residual ** 2))
             ndof = max(observed.size - p.n_params, 1)
-            plot_image(row_ax[0], observed, title="Observed")
+            plot_image(row_ax[0], observed, title="Observed", scale="asinh")
             plot_image(row_ax[1], predicted,
-                       title=f"{name} model (χ²/ν={chisq / ndof:.3f})")
+                       title=f"{name} model (χ²/ν={chisq / ndof:.3f})",
+                       scale="asinh")
             plot_image(row_ax[2], residual, title=f"{name} residual", residual=True)
             plot_residual_histogram(row_ax[3], residual, title=f"{name} hist")
         fig.tight_layout()

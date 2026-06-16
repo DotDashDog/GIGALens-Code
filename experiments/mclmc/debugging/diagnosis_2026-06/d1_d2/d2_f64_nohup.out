@@ -1,0 +1,25 @@
+[run_d2_f64] host=login17 date=2026-06-12T14:06:48-07:00
+[run_d2_f64] Waiting for GPU lock (needed for shifter)...
+--- versions ---
+jax 0.10.0.dev20260612 jaxlib 0.10.0.dev20260612
+--- running D2 float64 ---
+[d2_f64] float64 enabled
+[14:09:19] D2 noise floor (float64) starting
+[14:09:19] Output: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2
+[14:09:19] JAX 0.10.0.dev20260612 devices: [CpuDevice(id=0)]
+[14:09:19] x64 enabled: True
+[14:09:19] Initial RSS: 0.26 GB
+[14:09:19] Loading system...
+[14:09:31] 
+=== n_max=10 (float64) ===
+[14:09:31]   RSS before model build: 0.38 GB
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d2_noise_floor_f64.py", line 299, in <module>
+    main()
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d2_noise_floor_f64.py", line 180, in main
+    simulator = model_seq.simulator
+                ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ModellingSequence' object has no attribute 'simulator'
+--- D2 f64 exit code: 1 ---
+srun: error: nid001145: task 0: Exited with exit code 1
+srun: Terminating StepId=54359739.135

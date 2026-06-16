@@ -1,0 +1,20 @@
+[E1] JAX 0.4.7 devices=[CpuDevice(id=0)] precision=float64
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py", line 498, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py", line 494, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py", line 221, in cmd_dump
+    model_seq, lens_sim = build_model(args.n_max)
+                          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py", line 84, in build_model
+    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=n_max)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/src/gigalens_research/simtests/experiments/vela_shapelets.py", line 121, in build_epl_shear_sersic_shapelets
+    from gigalens.jax.inference import ModellingSequence
+  File "/global/homes/l/linusu/gigalens/src/gigalens/jax/inference.py", line 59, in <module>
+    mesh = jax.make_mesh((len(jax.devices()),), ('device',))
+           ^^^^^^^^^^^^^
+AttributeError: module 'jax' has no attribute 'make_mesh'

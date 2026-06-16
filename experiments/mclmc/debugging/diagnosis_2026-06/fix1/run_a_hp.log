@@ -1,0 +1,30 @@
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260614 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/fix1_runA_hp
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  high_precision=True
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-08)
+Final Chi-squared: 1.51671
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 393, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 205, in main
+    artifacts = bootstrap_stage.derive_artifacts(stage_result.arrays)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/src/gigalens_research/simtests/pipelines.py", line 302, in derive_artifacts
+    qz = tfd.MultivariateNormalTriL(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/decorator.py", line 235, in fun
+    return caller(func, *(extras + args), **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/distributions/distribution.py", line 342, in wrapped_init
+    default_init(self_, *args, **kwargs)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/distributions/mvn_tril.py", line 205, in __init__
+    dtype = dtype_util.common_dtype([loc, scale_tril], tf.float32)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/dtype_util.py", line 219, in common_dtype
+    raise TypeError(
+TypeError: Found incompatible dtypes, <class 'numpy.float32'> and <class 'numpy.float64'>. Seen so far: [<class 'numpy.float32'>, <class 'numpy.float64'>]
+srun: error: nid001049: task 0: Exited with exit code 1
+srun: Terminating StepId=54445706.6

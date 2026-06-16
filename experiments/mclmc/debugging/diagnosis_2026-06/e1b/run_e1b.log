@@ -1,0 +1,62 @@
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class bootstrap --n-max 25 --precision float64 --K 8
+[E1b] bootstrap anchor 0: |g|=146597 logp=154849.76  (9.9s)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class bootstrap --n-max 25 --precision float32 --K 8
+[E1b] bootstrap anchor 0: |g|=146599 logp=154849.75  (7.3s)
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class run_a_late --n-max 25 --precision float64 --K 8
+[E1b] run_a_late anchor 0: |g|=4695.22 logp=159881.09  (9.3s)
+[E1b] run_a_late anchor 1: |g|=7334.8 logp=159871.25  (5.4s)
+[E1b] run_a_late anchor 2: |g|=11456.5 logp=159894.59  (5.4s)
+[E1b] run_a_late anchor 3: |g|=9836.23 logp=159862.72  (5.2s)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class run_a_late --n-max 25 --precision float32 --K 8
+[E1b] run_a_late anchor 0: |g|=4695.55 logp=159881.08  (6.9s)
+[E1b] run_a_late anchor 1: |g|=7333.96 logp=159871.27  (2.8s)
+[E1b] run_a_late anchor 2: |g|=11455.8 logp=159894.58  (2.8s)
+[E1b] run_a_late anchor 3: |g|=9834.69 logp=159862.77  (2.7s)
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class run_b_late --n-max 25 --precision float64 --K 8
+[E1b] run_b_late anchor 0: |g|=15743.4 logp=159558.06  (10.6s)
+[E1b] run_b_late anchor 1: |g|=17722.3 logp=159573.83  (6.0s)
+[E1b] run_b_late anchor 2: |g|=15642.1 logp=159566.79  (5.9s)
+[E1b] run_b_late anchor 3: |g|=17719.9 logp=159575.77  (5.3s)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class run_b_late --n-max 25 --precision float32 --K 8
+[E1b] run_b_late anchor 0: |g|=15756.1 logp=159558.19  (7.0s)
+[E1b] run_b_late anchor 1: |g|=17723.9 logp=159573.97  (2.8s)
+[E1b] run_b_late anchor 2: |g|=15642.9 logp=159566.78  (2.7s)
+[E1b] run_b_late anchor 3: |g|=17728.8 logp=159575.95  (2.9s)
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class prior_far --n-max 25 --precision float64 --K 8
+[E1b] prior_far anchor 0: |g|=914487 logp=-291793.3  (9.8s)
+[E1b] prior_far anchor 1: |g|=1.49272e+06 logp=-307423.08  (5.6s)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class prior_far --n-max 25 --precision float32 --K 8
+[E1b] prior_far anchor 0: |g|=914416 logp=-291663.56  (7.4s)
+[E1b] prior_far anchor 1: |g|=3.17509e+06 logp=-309723.28  (2.7s)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class bootstrap --n-max 10 --precision float64 --K 8
+[E1b] bootstrap anchor 0: |g|=148291 logp=152585.3  (4.9s)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py dump --anchor-class bootstrap --n-max 10 --precision float32 --K 8
+[E1b] bootstrap anchor 0: |g|=148294 logp=152585.31  (4.4s)
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1b_grad_audit.py analyze
+[E1b] bootstrap_nmax10_anchor0: |g|f64=1.483e+05 ratio=1 rel_err_med=2.04e-05 cos_med=1.0000 f32_spread=9.06e-05 f64_spread=8.83e-05
+[E1b] bootstrap_nmax25_anchor0: |g|f64=1.466e+05 ratio=1 rel_err_med=2.18e-05 cos_med=1.0000 f32_spread=9.22e-05 f64_spread=9.13e-05
+[E1b] prior_far_nmax25_anchor0: |g|f64=9.145e+05 ratio=0.9999 rel_err_med=0.002 cos_med=1.0000 f32_spread=0.00253 f64_spread=7.23e-06
+[E1b] prior_far_nmax25_anchor1: |g|f64=1.493e+06 ratio=2.127 rel_err_med=36.8 cos_med=0.2533 f32_spread=23 f64_spread=2.35e-05
+[E1b] run_a_late_nmax25_anchor0: |g|f64=4695 ratio=1 rel_err_med=0.000403 cos_med=1.0000 f32_spread=0.00139 f64_spread=0.00121
+[E1b] run_a_late_nmax25_anchor1: |g|f64=7335 ratio=0.9999 rel_err_med=0.000317 cos_med=1.0000 f32_spread=0.000954 f64_spread=0.000932
+[E1b] run_a_late_nmax25_anchor2: |g|f64=1.146e+04 ratio=0.9999 rel_err_med=0.000124 cos_med=1.0000 f32_spread=0.000613 f64_spread=0.000622
+[E1b] run_a_late_nmax25_anchor3: |g|f64=9836 ratio=0.9998 rel_err_med=0.000725 cos_med=1.0000 f32_spread=0.00153 f64_spread=0.000713
+[E1b] run_b_late_nmax25_anchor0: |g|f64=1.574e+04 ratio=1.001 rel_err_med=0.00121 cos_med=1.0000 f32_spread=0.000724 f64_spread=0.000359
+[E1b] run_b_late_nmax25_anchor1: |g|f64=1.772e+04 ratio=1 rel_err_med=0.000633 cos_med=1.0000 f32_spread=0.00045 f64_spread=0.000412
+[E1b] run_b_late_nmax25_anchor2: |g|f64=1.564e+04 ratio=1 rel_err_med=0.000923 cos_med=1.0000 f32_spread=0.000956 f64_spread=0.000493
+[E1b] run_b_late_nmax25_anchor3: |g|f64=1.772e+04 ratio=1.001 rel_err_med=0.000836 cos_med=1.0000 f32_spread=0.000512 f64_spread=0.000383
+[E1b] plot -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1b/e1b_grad_audit.png

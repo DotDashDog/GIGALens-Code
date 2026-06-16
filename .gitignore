@@ -32,3 +32,8 @@ sys60_converged_4e4_burnin/
 hmc_samples_z.npy
 samples.npy
 svi_samples.npy
+
+# MCLMC diagnostic run outputs: large, regenerable .npy/.npz arrays from the
+# adaptation-collapse diagnosis (keep the scripts + .md writeups + small plots).
+experiments/mclmc/debugging/**/*.npy
+experiments/mclmc/debugging/**/*.npz

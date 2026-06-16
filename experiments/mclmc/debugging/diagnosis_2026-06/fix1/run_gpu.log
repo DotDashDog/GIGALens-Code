@@ -1,0 +1,33 @@
+/global/homes/l/linusu/gigalens/src/gigalens/simulator.py:78: SyntaxWarning: invalid escape sequence '\c'
+  """Simulates lenses and fits for their linear parameters based on the observed data.
+[fix1] config=float32 x64=False high_precision=False dev=cuda:0
+    bootstrap        logp=154849.765625
+    run_a_late_0     logp=159881.015625
+    run_a_late_1     logp=159870.968750
+    run_a_late_2     logp=159894.359375
+    run_a_late_3     logp=156276.203125
+[fix1] dumped -> dump_float32.npz  (ray unique=6/400)
+[fix1] config=full64 x64=True high_precision=False dev=cuda:0
+    bootstrap        logp=154849.763126
+    run_a_late_0     logp=159881.091520
+    run_a_late_1     logp=159871.253314
+    run_a_late_2     logp=159894.588330
+    run_a_late_3     logp=159862.724113
+[fix1] dumped -> dump_full64.npz  (ray unique=400/400)
+[fix1] config=mixed x64=True high_precision=True dev=cuda:0
+    bootstrap        logp=154849.767479
+    run_a_late_0     logp=159881.095733
+    run_a_late_1     logp=159871.257527
+    run_a_late_2     logp=159894.592543
+    run_a_late_3     logp=159862.728336
+[fix1] dumped -> dump_mixed.npz  (ray unique=400/400)
+
+anchor                  float32         full64          mixed   |mixed-full64|
+bootstrap           154849.7656    154849.7631    154849.7675   4.353e-03
+run_a_late_0        159881.0156    159881.0915    159881.0957   4.213e-03
+run_a_late_1        159870.9688    159871.2533    159871.2575   4.213e-03
+run_a_late_2        159894.3594    159894.5883    159894.5925   4.213e-03
+run_a_late_3        156276.2031    159862.7241    159862.7283   4.222e-03
+
+ray unique logp values (400 pts through frozen anchor 0): float32=6, full64=400, mixed=400
+[fix1] plot -> fix1/fix1_gate.png

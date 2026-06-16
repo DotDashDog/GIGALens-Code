@@ -1,0 +1,34 @@
+[repro] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+[repro] output dir: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/run_c_nmax25_ds1e-6_nb2000
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=100, diag_scale=1e-06)
+Final Chi-squared: 1.51841
+[repro] qz obtained in 79.4s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 71.69664890505373 s
+[repro] MCLMC done in 95.6s
+[repro] saving to /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/run_c_nmax25_ds1e-6_nb2000
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py:309: RuntimeWarning: Mean of empty slice
+  "energy_change_raw_rms": float(np.sqrt(np.nanmean(ecraw**2))) if n_steps_phase > 0 else None,
+
+=== SUMMARY ===
+  tune1     : eps 0.3208 -> 1.284  xi[10,50,90]=[1e-08,0.0287,0.718]  kern_rej=0.000  step_norm_med=0.000961
+  tune2     : eps 1.287 -> 0.0002203  xi[10,50,90]=[1e-08,1e-08,6.46]  kern_rej=0.330  step_norm_med=1.16e-10
+  tune3     : eps 0.0002203 -> 0.0002203  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  sampling  : eps 0.0002203 -> 0.0002203  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  MM window step= 514: eig [9.02e-08, 0.00804]  cond=8.92e+04  n_neg=0
+  MM window step= 744: eig [6.91e-09, 0.00679]  cond=9.84e+05  n_neg=0
+  MM window step=1203: eig [-2.91e-10, 0.000193]  cond=1.39e+09  n_neg=5
+
+[repro] all outputs written to /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/run_c_nmax25_ds1e-6_nb2000

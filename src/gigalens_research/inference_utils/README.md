@@ -32,6 +32,7 @@ diagnostics and plotting across all inference algorithms.
   - [Writing a custom stage](#writing-a-custom-stage)
 - [Caching and invalidation](#caching-and-invalidation)
 - [Truth-aware diagnostics](#truth-aware-diagnostics)
+- [Debug diagnostics](#debug-diagnostics)
 
 ---
 
@@ -220,6 +221,7 @@ MCLMCStage(
     frac_tune2=0.6,         # burn-in fraction for stage-2 tuning
     frac_tune3=0.2,         # burn-in fraction for stage-3 tuning
     progress_bar=False,
+    debug=False,            # capture the tuning history for diagnostics
     name="mclmc", seed=None,
 )
 ```
@@ -227,6 +229,11 @@ MCLMCStage(
 **Requires:** `qz`.  
 **Produces:** `samples_z` of shape `(n_chains, num_results, n_params)`.  
 **Posterior view:** `SamplerPosterior` (identical to HMC).
+
+Run with `debug=True` to capture the per-step tuning history (step size, `L`,
+inverse-mass-matrix spectrum, energy-error ratio `xi`, NaN mask) for the
+[debug diagnostics](#debug-diagnostics) plot. `debug` is part of the cache
+key, so toggling it re-runs the stage (the captured arrays are extra output).
 
 ---
 
@@ -592,3 +599,43 @@ truth, recovered, residual, extent = source_comparison(
     post, truth_fn, grid_pix=400, fov_arcsec=2.0,
 )
 ```
+
+---
+
+## Debug diagnostics
+
+Some stages can capture their *internal* run history for debugging failed
+inference — distinct from posterior convergence diagnostics, which are about
+the finished chain. Currently `MCLMCStage` supports it; the mechanism is
+generic so other stages can opt in.
+
+Enable it by constructing the stage with `debug=True`:
+
+```python
+pipeline.add(MCLMCStage(n_chains=32, num_burnin_steps=2000,
+                        num_results=3000, debug=True))
+pipeline.run(out_dir="run/")
+
+# Pull the captured arrays (empty StageDiagnostics if debug was off):
+diag = pipeline.diagnostics("mclmc")     # -> StageDiagnostics
+diag.arrays.keys()    # step_size, L, xi, nonan, inverse_mass_matrix
+diag.config           # tuning-stage boundaries needed by the plotter
+
+# Or load them back later without an active pipeline:
+from gigalens_research.inference_utils import diagnostics_from_disk
+diag = diagnostics_from_disk("run/", "mclmc", ctx)
+```
+
+`StageDiagnostics` is pure data (arrays + plot config + ctx). The rendering
+lives in `gigalens_research.plotting.plot_stage_diagnostics`, which dispatches
+on the stage class — see the plotting README. Diagnostics are persisted to a
+separate `diagnostics.npz` per stage so loading a posterior never pulls in the
+(potentially large) debug arrays.
+
+**Adding diagnostics to a new stage:**
+
+1. In the stage's `run`, populate `StageResult.diagnostics` (only when a
+   `debug` flag is set) and expose plot-relevant config via
+   `diagnostics_config()`.
+2. Register a plotter in `plotting/diagnostics.py` with
+   `@register_diagnostic_plotter("YourStage")`.

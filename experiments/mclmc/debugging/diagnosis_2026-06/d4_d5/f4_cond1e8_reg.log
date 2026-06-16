@@ -1,0 +1,15 @@
+[d4d5] JAX 0.10.0.dev20260615 devices [CpuDevice(id=0)]
+[d4d5] exp=f4_cond1e8_reg cond=1e+08 qz_init=honest pathology=none delta=0
+[d4d5] DE_TARGET(xi=1)=0.0922  true_std[min,med,max]=[0.393,1.23,2.65]
+[d4d5] MCLMC done in 2.1s
+
+=== SUMMARY ===
+  tune1     : eps 1.177 -> 0.09415 (min 0) xi[10,50,90]=[0.000241,0.286,15.8] kern_rej=0.000 snorm_med=0.17 ecraw_rms=0.257 ecraw_nan=0.000
+  tune2     : eps 0.09404 -> 0.003124 (min 0) xi[10,50,90]=[1e-08,1e-08,5.13] kern_rej=0.000 snorm_med=0 ecraw_rms=0.14 ecraw_nan=0.000
+  tune3     : eps 0.003124 -> 0.003124 (min 0.00312) xi[10,50,90]=[-1,-1,-1] kern_rej=0.000 snorm_med=0.00794 ecraw_rms=0.419 ecraw_nan=0.000
+  sampling  : eps 0.003124 -> 0.003124 (min 0.00312) xi[10,50,90]=[-1,-1,-1] kern_rej=0.000 snorm_med=0.00507 ecraw_rms=0.364 ecraw_nan=0.000
+  MM step= 514: eig[4.74e-06,51.5] cond=1.09e+07 n_neg=0 nan=False
+  MM step= 744: eig[2.15e-06,67.1] cond=3.12e+07 n_neg=0 nan=False
+  MM step=1203: eig[7.19e-07,78.9] cond=1.1e+08 n_neg=0 nan=False
+
+[d4d5] outputs -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d4_d5/f4_cond1e8_reg

@@ -44,15 +44,20 @@ def _n_basis(light_model) -> int:
     """Number of linear-amplitude basis functions a light profile contributes
     when used with ``use_lstsq=True``.
 
-    - Profiles with their own ``n_layers`` attribute (e.g. Shapelets) report
-      it directly.
-    - Single-component profiles (Sersic, SersicEllipse, ...) report 1.
+    Reads the profile's ``depth`` (the number of basis rows its ``light()``
+    returns in lstsq mode), which is set on every profile:
+
+    - single-component profiles (Sersic, SersicEllipse, ...) -> 1,
+    - Shapelets -> ``n_layers``,
+    - composite profiles (e.g. SersicShapelets) -> sum of their parts
+      (so a single ``n_layers`` attribute, which composites lack, would
+      undercount them).
 
     Used by :meth:`Posterior.source_plane` to slice the solved coefficient
     vector returned by :meth:`LensSimulator.lstsq_simulate`, which is laid out
     as ``[lens_light_bases..., source_light_bases...]`` in profile order.
     """
-    return int(getattr(light_model, "n_layers", 1))
+    return int(getattr(light_model, "depth", getattr(light_model, "n_layers", 1)))
 
 
 # ---------------------------------------------------------------------------

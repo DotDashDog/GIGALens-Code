@@ -85,6 +85,8 @@ def plot_source_comparison(
     *,
     extent: Optional[Tuple[float, float, float, float]] = None,
     point: str = "median",
+    scale: str = "asinh",
+    linear_width: Optional[float] = None,
     log_vmin: float = 1e-2,
     titles: Optional[Tuple[str, str, str]] = None,
     grid_pix: Optional[int] = None,
@@ -98,9 +100,11 @@ def plot_source_comparison(
     :class:`LightProfile`). See :func:`source_comparison` for full input
     semantics.
 
-    Truth and recovered share one color scale (a common ``vmin``/``vmax``
-    computed from both) so their brightnesses are directly comparable; the
-    residual uses a centered diverging map.
+    Truth and recovered share one color scale (a common ``vmax`` computed from
+    both panels, with ``vmin=0`` since negative pixels are clipped) so their
+    brightnesses are directly comparable. The residual uses a centered diverging
+    map. ``scale`` controls the normalization (default ``"asinh"``); see
+    :func:`plot_image` for the full set of options.
 
     Returns the three axes so the caller can post-decorate (e.g. overlay
     caustics with :func:`plot_caustics`).
@@ -112,17 +116,29 @@ def plot_source_comparison(
     )
     titles = titles or ("Truth source", f"Recovered ({point})", "Truth − Recovered")
 
-    # Shared color scale across truth and recovered so the two panels are
-    # directly comparable. Use the joint max for vmax; vmin is the log floor.
-    both = np.concatenate([np.asarray(truth).ravel(), np.asarray(recovered).ravel()])
+    # Shared color limits: joint vmax across both panels, vmin=0 (negatives
+    # clipped for asinh/sqrt) or log_vmin for log scale.
+    both = np.concatenate([
+        np.clip(np.asarray(truth).ravel(), 0, None),
+        np.clip(np.asarray(recovered).ravel(), 0, None),
+    ])
     finite = both[np.isfinite(both)]
-    shared_vmax = float(finite.max()) if finite.size else log_vmin
+    shared_vmax = float(finite.max()) if finite.size else 1.0
+    shared_vmin = log_vmin if scale == "log" else 0.0
+
+    # For asinh, share the linear_width computed from the joint vmax so both
+    # panels have identical knee positions (critical for a fair comparison).
+    lw = linear_width
+    if scale == "asinh" and lw is None:
+        lw = max(shared_vmax / 100.0, 1e-12)
 
     axs = fig.subplots(1, 3)
     plot_image(axs[0], truth, fig=fig, extent=extent, title=titles[0],
-               log_vmin=log_vmin, vmin=log_vmin, vmax=shared_vmax, remove_axis=False)
+               scale=scale, linear_width=lw, log_vmin=log_vmin,
+               vmin=shared_vmin, vmax=shared_vmax, remove_axis=False)
     plot_image(axs[1], recovered, fig=fig, extent=extent, title=titles[1],
-               log_vmin=log_vmin, vmin=log_vmin, vmax=shared_vmax, remove_axis=False)
+               scale=scale, linear_width=lw, log_vmin=log_vmin,
+               vmin=shared_vmin, vmax=shared_vmax, remove_axis=False)
     plot_image(axs[2], residual, fig=fig, extent=extent, title=titles[2],
                residual=True, remove_axis=False)
     for ax in axs:

@@ -1,0 +1,22 @@
+{
+  "n_max": 10,
+  "num_burnin_steps": 2000,
+  "num_results": 500,
+  "n_chains": 8,
+  "diag_scale": 1e-08,
+  "seed": 0,
+  "x64": true,
+  "high_precision": true,
+  "bootstrap_map_steps": 200,
+  "bootstrap_map_samples": 16,
+  "no_bootstrap": false,
+  "total_steps": 2500,
+  "tune1_steps": 400,
+  "tune2_steps": 1200,
+  "tune3_steps": 400,
+  "dim": 17,
+  "jax_version": "0.10.0.dev20260615",
+  "mclmc_wall_time_s": 75.80547460191883,
+  "bootstrap_wall_time_s": 20.238059705123305,
+  "tag": "nmax10_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113105"
+}

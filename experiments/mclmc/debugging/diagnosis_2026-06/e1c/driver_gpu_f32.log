@@ -1,0 +1,69 @@
+=== E1c precision=float32 anchor=both jobid=54445706 host=login18 date=2026-06-14T10:26:30-07:00 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c/run_gpu_float32_both.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+=== E1c env ===
+CUDA_ARCH_LIST=7.5 8.0 8.6 9.0 10.0 12.0
+CUDA_BASE_IMAGE=nvcr.io/nvidia/cuda-dl-base:26.02-cuda13.1-devel-ubuntu24.04
+CUDA_COMPONENT_LIST=cccl crt nvrtc driver-dev culibos-dev cudart cudart-dev nvcc tileiras
+CUDA_DRIVER_VERSION=590.48.01
+CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/22.7/cuda/11.7
+CUDA_VERSION=13.1.1.006
+CUDA_VISIBLE_DEVICES=0
+JAX_TOOLBOX_REF=aae1dc863c64f7c1057c67d5b9fa9d8669b7decd
+PYTHONPATH=/global/homes/l/linusu/sidecar_jax_upgrade:/global/homes/l/linusu/gigalens/src:/global/homes/l/linusu/GIGALens-Code/src:/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages
+XLA_FLAGS= --xla_gpu_enable_latency_hiding_scheduler=true
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.5
+XLA_PYTHON_CLIENT_PREALLOCATE=false
+[E1c] JAX 0.10.0.dev20260614 devices: [CudaDevice(id=0)]
+[E1c] n_max=25 precision=float32 device_tag=gpu K=8
+[E1c] out_dir: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c
+[E1c] model built n_max=25
+[E1c] [run_a_late_0] A(std logp)=159881.015625  gnorm_A=4687  ulp=0.01562
+        kernel ld direct (eps->0) median=159881.015625  standalone-kernel(direct)=0 (0 ulp)
+        eps->0 raw dE: median=0.000000  std_over_K=0.000e+00  (0 ulp)
+        eps=1e-09: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-05: dE median=0.000000 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [run_a_late_1] A(std logp)=159870.984375  gnorm_A=7444  ulp=0.01562
+        kernel ld direct (eps->0) median=159871.000000  standalone-kernel(direct)=-0.015625 (-1 ulp)
+        eps->0 raw dE: median=-0.015625  std_over_K=0.000e+00  (-1 ulp)
+        eps=1e-09: dE median=-0.015625 std_over_K=0.000e+00
+        eps=1e-07: dE median=-0.015625 std_over_K=0.000e+00
+        eps=1e-05: dE median=-0.015625 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [run_a_late_2] A(std logp)=159894.406250  gnorm_A=1.143e+04  ulp=0.01562
+        kernel ld direct (eps->0) median=159894.390625  standalone-kernel(direct)=0.015625 (1 ulp)
+        eps->0 raw dE: median=0.015625  std_over_K=0.000e+00  (1 ulp)
+        eps=1e-09: dE median=0.015625 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.015625 std_over_K=0.000e+00
+        eps=1e-05: dE median=0.015625 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [run_a_late_3] A(std logp)=156276.203125  gnorm_A=1.11e+08  ulp=0.01562
+        kernel ld direct (eps->0) median=156276.218750  standalone-kernel(direct)=-0.015625 (-1 ulp)
+        eps->0 raw dE: median=-0.015625  std_over_K=0.000e+00  (-1 ulp)
+        eps=1e-09: dE median=-0.015625 std_over_K=0.000e+00
+        eps=1e-07: dE median=-0.015625 std_over_K=0.000e+00
+        eps=1e-05: dE median=-0.015625 std_over_K=1.736e-02
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [bootstrap_0] A(std logp)=154849.765625  gnorm_A=1.466e+05  ulp=0.01562
+        kernel ld direct (eps->0) median=154849.781250  standalone-kernel(direct)=-0.015625 (-1 ulp)
+        eps->0 raw dE: median=-0.015625  std_over_K=0.000e+00  (-1 ulp)
+        eps=1e-09: dE median=-0.015625 std_over_K=0.000e+00
+        eps=1e-07: dE median=-0.015625 std_over_K=0.000e+00
+        eps=1e-05: dE median=-0.015625 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] summary written: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c/summary_gpu_float32_nmax25_both.json
+[E1c] raw npz written: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c/raw_gpu_float32_nmax25_both.npz
+
+==============================================================================
+E1c CONSTANTS TABLE  (gpu_float32_nmax25_both)
+==============================================================================
+anchor               A(logp)   archived dE  measured dE0    honest dE0
+run_a_late_0       159881.02       +3.8594       +0.0000     +0.000000
+run_a_late_1       159870.98       +4.2031       -0.0156     +0.000000
+run_a_late_2       159894.41       +2.6719       +0.0156     +0.000000
+run_a_late_3       156276.20    -3580.7812       -0.0156     +0.000000
+bootstrap_0        154849.77       +0.0781       -0.0156     +0.000000
+==============================================================================
+=== E1c gpu float32 both: exit 0 ===

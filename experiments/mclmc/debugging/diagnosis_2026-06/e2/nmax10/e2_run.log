@@ -1,0 +1,182 @@
+E2 n_max=10  start: 2026-06-12T16:09:03
+[E2] n_max=10: loading model...
+[E2] model loaded in 0.4s
+
+[E2] ---- anchor set: bootstrap (n_anchors=1) ----
+[E2]   anchor 1/1
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=3.626e+01  cond(A)^2=1.315e+03  cond(gram_f64)=1.315e+03  cond(gram_f32)=1.315e+03  gram_f32_neg_ev=0
+[E2]   sv_max=6.903e+04  sv_min=1.904e+03
+[E2]   amp_norm=1.362e-01  amp_max_abs=7.979e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 2.9s
+
+[E2] ---- anchor set: run_a_late (n_anchors=8) ----
+[E2]   anchor 1/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.743e+01  cond(A)^2=3.039e+02  cond(gram_f64)=3.039e+02  cond(gram_f32)=3.039e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.513e+04  sv_min=2.015e+03
+[E2]   amp_norm=1.355e-01  amp_max_abs=4.862e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 2/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.778e+01  cond(A)^2=3.161e+02  cond(gram_f64)=3.161e+02  cond(gram_f32)=3.161e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.572e+04  sv_min=2.009e+03
+[E2]   amp_norm=1.353e-01  amp_max_abs=4.831e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 3/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.736e+01  cond(A)^2=3.014e+02  cond(gram_f64)=3.014e+02  cond(gram_f32)=3.014e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.505e+04  sv_min=2.019e+03
+[E2]   amp_norm=1.355e-01  amp_max_abs=4.894e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 4/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.732e+01  cond(A)^2=2.999e+02  cond(gram_f64)=2.999e+02  cond(gram_f32)=2.999e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.504e+04  sv_min=2.024e+03
+[E2]   amp_norm=1.353e-01  amp_max_abs=4.871e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 5/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.722e+01  cond(A)^2=2.967e+02  cond(gram_f64)=2.967e+02  cond(gram_f32)=2.967e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.491e+04  sv_min=2.027e+03
+[E2]   amp_norm=1.352e-01  amp_max_abs=4.836e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.4s
+[E2]   anchor 6/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.734e+01  cond(A)^2=3.007e+02  cond(gram_f64)=3.007e+02  cond(gram_f32)=3.007e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.474e+04  sv_min=2.003e+03
+[E2]   amp_norm=1.368e-01  amp_max_abs=4.960e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.7s
+[E2]   anchor 7/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.730e+01  cond(A)^2=2.993e+02  cond(gram_f64)=2.993e+02  cond(gram_f32)=2.993e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.491e+04  sv_min=2.018e+03
+[E2]   amp_norm=1.355e-01  amp_max_abs=4.992e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 8/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.719e+01  cond(A)^2=2.956e+02  cond(gram_f64)=2.956e+02  cond(gram_f32)=2.956e+02  gram_f32_neg_ev=0
+[E2]   sv_max=3.487e+04  sv_min=2.028e+03
+[E2]   amp_norm=1.350e-01  amp_max_abs=4.821e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+
+[E2] ---- anchor set: run_b_late (n_anchors=8) ----
+[E2]   anchor 1/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.532e+01  cond(A)^2=6.411e+02  cond(gram_f64)=6.411e+02  cond(gram_f32)=6.411e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.499e+04  sv_min=1.777e+03
+[E2]   amp_norm=1.421e-01  amp_max_abs=7.749e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 2/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.516e+01  cond(A)^2=6.329e+02  cond(gram_f64)=6.329e+02  cond(gram_f32)=6.329e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.474e+04  sv_min=1.778e+03
+[E2]   amp_norm=1.422e-01  amp_max_abs=7.752e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 3/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.503e+01  cond(A)^2=6.264e+02  cond(gram_f64)=6.264e+02  cond(gram_f32)=6.264e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.472e+04  sv_min=1.787e+03
+[E2]   amp_norm=1.418e-01  amp_max_abs=7.756e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 4/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.522e+01  cond(A)^2=6.361e+02  cond(gram_f64)=6.361e+02  cond(gram_f32)=6.361e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.472e+04  sv_min=1.773e+03
+[E2]   amp_norm=1.425e-01  amp_max_abs=7.796e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 5/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.545e+01  cond(A)^2=6.478e+02  cond(gram_f64)=6.478e+02  cond(gram_f32)=6.478e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.518e+04  sv_min=1.775e+03
+[E2]   amp_norm=1.422e-01  amp_max_abs=7.763e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.6s
+[E2]   anchor 6/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.531e+01  cond(A)^2=6.406e+02  cond(gram_f64)=6.406e+02  cond(gram_f32)=6.406e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.493e+04  sv_min=1.775e+03
+[E2]   amp_norm=1.424e-01  amp_max_abs=7.771e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+[E2]   anchor 7/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.488e+01  cond(A)^2=6.190e+02  cond(gram_f64)=6.190e+02  cond(gram_f32)=6.190e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.442e+04  sv_min=1.785e+03
+[E2]   amp_norm=1.416e-01  amp_max_abs=7.722e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.4s
+[E2]   anchor 8/8
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=2.450e+01  cond(A)^2=6.005e+02  cond(gram_f64)=6.005e+02  cond(gram_f32)=6.005e+02  gram_f32_neg_ev=0
+[E2]   sv_max=4.389e+04  sv_min=1.791e+03
+[E2]   amp_norm=1.418e-01  amp_max_abs=7.695e-02
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.000e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.000e+00
+[E2]   done in 0.5s
+
+[E2] ---- anchor set: prior_draws (n_anchors=4) ----
+[E2]   anchor 1/4
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.610e+09  cond(A)^2=2.594e+18  cond(gram_f64)=2.922e+18  cond(gram_f32)=1.371e+11  gram_f32_neg_ev=4
+[E2]   sv_max=4.227e+05  sv_min=2.624e-04
+[E2]   amp_norm=2.863e+05  amp_max_abs=9.470e+04
+[E2]   ratio cond_gram_f64/cond(A)^2 = 1.127e+00
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 4.692e-08
+[E2]   done in 0.5s
+[E2]   anchor 2/4
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.052e+09  cond(A)^2=1.106e+18  cond(gram_f64)=1.094e+18  cond(gram_f32)=6.740e+10  gram_f32_neg_ev=14
+[E2]   sv_max=2.735e+05  sv_min=2.600e-04
+[E2]   amp_norm=7.432e+04  amp_max_abs=3.379e+04
+[E2]   ratio cond_gram_f64/cond(A)^2 = 9.883e-01
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 6.164e-08
+[E2]   done in 0.5s
+[E2]   anchor 3/4
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=7.764e+06  cond(A)^2=6.027e+13  cond(gram_f64)=6.027e+13  cond(gram_f32)=5.348e+10  gram_f32_neg_ev=8
+[E2]   sv_max=2.478e+05  sv_min=3.192e-02
+[E2]   amp_norm=2.150e+02  amp_max_abs=7.256e+01
+[E2]   ratio cond_gram_f64/cond(A)^2 = 9.999e-01
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 8.874e-04
+[E2]   done in 0.5s
+[E2]   anchor 4/4
+[E2]   A shape: (40000, 67)  nan_pre_clamp=False
+[E2]   cond(A)=1.622e+10  cond(A)^2=2.631e+20  cond(gram_f64)=1.528e+17  cond(gram_f32)=2.063e+09  gram_f32_neg_ev=11
+[E2]   sv_max=1.583e+04  sv_min=9.757e-07
+[E2]   amp_norm=1.770e+08  amp_max_abs=9.854e+07
+[E2]   ratio cond_gram_f64/cond(A)^2 = 5.809e-04
+[E2]   ratio cond_gram_f32/cond_gram_f64 = 1.350e-08
+[E2]   done in 0.5s
+
+[E2] spectra saved to diagnosis_2026-06/e2/nmax10/spectra.npz
+[E2] summary saved to diagnosis_2026-06/e2/nmax10/summary.json

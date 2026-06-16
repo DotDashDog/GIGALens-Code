@@ -1,0 +1,15 @@
+[run_d1_only] jobid=54359739 host=login17 date=2026-06-12T14:12:51-07:00
+[run_d1_only] Acquiring GPU lock...
+/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/run_d1_only.sh: line 29: 241287 Terminated              flock /global/homes/l/linusu/.claude/mclmc_gpu.lock srun --overlap --jobid="$JOBID" --ntasks=1 --cpus-per-task=16 shifter --module=gpu,nccl-plugin --image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 bash -c "
+            export PYTHONPATH=\"/global/homes/l/linusu/sidecar_jax_upgrade:\$HOME/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages\"
+            export XLA_PYTHON_CLIENT_PREALLOCATE=false
+            export XLA_PYTHON_CLIENT_MEM_FRACTION=0.75
+            echo '--- versions ---'
+            python -c 'import jax, jaxlib; print(\"jax\", jax.__version__, \"jaxlib\", jaxlib.__version__)'
+            echo '--- running D1 finiteness audit ---'
+            python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d1_finiteness_audit.py
+            ec=\$?
+            echo \"--- D1 exit code: \$ec ---\"
+            exit \$ec
+        " 2>&1
+     241288 Done                    | tee "$LOG_FILE"

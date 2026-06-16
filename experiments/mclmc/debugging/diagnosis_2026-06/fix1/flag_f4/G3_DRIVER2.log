@@ -1,0 +1,63 @@
+>>>>> n25 float64, NO F4 (flag control) 2026-06-15T14:23:36-07:00
+=== repro_vela n25_f64_noF4 jobid=54496479 host=login11 date=2026-06-15T14:23:37-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --likelihood-precision float64 --no-bootstrap --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --out-dir diagnosis_2026-06/fix1/flag_f4/n25_f64_noF4 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_f64_noF4.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/flag_f4/n25_f64_noF4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_142350
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  likelihood_precision=float64
+[repro] --no-bootstrap: constructing qz from truth directly
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 405, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 198, in main
+    qz = tfd.MultivariateNormalTriL(loc=true_z, scale_tril=scale_tril)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/decorator.py", line 235, in fun
+    return caller(func, *(extras + args), **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/distributions/distribution.py", line 342, in wrapped_init
+    default_init(self_, *args, **kwargs)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/distributions/mvn_tril.py", line 205, in __init__
+    dtype = dtype_util.common_dtype([loc, scale_tril], tf.float32)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/dtype_util.py", line 219, in common_dtype
+    raise TypeError(
+TypeError: Found incompatible dtypes, <class 'numpy.float32'> and <class 'numpy.float64'>. Seen so far: [<class 'numpy.float32'>, <class 'numpy.float64'>]
+srun: error: nid001077: task 0: Exited with exit code 1
+srun: Terminating StepId=54496479.12
+>>>>> n25 float64, WITH F4 (regression) 2026-06-15T14:24:01-07:00
+=== repro_vela n25_f64_F4 jobid=54496479 host=login11 date=2026-06-15T14:24:01-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --likelihood-precision float64 --no-bootstrap --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --regularize-mm --out-dir diagnosis_2026-06/fix1/flag_f4/n25_f64_F4 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_f64_F4.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/flag_f4/n25_f64_F4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_142410
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  likelihood_precision=float64
+[repro] --no-bootstrap: constructing qz from truth directly
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 405, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 198, in main
+    qz = tfd.MultivariateNormalTriL(loc=true_z, scale_tril=scale_tril)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/decorator.py", line 235, in fun
+    return caller(func, *(extras + args), **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/distributions/distribution.py", line 342, in wrapped_init
+    default_init(self_, *args, **kwargs)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/distributions/mvn_tril.py", line 205, in __init__
+    dtype = dtype_util.common_dtype([loc, scale_tril], tf.float32)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/dtype_util.py", line 219, in common_dtype
+    raise TypeError(
+TypeError: Found incompatible dtypes, <class 'numpy.float32'> and <class 'numpy.float64'>. Seen so far: [<class 'numpy.float32'>, <class 'numpy.float64'>]
+srun: error: nid001077: task 0: Exited with exit code 1
+srun: Terminating StepId=54496479.13
+G3 DONE 2026-06-15T14:24:20-07:00

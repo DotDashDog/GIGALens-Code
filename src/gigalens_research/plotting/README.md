@@ -21,12 +21,14 @@ control display and saving.
   - [loss_histories](#loss_histories)
   - [compound_corner](#compound_corner)
   - [image_comparison](#image_comparison)
+  - [diagnostics](#diagnostics)
 - [Primitive plotters reference](#primitive-plotters-reference)
   - [plot_image](#plot_image)
   - [Source plane and caustics](#source-plane-and-caustics)
   - [Corner plots](#corner-plots)
   - [Convergence plots](#convergence-plots)
   - [Truth diagnostics](#truth-diagnostics)
+  - [Debug diagnostics](#debug-diagnostics)
 - [Labels and parameter flattening](#labels-and-parameter-flattening)
 
 ---
@@ -39,6 +41,7 @@ control display and saving.
 | `source_plane.py` | `plot_source_plane`, `plot_caustics`, `plot_critical_curves`, `plot_caustics_critical` |
 | `convergence.py` | `plot_chain_traces`, `plot_running_rhat`, `plot_running_ess`, `plot_loss_history` |
 | `corner.py` | `plot_corner`, `plot_corner_overlay` |
+| `diagnostics.py` | `plot_stage_diagnostics`, `plot_mclmc_diagnostics`, `register_diagnostic_plotter` |
 | `labels.py` | `LATEX_LABELS`, `latex_label`, `flatten_params`, `flatten_param_names` |
 | `truth.py` | `plot_z_scores`, `plot_source_comparison` |
 | `reports.py` | `PosteriorReport`, `PipelineReport` |
@@ -319,6 +322,24 @@ fig = pr.image_comparison(
 
 ---
 
+### diagnostics
+
+Render a stage's captured *debug* run history (e.g. an MCLMC tuning trace).
+Requires that the stage was run with `debug=True` (see the inference_utils
+README). Works on both live-pipeline and `from_disk` reports.
+
+```python
+fig = pr.diagnostics("mclmc", chain=3)  # extra kwargs forwarded to the plotter
+```
+
+For MCLMC this produces five stacked panels vs. step: per-chain step size,
+trajectory length `L`, inverse-mass-matrix eigenvalue spread, the energy-error
+ratio `xi` for one chain, and a finite-step (NaN) heatmap — with dashed lines
+marking the three tuning-stage boundaries. It's the quickest way to see *where*
+a sampling run blew up.
+
+---
+
 ## Primitive plotters reference
 
 ### plot_image
@@ -464,6 +485,38 @@ ax_truth, ax_rec, ax_res = plot_source_comparison(
 #   - a (N, N) ndarray  →  provide extent=(xmin, xmax, ymin, ymax) in arcsec
 #   - a callable f(X, Y) -> image  →  provide grid_pix / fov_arcsec
 ```
+
+---
+
+### Debug diagnostics
+
+Stage-specific run histories (distinct from the convergence plots above,
+which work off a finished posterior). Dispatched by stage class through a
+registry, so each algorithm gets its own plotter.
+
+```python
+from gigalens_research.plotting import (
+    plot_stage_diagnostics,        # dispatch on diag.stage_class
+    plot_mclmc_diagnostics,        # the MCLMCStage plotter
+    register_diagnostic_plotter,   # decorator to add a new stage's plotter
+    has_diagnostic_plotter,
+)
+
+# `diag` is a StageDiagnostics from pipeline.diagnostics(stage) or
+# diagnostics_from_disk(out_dir, stage, ctx). Requires the stage ran with
+# debug=True.
+fig = plot_stage_diagnostics(diag, chain=0)
+
+# Add diagnostics for a new stage:
+@register_diagnostic_plotter("NutsStage")
+def plot_nuts_diagnostics(diag, **kwargs):
+    arr, cfg = diag.arrays, diag.config
+    ...
+    return fig
+```
+
+`plot_stage_diagnostics` raises a clear error if the stage wasn't run with
+`debug=True` (no captured arrays) or if no plotter is registered for its class.
 
 ---
 

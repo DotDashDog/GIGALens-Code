@@ -329,9 +329,18 @@ def _single_init(position: ArrayLike, logdensity_fn: Callable, rng_key: PRNGKey)
         )
     l, g = jax.value_and_grad(logdensity_fn)(position)
 
+    # generate_unit_vector samples jax.random.normal, which defaults to float32 even under
+    # jax_enable_x64; cast the momentum to the position dtype so the initial state is
+    # single-dtype. Otherwise it clashes with the kernel's float64 momentum in the
+    # lax.select inside handle_nans (and similar branch sites).
+    momentum = jax.tree_util.tree_map(
+        lambda m, p: m.astype(p.dtype),
+        generate_unit_vector(rng_key, position),
+        position,
+    )
     return IntegratorState(
         position=position,
-        momentum=generate_unit_vector(rng_key, position),
+        momentum=momentum,
         logdensity=l,
         logdensity_grad=g,
     )

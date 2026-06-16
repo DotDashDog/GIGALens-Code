@@ -1,0 +1,19 @@
+--- versions ---
+jax 0.10.0.dev20260612 jaxlib 0.10.0.dev20260612
+--- running D2 float64 ---
+[d2_f64] float64 enabled
+[14:25:22] D2 noise floor (float64) starting
+[14:25:22] Output: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2
+[14:25:23] JAX 0.10.0.dev20260612 devices: [CpuDevice(id=0)]
+[14:25:23] x64 enabled: True
+[14:25:23] Initial RSS: 0.26 GB
+[14:25:23] Loading system...
+[14:25:33] 
+=== n_max=10 (float64) ===
+[14:25:33]   RSS before model build: 0.38 GB
+[14:25:35]   Getting bootstrap qz...
+srun: forcing job termination
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+[2026-06-12T21:27:39.261] error: *** STEP 54359739.139 ON nid001145 CANCELLED AT 2026-06-12T21:27:39 DUE to SIGNAL Killed ***
+srun: error: nid001145: task 0: Killed
+srun: Terminating StepId=54359739.139

@@ -8,11 +8,14 @@ Registered pipeline builders
 
 Custom stages
 -------------
-- :class:`VelaBootstrapQzStage`: runs a short MAP with lens parameters pinned
-  to truth to recover the shapelet geometry, then constructs a tight diagonal
-  ``qz`` around the full true-parameter vector.  This ``qz`` initialises the
-  subsequent MCLMC chains at truth, isolating source-model misspecification as
-  the only source of posterior bias.
+- :class:`PartialTruthBootstrapQzStage`: profile-agnostic bootstrap.  Given a
+  truth that constrains some parameters but leaves others free, it runs a short
+  MAP with the constrained parameters pinned to truth (the rest optimised),
+  then constructs a tight diagonal ``qz`` around the full true-parameter vector.
+  This ``qz`` initialises the subsequent MCLMC chains at truth, isolating model
+  misspecification as the only source of posterior bias.  Profiles and free-
+  parameter priors are read from the ``InferenceContext`` rather than re-
+  specified, so the same stage serves every source/lens model.
 """
 from __future__ import annotations
 
@@ -79,22 +82,23 @@ def build_map_svi_hmc(system: Any, **kwargs) -> List[InferenceStage]:
 def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
     """Fixed-lens MAP bootstrap → MCLMC pipeline.
 
-    Runs :class:`VelaBootstrapQzStage` to recover the shapelet truth geometry
-    via a short MAP (lens pinned to truth), then runs MCLMC starting from a
-    tight diagonal ``qz`` centred at the full truth in unconstrained space.
+    Runs :class:`PartialTruthBootstrapQzStage` with the lens (mass + lens light)
+    pinned to truth and the source left free, recovering the source geometry via
+    a short MAP, then runs MCLMC starting from a tight diagonal ``qz`` centred at
+    the full truth in unconstrained space.  The source profile is whatever the
+    inference model uses (read from ``ctx``), so this builder is source-agnostic.
 
     Kwargs consumed:
 
-    ``n_max`` (10),
     ``bootstrap_map_steps`` (200), ``bootstrap_map_n_samples`` (100),
     ``n_chains`` (8), ``num_burnin_steps`` (4000), ``num_results`` (4000),
     ``desired_energy_variance`` (5e-4),
     ``frac_tune1`` (0.2), ``frac_tune2`` (0.6), ``frac_tune3`` (0.2).
     """
     return [
-        VelaBootstrapQzStage(
+        PartialTruthBootstrapQzStage(
             system=system,
-            n_max=int(kwargs.get("n_max", 10)),
+            free=("source",),
             map_num_steps=int(kwargs.get("bootstrap_map_steps", 200)),
             map_n_samples=int(kwargs.get("bootstrap_map_n_samples", 100)),
         ),
@@ -111,38 +115,58 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
 
 
 # ---------------------------------------------------------------------------
-# Custom stage: VelaBootstrapQzStage
+# Custom stage: PartialTruthBootstrapQzStage
 # ---------------------------------------------------------------------------
 
 
+# Component index → name, matching the canonical
+# ``PhysicalModel(lens_mass, lens_light, source_light)`` / prior ordering.
+_COMPONENT_NAMES: tuple = ("lens", "lens_light", "source")
+
+
 @register_stage
-class VelaBootstrapQzStage(InferenceStage):
-    """Bootstrap ``qz`` for Vela MCLMC initialisation.
+class PartialTruthBootstrapQzStage(InferenceStage):
+    """Bootstrap ``qz`` from a *partial* truth, profile-agnostically.
 
-    Runs a short MAP with the lens parameters pinned to the simulation truth
-    and the source shapelets free.  This recovers the shapelet geometry
-    (``beta``, ``center_x``, ``center_y``) that best represents the true
-    source at the true lens position.  The result is combined with the full
-    simulation truth to produce a tight diagonal ``qz`` in the inference
-    model's unconstrained space.
+    Given a truth that constrains *some* parameters but leaves others free, this
+    stage runs a short MAP with the constrained parameters pinned to truth and
+    the free ones optimised, recovering the free-parameter values that best
+    represent the truth.  Those are combined with the full simulation truth to
+    build a tight diagonal ``qz`` in the inference model's unconstrained space,
+    which then initialises MCLMC at truth — isolating model misspecification as
+    the sole mechanism driving posterior bias (vs. initialisation failure).
 
-    Starting MCLMC from truth isolates source-model misspecification as the
-    sole mechanism driving posterior bias (vs. initialisation failure).
+    Unlike the old ``VelaBootstrapQzStage`` this class does **not** name any
+    profile or re-specify any prior.  It reads the physical model and the prior
+    from the :class:`InferenceContext` (``ctx``), so the free parameters keep
+    *exactly* the inference prior — there is one source of truth for the prior,
+    and swapping the source (or lens) profile requires no change here.
 
     Parameters
     ----------
     system : System
-        The simulated system (provides truth params, image, noise params).
-    n_max : int
-        Shapelet order — must match the inference model's ``n_max``.
-    map_num_steps : int
-        MAP optimisation steps for the fixed-lens bootstrap.
-    map_n_samples : int
-        Number of MAP random starts for the fixed-lens bootstrap.
+        The simulated system (provides ``truth_x``, image, noise params).
+    free : Sequence[str] | Callable[[str, int, str], bool]
+        Which parameters truth does *not* constrain.  Either a collection of
+        component names (any of ``{"lens", "lens_light", "source"}`` — every
+        parameter of those components is left free) or a predicate
+        ``is_free(component_name, profile_idx, param_name) -> bool`` for
+        finer-grained control.  Everything not selected is pinned to truth.
+        Defaults to ``("source",)``.
+    free_tag : str, optional
+        Stable label for ``free`` used in the config hash.  Required (or
+        derived) when ``free`` is a callable, since callables have no stable
+        repr.  For a collection of names it defaults to the sorted names.
+    map_num_steps, map_n_samples : int
+        MAP optimisation steps / random starts for the fixed bootstrap.
+    diag_scale : float
+        Variance of the diagonal ``qz`` (``scale = sqrt(diag_scale)``).
+    pin_eps : float
+        Half-width of the ``Uniform`` used to pin a constrained parameter.
     """
 
     name = "bootstrap_map"
-    schema_version: int = 1
+    schema_version: int = 2
     requires = ()
     produces = ("qz",)
 
@@ -150,19 +174,23 @@ class VelaBootstrapQzStage(InferenceStage):
         self,
         system: Any,
         *,
-        n_max: int = 10,
+        free: Any = ("source",),
+        free_tag: Optional[str] = None,
         map_num_steps: int = 200,
         map_n_samples: int = 100,
         diag_scale: float = 1e-6,
+        pin_eps: float = 1e-6,
         name: Optional[str] = None,
         seed: Optional[int] = None,
     ):
         super().__init__(name=name or "bootstrap_map", seed=seed)
         self.system = system
-        self.n_max = int(n_max)
+        self.free = free
+        self._is_free, self._free_tag = _normalise_free(free, free_tag)
         self.map_num_steps = int(map_num_steps)
         self.map_n_samples = int(map_n_samples)
         self.diag_scale = float(diag_scale)
+        self.pin_eps = float(pin_eps)
 
     def config_hash_data(self) -> Dict[str, Any]:
         try:
@@ -175,9 +203,11 @@ class VelaBootstrapQzStage(InferenceStage):
         return {
             "system_id": self.system.system_id,
             "truth_hash": truth_hash,
-            "n_max": self.n_max,
+            "free": self._free_tag,
             "map_num_steps": self.map_num_steps,
             "map_n_samples": self.map_n_samples,
+            "diag_scale": self.diag_scale,
+            "pin_eps": self.pin_eps,
         }
 
     def run(
@@ -187,14 +217,10 @@ class VelaBootstrapQzStage(InferenceStage):
         seed: int,
     ) -> StageResult:
         import jax.numpy as jnp
-        import jax
+        import jax.tree_util as jtu
         import optax
 
         from gigalens.jax.inference import ModellingSequence
-        from gigalens.jax.model import BackwardProbModel
-        from gigalens.jax.profiles.light import sersic, shapelets
-        from gigalens.jax.profiles.mass import epl, shear
-        from gigalens.model import PhysicalModel
 
         t0 = time.perf_counter()
 
@@ -202,47 +228,44 @@ class VelaBootstrapQzStage(InferenceStage):
         sim_config = self.system.sim_config
         observed_img = jnp.asarray(self.system.observed_image)
 
-        # Build fixed-lens prior: mass + lens_light pinned to truth, source free.
-        def _fixed(profile_params: Dict[str, Any]) -> Any:
-            dists: Dict[str, Any] = {}
-            for key, val in profile_params.items():
-                v = float(jnp.squeeze(jnp.asarray(val)))
-                dists[key] = tfd.Uniform(v - 1e-6, v + 1e-6)
-            return tfd.JointDistributionNamed(dists)
+        # The inference model is the single source of truth for both the
+        # profiles (physical model) and the free-parameter priors.
+        inf_prior = ctx.prob_model.prior
 
-        lens_fixed_prior = tfd.JointDistributionSequential(
-            [_fixed(p) for p in truth_x[0]]
-        )
-        # Lens light: exclude Ie (solved by lstsq).
-        lens_light_no_ie = {k: v for k, v in truth_x[1][0].items() if k != "Ie"}
-        lens_light_fixed_prior = tfd.JointDistributionSequential(
-            [_fixed(lens_light_no_ie)]
-        )
-        src_free_prior = tfd.JointDistributionSequential([
-            tfd.JointDistributionNamed(dict(
-                beta=tfd.LogNormal(jnp.log(0.7), 0.4),
-                center_x=tfd.Normal(0.0, 0.01),
-                center_y=tfd.Normal(0.0, 0.01),
-            ))
-        ])
-        fixed_prior = tfd.JointDistributionSequential([
-            lens_fixed_prior, lens_light_fixed_prior, src_free_prior,
-        ])
+        # Build the fixed prior by walking the inference prior's nested
+        # JointDistributionSequential([JointDistributionNamed, ...]) structure:
+        # keep each free param's inference distribution, replace each pinned
+        # param with a near-delta Uniform at its truth value.  Parameters solved
+        # by lstsq (e.g. Sersic ``Ie``, shapelet amplitudes) are absent from the
+        # prior and so are correctly never pinned or freed.
+        fixed_components = []
+        for ci, comp in enumerate(inf_prior.model):
+            cname = self._component_name(ci)
+            prof_blocks = []
+            for pi, named in enumerate(comp.model):
+                dists: Dict[str, Any] = {}
+                for pname, dist in named.model.items():
+                    if self._is_free(cname, pi, pname):
+                        dists[pname] = dist
+                    else:
+                        v = float(jnp.squeeze(jnp.asarray(truth_x[ci][pi][pname])))
+                        dists[pname] = tfd.Uniform(v - self.pin_eps, v + self.pin_eps)
+                prof_blocks.append(tfd.JointDistributionNamed(dists))
+            fixed_components.append(tfd.JointDistributionSequential(prof_blocks))
+        fixed_prior = tfd.JointDistributionSequential(fixed_components)
 
-        src_model = shapelets.ShapeletsFast(
-            n_max=self.n_max, use_lstsq=True, interpolate=False
-        )
-        fixed_phys = PhysicalModel(
-            [epl.EPL(50), shear.Shear()],
-            [sersic.SersicEllipse(use_lstsq=True)],
-            [src_model],
-        )
-        fixed_prob = BackwardProbModel(
-            fixed_prior, observed_img,
+        # Reuse the inference physical model (identical profiles) and rebuild the
+        # prob model with the same class + the system's noise; only the prior
+        # changes.  Noise comes from ``system`` (not from ``ctx.prob_model``
+        # attributes) because ``BackwardProbModel`` stores a precomputed
+        # ``err_map`` rather than ``background_rms`` / ``exp_time``.
+        fixed_prob = type(ctx.prob_model)(
+            fixed_prior,
+            observed_img,
             background_rms=self.system.background_rms,
             exp_time=self.system.exp_time,
         )
-        fixed_seq = ModellingSequence(fixed_phys, fixed_prob, sim_config)
+        fixed_seq = ModellingSequence(ctx.phys_model, fixed_prob, sim_config)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
         map_samples, lps, _ = fixed_seq.MAP(
@@ -259,49 +282,89 @@ class VelaBootstrapQzStage(InferenceStage):
         map_samples_np = np.asarray(map_samples)
         best = int(np.nanargmax(lps_np))
         map_z = jnp.asarray(map_samples_np[best])  # (n_params,)
-        shp_true = fixed_prob.bij.forward(list(jnp.atleast_2d(map_z).T))[2][0]
-        shp_true_np = {k: float(np.asarray(jnp.squeeze(v)))
-                       for k, v in shp_true.items()}
+        # Constrained-space params recovered by the MAP, same nested structure
+        # as the inference model.
+        recovered = fixed_prob.bij.forward(list(jnp.atleast_2d(map_z).T))
 
-        # Build full-model truth params (mass + lens_light without Ie + shapelets).
-        true_params_shp = [
-            truth_x[0],
-            [lens_light_no_ie],
-            [{k: jnp.asarray(v) for k, v in shp_true_np.items()}],
-        ]
+        # Compose the full constrained truth: free leaves take their recovered
+        # MAP value, pinned leaves take the exact truth value.
+        full_params: list = []
+        free_vals: Dict[str, float] = {}
+        for ci, comp in enumerate(inf_prior.model):
+            cname = self._component_name(ci)
+            profs: list = []
+            for pi, named in enumerate(comp.model):
+                d: Dict[str, Any] = {}
+                for pname in named.model.keys():
+                    if self._is_free(cname, pi, pname):
+                        val = float(np.asarray(jnp.squeeze(recovered[ci][pi][pname])))
+                        free_vals[f"{cname}{pi}_{pname}"] = val
+                        d[pname] = jnp.asarray(val)
+                    else:
+                        d[pname] = jnp.asarray(truth_x[ci][pi][pname])
+                profs.append(d)
+            full_params.append(profs)
 
         # Map to unconstrained space via the FULL inference model's bijector.
-        true_z = jnp.squeeze(jnp.stack(ctx.prob_model.bij.inverse(true_params_shp)).T)
-        d = true_z.shape[-1]
-        scale_tril = jnp.diag(jnp.ones(d) * jnp.sqrt(self.diag_scale))
+        # Truth leaves may have shape (1,) while recovered leaves are scalars
+        # (), so squeeze everything to () for a consistent stackable list.
+        full_params = jtu.tree_map(
+            lambda x: jnp.squeeze(jnp.asarray(x)), full_params
+        )
+        true_z = jnp.stack(ctx.prob_model.bij.inverse(full_params))
+        d_dim = true_z.shape[-1]
+        scale_tril = jnp.diag(jnp.ones(d_dim) * jnp.sqrt(self.diag_scale))
 
         return StageResult(
             arrays={
                 "qz_loc": np.asarray(true_z),
                 "qz_scale_tril": np.asarray(scale_tril),
-                **{f"shp_{k}": np.array([v]) for k, v in shp_true_np.items()},
+                **{f"free_{k}": np.array([v]) for k, v in free_vals.items()},
             },
             metadata={
                 "wall_time_s": time.perf_counter() - t0,
-                "n_max": self.n_max,
-                "shp_beta": shp_true_np.get("beta", float("nan")),
-                "shp_center_x": shp_true_np.get("center_x", 0.0),
-                "shp_center_y": shp_true_np.get("center_y", 0.0),
+                "free": self._free_tag,
+                "n_free": len(free_vals),
+                **{f"free_{k}": v for k, v in free_vals.items()},
             },
         )
 
     def derive_artifacts(self, arrays: Dict[str, np.ndarray]) -> Dict[str, Any]:
         import jax.numpy as jnp
-        qz = tfd.MultivariateNormalTriL(
-            loc=jnp.asarray(arrays["qz_loc"]),
-            scale_tril=jnp.asarray(arrays["qz_scale_tril"]),
-        )
+        loc = jnp.asarray(arrays["qz_loc"])
+        # Keep loc / scale_tril dtype-consistent: under jax_enable_x64 the MAP loc is
+        # float64 while the diag_scale-built scale_tril may stay float32, which trips
+        # tfd's common-dtype check.
+        scale_tril = jnp.asarray(arrays["qz_scale_tril"]).astype(loc.dtype)
+        qz = tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)
         return {"qz": qz}
+
+    def _component_name(self, ci: int) -> str:
+        if ci < len(_COMPONENT_NAMES):
+            return _COMPONENT_NAMES[ci]
+        return f"component_{ci}"
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _normalise_free(free: Any, free_tag: Optional[str]):
+    """Return ``(is_free_predicate, stable_tag)`` for a ``free`` spec.
+
+    ``free`` is either a predicate ``(component, profile_idx, param) -> bool``
+    or a collection of component names.  ``free_tag`` is a stable label for the
+    config hash; for a collection it defaults to the sorted names, for a
+    callable it falls back to the function ``__name__`` (override via
+    ``free_tag`` if that is not unique enough).
+    """
+    if callable(free):
+        tag = free_tag or getattr(free, "__name__", repr(free))
+        return free, tag
+    names = frozenset(free)
+    tag = free_tag or ",".join(sorted(names))
+    return (lambda comp, _pi, _p: comp in names), tag
 
 
 def _to_numpy_leaves(obj: Any) -> Any:

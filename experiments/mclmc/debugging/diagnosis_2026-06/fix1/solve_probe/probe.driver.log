@@ -1,0 +1,29 @@
+[probe] jax 0.10.0.dev20260615 x64=True dev=[CudaDevice(id=0)]
+[probe] model built n_max=25 system=vela01_cam12_rep03
+Final Chi-squared: 1.51671
+[probe] anchor z0[:4]=[-0.0337585  -0.0025613   0.44475716 -0.88432705] dim=17
+[probe] REPLICATION CHECK: f32 maxdiff=0.000e+00 (scale 3.845e+00); f64 maxdiff=2.918e-09 (scale 3.845e+00)
+[probe] dE_target (xi=1) = 0.0922
+
+[probe] window=1e-01  jitter(median over 3 dirs):
+    f32all    jitter=3.193e+03  (3.46e+04 x dE_target)  n_unique=400
+    f64solve  jitter=3.193e+03  (3.46e+04 x dE_target)  n_unique=400
+    f64all    jitter=3.193e+03  (3.46e+04 x dE_target)  n_unique=400
+
+[probe] window=1e-02  jitter(median over 3 dirs):
+    f32all    jitter=2.332e-02  (2.53e-01 x dE_target)  n_unique=400
+    f64solve  jitter=2.323e-02  (2.52e-01 x dE_target)  n_unique=400
+    f64all    jitter=2.188e-02  (2.37e-01 x dE_target)  n_unique=400
+
+[probe] window=1e-03  jitter(median over 3 dirs):
+    f32all    jitter=7.553e-03  (8.19e-02 x dE_target)  n_unique=400
+    f64solve  jitter=7.538e-03  (8.18e-02 x dE_target)  n_unique=400
+    f64all    jitter=7.079e-06  (7.68e-05 x dE_target)  n_unique=400
+
+[probe] window=1e-04  jitter(median over 3 dirs):
+    f32all    jitter=6.410e-03  (6.95e-02 x dE_target)  n_unique=400
+    f64solve  jitter=6.469e-03  (7.02e-02 x dE_target)  n_unique=400
+    f64all    jitter=1.190e-10  (1.29e-09 x dE_target)  n_unique=400
+
+[probe] wrote diagnosis_2026-06/fix1/solve_probe/solve_probe_rays.png
+[probe] wrote diagnosis_2026-06/fix1/solve_probe/solve_probe_summary.json

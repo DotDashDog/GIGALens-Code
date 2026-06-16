@@ -1,0 +1,715 @@
+[D3] float64 enabled
+[D3] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0)]
+[D3] n_max=25 precision=float64 K=64 n_eps=25
+[D3] output dir: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25
+[D3] run_a final metric[0,0]=6.298e-06  run_b final metric[0,0]=8.785e-06
+[D3] system loaded
+[D3] model built n_max=25
+[D3] --skip-bootstrap: using saved step-0 position as qz.mean proxy (n_max=25, diff from true mean ~1e-4)
+[D3]   bootstrap_point[:4]=[-0.03368193 -0.00262435  0.4446851  -0.8844137 ]
+[D3] eps grid: 25 points logspace(1e-07,1e+01)
+[D3] eps range: 1.000e-07 .. 1.000e+01
+
+[D3] === metric=diag_1e-8_I  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.548e+05  grad_norm=1.466e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.794e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.772e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=4.008e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=4.394e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=2.441e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=2.472e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=2.486e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=4.282e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=2.336e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=2.486e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.415e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=2.334e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=5.761e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=3.403e-21  median|dE|=1.746e-10  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=3.299e-19  median|dE|=1.630e-09  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=3.296e-17  median|dE|=1.585e-08  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=3.273e-15  median|dE|=1.606e-07  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=3.229e-13  median|dE|=1.578e-06  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=3.131e-11  median|dE|=1.604e-05  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.885e-09  median|dE|=1.474e-04  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=2.201e-07  median|dE|=2.426e-03  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=6.324e-06  median|dE|=4.943e-02  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.240e-03  median|dE|=5.398e-01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=2.268e-02  median|dE|=3.949e-01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.988e-01  median|dE|=7.229e+00  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/dE_diag_1e-8_I__bootstrap.npz
+
+[D3] === metric=diag_1e-6_I  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.548e+05  grad_norm=1.466e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=2.636e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=3.348e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=2.803e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=2.763e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=2.772e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=2.881e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=3.537e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=2.772e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=3.123e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=4.981e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.401e-21  median|dE|=1.746e-10  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=3.305e-19  median|dE|=1.630e-09  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=3.304e-17  median|dE|=1.572e-08  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=3.287e-15  median|dE|=1.542e-07  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=3.250e-13  median|dE|=1.440e-06  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=3.162e-11  median|dE|=1.517e-05  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=2.931e-09  median|dE|=1.508e-04  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=2.257e-07  median|dE|=2.327e-03  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=6.625e-06  median|dE|=4.754e-02  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.335e-03  median|dE|=5.328e-01  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=1.843e-02  median|dE|=3.978e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=1.639e-01  median|dE|=7.443e+00  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=5.755e-01  median|dE|=7.726e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=6.299e-01  median|dE|=1.668e+02  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=7.394e-01  median|dE|=1.733e+03  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/dE_diag_1e-6_I__bootstrap.npz
+
+[D3] === metric=run_a_final  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.548e+05  grad_norm=1.466e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.095e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.725e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=3.406e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=3.250e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=2.617e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=1.926e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=2.772e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=3.250e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=5.245e-22  median|dE|=8.731e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=5.422e-20  median|dE|=8.440e-10  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=5.405e-18  median|dE|=8.295e-09  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=5.401e-16  median|dE|=8.203e-08  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=5.391e-14  median|dE|=8.027e-07  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=5.359e-12  median|dE|=7.552e-06  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=5.245e-10  median|dE|=8.074e-05  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=4.799e-08  median|dE|=7.279e-04  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=3.120e-06  median|dE|=1.270e-02  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=5.494e-05  median|dE|=2.003e-01  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=1.751e-02  median|dE|=8.983e-01  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.191e-02  median|dE|=3.203e+00  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=7.142e-01  median|dE|=1.056e+01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=1.005e+00  median|dE|=1.112e+01  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.030e+00  median|dE|=1.044e+01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=1.014e+00  median|dE|=3.631e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=9.854e-01  median|dE|=5.812e+02  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/dE_run_a_final__bootstrap.npz
+
+[D3] === metric=run_b_final  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.548e+05  grad_norm=1.466e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.406e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.803e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=4.174e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=2.597e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=2.783e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=3.016e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=3.693e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=4.018e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=3.483e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=5.166e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.656e-21  median|dE|=2.037e-10  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=3.739e-19  median|dE|=1.950e-09  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=3.761e-17  median|dE|=1.931e-08  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=3.789e-15  median|dE|=1.914e-07  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=3.832e-13  median|dE|=1.902e-06  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=3.891e-11  median|dE|=1.979e-05  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=3.935e-09  median|dE|=1.991e-04  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=3.718e-07  median|dE|=3.047e-03  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=2.265e-05  median|dE|=5.227e-02  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.099e-03  median|dE|=5.473e-01  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=5.501e-02  median|dE|=4.075e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=2.346e-01  median|dE|=6.078e+00  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.253e+00  median|dE|=1.258e+01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=1.351e+00  median|dE|=6.710e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.293e+00  median|dE|=1.671e+01  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/dE_run_b_final__bootstrap.npz
+
+[D3] === metric=diag_1e-8_I  anchor=run_a_late  n_anchors=4 ===
+[D3]   anchor 1/4
+      logdensity=1.599e+05  grad_norm=4695  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=2.179e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.915e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=2.023e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=2.490e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=3.054e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=3.220e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=2.798e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=3.531e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=4.340e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=3.031e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.503e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=2.725e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=2.052e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=2.840e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=3.668e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=3.771e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=4.281e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=8.583e-22  median|dE|=8.731e-11  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=7.651e-20  median|dE|=8.004e-10  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=7.252e-18  median|dE|=8.033e-09  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=6.798e-16  median|dE|=8.177e-08  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=6.280e-14  median|dE|=7.796e-07  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=5.804e-12  median|dE|=7.136e-06  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=5.524e-10  median|dE|=6.037e-05  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=4.473e-06  median|dE|=4.942e-03  NaN=0/64
+[D3]   anchor 2/4
+      logdensity=1.599e+05  grad_norm=7335  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=9.837e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=9.376e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=1.027e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=6.169e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=1.288e-22  median|dE|=4.366e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=7.151e-23  median|dE|=4.366e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=7.664e-23  median|dE|=4.366e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=1.105e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=9.376e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=1.454e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=1.179e-22  median|dE|=4.366e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=1.058e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=1.217e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=1.156e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=9.020e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=1.667e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=1.991e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=6.474e-21  median|dE|=2.619e-10  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=6.108e-19  median|dE|=2.779e-09  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=6.182e-17  median|dE|=2.743e-08  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=6.329e-15  median|dE|=2.640e-07  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=6.530e-13  median|dE|=2.871e-06  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=6.689e-11  median|dE|=2.920e-05  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=5.917e-09  median|dE|=2.569e-04  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=7.014e-06  median|dE|=4.547e-03  NaN=0/64
+[D3]   anchor 3/4
+      logdensity=1.599e+05  grad_norm=1.146e+04  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=6.228e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=6.184e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=6.924e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=7.862e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=6.379e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=8.389e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=7.210e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=5.896e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=4.652e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=8.330e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=6.013e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=6.334e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=7.735e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=8.436e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=6.519e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=6.120e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=2.998e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=2.645e-20  median|dE|=4.948e-10  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=2.567e-18  median|dE|=4.904e-09  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.547e-16  median|dE|=4.687e-08  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=2.532e-14  median|dE|=4.675e-07  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=2.622e-12  median|dE|=5.168e-06  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=3.354e-10  median|dE|=5.563e-05  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=9.763e-08  median|dE|=9.632e-04  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=4.783e-05  median|dE|=3.621e-02  NaN=0/64
+[D3]   anchor 4/4
+      logdensity=1.599e+05  grad_norm=9836  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.158e-21  median|dE|=4.366e-10  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=3.991e-21  median|dE|=4.366e-10  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=3.958e-21  median|dE|=4.075e-10  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=3.838e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=4.351e-21  median|dE|=4.075e-10  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=3.672e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=3.827e-21  median|dE|=4.220e-10  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=3.550e-21  median|dE|=4.802e-10  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=3.564e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=3.944e-21  median|dE|=4.366e-10  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.005e-21  median|dE|=4.366e-10  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=4.625e-21  median|dE|=4.657e-10  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=4.131e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=4.665e-21  median|dE|=3.201e-10  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=4.859e-21  median|dE|=3.201e-10  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=5.133e-21  median|dE|=3.492e-10  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=4.081e-21  median|dE|=3.492e-10  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=3.228e-20  median|dE|=5.384e-10  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=2.680e-18  median|dE|=5.079e-09  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.713e-16  median|dE|=5.667e-08  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=2.763e-14  median|dE|=5.549e-07  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=2.837e-12  median|dE|=5.731e-06  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=2.985e-10  median|dE|=5.813e-05  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=3.998e-08  median|dE|=5.614e-04  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=4.022e-05  median|dE|=8.094e-03  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/dE_diag_1e-8_I__run_a_late.npz
+
+[D3] === metric=run_b_final  anchor=run_a_late  n_anchors=4 ===
+[D3]   anchor 1/4
+      logdensity=1.599e+05  grad_norm=4695  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=2.491e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.472e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=3.460e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=3.308e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=2.160e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=2.837e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=4.861e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=3.187e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=3.114e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=3.814e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=4.282e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=1.276e-21  median|dE|=1.310e-10  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=1.256e-19  median|dE|=1.310e-09  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=1.258e-17  median|dE|=1.304e-08  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=1.263e-15  median|dE|=1.287e-07  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=1.268e-13  median|dE|=1.275e-06  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=1.273e-11  median|dE|=1.208e-05  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=1.270e-09  median|dE|=1.142e-04  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=1.213e-07  median|dE|=1.340e-03  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=8.515e-06  median|dE|=2.683e-02  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=1.041e-03  median|dE|=4.374e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=2.044e-01  median|dE|=1.468e+00  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.486e-01  median|dE|=1.999e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=2.551e+00  median|dE|=4.959e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.298e+00  median|dE|=5.869e+02  NaN=0/64
+[D3]   anchor 2/4
+      logdensity=1.599e+05  grad_norm=7335  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=9.594e-23  median|dE|=4.366e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=8.875e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=9.479e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=1.004e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=8.154e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=6.768e-23  median|dE|=5.821e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=1.119e-22  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=1.098e-22  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=9.905e-23  median|dE|=4.366e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=9.468e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=2.132e-22  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=6.229e-21  median|dE|=2.910e-10  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=5.892e-19  median|dE|=3.041e-09  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=5.893e-17  median|dE|=3.030e-08  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=5.905e-15  median|dE|=3.074e-07  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=5.928e-13  median|dE|=3.031e-06  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=5.947e-11  median|dE|=2.837e-05  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=5.859e-09  median|dE|=2.534e-04  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=5.101e-07  median|dE|=2.895e-03  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.129e-05  median|dE|=5.139e-02  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=1.630e-03  median|dE|=5.484e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=8.420e-02  median|dE|=7.386e-01  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.210e+00  median|dE|=3.557e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=2.254e+00  median|dE|=2.157e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=8.982e-01  median|dE|=5.158e+02  NaN=0/64
+[D3]   anchor 3/4
+      logdensity=1.599e+05  grad_norm=1.146e+04  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=5.990e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=6.606e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=7.508e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=8.520e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=8.524e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=7.589e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=6.704e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=6.597e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=8.455e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=6.558e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=9.234e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=1.825e-21  median|dE|=1.455e-10  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=1.773e-19  median|dE|=1.353e-09  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=1.780e-17  median|dE|=1.334e-08  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=1.771e-15  median|dE|=1.292e-07  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=1.752e-13  median|dE|=1.284e-06  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=1.713e-11  median|dE|=1.333e-05  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=1.623e-09  median|dE|=1.385e-04  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=1.384e-07  median|dE|=1.619e-03  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=6.755e-06  median|dE|=2.844e-02  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=1.283e-03  median|dE|=4.163e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=1.389e-01  median|dE|=1.616e+00  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=8.344e-02  median|dE|=2.164e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=1.516e+00  median|dE|=5.787e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=6.713e-01  median|dE|=6.106e+02  NaN=0/64
+[D3]   anchor 4/4
+      logdensity=1.599e+05  grad_norm=9836  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.961e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=4.068e-21  median|dE|=4.802e-10  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=4.723e-21  median|dE|=4.075e-10  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=4.394e-21  median|dE|=4.075e-10  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=4.866e-21  median|dE|=3.638e-10  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=5.695e-21  median|dE|=4.366e-10  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=4.309e-21  median|dE|=3.056e-10  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=5.024e-21  median|dE|=4.075e-10  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=6.451e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=5.510e-21  median|dE|=3.783e-10  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=4.340e-21  median|dE|=3.201e-10  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=7.942e-21  median|dE|=3.347e-10  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=2.793e-19  median|dE|=1.324e-09  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=2.647e-17  median|dE|=1.299e-08  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=2.624e-15  median|dE|=1.324e-07  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=2.603e-13  median|dE|=1.333e-06  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=2.561e-11  median|dE|=1.404e-05  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=2.460e-09  median|dE|=1.643e-04  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=2.140e-07  median|dE|=2.540e-03  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.015e-05  median|dE|=4.242e-02  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=8.569e-04  median|dE|=4.302e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=1.389e-02  median|dE|=5.786e-01  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.640e-01  median|dE|=2.165e+01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=9.889e-01  median|dE|=2.690e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=7.502e-01  median|dE|=5.079e+02  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/dE_run_b_final__run_a_late.npz
+
+[D3] all combos done in 1288.7s
+
+[D3] ANALYSIS: diag_1e-8_I__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 4.34  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.371e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 2.154e+00  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 7.5e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: diag_1e-6_I__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 5.83  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.678e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 2.154e-01  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 6.14e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: run_a_final__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 5.77  (expected ~6.0)
+       floor level (Var(dE)/dim): 1.956e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 1.000e-01  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 6.29e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: run_b_final__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 5.95  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.638e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 2.154e-01  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 7.95e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: diag_1e-8_I__run_a_late
+       slope (log-log, eps 1e-4..1e-1): 0.54  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.427e-21
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: nan  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 6.16e-18  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: run_b_final__run_a_late
+       slope (log-log, eps 1e-4..1e-1): 5.07  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.341e-21
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 4.642e-01  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 5.29e-18  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] summary written to /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/summary.json
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/eevpd_diag_1e-8_I__bootstrap.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/eevpd_diag_1e-6_I__bootstrap.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/eevpd_run_a_final__bootstrap.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/eevpd_run_b_final__bootstrap.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/eevpd_diag_1e-8_I__run_a_late.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float64_K64_eps25/eevpd_run_b_final__run_a_late.png
+
+============================================================
+D3 VERDICT CHECKLIST
+============================================================
+
+  diag_1e-8_I__bootstrap:
+    slope=4.34  floor=2.37e-23  crossing_eps=2.15e+00  xi@collapsed=7.5e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  diag_1e-6_I__bootstrap:
+    slope=5.83  floor=2.68e-23  crossing_eps=2.15e-01  xi@collapsed=6.1e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  run_a_final__bootstrap:
+    slope=5.77  floor=1.96e-23  crossing_eps=1.00e-01  xi@collapsed=6.3e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  run_b_final__bootstrap:
+    slope=5.95  floor=2.64e-23  crossing_eps=2.15e-01  xi@collapsed=7.9e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  diag_1e-8_I__run_a_late:
+    slope=0.54  floor=2.43e-21  crossing_eps=nan  xi@collapsed=6.2e-18
+    *** ANOMALOUS SLOPE 0.54 — not slope-6 regime ***
+
+  run_b_final__run_a_late:
+    slope=5.07  floor=2.34e-21  crossing_eps=4.64e-01  xi@collapsed=5.3e-18
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+============================================================
+=== D3 f64 n_max=25 exit: 0 ===
+[D3] float64 enabled
+[D3] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0)]
+[D3] n_max=10 precision=float64 K=64 n_eps=25
+[D3] output dir: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25
+[D3] run_a final metric[0,0]=6.298e-06  run_b final metric[0,0]=8.785e-06
+[D3] system loaded
+[D3] model built n_max=10
+[D3] --skip-bootstrap: using saved step-0 position as qz.mean proxy (n_max=10, diff from true mean ~1e-4)
+[D3]   bootstrap_point[:4]=[-0.03368089 -0.00262251  0.44468555 -0.8844134 ]
+[D3] eps grid: 25 points logspace(1e-07,1e+01)
+[D3] eps range: 1.000e-07 .. 1.000e+01
+
+[D3] === metric=run_b_final  anchor=run_b_late  n_anchors=4 ===
+[D3]   anchor 1/4
+      logdensity=1.576e+05  grad_norm=5761  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=1.791e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.336e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=1.786e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=1.819e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=1.941e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=1.507e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=1.591e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=1.713e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=1.747e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=1.163e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=2.409e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=8.047e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=6.389e-21  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=6.375e-19  median|dE|=5.530e-10  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=6.512e-17  median|dE|=5.384e-09  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=6.693e-15  median|dE|=5.250e-08  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=6.895e-13  median|dE|=5.113e-07  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=6.895e-11  median|dE|=4.636e-06  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=5.756e-09  median|dE|=3.749e-05  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.523e-07  median|dE|=2.799e-04  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=4.915e-05  median|dE|=4.364e-03  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=6.670e-03  median|dE|=2.455e-01  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=2.111e+00  median|dE|=1.410e+01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=4.934e+01  median|dE|=1.073e+02  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.790e+04  median|dE|=7.235e+02  NaN=0/64
+[D3]   anchor 2/4
+      logdensity=1.576e+05  grad_norm=8107  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=1.713e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.097e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=1.643e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=1.747e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=2.102e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=1.731e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=1.828e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=2.276e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=2.130e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=1.819e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=1.382e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=1.941e-23  median|dE|=0.000e+00  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=3.269e-23  median|dE|=1.455e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=1.295e-21  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=1.550e-19  median|dE|=2.037e-10  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=2.208e-17  median|dE|=1.819e-09  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=4.053e-15  median|dE|=2.224e-08  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=9.475e-13  median|dE|=3.427e-07  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=2.278e-10  median|dE|=6.650e-06  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.617e-08  median|dE|=5.305e-05  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=5.960e-07  median|dE|=3.265e-03  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=8.990e-04  median|dE|=3.702e-02  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=6.224e-01  median|dE|=7.325e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=4.648e+01  median|dE|=8.522e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.168e+03  median|dE|=6.332e+02  NaN=0/64
+[D3]   anchor 3/4
+      logdensity=1.576e+05  grad_norm=3977  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=1.713e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=1.280e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=1.941e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=2.373e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=1.877e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=1.903e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=2.564e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=1.635e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=1.653e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=2.120e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=1.828e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=1.043e-22  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=8.429e-21  median|dE|=5.821e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=8.626e-19  median|dE|=3.201e-10  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=8.803e-17  median|dE|=3.434e-09  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=9.060e-15  median|dE|=3.174e-08  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=9.382e-13  median|dE|=3.182e-07  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=9.481e-11  median|dE|=3.065e-06  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=7.765e-09  median|dE|=3.421e-05  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.748e-07  median|dE|=5.822e-04  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=1.870e-05  median|dE|=1.248e-02  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=2.980e-02  median|dE|=6.813e-01  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=2.989e+00  median|dE|=6.037e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=1.328e+01  median|dE|=8.969e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.272e+04  median|dE|=5.350e+02  NaN=0/64
+[D3]   anchor 4/4
+      logdensity=1.576e+05  grad_norm=6696  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=1.791e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=1.280e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=1.786e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=1.965e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=1.557e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=2.409e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=1.926e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=2.097e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=1.903e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=1.741e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=2.005e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=1.906e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=6.885e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=5.196e-21  median|dE|=5.821e-11  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=5.114e-19  median|dE|=3.056e-10  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=4.882e-17  median|dE|=3.332e-09  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=4.588e-15  median|dE|=3.430e-08  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=4.527e-13  median|dE|=3.404e-07  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=6.770e-11  median|dE|=2.655e-06  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=2.388e-08  median|dE|=2.894e-05  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=6.585e-06  median|dE|=7.317e-04  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=2.373e-03  median|dE|=3.498e-02  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=6.772e-01  median|dE|=2.108e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=7.012e+01  median|dE|=7.119e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.900e+03  median|dE|=6.528e+02  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/dE_run_b_final__run_b_late.npz
+
+[D3] === metric=diag_1e-8_I  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.526e+05  grad_norm=1.483e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=2.850e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.724e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=5.119e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=4.339e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=3.615e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=3.629e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=4.316e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=4.029e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=3.927e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=3.337e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.343e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=3.191e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=8.389e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=3.779e-21  median|dE|=1.601e-10  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=3.569e-19  median|dE|=1.644e-09  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=3.557e-17  median|dE|=1.665e-08  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=3.532e-15  median|dE|=1.628e-07  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=3.479e-13  median|dE|=1.584e-06  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=3.363e-11  median|dE|=1.517e-05  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=3.085e-09  median|dE|=1.659e-04  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=2.333e-07  median|dE|=2.490e-03  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=6.547e-06  median|dE|=5.138e-02  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.356e-03  median|dE|=5.566e-01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=2.089e-02  median|dE|=4.049e-01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=2.080e-01  median|dE|=7.201e+00  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/dE_diag_1e-8_I__bootstrap.npz
+
+[D3] === metric=run_b_final  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.526e+05  grad_norm=1.483e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.421e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=4.339e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=4.232e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=3.148e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=4.388e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=3.693e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=3.737e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=2.383e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=3.191e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=5.211e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=8.947e-22  median|dE|=8.731e-11  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=8.012e-20  median|dE|=9.313e-10  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=8.061e-18  median|dE|=9.299e-09  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=8.116e-16  median|dE|=9.521e-08  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=8.211e-14  median|dE|=9.446e-07  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=8.368e-12  median|dE|=9.517e-06  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=8.594e-10  median|dE|=1.034e-04  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=8.683e-08  median|dE|=1.308e-03  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=7.135e-06  median|dE|=2.202e-02  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.994e-04  median|dE|=2.827e-01  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=3.344e-02  median|dE|=6.440e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=3.450e-02  median|dE|=4.137e+00  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=1.088e+00  median|dE|=1.550e+01  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=1.216e+00  median|dE|=4.289e+01  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=1.167e+00  median|dE|=1.460e+01  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/dE_run_b_final__bootstrap.npz
+
+[D3] === metric=diag_1e-6_I  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.526e+05  grad_norm=1.483e+05  finite_ld=True  finite_grad=True
+      eps=1.000e-07  Var(dE)/dim=3.823e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-07  Var(dE)/dim=2.681e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-07  Var(dE)/dim=2.510e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-06  Var(dE)/dim=2.675e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-06  Var(dE)/dim=3.502e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-06  Var(dE)/dim=3.843e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-05  Var(dE)/dim=2.860e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-05  Var(dE)/dim=4.135e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=4.642e-05  Var(dE)/dim=2.564e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=1.000e-04  Var(dE)/dim=8.329e-23  median|dE|=2.910e-11  NaN=0/64
+      eps=2.154e-04  Var(dE)/dim=3.615e-21  median|dE|=1.601e-10  NaN=0/64
+      eps=4.642e-04  Var(dE)/dim=3.601e-19  median|dE|=1.630e-09  NaN=0/64
+      eps=1.000e-03  Var(dE)/dim=3.574e-17  median|dE|=1.623e-08  NaN=0/64
+      eps=2.154e-03  Var(dE)/dim=3.552e-15  median|dE|=1.562e-07  NaN=0/64
+      eps=4.642e-03  Var(dE)/dim=3.507e-13  median|dE|=1.487e-06  NaN=0/64
+      eps=1.000e-02  Var(dE)/dim=3.403e-11  median|dE|=1.510e-05  NaN=0/64
+      eps=2.154e-02  Var(dE)/dim=3.136e-09  median|dE|=1.653e-04  NaN=0/64
+      eps=4.642e-02  Var(dE)/dim=2.384e-07  median|dE|=2.447e-03  NaN=0/64
+      eps=1.000e-01  Var(dE)/dim=6.800e-06  median|dE|=5.093e-02  NaN=0/64
+      eps=2.154e-01  Var(dE)/dim=1.459e-03  median|dE|=5.505e-01  NaN=0/64
+      eps=4.642e-01  Var(dE)/dim=1.784e-02  median|dE|=3.867e-01  NaN=0/64
+      eps=1.000e+00  Var(dE)/dim=1.732e-01  median|dE|=7.511e+00  NaN=0/64
+      eps=2.154e+00  Var(dE)/dim=5.762e-01  median|dE|=7.952e+00  NaN=0/64
+      eps=4.642e+00  Var(dE)/dim=6.190e-01  median|dE|=1.583e+02  NaN=0/64
+      eps=1.000e+01  Var(dE)/dim=7.276e-01  median|dE|=1.722e+03  NaN=0/64
+[D3]   saved /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/dE_diag_1e-6_I__bootstrap.npz
+
+[D3] all combos done in 389.9s
+
+[D3] ANALYSIS: run_b_final__run_b_late
+       slope (log-log, eps 1e-4..1e-1): 5.03  (expected ~6.0)
+       floor level (Var(dE)/dim): 4.532e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 1.000e+00  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 1.02e-19  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: diag_1e-8_I__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 4.31  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.767e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 2.154e+00  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 8.38e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: run_b_final__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 5.86  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.421e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 4.642e-01  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 5.74e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] ANALYSIS: diag_1e-6_I__bootstrap
+       slope (log-log, eps 1e-4..1e-1): 5.79  (expected ~6.0)
+       floor level (Var(dE)/dim): 2.549e-23
+       floor onset eps: 1.000e-07
+       5e-4 crossing eps: 2.154e-01  (run_b settled at eps≈0.79)
+       xi at collapsed eps=1.67e-05: 7.55e-20  (run_a observed xi_q50≈0.029, q90≈2.87)
+       floor >= 5e-4 (H4 unreachable): False
+
+[D3] summary written to /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/summary.json
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/eevpd_run_b_final__run_b_late.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/eevpd_diag_1e-8_I__bootstrap.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/eevpd_run_b_final__bootstrap.png
+[D3] plot saved: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax10_float64_K64_eps25/eevpd_diag_1e-6_I__bootstrap.png
+
+============================================================
+D3 VERDICT CHECKLIST
+============================================================
+
+  run_b_final__run_b_late:
+    slope=5.03  floor=4.53e-23  crossing_eps=1.00e+00  xi@collapsed=1e-19
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  diag_1e-8_I__bootstrap:
+    slope=4.31  floor=2.77e-23  crossing_eps=2.15e+00  xi@collapsed=8.4e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  run_b_final__bootstrap:
+    slope=5.86  floor=2.42e-23  crossing_eps=4.64e-01  xi@collapsed=5.7e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+
+  diag_1e-6_I__bootstrap:
+    slope=5.79  floor=2.55e-23  crossing_eps=2.15e-01  xi@collapsed=7.6e-20
+    slope near 6.0 and floor below target — model-side numerics OK at this combo
+============================================================
+=== D3 f64 n_max=10 exit: 0 ===

@@ -1,0 +1,54 @@
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1c_compilation_seam.py --device cpu --precision float32 --n-max 25 --anchor-class both --K 8
+[E1c] JAX 0.10.0.dev20260614 devices: [CpuDevice(id=0)]
+[E1c] n_max=25 precision=float32 device_tag=cpu K=8
+[E1c] out_dir: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c
+[E1c] model built n_max=25
+[E1c] [run_a_late_0] A(std logp)=159881.078125  gnorm_A=4696  ulp=0.01562
+        kernel ld direct (eps->0) median=159881.078125  standalone-kernel(direct)=0 (0 ulp)
+        eps->0 raw dE: median=0.000000  std_over_K=0.000e+00  (0 ulp)
+        eps=1e-09: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-05: dE median=-0.015625 std_over_K=7.564e-03
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [run_a_late_1] A(std logp)=159871.265625  gnorm_A=7334  ulp=0.01562
+        kernel ld direct (eps->0) median=159871.265625  standalone-kernel(direct)=0 (0 ulp)
+        eps->0 raw dE: median=0.000000  std_over_K=0.000e+00  (0 ulp)
+        eps=1e-09: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-05: dE median=0.000000 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [run_a_late_2] A(std logp)=159894.578125  gnorm_A=1.146e+04  ulp=0.01562
+        kernel ld direct (eps->0) median=159894.578125  standalone-kernel(direct)=0 (0 ulp)
+        eps->0 raw dE: median=0.000000  std_over_K=0.000e+00  (0 ulp)
+        eps=1e-09: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-05: dE median=0.000000 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [run_a_late_3] A(std logp)=159862.765625  gnorm_A=9835  ulp=0.01562
+        kernel ld direct (eps->0) median=159862.765625  standalone-kernel(direct)=0 (0 ulp)
+        eps->0 raw dE: median=0.000000  std_over_K=0.000e+00  (0 ulp)
+        eps=1e-09: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-05: dE median=0.000000 std_over_K=0.000e+00
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] [bootstrap_0] A(std logp)=154849.750000  gnorm_A=1.466e+05  ulp=0.01562
+        kernel ld direct (eps->0) median=154849.750000  standalone-kernel(direct)=0 (0 ulp)
+        eps->0 raw dE: median=0.000000  std_over_K=0.000e+00  (0 ulp)
+        eps=1e-09: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-07: dE median=0.000000 std_over_K=0.000e+00
+        eps=1e-05: dE median=0.000000 std_over_K=5.167e-03
+        HONEST dE (eps->0): median=0 std=0.000e+00  (0 ulp)
+[E1c] summary written: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c/summary_cpu_float32_nmax25_both.json
+[E1c] raw npz written: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1c/raw_cpu_float32_nmax25_both.npz
+
+==============================================================================
+E1c CONSTANTS TABLE  (cpu_float32_nmax25_both)
+==============================================================================
+anchor               A(logp)   archived dE  measured dE0    honest dE0
+run_a_late_0       159881.08       +3.8594       +0.0000     +0.000000
+run_a_late_1       159871.27       +4.2031       +0.0000     +0.000000
+run_a_late_2       159894.58       +2.6719       +0.0000     +0.000000
+run_a_late_3       159862.77    -3580.7812       +0.0000     +0.000000
+bootstrap_0        154849.75       +0.0781       +0.0000     +0.000000
+==============================================================================
+=== e1c cpu exit 0 ===

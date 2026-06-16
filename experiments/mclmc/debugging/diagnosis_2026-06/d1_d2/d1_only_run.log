@@ -1,0 +1,649 @@
+--- versions ---
+jax 0.10.0.dev20260612 jaxlib 0.10.0.dev20260612
+--- running D1 finiteness audit ---
+[14:27:49] D1 finiteness audit starting
+[14:27:49] Output: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2
+E0612 14:27:53.787617 1107393 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.787669 1107394 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.787687 1107395 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.787959 1107396 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.788050 1107397 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.788127 1107398 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.788369 1107399 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.788411 1107400 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:27:53.788472 1107401 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+[14:27:53] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+[14:27:53] Loading system...
+[14:27:53] System loaded: vela01_cam12_rep03
+[14:28:07] Loading Phase 0 positions...
+[14:28:07] Phase 0 positions loaded: frozen_a=(20, 17), frozen_b=(20, 17)
+[14:28:07] 
+=== n_max=10 ===
+[14:28:09]   Model built in 2.1s
+[14:28:09]   Getting bootstrap qz...
+Final Chi-squared: 1.63145
+[14:28:32]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:28:32]   Compiling value_and_grad...
+[14:28:41]   Compiled OK
+[14:28:41]   Anchor (a): bootstrap point
+[14:28:41]     logp=152591.6875, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:28:41]   Anchor (b1): qz draws diag_scale=1e-6
+[14:28:42]     logp=152576.1383±108.8834, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:42]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:28:42]     logp=154919.3414±39.7008, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:42]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:28:42]     logp=157594.4641±1.9880, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:42]   Anchor (c): prior draws
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7cf940; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7cf8e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7cf880; to 'jaxlib._jax.ArrayImpl' at 0x1037dd20>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7cf820; to 'jaxlib._jax.ArrayImpl' at 0x1a4fec50>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7cf7c0; to 'jaxlib._jax.ArrayImpl' at 0x192a73b0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7cf340; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7cf940; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7cf8e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7cf880; to 'jaxlib._jax.ArrayImpl' at 0x1037dd20>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7cf820; to 'jaxlib._jax.ArrayImpl' at 0x1a4fec50>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7cf7c0; to 'jaxlib._jax.ArrayImpl' at 0x192a73b0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7cf340; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7e9900; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7e98a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7e9840; to 'jaxlib._jax.ArrayImpl' at 0x17320c30>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7e97e0; to 'jaxlib._jax.ArrayImpl' at 0x1bcad6f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7e9780; to 'jaxlib._jax.ArrayImpl' at 0xf4efa40>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7e9300; to 'jaxlib._jax.ArrayImpl' at 0x1609b450>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7e9900; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7e98a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7e9840; to 'jaxlib._jax.ArrayImpl' at 0x17320c30>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7e97e0; to 'jaxlib._jax.ArrayImpl' at 0x1bcad6f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7e9780; to 'jaxlib._jax.ArrayImpl' at 0xf4efa40>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7e9300; to 'jaxlib._jax.ArrayImpl' at 0x1609b450>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7f3460; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7f3400; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7f33a0; to 'jaxlib._jax.ArrayImpl' at 0xf337b70>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7f3340; to 'jaxlib._jax.ArrayImpl' at 0x1b325a60>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7f32e0; to 'jaxlib._jax.ArrayImpl' at 0xf1c2cf0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7f2e60; to 'jaxlib._jax.ArrayImpl' at 0x17320c30>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7f3460; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7f3400; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7f33a0; to 'jaxlib._jax.ArrayImpl' at 0xf337b70>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7f3340; to 'jaxlib._jax.ArrayImpl' at 0x1b325a60>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7f32e0; to 'jaxlib._jax.ArrayImpl' at 0xf1c2cf0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7f2e60; to 'jaxlib._jax.ArrayImpl' at 0x17320c30>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7f3100; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7f3160; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7f31c0; to 'jaxlib._jax.ArrayImpl' at 0x16ae7670>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7f2d40; to 'jaxlib._jax.ArrayImpl' at 0xe6f3390>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7f2ce0; to 'jaxlib._jax.ArrayImpl' at 0x100e32e0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7f29e0; to 'jaxlib._jax.ArrayImpl' at 0x194b9570>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c7f3100; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c7f3160; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c7f31c0; to 'jaxlib._jax.ArrayImpl' at 0x16ae7670>), 'e1': HashableWeakRef(<weakref at 0x7fda4c7f2d40; to 'jaxlib._jax.ArrayImpl' at 0xe6f3390>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c7f2ce0; to 'jaxlib._jax.ArrayImpl' at 0x100e32e0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c7f29e0; to 'jaxlib._jax.ArrayImpl' at 0x194b9570>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c605ea0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c605e40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c605de0; to 'jaxlib._jax.ArrayImpl' at 0xc166cf0>), 'e1': HashableWeakRef(<weakref at 0x7fda4c605d80; to 'jaxlib._jax.ArrayImpl' at 0x179c2570>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c605d20; to 'jaxlib._jax.ArrayImpl' at 0x157555c0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c6058a0; to 'jaxlib._jax.ArrayImpl' at 0x194b9570>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c605ea0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c605e40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c605de0; to 'jaxlib._jax.ArrayImpl' at 0xc166cf0>), 'e1': HashableWeakRef(<weakref at 0x7fda4c605d80; to 'jaxlib._jax.ArrayImpl' at 0x179c2570>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c605d20; to 'jaxlib._jax.ArrayImpl' at 0x157555c0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c6058a0; to 'jaxlib._jax.ArrayImpl' at 0x194b9570>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c606ec0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c606f20; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c606f80; to 'jaxlib._jax.ArrayImpl' at 0xf337b00>), 'e1': HashableWeakRef(<weakref at 0x7fda4c606fe0; to 'jaxlib._jax.ArrayImpl' at 0xefa2070>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c6067a0; to 'jaxlib._jax.ArrayImpl' at 0xe938980>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c607040; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c606ec0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c606f20; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c606f80; to 'jaxlib._jax.ArrayImpl' at 0xf337b00>), 'e1': HashableWeakRef(<weakref at 0x7fda4c606fe0; to 'jaxlib._jax.ArrayImpl' at 0xefa2070>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c6067a0; to 'jaxlib._jax.ArrayImpl' at 0xe938980>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c607040; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c6188e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c618880; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c618820; to 'jaxlib._jax.ArrayImpl' at 0xe938980>), 'e1': HashableWeakRef(<weakref at 0x7fda4c6187c0; to 'jaxlib._jax.ArrayImpl' at 0x19117a70>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c618760; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c6182e0; to 'jaxlib._jax.ArrayImpl' at 0x174cfbf0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c6188e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c618880; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c618820; to 'jaxlib._jax.ArrayImpl' at 0xe938980>), 'e1': HashableWeakRef(<weakref at 0x7fda4c6187c0; to 'jaxlib._jax.ArrayImpl' at 0x19117a70>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c618760; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c6182e0; to 'jaxlib._jax.ArrayImpl' at 0x174cfbf0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c61a620; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c61a860; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c61a800; to 'jaxlib._jax.ArrayImpl' at 0x1a2b6610>), 'e1': HashableWeakRef(<weakref at 0x7fda4c61a7a0; to 'jaxlib._jax.ArrayImpl' at 0xf2ca8b0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c61af20; to 'jaxlib._jax.ArrayImpl' at 0x184002e0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c61aa40; to 'jaxlib._jax.ArrayImpl' at 0x1a4ff3f0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c61a620; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c61a860; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c61a800; to 'jaxlib._jax.ArrayImpl' at 0x1a2b6610>), 'e1': HashableWeakRef(<weakref at 0x7fda4c61a7a0; to 'jaxlib._jax.ArrayImpl' at 0xf2ca8b0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c61af20; to 'jaxlib._jax.ArrayImpl' at 0x184002e0>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c61aa40; to 'jaxlib._jax.ArrayImpl' at 0x1a4ff3f0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c6232e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c623280; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c623220; to 'jaxlib._jax.ArrayImpl' at 0xd43d3f0>), 'e1': HashableWeakRef(<weakref at 0x7fda4c6231c0; to 'jaxlib._jax.ArrayImpl' at 0x18f01060>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c623160; to 'jaxlib._jax.ArrayImpl' at 0x1aa8e230>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c622ce0; to 'jaxlib._jax.ArrayImpl' at 0x184002e0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c6232e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c623280; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c623220; to 'jaxlib._jax.ArrayImpl' at 0xd43d3f0>), 'e1': HashableWeakRef(<weakref at 0x7fda4c6231c0; to 'jaxlib._jax.ArrayImpl' at 0x18f01060>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c623160; to 'jaxlib._jax.ArrayImpl' at 0x1aa8e230>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c622ce0; to 'jaxlib._jax.ArrayImpl' at 0x184002e0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c622b60; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c622b00; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c622aa0; to 'jaxlib._jax.ArrayImpl' at 0xf0f4db0>), 'e1': HashableWeakRef(<weakref at 0x7fda4c622a40; to 'jaxlib._jax.ArrayImpl' at 0x176eaef0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c6229e0; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c6227a0; to 'jaxlib._jax.ArrayImpl' at 0xe636830>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c622b60; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c622b00; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c622aa0; to 'jaxlib._jax.ArrayImpl' at 0xf0f4db0>), 'e1': HashableWeakRef(<weakref at 0x7fda4c622a40; to 'jaxlib._jax.ArrayImpl' at 0x176eaef0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c6229e0; to 'jaxlib._jax.ArrayImpl' at 0x1b6e7680>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c6227a0; to 'jaxlib._jax.ArrayImpl' at 0xe636830>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c63dd20; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c63dcc0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c63dc60; to 'jaxlib._jax.ArrayImpl' at 0xf4f4170>), 'e1': HashableWeakRef(<weakref at 0x7fda4c63dc00; to 'jaxlib._jax.ArrayImpl' at 0x16c295f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c63dba0; to 'jaxlib._jax.ArrayImpl' at 0x14fb4630>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c63d720; to 'jaxlib._jax.ArrayImpl' at 0xc312760>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c63dd20; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c63dcc0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c63dc60; to 'jaxlib._jax.ArrayImpl' at 0xf4f4170>), 'e1': HashableWeakRef(<weakref at 0x7fda4c63dc00; to 'jaxlib._jax.ArrayImpl' at 0x16c295f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c63dba0; to 'jaxlib._jax.ArrayImpl' at 0x14fb4630>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c63d720; to 'jaxlib._jax.ArrayImpl' at 0xc312760>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c63ee00; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c63ee60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c63e620; to 'jaxlib._jax.ArrayImpl' at 0x17885850>), 'e1': HashableWeakRef(<weakref at 0x7fda4c63e5c0; to 'jaxlib._jax.ArrayImpl' at 0xec13ce0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c63e560; to 'jaxlib._jax.ArrayImpl' at 0x1b325a60>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c63f220; to 'jaxlib._jax.ArrayImpl' at 0xd74d5f0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c63ee00; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c63ee60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c63e620; to 'jaxlib._jax.ArrayImpl' at 0x17885850>), 'e1': HashableWeakRef(<weakref at 0x7fda4c63e5c0; to 'jaxlib._jax.ArrayImpl' at 0xec13ce0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c63e560; to 'jaxlib._jax.ArrayImpl' at 0x1b325a60>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c63f220; to 'jaxlib._jax.ArrayImpl' at 0xd74d5f0>)})
+[14:28:44]     Got 20 prior samples
+[14:28:44]     logp=36425.5901±49400.5874, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:44]   n_max=10 done in 37.0s
+[14:28:44] 
+=== n_max=15 ===
+[14:28:44]   Model built in 0.2s
+[14:28:44]   Getting bootstrap qz...
+Final Chi-squared: 1.57325
+[14:29:10]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:29:10]   Compiling value_and_grad...
+[14:29:25]   Compiled OK
+[14:29:25]   Anchor (a): bootstrap point
+[14:29:25]     logp=153759.3281, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:29:25]   Anchor (b1): qz draws diag_scale=1e-6
+[14:29:25]     logp=153743.9719±108.3163, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:25]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:29:25]     logp=158094.7766±19.2380, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:25]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:29:25]     logp=158587.7680±8.3715, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:25]   Anchor (c): prior draws
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c64dba0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c64db40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c64dae0; to 'jaxlib._jax.ArrayImpl' at 0x180b1f60>), 'e1': HashableWeakRef(<weakref at 0x7fda4c64da80; to 'jaxlib._jax.ArrayImpl' at 0x192344a0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c64dea0; to 'jaxlib._jax.ArrayImpl' at 0x17180490>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c64d480; to 'jaxlib._jax.ArrayImpl' at 0x2420bf40>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda4c64dba0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda4c64db40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda4c64dae0; to 'jaxlib._jax.ArrayImpl' at 0x180b1f60>), 'e1': HashableWeakRef(<weakref at 0x7fda4c64da80; to 'jaxlib._jax.ArrayImpl' at 0x192344a0>), 'center_y': HashableWeakRef(<weakref at 0x7fda4c64dea0; to 'jaxlib._jax.ArrayImpl' at 0x17180490>), 'center_x': HashableWeakRef(<weakref at 0x7fda4c64d480; to 'jaxlib._jax.ArrayImpl' at 0x2420bf40>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143e6560; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143e6500; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143e64a0; to 'jaxlib._jax.ArrayImpl' at 0x193f0a30>), 'e1': HashableWeakRef(<weakref at 0x7fda143e6440; to 'jaxlib._jax.ArrayImpl' at 0xeed41e0>), 'center_y': HashableWeakRef(<weakref at 0x7fda143e63e0; to 'jaxlib._jax.ArrayImpl' at 0x28a36040>), 'center_x': HashableWeakRef(<weakref at 0x7fda143e5f60; to 'jaxlib._jax.ArrayImpl' at 0x240ecaa0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143e6560; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143e6500; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143e64a0; to 'jaxlib._jax.ArrayImpl' at 0x193f0a30>), 'e1': HashableWeakRef(<weakref at 0x7fda143e6440; to 'jaxlib._jax.ArrayImpl' at 0xeed41e0>), 'center_y': HashableWeakRef(<weakref at 0x7fda143e63e0; to 'jaxlib._jax.ArrayImpl' at 0x28a36040>), 'center_x': HashableWeakRef(<weakref at 0x7fda143e5f60; to 'jaxlib._jax.ArrayImpl' at 0x240ecaa0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143e6980; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143e6920; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143e68c0; to 'jaxlib._jax.ArrayImpl' at 0xf223be0>), 'e1': HashableWeakRef(<weakref at 0x7fda143e6b00; to 'jaxlib._jax.ArrayImpl' at 0xe6f3390>), 'center_y': HashableWeakRef(<weakref at 0x7fda143e7400; to 'jaxlib._jax.ArrayImpl' at 0x1b4141b0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143e6c80; to 'jaxlib._jax.ArrayImpl' at 0x17e2ddb0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143e6980; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143e6920; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143e68c0; to 'jaxlib._jax.ArrayImpl' at 0xf223be0>), 'e1': HashableWeakRef(<weakref at 0x7fda143e6b00; to 'jaxlib._jax.ArrayImpl' at 0xe6f3390>), 'center_y': HashableWeakRef(<weakref at 0x7fda143e7400; to 'jaxlib._jax.ArrayImpl' at 0x1b4141b0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143e6c80; to 'jaxlib._jax.ArrayImpl' at 0x17e2ddb0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143c0fa0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143c0f40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143c0ee0; to 'jaxlib._jax.ArrayImpl' at 0x28577d20>), 'e1': HashableWeakRef(<weakref at 0x7fda143c0e80; to 'jaxlib._jax.ArrayImpl' at 0x2897e110>), 'center_y': HashableWeakRef(<weakref at 0x7fda143c0e20; to 'jaxlib._jax.ArrayImpl' at 0x21b9b510>), 'center_x': HashableWeakRef(<weakref at 0x7fda143c09a0; to 'jaxlib._jax.ArrayImpl' at 0x199be200>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143c0fa0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143c0f40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143c0ee0; to 'jaxlib._jax.ArrayImpl' at 0x28577d20>), 'e1': HashableWeakRef(<weakref at 0x7fda143c0e80; to 'jaxlib._jax.ArrayImpl' at 0x2897e110>), 'center_y': HashableWeakRef(<weakref at 0x7fda143c0e20; to 'jaxlib._jax.ArrayImpl' at 0x21b9b510>), 'center_x': HashableWeakRef(<weakref at 0x7fda143c09a0; to 'jaxlib._jax.ArrayImpl' at 0x199be200>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143c00a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143c0040; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143c01c0; to 'jaxlib._jax.ArrayImpl' at 0xe8a5980>), 'e1': HashableWeakRef(<weakref at 0x7fda143c2800; to 'jaxlib._jax.ArrayImpl' at 0xf9fec70>), 'center_y': HashableWeakRef(<weakref at 0x7fda143c2740; to 'jaxlib._jax.ArrayImpl' at 0x240909a0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143c2ec0; to 'jaxlib._jax.ArrayImpl' at 0xe9eb260>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143c00a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143c0040; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143c01c0; to 'jaxlib._jax.ArrayImpl' at 0xe8a5980>), 'e1': HashableWeakRef(<weakref at 0x7fda143c2800; to 'jaxlib._jax.ArrayImpl' at 0xf9fec70>), 'center_y': HashableWeakRef(<weakref at 0x7fda143c2740; to 'jaxlib._jax.ArrayImpl' at 0x240909a0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143c2ec0; to 'jaxlib._jax.ArrayImpl' at 0xe9eb260>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143cf9a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143cf940; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143cf8e0; to 'jaxlib._jax.ArrayImpl' at 0x1ee5aae0>), 'e1': HashableWeakRef(<weakref at 0x7fda143cf880; to 'jaxlib._jax.ArrayImpl' at 0x20ac2e90>), 'center_y': HashableWeakRef(<weakref at 0x7fda143cf820; to 'jaxlib._jax.ArrayImpl' at 0x2947b5b0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143cf3a0; to 'jaxlib._jax.ArrayImpl' at 0x25c4c3a0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda143cf9a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143cf940; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143cf8e0; to 'jaxlib._jax.ArrayImpl' at 0x1ee5aae0>), 'e1': HashableWeakRef(<weakref at 0x7fda143cf880; to 'jaxlib._jax.ArrayImpl' at 0x20ac2e90>), 'center_y': HashableWeakRef(<weakref at 0x7fda143cf820; to 'jaxlib._jax.ArrayImpl' at 0x2947b5b0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143cf3a0; to 'jaxlib._jax.ArrayImpl' at 0x25c4c3a0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda14226440; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143cda80; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143cdc60; to 'jaxlib._jax.ArrayImpl' at 0x1681d490>), 'e1': HashableWeakRef(<weakref at 0x7fda143cf460; to 'jaxlib._jax.ArrayImpl' at 0x1b3e00f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda143cf4c0; to 'jaxlib._jax.ArrayImpl' at 0x240ecaa0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143cf0a0; to 'jaxlib._jax.ArrayImpl' at 0xeb86000>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda14226440; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda143cda80; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda143cdc60; to 'jaxlib._jax.ArrayImpl' at 0x1681d490>), 'e1': HashableWeakRef(<weakref at 0x7fda143cf460; to 'jaxlib._jax.ArrayImpl' at 0x1b3e00f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda143cf4c0; to 'jaxlib._jax.ArrayImpl' at 0x240ecaa0>), 'center_x': HashableWeakRef(<weakref at 0x7fda143cf0a0; to 'jaxlib._jax.ArrayImpl' at 0xeb86000>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1423a3e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1423a380; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1423a320; to 'jaxlib._jax.ArrayImpl' at 0x23c02da0>), 'e1': HashableWeakRef(<weakref at 0x7fda1423a2c0; to 'jaxlib._jax.ArrayImpl' at 0x28a22dd0>), 'center_y': HashableWeakRef(<weakref at 0x7fda1423a260; to 'jaxlib._jax.ArrayImpl' at 0x171008d0>), 'center_x': HashableWeakRef(<weakref at 0x7fda14239de0; to 'jaxlib._jax.ArrayImpl' at 0x25d404a0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1423a3e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1423a380; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1423a320; to 'jaxlib._jax.ArrayImpl' at 0x23c02da0>), 'e1': HashableWeakRef(<weakref at 0x7fda1423a2c0; to 'jaxlib._jax.ArrayImpl' at 0x28a22dd0>), 'center_y': HashableWeakRef(<weakref at 0x7fda1423a260; to 'jaxlib._jax.ArrayImpl' at 0x171008d0>), 'center_x': HashableWeakRef(<weakref at 0x7fda14239de0; to 'jaxlib._jax.ArrayImpl' at 0x25d404a0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1423a980; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1423b280; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1423b2e0; to 'jaxlib._jax.ArrayImpl' at 0x1baed870>), 'e1': HashableWeakRef(<weakref at 0x7fda1423b340; to 'jaxlib._jax.ArrayImpl' at 0x20b350f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda1423b3a0; to 'jaxlib._jax.ArrayImpl' at 0x282962c0>), 'center_x': HashableWeakRef(<weakref at 0x7fda1423b0a0; to 'jaxlib._jax.ArrayImpl' at 0x20be6a60>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1423a980; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1423b280; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1423b2e0; to 'jaxlib._jax.ArrayImpl' at 0x1baed870>), 'e1': HashableWeakRef(<weakref at 0x7fda1423b340; to 'jaxlib._jax.ArrayImpl' at 0x20b350f0>), 'center_y': HashableWeakRef(<weakref at 0x7fda1423b3a0; to 'jaxlib._jax.ArrayImpl' at 0x282962c0>), 'center_x': HashableWeakRef(<weakref at 0x7fda1423b0a0; to 'jaxlib._jax.ArrayImpl' at 0x20be6a60>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda14248e20; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda14248dc0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda14248d60; to 'jaxlib._jax.ArrayImpl' at 0x1bc21bc0>), 'e1': HashableWeakRef(<weakref at 0x7fda14248d00; to 'jaxlib._jax.ArrayImpl' at 0x21917b70>), 'center_y': HashableWeakRef(<weakref at 0x7fda14248ca0; to 'jaxlib._jax.ArrayImpl' at 0xd809ae0>), 'center_x': HashableWeakRef(<weakref at 0x7fda14248820; to 'jaxlib._jax.ArrayImpl' at 0xcf654d0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda14248e20; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda14248dc0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda14248d60; to 'jaxlib._jax.ArrayImpl' at 0x1bc21bc0>), 'e1': HashableWeakRef(<weakref at 0x7fda14248d00; to 'jaxlib._jax.ArrayImpl' at 0x21917b70>), 'center_y': HashableWeakRef(<weakref at 0x7fda14248ca0; to 'jaxlib._jax.ArrayImpl' at 0xd809ae0>), 'center_x': HashableWeakRef(<weakref at 0x7fda14248820; to 'jaxlib._jax.ArrayImpl' at 0xcf654d0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1424a5c0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1424a620; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1424a860; to 'jaxlib._jax.ArrayImpl' at 0xeb042e0>), 'e1': HashableWeakRef(<weakref at 0x7fda1424a740; to 'jaxlib._jax.ArrayImpl' at 0x1b810220>), 'center_y': HashableWeakRef(<weakref at 0x7fda1424a800; to 'jaxlib._jax.ArrayImpl' at 0x20790230>), 'center_x': HashableWeakRef(<weakref at 0x7fda1424b340; to 'jaxlib._jax.ArrayImpl' at 0x2897e110>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1424a5c0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1424a620; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1424a860; to 'jaxlib._jax.ArrayImpl' at 0xeb042e0>), 'e1': HashableWeakRef(<weakref at 0x7fda1424a740; to 'jaxlib._jax.ArrayImpl' at 0x1b810220>), 'center_y': HashableWeakRef(<weakref at 0x7fda1424a800; to 'jaxlib._jax.ArrayImpl' at 0x20790230>), 'center_x': HashableWeakRef(<weakref at 0x7fda1424b340; to 'jaxlib._jax.ArrayImpl' at 0x2897e110>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1424f820; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1424f7c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1424f760; to 'jaxlib._jax.ArrayImpl' at 0xec89d40>), 'e1': HashableWeakRef(<weakref at 0x7fda1424f700; to 'jaxlib._jax.ArrayImpl' at 0x23bdf100>), 'center_y': HashableWeakRef(<weakref at 0x7fda1424f6a0; to 'jaxlib._jax.ArrayImpl' at 0x1699ed40>), 'center_x': HashableWeakRef(<weakref at 0x7fda1424f220; to 'jaxlib._jax.ArrayImpl' at 0x1937ec00>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1424f820; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1424f7c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1424f760; to 'jaxlib._jax.ArrayImpl' at 0xec89d40>), 'e1': HashableWeakRef(<weakref at 0x7fda1424f700; to 'jaxlib._jax.ArrayImpl' at 0x23bdf100>), 'center_y': HashableWeakRef(<weakref at 0x7fda1424f6a0; to 'jaxlib._jax.ArrayImpl' at 0x1699ed40>), 'center_x': HashableWeakRef(<weakref at 0x7fda1424f220; to 'jaxlib._jax.ArrayImpl' at 0x1937ec00>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1424dae0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1424f2e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1424f340; to 'jaxlib._jax.ArrayImpl' at 0x15451370>), 'e1': HashableWeakRef(<weakref at 0x7fda1424f3a0; to 'jaxlib._jax.ArrayImpl' at 0x28835260>), 'center_y': HashableWeakRef(<weakref at 0x7fda1424f400; to 'jaxlib._jax.ArrayImpl' at 0xd214620>), 'center_x': HashableWeakRef(<weakref at 0x7fda1424f640; to 'jaxlib._jax.ArrayImpl' at 0x20ac2e90>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fda1424dae0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fda1424f2e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fda1424f340; to 'jaxlib._jax.ArrayImpl' at 0x15451370>), 'e1': HashableWeakRef(<weakref at 0x7fda1424f3a0; to 'jaxlib._jax.ArrayImpl' at 0x28835260>), 'center_y': HashableWeakRef(<weakref at 0x7fda1424f400; to 'jaxlib._jax.ArrayImpl' at 0xd214620>), 'center_x': HashableWeakRef(<weakref at 0x7fda1424f640; to 'jaxlib._jax.ArrayImpl' at 0x20ac2e90>)})
+[14:29:26]     Got 20 prior samples
+[14:29:26]     logp=43119.5750±50245.6184, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:26]   n_max=15 done in 42.7s
+[14:29:26] 
+=== n_max=20 ===
+[14:29:27]   Model built in 0.2s
+[14:29:27]   Getting bootstrap qz...
+Final Chi-squared: 1.54810
+[14:30:01]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:30:01]   Compiling value_and_grad...
+[14:30:19]   Compiled OK
+[14:30:19]   Anchor (a): bootstrap point
+[14:30:19]     logp=154264.0781, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:30:19]   Anchor (b1): qz draws diag_scale=1e-6
+[14:30:19]     logp=154248.4688±107.1204, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:19]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:30:19]     logp=159198.7203±9.7186, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:19]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:30:19]     logp=159219.0969±12.8323, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:19]   Anchor (c): prior draws
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86d89a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86d8940; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86d88e0; to 'jaxlib._jax.ArrayImpl' at 0x2ed54ee0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86d8880; to 'jaxlib._jax.ArrayImpl' at 0x152ae2e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86d8820; to 'jaxlib._jax.ArrayImpl' at 0x28bdad80>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86d83a0; to 'jaxlib._jax.ArrayImpl' at 0x1831b920>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86d89a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86d8940; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86d88e0; to 'jaxlib._jax.ArrayImpl' at 0x2ed54ee0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86d8880; to 'jaxlib._jax.ArrayImpl' at 0x152ae2e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86d8820; to 'jaxlib._jax.ArrayImpl' at 0x28bdad80>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86d83a0; to 'jaxlib._jax.ArrayImpl' at 0x1831b920>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86da320; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86da6e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86da920; to 'jaxlib._jax.ArrayImpl' at 0x1b40f090>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86da8c0; to 'jaxlib._jax.ArrayImpl' at 0x21971560>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86da860; to 'jaxlib._jax.ArrayImpl' at 0x2a2e0e90>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86dab60; to 'jaxlib._jax.ArrayImpl' at 0x2eaac0f0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86da320; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86da6e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86da920; to 'jaxlib._jax.ArrayImpl' at 0x1b40f090>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86da8c0; to 'jaxlib._jax.ArrayImpl' at 0x21971560>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86da860; to 'jaxlib._jax.ArrayImpl' at 0x2a2e0e90>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86dab60; to 'jaxlib._jax.ArrayImpl' at 0x2eaac0f0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86cf3a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86cf340; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86cf2e0; to 'jaxlib._jax.ArrayImpl' at 0x1574e1f0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86cf280; to 'jaxlib._jax.ArrayImpl' at 0x14a23890>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86cf220; to 'jaxlib._jax.ArrayImpl' at 0x22956510>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86ceda0; to 'jaxlib._jax.ArrayImpl' at 0x23ff92d0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86cf3a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86cf340; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86cf2e0; to 'jaxlib._jax.ArrayImpl' at 0x1574e1f0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86cf280; to 'jaxlib._jax.ArrayImpl' at 0x14a23890>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86cf220; to 'jaxlib._jax.ArrayImpl' at 0x22956510>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86ceda0; to 'jaxlib._jax.ArrayImpl' at 0x23ff92d0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86cf100; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86cec80; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86cec20; to 'jaxlib._jax.ArrayImpl' at 0x155ed5f0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86cebc0; to 'jaxlib._jax.ArrayImpl' at 0x2a1056e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86ceb60; to 'jaxlib._jax.ArrayImpl' at 0x2e322be0>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86cf4c0; to 'jaxlib._jax.ArrayImpl' at 0x28ccd3e0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b86cf100; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b86cec80; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b86cec20; to 'jaxlib._jax.ArrayImpl' at 0x155ed5f0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b86cebc0; to 'jaxlib._jax.ArrayImpl' at 0x2a1056e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b86ceb60; to 'jaxlib._jax.ArrayImpl' at 0x2e322be0>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b86cf4c0; to 'jaxlib._jax.ArrayImpl' at 0x28ccd3e0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8535de0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8535d80; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8535d20; to 'jaxlib._jax.ArrayImpl' at 0x1bbda300>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8535cc0; to 'jaxlib._jax.ArrayImpl' at 0x23dcc760>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b8535c60; to 'jaxlib._jax.ArrayImpl' at 0x29b37f10>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b85357e0; to 'jaxlib._jax.ArrayImpl' at 0x2de783b0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8535de0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8535d80; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8535d20; to 'jaxlib._jax.ArrayImpl' at 0x1bbda300>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8535cc0; to 'jaxlib._jax.ArrayImpl' at 0x23dcc760>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b8535c60; to 'jaxlib._jax.ArrayImpl' at 0x29b37f10>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b85357e0; to 'jaxlib._jax.ArrayImpl' at 0x2de783b0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8536e00; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8536e60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8536ec0; to 'jaxlib._jax.ArrayImpl' at 0x2ec55750>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8536f20; to 'jaxlib._jax.ArrayImpl' at 0x147cbad0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85366e0; to 'jaxlib._jax.ArrayImpl' at 0x27dcdfb0>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8536f80; to 'jaxlib._jax.ArrayImpl' at 0x2af52b60>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8536e00; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8536e60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8536ec0; to 'jaxlib._jax.ArrayImpl' at 0x2ec55750>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8536f20; to 'jaxlib._jax.ArrayImpl' at 0x147cbad0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85366e0; to 'jaxlib._jax.ArrayImpl' at 0x27dcdfb0>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8536f80; to 'jaxlib._jax.ArrayImpl' at 0x2af52b60>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b850c820; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b850c7c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b850c760; to 'jaxlib._jax.ArrayImpl' at 0xbf68a10>), 'e1': HashableWeakRef(<weakref at 0x7fd9b850c700; to 'jaxlib._jax.ArrayImpl' at 0x25ff0e70>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b850c6a0; to 'jaxlib._jax.ArrayImpl' at 0x14a63e80>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b850c220; to 'jaxlib._jax.ArrayImpl' at 0x270484c0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b850c820; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b850c7c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b850c760; to 'jaxlib._jax.ArrayImpl' at 0xbf68a10>), 'e1': HashableWeakRef(<weakref at 0x7fd9b850c700; to 'jaxlib._jax.ArrayImpl' at 0x25ff0e70>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b850c6a0; to 'jaxlib._jax.ArrayImpl' at 0x14a63e80>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b850c220; to 'jaxlib._jax.ArrayImpl' at 0x270484c0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b850e740; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b850e6e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b850ee60; to 'jaxlib._jax.ArrayImpl' at 0x2a810ba0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b850ee00; to 'jaxlib._jax.ArrayImpl' at 0x28bdad80>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b850ed40; to 'jaxlib._jax.ArrayImpl' at 0x1ee989d0>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b850e8c0; to 'jaxlib._jax.ArrayImpl' at 0x23a09b80>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b850e740; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b850e6e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b850ee60; to 'jaxlib._jax.ArrayImpl' at 0x2a810ba0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b850ee00; to 'jaxlib._jax.ArrayImpl' at 0x28bdad80>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b850ed40; to 'jaxlib._jax.ArrayImpl' at 0x1ee989d0>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b850e8c0; to 'jaxlib._jax.ArrayImpl' at 0x23a09b80>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8523220; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b85231c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8523160; to 'jaxlib._jax.ArrayImpl' at 0xd6802f0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8523100; to 'jaxlib._jax.ArrayImpl' at 0x281462e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85230a0; to 'jaxlib._jax.ArrayImpl' at 0xd6f3050>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8522c20; to 'jaxlib._jax.ArrayImpl' at 0xce61c60>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8523220; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b85231c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8523160; to 'jaxlib._jax.ArrayImpl' at 0xd6802f0>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8523100; to 'jaxlib._jax.ArrayImpl' at 0x281462e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85230a0; to 'jaxlib._jax.ArrayImpl' at 0xd6f3050>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8522c20; to 'jaxlib._jax.ArrayImpl' at 0xce61c60>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8522a40; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b85229e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8522980; to 'jaxlib._jax.ArrayImpl' at 0x2a7bda50>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8522920; to 'jaxlib._jax.ArrayImpl' at 0x22956510>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b8522fe0; to 'jaxlib._jax.ArrayImpl' at 0x1746c640>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8522620; to 'jaxlib._jax.ArrayImpl' at 0x2a11f270>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8522a40; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b85229e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8522980; to 'jaxlib._jax.ArrayImpl' at 0x2a7bda50>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8522920; to 'jaxlib._jax.ArrayImpl' at 0x22956510>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b8522fe0; to 'jaxlib._jax.ArrayImpl' at 0x1746c640>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8522620; to 'jaxlib._jax.ArrayImpl' at 0x2a11f270>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8545c60; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8545c00; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8545ba0; to 'jaxlib._jax.ArrayImpl' at 0x294e2900>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8545b40; to 'jaxlib._jax.ArrayImpl' at 0x1ac8fbe0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b8545ae0; to 'jaxlib._jax.ArrayImpl' at 0x288ddb90>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8545660; to 'jaxlib._jax.ArrayImpl' at 0x2a2e0e90>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8545c60; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8545c00; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8545ba0; to 'jaxlib._jax.ArrayImpl' at 0x294e2900>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8545b40; to 'jaxlib._jax.ArrayImpl' at 0x1ac8fbe0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b8545ae0; to 'jaxlib._jax.ArrayImpl' at 0x288ddb90>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8545660; to 'jaxlib._jax.ArrayImpl' at 0x2a2e0e90>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8546500; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b85464a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8546440; to 'jaxlib._jax.ArrayImpl' at 0xfbe9500>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8546380; to 'jaxlib._jax.ArrayImpl' at 0x29b37f10>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85463e0; to 'jaxlib._jax.ArrayImpl' at 0x267f0d20>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8547040; to 'jaxlib._jax.ArrayImpl' at 0x28a7d6d0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8546500; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b85464a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8546440; to 'jaxlib._jax.ArrayImpl' at 0xfbe9500>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8546380; to 'jaxlib._jax.ArrayImpl' at 0x29b37f10>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85463e0; to 'jaxlib._jax.ArrayImpl' at 0x267f0d20>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8547040; to 'jaxlib._jax.ArrayImpl' at 0x28a7d6d0>)})
+[14:30:21]     Got 20 prior samples
+[14:30:21]     logp=-12719.8262±208425.3575, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:21]   n_max=20 done in 54.6s
+[14:30:21] 
+=== n_max=25 ===
+[14:30:21]   Model built in 0.2s
+[14:30:21]   Getting bootstrap qz...
+Final Chi-squared: 1.51841
+[14:31:39]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:31:39]   Compiling value_and_grad...
+[14:31:58]   Compiled OK
+[14:31:58]   Anchor (a): bootstrap point
+[14:31:58]     logp=154857.4531, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:31:58]   Anchor (b1): qz draws diag_scale=1e-6
+[14:31:58]     logp=154841.5914±106.4091, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:31:58]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:31:59]     logp=159858.7000±73.2526, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:31:59]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:31:59]     logp=159563.4438±15.7201, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:31:59]   Anchor (c): prior draws
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8561b40; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8561ae0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8561a80; to 'jaxlib._jax.ArrayImpl' at 0xf24ab20>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8561a20; to 'jaxlib._jax.ArrayImpl' at 0x25ef69a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85619c0; to 'jaxlib._jax.ArrayImpl' at 0x16791060>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8560dc0; to 'jaxlib._jax.ArrayImpl' at 0x23974a70>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd9b8561b40; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd9b8561ae0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd9b8561a80; to 'jaxlib._jax.ArrayImpl' at 0xf24ab20>), 'e1': HashableWeakRef(<weakref at 0x7fd9b8561a20; to 'jaxlib._jax.ArrayImpl' at 0x25ef69a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd9b85619c0; to 'jaxlib._jax.ArrayImpl' at 0x16791060>), 'center_x': HashableWeakRef(<weakref at 0x7fd9b8560dc0; to 'jaxlib._jax.ArrayImpl' at 0x23974a70>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645ea500; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645ea4a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645ea440; to 'jaxlib._jax.ArrayImpl' at 0x3e739f70>), 'e1': HashableWeakRef(<weakref at 0x7fd7645ea3e0; to 'jaxlib._jax.ArrayImpl' at 0x221e97a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645ea380; to 'jaxlib._jax.ArrayImpl' at 0x3e67bc80>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645e9f00; to 'jaxlib._jax.ArrayImpl' at 0x17729520>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645ea500; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645ea4a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645ea440; to 'jaxlib._jax.ArrayImpl' at 0x3e739f70>), 'e1': HashableWeakRef(<weakref at 0x7fd7645ea3e0; to 'jaxlib._jax.ArrayImpl' at 0x221e97a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645ea380; to 'jaxlib._jax.ArrayImpl' at 0x3e67bc80>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645e9f00; to 'jaxlib._jax.ArrayImpl' at 0x17729520>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645ea9e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645ea980; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645ea920; to 'jaxlib._jax.ArrayImpl' at 0x2a135f80>), 'e1': HashableWeakRef(<weakref at 0x7fd7645ea8c0; to 'jaxlib._jax.ArrayImpl' at 0x1b8cc080>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645ea860; to 'jaxlib._jax.ArrayImpl' at 0x26fdf130>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645eada0; to 'jaxlib._jax.ArrayImpl' at 0x2d58e250>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645ea9e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645ea980; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645ea920; to 'jaxlib._jax.ArrayImpl' at 0x2a135f80>), 'e1': HashableWeakRef(<weakref at 0x7fd7645ea8c0; to 'jaxlib._jax.ArrayImpl' at 0x1b8cc080>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645ea860; to 'jaxlib._jax.ArrayImpl' at 0x26fdf130>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645eada0; to 'jaxlib._jax.ArrayImpl' at 0x2d58e250>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645f0e80; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645f0e20; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645f0dc0; to 'jaxlib._jax.ArrayImpl' at 0x20ca3f90>), 'e1': HashableWeakRef(<weakref at 0x7fd7645f0d60; to 'jaxlib._jax.ArrayImpl' at 0xf0cf5f0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645f0d00; to 'jaxlib._jax.ArrayImpl' at 0x2ad6a960>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645f0880; to 'jaxlib._jax.ArrayImpl' at 0x2a39eb50>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645f0e80; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645f0e20; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645f0dc0; to 'jaxlib._jax.ArrayImpl' at 0x20ca3f90>), 'e1': HashableWeakRef(<weakref at 0x7fd7645f0d60; to 'jaxlib._jax.ArrayImpl' at 0xf0cf5f0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645f0d00; to 'jaxlib._jax.ArrayImpl' at 0x2ad6a960>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645f0880; to 'jaxlib._jax.ArrayImpl' at 0x2a39eb50>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645f2620; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645f2680; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645f28c0; to 'jaxlib._jax.ArrayImpl' at 0x14cd1310>), 'e1': HashableWeakRef(<weakref at 0x7fd7645f27a0; to 'jaxlib._jax.ArrayImpl' at 0x29b744e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645f2860; to 'jaxlib._jax.ArrayImpl' at 0x19d308d0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645f33a0; to 'jaxlib._jax.ArrayImpl' at 0x26ba3690>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7645f2620; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7645f2680; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7645f28c0; to 'jaxlib._jax.ArrayImpl' at 0x14cd1310>), 'e1': HashableWeakRef(<weakref at 0x7fd7645f27a0; to 'jaxlib._jax.ArrayImpl' at 0x29b744e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7645f2860; to 'jaxlib._jax.ArrayImpl' at 0x19d308d0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7645f33a0; to 'jaxlib._jax.ArrayImpl' at 0x26ba3690>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd76447f7c0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd76447f760; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd76447f700; to 'jaxlib._jax.ArrayImpl' at 0x2aa67400>), 'e1': HashableWeakRef(<weakref at 0x7fd76447f6a0; to 'jaxlib._jax.ArrayImpl' at 0x2761e5a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd76447f640; to 'jaxlib._jax.ArrayImpl' at 0xf280bd0>), 'center_x': HashableWeakRef(<weakref at 0x7fd76447f1c0; to 'jaxlib._jax.ArrayImpl' at 0x2ea13ed0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd76447f7c0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd76447f760; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd76447f700; to 'jaxlib._jax.ArrayImpl' at 0x2aa67400>), 'e1': HashableWeakRef(<weakref at 0x7fd76447f6a0; to 'jaxlib._jax.ArrayImpl' at 0x2761e5a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd76447f640; to 'jaxlib._jax.ArrayImpl' at 0xf280bd0>), 'center_x': HashableWeakRef(<weakref at 0x7fd76447f1c0; to 'jaxlib._jax.ArrayImpl' at 0x2ea13ed0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd76447f280; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd76447f2e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd76447f340; to 'jaxlib._jax.ArrayImpl' at 0x28cc3650>), 'e1': HashableWeakRef(<weakref at 0x7fd76447f3a0; to 'jaxlib._jax.ArrayImpl' at 0xfcdb0e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd76447f400; to 'jaxlib._jax.ArrayImpl' at 0x21c8b7b0>), 'center_x': HashableWeakRef(<weakref at 0x7fd76447f7c0; to 'jaxlib._jax.ArrayImpl' at 0x2388be60>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd76447f280; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd76447f2e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd76447f340; to 'jaxlib._jax.ArrayImpl' at 0x28cc3650>), 'e1': HashableWeakRef(<weakref at 0x7fd76447f3a0; to 'jaxlib._jax.ArrayImpl' at 0xfcdb0e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd76447f400; to 'jaxlib._jax.ArrayImpl' at 0x21c8b7b0>), 'center_x': HashableWeakRef(<weakref at 0x7fd76447f7c0; to 'jaxlib._jax.ArrayImpl' at 0x2388be60>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644b6140; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644b60e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644b6080; to 'jaxlib._jax.ArrayImpl' at 0x2a2b1b10>), 'e1': HashableWeakRef(<weakref at 0x7fd7644b6020; to 'jaxlib._jax.ArrayImpl' at 0x27454fa0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644b5fc0; to 'jaxlib._jax.ArrayImpl' at 0x1b845dd0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644b5b40; to 'jaxlib._jax.ArrayImpl' at 0x18d8db70>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644b6140; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644b60e0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644b6080; to 'jaxlib._jax.ArrayImpl' at 0x2a2b1b10>), 'e1': HashableWeakRef(<weakref at 0x7fd7644b6020; to 'jaxlib._jax.ArrayImpl' at 0x27454fa0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644b5fc0; to 'jaxlib._jax.ArrayImpl' at 0x1b845dd0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644b5b40; to 'jaxlib._jax.ArrayImpl' at 0x18d8db70>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644b70a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644b7100; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644b7160; to 'jaxlib._jax.ArrayImpl' at 0x239e9da0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644b71c0; to 'jaxlib._jax.ArrayImpl' at 0x25ef69a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644b7220; to 'jaxlib._jax.ArrayImpl' at 0x3b6d77c0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644b6c80; to 'jaxlib._jax.ArrayImpl' at 0x2973c570>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644b70a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644b7100; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644b7160; to 'jaxlib._jax.ArrayImpl' at 0x239e9da0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644b71c0; to 'jaxlib._jax.ArrayImpl' at 0x25ef69a0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644b7220; to 'jaxlib._jax.ArrayImpl' at 0x3b6d77c0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644b6c80; to 'jaxlib._jax.ArrayImpl' at 0x2973c570>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644c8ac0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644c8a60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644c8a00; to 'jaxlib._jax.ArrayImpl' at 0x1b64aff0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644c89a0; to 'jaxlib._jax.ArrayImpl' at 0x3e67bc80>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644c8940; to 'jaxlib._jax.ArrayImpl' at 0x2cbb8a40>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644c84c0; to 'jaxlib._jax.ArrayImpl' at 0x26122810>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644c8ac0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644c8a60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644c8a00; to 'jaxlib._jax.ArrayImpl' at 0x1b64aff0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644c89a0; to 'jaxlib._jax.ArrayImpl' at 0x3e67bc80>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644c8940; to 'jaxlib._jax.ArrayImpl' at 0x2cbb8a40>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644c84c0; to 'jaxlib._jax.ArrayImpl' at 0x26122810>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644ca860; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644ca440; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644ca800; to 'jaxlib._jax.ArrayImpl' at 0xbfd5a50>), 'e1': HashableWeakRef(<weakref at 0x7fd7644caa40; to 'jaxlib._jax.ArrayImpl' at 0x26fdf130>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644ca9e0; to 'jaxlib._jax.ArrayImpl' at 0x2caad840>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644cace0; to 'jaxlib._jax.ArrayImpl' at 0x2e6a13b0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644ca860; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644ca440; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644ca800; to 'jaxlib._jax.ArrayImpl' at 0xbfd5a50>), 'e1': HashableWeakRef(<weakref at 0x7fd7644caa40; to 'jaxlib._jax.ArrayImpl' at 0x26fdf130>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644ca9e0; to 'jaxlib._jax.ArrayImpl' at 0x2caad840>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644cace0; to 'jaxlib._jax.ArrayImpl' at 0x2e6a13b0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644d3400; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644d33a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644d3340; to 'jaxlib._jax.ArrayImpl' at 0x2d88ccd0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644d32e0; to 'jaxlib._jax.ArrayImpl' at 0x2ad6a960>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644d3280; to 'jaxlib._jax.ArrayImpl' at 0x22b472a0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644d2e00; to 'jaxlib._jax.ArrayImpl' at 0x18f32a50>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644d3400; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644d33a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644d3340; to 'jaxlib._jax.ArrayImpl' at 0x2d88ccd0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644d32e0; to 'jaxlib._jax.ArrayImpl' at 0x2ad6a960>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644d3280; to 'jaxlib._jax.ArrayImpl' at 0x22b472a0>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644d2e00; to 'jaxlib._jax.ArrayImpl' at 0x18f32a50>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644d3100; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644d3160; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644d2ce0; to 'jaxlib._jax.ArrayImpl' at 0x17e608a0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644d2c80; to 'jaxlib._jax.ArrayImpl' at 0x19d308d0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644d2c20; to 'jaxlib._jax.ArrayImpl' at 0x27b7eb30>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644d2e00; to 'jaxlib._jax.ArrayImpl' at 0x19ac1580>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd7644d3100; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd7644d3160; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd7644d2ce0; to 'jaxlib._jax.ArrayImpl' at 0x17e608a0>), 'e1': HashableWeakRef(<weakref at 0x7fd7644d2c80; to 'jaxlib._jax.ArrayImpl' at 0x19d308d0>), 'center_y': HashableWeakRef(<weakref at 0x7fd7644d2c20; to 'jaxlib._jax.ArrayImpl' at 0x27b7eb30>), 'center_x': HashableWeakRef(<weakref at 0x7fd7644d2e00; to 'jaxlib._jax.ArrayImpl' at 0x19ac1580>)})
+[14:32:00]     Got 20 prior samples
+[14:32:00]     logp=-668742.4868±2386100.8509, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:32:00]   n_max=25 done in 99.4s
+[14:32:00] 
+=== n_max=30 ===
+[14:32:01]   Model built in 0.2s
+[14:32:01]   Getting bootstrap qz...
+Final Chi-squared: 1.49332
+[14:33:25]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:33:25]   Compiling value_and_grad...
+[14:33:42]   Compiled OK
+[14:33:42]   Anchor (a): bootstrap point
+[14:33:42]     logp=155358.6875, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:33:42]   Anchor (b1): qz draws diag_scale=1e-6
+[14:33:42]     logp=155344.5688±106.6124, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:42]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:33:42]     logp=-73880.5547±1019875.7623, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:42]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:33:42]     logp=159600.3039±261.7150, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:42]   Anchor (c): prior draws
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd67717aaa0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd67717aa40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd67717a9e0; to 'jaxlib._jax.ArrayImpl' at 0x2ca77b90>), 'e1': HashableWeakRef(<weakref at 0x7fd67717a980; to 'jaxlib._jax.ArrayImpl' at 0x3ab2b250>), 'center_y': HashableWeakRef(<weakref at 0x7fd67717a920; to 'jaxlib._jax.ArrayImpl' at 0x1b9447a0>), 'center_x': HashableWeakRef(<weakref at 0x7fd67717a4a0; to 'jaxlib._jax.ArrayImpl' at 0x20896900>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd67717aaa0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd67717aa40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd67717a9e0; to 'jaxlib._jax.ArrayImpl' at 0x2ca77b90>), 'e1': HashableWeakRef(<weakref at 0x7fd67717a980; to 'jaxlib._jax.ArrayImpl' at 0x3ab2b250>), 'center_y': HashableWeakRef(<weakref at 0x7fd67717a920; to 'jaxlib._jax.ArrayImpl' at 0x1b9447a0>), 'center_x': HashableWeakRef(<weakref at 0x7fd67717a4a0; to 'jaxlib._jax.ArrayImpl' at 0x20896900>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd67717ac20; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd677179f60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677179ea0; to 'jaxlib._jax.ArrayImpl' at 0x182e2b50>), 'e1': HashableWeakRef(<weakref at 0x7fd677179e40; to 'jaxlib._jax.ArrayImpl' at 0x23a45070>), 'center_y': HashableWeakRef(<weakref at 0x7fd677179de0; to 'jaxlib._jax.ArrayImpl' at 0x27ebc230>), 'center_x': HashableWeakRef(<weakref at 0x7fd67717afe0; to 'jaxlib._jax.ArrayImpl' at 0x29bbadb0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd67717ac20; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd677179f60; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677179ea0; to 'jaxlib._jax.ArrayImpl' at 0x182e2b50>), 'e1': HashableWeakRef(<weakref at 0x7fd677179e40; to 'jaxlib._jax.ArrayImpl' at 0x23a45070>), 'center_y': HashableWeakRef(<weakref at 0x7fd677179de0; to 'jaxlib._jax.ArrayImpl' at 0x27ebc230>), 'center_x': HashableWeakRef(<weakref at 0x7fd67717afe0; to 'jaxlib._jax.ArrayImpl' at 0x29bbadb0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd677141420; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771413c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677141360; to 'jaxlib._jax.ArrayImpl' at 0x19667240>), 'e1': HashableWeakRef(<weakref at 0x7fd677141300; to 'jaxlib._jax.ArrayImpl' at 0x3e8ee110>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771412a0; to 'jaxlib._jax.ArrayImpl' at 0x1a766ca0>), 'center_x': HashableWeakRef(<weakref at 0x7fd677140e20; to 'jaxlib._jax.ArrayImpl' at 0x17a89600>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd677141420; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771413c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677141360; to 'jaxlib._jax.ArrayImpl' at 0x19667240>), 'e1': HashableWeakRef(<weakref at 0x7fd677141300; to 'jaxlib._jax.ArrayImpl' at 0x3e8ee110>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771412a0; to 'jaxlib._jax.ArrayImpl' at 0x1a766ca0>), 'center_x': HashableWeakRef(<weakref at 0x7fd677140e20; to 'jaxlib._jax.ArrayImpl' at 0x17a89600>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd677142440; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771424a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677142500; to 'jaxlib._jax.ArrayImpl' at 0x1e6ea1f0>), 'e1': HashableWeakRef(<weakref at 0x7fd677142560; to 'jaxlib._jax.ArrayImpl' at 0x19904300>), 'center_y': HashableWeakRef(<weakref at 0x7fd677141d20; to 'jaxlib._jax.ArrayImpl' at 0x297e87f0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771425c0; to 'jaxlib._jax.ArrayImpl' at 0xd5b35f0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd677142440; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771424a0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677142500; to 'jaxlib._jax.ArrayImpl' at 0x1e6ea1f0>), 'e1': HashableWeakRef(<weakref at 0x7fd677142560; to 'jaxlib._jax.ArrayImpl' at 0x19904300>), 'center_y': HashableWeakRef(<weakref at 0x7fd677141d20; to 'jaxlib._jax.ArrayImpl' at 0x297e87f0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771425c0; to 'jaxlib._jax.ArrayImpl' at 0xd5b35f0>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd67711bd60; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd67711bd00; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd67711bca0; to 'jaxlib._jax.ArrayImpl' at 0x216f1ef0>), 'e1': HashableWeakRef(<weakref at 0x7fd67711bc40; to 'jaxlib._jax.ArrayImpl' at 0x179635f0>), 'center_y': HashableWeakRef(<weakref at 0x7fd67711bbe0; to 'jaxlib._jax.ArrayImpl' at 0x290fae60>), 'center_x': HashableWeakRef(<weakref at 0x7fd67711b760; to 'jaxlib._jax.ArrayImpl' at 0x2819d940>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd67711bd60; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd67711bd00; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd67711bca0; to 'jaxlib._jax.ArrayImpl' at 0x216f1ef0>), 'e1': HashableWeakRef(<weakref at 0x7fd67711bc40; to 'jaxlib._jax.ArrayImpl' at 0x179635f0>), 'center_y': HashableWeakRef(<weakref at 0x7fd67711bbe0; to 'jaxlib._jax.ArrayImpl' at 0x290fae60>), 'center_x': HashableWeakRef(<weakref at 0x7fd67711b760; to 'jaxlib._jax.ArrayImpl' at 0x2819d940>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd677122620; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771225c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677122560; to 'jaxlib._jax.ArrayImpl' at 0x24442470>), 'e1': HashableWeakRef(<weakref at 0x7fd677122500; to 'jaxlib._jax.ArrayImpl' at 0x2e043d60>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771224a0; to 'jaxlib._jax.ArrayImpl' at 0x2f1d65c0>), 'center_x': HashableWeakRef(<weakref at 0x7fd67711b940; to 'jaxlib._jax.ArrayImpl' at 0x23280320>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd677122620; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771225c0; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd677122560; to 'jaxlib._jax.ArrayImpl' at 0x24442470>), 'e1': HashableWeakRef(<weakref at 0x7fd677122500; to 'jaxlib._jax.ArrayImpl' at 0x2e043d60>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771224a0; to 'jaxlib._jax.ArrayImpl' at 0x2f1d65c0>), 'center_x': HashableWeakRef(<weakref at 0x7fd67711b940; to 'jaxlib._jax.ArrayImpl' at 0x23280320>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771d66e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771d6680; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771d6620; to 'jaxlib._jax.ArrayImpl' at 0x3ab2b250>), 'e1': HashableWeakRef(<weakref at 0x7fd6771d65c0; to 'jaxlib._jax.ArrayImpl' at 0x241700d0>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771d6560; to 'jaxlib._jax.ArrayImpl' at 0x26a6bf00>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771d60e0; to 'jaxlib._jax.ArrayImpl' at 0x2259e200>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771d66e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771d6680; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771d6620; to 'jaxlib._jax.ArrayImpl' at 0x3ab2b250>), 'e1': HashableWeakRef(<weakref at 0x7fd6771d65c0; to 'jaxlib._jax.ArrayImpl' at 0x241700d0>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771d6560; to 'jaxlib._jax.ArrayImpl' at 0x26a6bf00>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771d60e0; to 'jaxlib._jax.ArrayImpl' at 0x2259e200>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771d69e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771d6980; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771d6ce0; to 'jaxlib._jax.ArrayImpl' at 0x2849a210>), 'e1': HashableWeakRef(<weakref at 0x7fd6771d6c20; to 'jaxlib._jax.ArrayImpl' at 0x2ea869e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771d6bc0; to 'jaxlib._jax.ArrayImpl' at 0x181f22a0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771d7760; to 'jaxlib._jax.ArrayImpl' at 0x19665740>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771d69e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771d6980; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771d6ce0; to 'jaxlib._jax.ArrayImpl' at 0x2849a210>), 'e1': HashableWeakRef(<weakref at 0x7fd6771d6c20; to 'jaxlib._jax.ArrayImpl' at 0x2ea869e0>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771d6bc0; to 'jaxlib._jax.ArrayImpl' at 0x181f22a0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771d7760; to 'jaxlib._jax.ArrayImpl' at 0x19665740>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771e1060; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771e1000; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771e0fa0; to 'jaxlib._jax.ArrayImpl' at 0x3e8ee110>), 'e1': HashableWeakRef(<weakref at 0x7fd6771e0f40; to 'jaxlib._jax.ArrayImpl' at 0x21ce3c90>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771e0ee0; to 'jaxlib._jax.ArrayImpl' at 0x284df070>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771e0a60; to 'jaxlib._jax.ArrayImpl' at 0x2e09ac10>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771e1060; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771e1000; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771e0fa0; to 'jaxlib._jax.ArrayImpl' at 0x3e8ee110>), 'e1': HashableWeakRef(<weakref at 0x7fd6771e0f40; to 'jaxlib._jax.ArrayImpl' at 0x21ce3c90>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771e0ee0; to 'jaxlib._jax.ArrayImpl' at 0x284df070>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771e0a60; to 'jaxlib._jax.ArrayImpl' at 0x2e09ac10>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771e28c0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771e2800; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771e2860; to 'jaxlib._jax.ArrayImpl' at 0xce30560>), 'e1': HashableWeakRef(<weakref at 0x7fd6771e2aa0; to 'jaxlib._jax.ArrayImpl' at 0xc07dc10>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771e2980; to 'jaxlib._jax.ArrayImpl' at 0x277209f0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771e36a0; to 'jaxlib._jax.ArrayImpl' at 0x3eac1890>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771e28c0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771e2800; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771e2860; to 'jaxlib._jax.ArrayImpl' at 0xce30560>), 'e1': HashableWeakRef(<weakref at 0x7fd6771e2aa0; to 'jaxlib._jax.ArrayImpl' at 0xc07dc10>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771e2980; to 'jaxlib._jax.ArrayImpl' at 0x277209f0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771e36a0; to 'jaxlib._jax.ArrayImpl' at 0x3eac1890>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771ef9a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771ef940; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771ef8e0; to 'jaxlib._jax.ArrayImpl' at 0x179635f0>), 'e1': HashableWeakRef(<weakref at 0x7fd6771ef880; to 'jaxlib._jax.ArrayImpl' at 0xecdf960>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771ef820; to 'jaxlib._jax.ArrayImpl' at 0x162c79e0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771ef3a0; to 'jaxlib._jax.ArrayImpl' at 0x3b277700>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771ef9a0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771ef940; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771ef8e0; to 'jaxlib._jax.ArrayImpl' at 0x179635f0>), 'e1': HashableWeakRef(<weakref at 0x7fd6771ef880; to 'jaxlib._jax.ArrayImpl' at 0xecdf960>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771ef820; to 'jaxlib._jax.ArrayImpl' at 0x162c79e0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771ef3a0; to 'jaxlib._jax.ArrayImpl' at 0x3b277700>)})
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771f2440; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771edb40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771edd20; to 'jaxlib._jax.ArrayImpl' at 0x25e685b0>), 'e1': HashableWeakRef(<weakref at 0x7fd6771ef460; to 'jaxlib._jax.ArrayImpl' at 0x1e5086c0>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771ef4c0; to 'jaxlib._jax.ArrayImpl' at 0xf27e6e0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771ef0a0; to 'jaxlib._jax.ArrayImpl' at 0x17ff5540>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7fd6771f2440; dead>), 'gamma': HashableWeakRef(<weakref at 0x7fd6771edb40; dead>), 'e2': HashableWeakRef(<weakref at 0x7fd6771edd20; to 'jaxlib._jax.ArrayImpl' at 0x25e685b0>), 'e1': HashableWeakRef(<weakref at 0x7fd6771ef460; to 'jaxlib._jax.ArrayImpl' at 0x1e5086c0>), 'center_y': HashableWeakRef(<weakref at 0x7fd6771ef4c0; to 'jaxlib._jax.ArrayImpl' at 0xf27e6e0>), 'center_x': HashableWeakRef(<weakref at 0x7fd6771ef0a0; to 'jaxlib._jax.ArrayImpl' at 0x17ff5540>)})
+[14:33:44]     Got 20 prior samples
+[14:33:44]     logp=-649462.7630±2796345.4418, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:44]   n_max=30 done in 103.7s
+[14:33:44] 
+D1 results saved to /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2/d1_results.json
+[14:33:44] 
+=== D1 SUMMARY TABLE ===
+[14:33:44]  n_max                     anchor  nonfinite_logp  nonfinite_grad  localization
+[14:33:44] -----------------------------------------------------------------------------------------------
+[14:33:44]     10                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     10                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     10               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     10              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     10                prior_draws           0.000           0.000  all_ok
+[14:33:44]     15                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     15                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     15               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     15              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     15                prior_draws           0.000           0.000  all_ok
+[14:33:44]     20                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     20                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     20               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     20              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     20                prior_draws           0.000           0.000  all_ok
+[14:33:44]     25                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     25                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     25               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     25              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     25                prior_draws           0.000           0.000  all_ok
+[14:33:44]     30                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     30                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     30               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     30              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     30                prior_draws           0.000           0.000  all_ok
+[14:33:44] 
+D1 audit complete.
+--- D1 exit code: 0 ---

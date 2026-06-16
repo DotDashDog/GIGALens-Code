@@ -123,7 +123,10 @@ def _feed(h: "hashlib._Hash", obj: Any) -> None:
             leaves, treedef = jax.tree_util.tree_flatten(obj)
         except Exception:
             leaves, treedef = None, None
-        if leaves:
+        # An unregistered object flattens to itself as a single leaf
+        # (``leaves == [obj]``); recursing on it would loop forever. Treat that
+        # case as "not a pytree" and fall through to parameters/repr handling.
+        if leaves and not (len(leaves) == 1 and leaves[0] is obj):
             h.update(b"pytree:"); h.update(type(obj).__name__.encode())
             h.update(b":"); h.update(str(treedef).encode())
             for leaf in leaves:
@@ -207,16 +210,37 @@ class InferenceContext:
         })
 
 
+def _is_profile(obj) -> bool:
+    """Duck-type a gigalens profile (mass or light): carries a ``_name`` tag and
+    a ``params`` list. Used to expand *composite* profiles (e.g.
+    ``SersicShapelets``, which holds sub-profiles as public attributes) instead
+    of feeding the opaque object to the hasher."""
+    return (
+        not isinstance(obj, (str, bytes))
+        and hasattr(obj, "_name")
+        and hasattr(obj, "params")
+    )
+
+
 def _hash_phys_model(pm) -> Dict[str, Any]:
     """Cheap, robust hash of a ``PhysicalModel``: profile classes + their
     public attributes (which is where things like ``EPL(niter=50)`` live).
+
+    Composite profiles that nest other profile objects as public attributes
+    (e.g. ``SersicShapelets.sersic`` / ``.shapelets``) are expanded recursively
+    so the hash stays content-based; a raw profile object would otherwise reach
+    the hasher's pytree fallback, which treats it as a self-referential leaf.
     """
+    def _describe(p):
+        attrs = {}
+        for k, v in vars(p).items():
+            if k.startswith("_"):
+                continue
+            attrs[k] = _describe(v) if _is_profile(v) else v
+        return {"type": type(p).__name__, "attrs": attrs}
+
     def _profiles(plist):
-        out = []
-        for p in plist:
-            attrs = {k: v for k, v in vars(p).items() if not k.startswith("_")}
-            out.append({"type": type(p).__name__, "attrs": attrs})
-        return out
+        return [_describe(p) for p in plist]
     return {
         "lenses": _profiles(pm.lenses),
         "lens_light": _profiles(pm.lens_light),
@@ -245,10 +269,50 @@ class StageResult:
     JSON-serializable scalars: wall time, seed, num_steps, etc. Anything that
     needs to flow into downstream stages as a higher-level object (e.g. a TFP
     distribution) is reconstructed by the stage's ``derive_artifacts``.
+
+    ``diagnostics`` holds optional debug arrays (e.g. an MCLMC tuning history):
+    extra, often large, run-internal quantities that are *not* published as
+    artifacts and never flow downstream. They are persisted separately from
+    ``arrays`` so loading a posterior view doesn't drag them in. Populate them
+    only when a stage is run with ``debug=True``.
     """
 
     arrays: Dict[str, np.ndarray]
     metadata: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    diagnostics: Dict[str, np.ndarray] = dataclasses.field(default_factory=dict)
+
+
+@dataclasses.dataclass
+class StageDiagnostics:
+    """A stage's debug arrays plus enough context to plot them.
+
+    Returned by :meth:`Pipeline.diagnostics` and :func:`diagnostics_from_disk`,
+    and consumed by ``gigalens_research.plotting.plot_stage_diagnostics``,
+    which dispatches on ``stage_class`` to the matching registered plotter.
+
+    Attributes
+    ----------
+    stage_name : str
+        The stage's instance name (its on-disk directory).
+    stage_class : str
+        The stage class name (e.g. ``"MCLMCStage"``); the plot-dispatch key.
+    arrays : dict[str, np.ndarray]
+        The captured debug arrays (e.g. ``step_size``, ``L``, ``xi``, ...).
+    config : dict
+        Plot-relevant config from ``InferenceStage.diagnostics_config`` (e.g.
+        tuning-stage boundaries).
+    ctx : InferenceContext
+        The modeling context, for plotters that need the model/simulator.
+    """
+
+    stage_name: str
+    stage_class: str
+    arrays: Dict[str, np.ndarray]
+    config: Dict[str, Any]
+    ctx: "InferenceContext"
+
+    def __bool__(self) -> bool:
+        return bool(self.arrays)
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +386,13 @@ class InferenceStage:
             f"{cls.__name__} does not produce a posterior view "
             f"(no to_posterior implementation)."
         )
+
+    def diagnostics_config(self) -> Dict[str, Any]:
+        """Subset of this stage's config that its diagnostic plotter needs
+        (e.g. tuning-stage boundaries). Stashed into the persisted manifest so
+        :class:`StageDiagnostics` is self-contained on reload. Default: empty.
+        """
+        return {}
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +489,7 @@ class BridgeStage(InferenceStage):
 
 _MANIFEST_FILENAME = "manifest.json"
 _ARRAYS_FILENAME = "arrays.npz"
+_DIAGNOSTICS_FILENAME = "diagnostics.npz"
 _PIPELINE_MANIFEST = "pipeline.json"
 
 
@@ -457,20 +529,35 @@ def _read_manifest(path: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def _save_stage(stage_dir: str, manifest: Dict[str, Any], arrays: Dict[str, np.ndarray]) -> None:
+def _save_stage(
+    stage_dir: str,
+    manifest: Dict[str, Any],
+    arrays: Dict[str, np.ndarray],
+    diagnostics: Optional[Dict[str, np.ndarray]] = None,
+) -> None:
     os.makedirs(stage_dir, exist_ok=True)
     if arrays:
         np.savez(os.path.join(stage_dir, _ARRAYS_FILENAME),
                  **{k: np.asarray(v) for k, v in arrays.items()})
+    if diagnostics:
+        np.savez(os.path.join(stage_dir, _DIAGNOSTICS_FILENAME),
+                 **{k: np.asarray(v) for k, v in diagnostics.items()})
     _write_manifest(os.path.join(stage_dir, _MANIFEST_FILENAME), manifest)
 
 
-def _load_stage_arrays(stage_dir: str) -> Dict[str, np.ndarray]:
-    arr_path = os.path.join(stage_dir, _ARRAYS_FILENAME)
-    if not os.path.exists(arr_path):
+def _load_npz(path: str) -> Dict[str, np.ndarray]:
+    if not os.path.exists(path):
         return {}
-    with np.load(arr_path) as data:
+    with np.load(path) as data:
         return {k: data[k] for k in data.files}
+
+
+def _load_stage_arrays(stage_dir: str) -> Dict[str, np.ndarray]:
+    return _load_npz(os.path.join(stage_dir, _ARRAYS_FILENAME))
+
+
+def _load_stage_diagnostics(stage_dir: str) -> Dict[str, np.ndarray]:
+    return _load_npz(os.path.join(stage_dir, _DIAGNOSTICS_FILENAME))
 
 
 def _move_aside(path: str) -> str:
@@ -573,6 +660,9 @@ class Pipeline:
             k: seed_artifact_ids.get(k) or stable_hash(v)
             for k, v in artifacts.items()
         }
+        # Track which stage last wrote each artifact so we can name the loser
+        # when an overwrite happens.
+        artifact_owner: Dict[str, str] = {k: "<seed>" for k in artifacts}
 
         self._validate_dag(set(artifacts))
 
@@ -603,8 +693,16 @@ class Pipeline:
 
             new = self._publish(stage, result)
             for k, v in new.items():
+                if k in artifacts and jax.process_index() == 0:
+                    print(
+                        f"[pipeline] WARNING: {stage.instance_name!r} overwrites "
+                        f"artifact {k!r} previously produced by "
+                        f"{artifact_owner.get(k, '?')!r}. "
+                        f"Downstream stages will use {stage.instance_name!r}'s {k!r}."
+                    )
                 artifacts[k] = v
                 artifact_hashes[k] = stable_hash(v)
+                artifact_owner[k] = stage.instance_name
             self.results[stage.instance_name] = result
 
             if verbose and jax.process_index() == 0:
@@ -635,7 +733,20 @@ class Pipeline:
     # -- internals ------------------------------------------------------------
 
     def _validate_dag(self, seeded_keys: set) -> None:
-        available = set(seeded_keys)
+        """Check that all ``requires`` are satisfied and warn about shadowed artifacts.
+
+        A *shadowed* artifact is one produced by stage A and then re-produced
+        by a later stage B. Stage B's value will silently replace A's in the
+        artifact bag — every stage that follows B gets B's version. This is
+        intentional and useful (e.g. HessianSurrogate → SVI both produce
+        ``qz``) but easy to set up by accident, so we warn here and again at
+        runtime when the overwrite actually happens.
+        """
+        available: set = set(seeded_keys)
+        # owner[key] = instance_name of the stage that most recently declared
+        # it produces that key.
+        owner: Dict[str, str] = {k: "<seed>" for k in seeded_keys}
+
         for stage in self.stages:
             missing = set(stage.requires) - available
             if missing:
@@ -644,6 +755,18 @@ class Pipeline:
                     f"but nothing earlier produces them. "
                     f"Available so far: {sorted(available)}."
                 )
+            for key in stage.produces:
+                if key in available:
+                    import warnings
+                    warnings.warn(
+                        f"[pipeline] artifact {key!r} is produced by both "
+                        f"{owner[key]!r} and {stage.instance_name!r}. "
+                        f"Stages after {stage.instance_name!r} will use "
+                        f"{stage.instance_name!r}'s {key!r} and ignore "
+                        f"{owner[key]!r}'s.",
+                        stacklevel=4,
+                    )
+                owner[key] = stage.instance_name
             available.update(stage.produces)
 
     def _run_or_load(
@@ -682,8 +805,11 @@ class Pipeline:
             if cached_hash == input_hash:
                 if stage.cacheable_outputs:
                     arrays = _load_stage_arrays(stage_dir)
+                    diagnostics = _load_stage_diagnostics(stage_dir)
                     return (
-                        StageResult(arrays=arrays, metadata=dict(manifest.get("metadata") or {})),
+                        StageResult(arrays=arrays,
+                                    metadata=dict(manifest.get("metadata") or {}),
+                                    diagnostics=diagnostics),
                         "loaded",
                     )
                 # Non-cacheable (bridges): fall through to re-run, but we'll
@@ -728,12 +854,14 @@ class Pipeline:
                 "input_hash": input_hash,
                 "upstream_hashes": upstream_hashes,
                 "config": _make_json_safe(stage.config_hash_data()),
+                "diagnostics_config": _make_json_safe(stage.diagnostics_config()),
                 "seed": seed,
                 "metadata": _make_json_safe(result.metadata),
                 "arrays": sorted(result.arrays.keys()),
+                "diagnostics": sorted(result.diagnostics.keys()),
                 "timestamp": _dt.datetime.now(_dt.timezone.utc).isoformat(),
             }
-            _save_stage(stage_dir, new_manifest, result.arrays)
+            _save_stage(stage_dir, new_manifest, result.arrays, result.diagnostics)
         return result, "computed" if manifest_unchanged else "ran"
 
     # -- posterior view ------------------------------------------------------
@@ -754,6 +882,28 @@ class Pipeline:
             )
         stage_obj = next(s for s in self.stages if s.instance_name == stage)
         return type(stage_obj).to_posterior(self.results[stage].arrays, self.ctx)
+
+    def diagnostics(self, stage: str) -> "StageDiagnostics":
+        """Return the captured debug diagnostics for one stage.
+
+        Only populated when the stage was run with ``debug=True``; otherwise
+        ``StageDiagnostics.arrays`` is empty (and the object is falsy). Pass
+        the result to ``gigalens_research.plotting.plot_stage_diagnostics``.
+        """
+        if not self.results:
+            raise RuntimeError("Pipeline has no results yet; call .run() first.")
+        if stage not in self.results:
+            raise KeyError(
+                f"No result for stage {stage!r}; available: {sorted(self.results)}."
+            )
+        stage_obj = next(s for s in self.stages if s.instance_name == stage)
+        return StageDiagnostics(
+            stage_name=stage,
+            stage_class=type(stage_obj).__name__,
+            arrays=dict(self.results[stage].diagnostics),
+            config=dict(stage_obj.diagnostics_config()),
+            ctx=self.ctx,
+        )
 
     def _pick_terminal_stage(self) -> str:
         # Order from richest to leanest posterior; pick the last entry whose
@@ -1054,6 +1204,88 @@ class HMCStage(InferenceStage):
         return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
 
 
+class HessianSurrogateStage(InferenceStage):
+    """Laplace-approximation surrogate posterior from the log-posterior Hessian.
+
+    Requires ``z_best`` (MAP estimate in unconstrained space).
+    Produces ``qz`` (``tfd.MultivariateNormalTriL`` with the Laplace
+    covariance) — the same artifact that :class:`SVIStage` produces, so this
+    stage is a drop-in replacement for SVI when a fast, deterministic
+    preconditioner is preferred.
+
+    The Hessian is built column-by-column using Hessian-vector products, which
+    is memory-safe at high shapelet orders (no vmap over the full basis).
+
+    Parameters
+    ----------
+    fix_indefinite : bool, default ``True``
+        Replace non-positive eigenvalues of ``-H`` with their absolute values
+        before computing the covariance.  See :func:`HessianSurrogate` for
+        the full discussion.
+    eigenvalue_floor : float or None
+        Lower bound on eigenvalues of ``-H`` as a fraction of the largest
+        eigenvalue (after flipping). ``None`` → ``1e-8 * max_eigenvalue``.
+    """
+
+    name: ClassVar[str] = "hessian_surrogate"
+    schema_version: ClassVar[int] = 1
+    requires: ClassVar[Tuple[str, ...]] = ("z_best",)
+    produces: ClassVar[Tuple[str, ...]] = ("qz",)
+
+    def __init__(
+        self,
+        *,
+        fix_indefinite: bool = True,
+        eigenvalue_floor: Optional[float] = None,
+        name: Optional[str] = None,
+        seed: Optional[int] = None,
+    ):
+        super().__init__(name=name, seed=seed)
+        self.fix_indefinite = bool(fix_indefinite)
+        self.eigenvalue_floor = eigenvalue_floor
+
+    def run(self, ctx, artifacts, seed):
+        from gigalens_research.inference.hessian_surrogate import HessianSurrogate
+        import time as _time
+        t0 = _time.perf_counter()
+        qz = HessianSurrogate(
+            ctx.model_seq,
+            artifacts["z_best"],
+            fix_indefinite=self.fix_indefinite,
+            eigenvalue_floor=self.eigenvalue_floor,
+        )
+        evals = np.linalg.eigvalsh(np.asarray(qz.covariance()))
+        return StageResult(
+            arrays={
+                "qz_loc": np.asarray(qz.loc),
+                "qz_scale_tril": np.asarray(qz.scale_tril),
+            },
+            metadata={
+                "wall_time_s": _time.perf_counter() - t0,
+                "fix_indefinite": self.fix_indefinite,
+                "cov_eigenvalue_min": float(evals.min()),
+                "cov_eigenvalue_max": float(evals.max()),
+                "cov_condition_number": float(evals.max() / max(evals.min(), 1e-300)),
+            },
+        )
+
+    def derive_artifacts(self, arrays):
+        qz = _tfd.MultivariateNormalTriL(
+            loc=jnp.asarray(arrays["qz_loc"]),
+            scale_tril=jnp.asarray(arrays["qz_scale_tril"]),
+        )
+        return {"qz": qz}
+
+    @classmethod
+    def to_posterior(cls, arrays, ctx):
+        from .posterior import SurrogatePosterior
+        qz = _tfd.MultivariateNormalTriL(
+            loc=jnp.asarray(arrays["qz_loc"]),
+            scale_tril=jnp.asarray(arrays["qz_scale_tril"]),
+        )
+        return SurrogatePosterior(ctx, qz=qz)
+
+
 class MCLMCStage(InferenceStage):
     """MCLMC sampler. Wraps ``gigalens_research.inference.MCLMC_JIT``.
 
@@ -1079,7 +1311,9 @@ class MCLMCStage(InferenceStage):
         frac_tune1: float = 0.2,
         frac_tune2: float = 0.6,
         frac_tune3: float = 0.2,
+        regularize_mass_matrix: bool = True,
         progress_bar: bool = False,
+        debug: bool = False,
         name: Optional[str] = None,
         seed: Optional[int] = None,
     ):
@@ -1094,13 +1328,25 @@ class MCLMCStage(InferenceStage):
         self.frac_tune2 = float(frac_tune2)
         self.frac_tune3 = float(frac_tune3)
         self.progress_bar = bool(progress_bar)
+        self.debug = bool(debug)
+        self.regularize_mass_matrix = bool(regularize_mass_matrix)
+    def diagnostics_config(self):
+        # What the MCLMC diagnostic plotter needs to draw the tuning-stage
+        # boundaries (see plotting.diagnostics.plot_mclmc_diagnostics).
+        return {
+            "num_burnin_steps": self.num_burnin_steps,
+            "num_results": self.num_results,
+            "frac_tune1": self.frac_tune1,
+            "frac_tune2": self.frac_tune2,
+            "frac_tune3": self.frac_tune3,
+        }
 
     def run(self, ctx, artifacts, seed):
         # Local import: keeps MCLMC's heavy blackjax dependency optional for
         # users who only need MAP/SVI/HMC.
         from gigalens_research.inference import MCLMC_JIT
         t0 = time.perf_counter()
-        samples = MCLMC_JIT(
+        out = MCLMC_JIT(
             model_seq=ctx.model_seq,
             qz=artifacts["qz"],
             n_hmc=self.n_chains,
@@ -1112,10 +1358,29 @@ class MCLMCStage(InferenceStage):
             frac_tune1=self.frac_tune1,
             frac_tune2=self.frac_tune2,
             frac_tune3=self.frac_tune3,
+            regularize_mass_matrix=self.regularize_mass_matrix,
             progress_bar=self.progress_bar,
             seed=seed,
+            debug_output=self.debug,
         )
-        # MCLMC_JIT returns shape (num_chains, num_steps, n_params) already.
+        diagnostics: Dict[str, np.ndarray] = {}
+        if self.debug:
+            # debug_output=True returns the full tuning `Hist`; the kept draws
+            # are the last `num_results` positions. We also capture the tuning
+            # traces (step_size, L, xi, success mask, mass matrix) for the
+            # diagnostic plotter. The inverse mass matrix is replicated across
+            # chains, so we keep only chain 0 to bound the on-disk size.
+            hist = out
+            samples = np.asarray(hist.position[:, -self.num_results:, :])
+            diagnostics = {
+                "step_size": np.asarray(hist.step_size),
+                "L": np.asarray(hist.L),
+                "xi": np.asarray(hist.xi),
+                "nonan": np.asarray(hist.nonan),
+                "inverse_mass_matrix": np.asarray(hist.inverse_mass_matrix[:1]),
+            }
+        else:
+            samples = np.asarray(out)
         samples_np = np.asarray(samples)
         return StageResult(
             arrays={"samples_z": samples_np},
@@ -1124,7 +1389,9 @@ class MCLMCStage(InferenceStage):
                 "num_chains": int(samples_np.shape[0]),
                 "num_steps": int(samples_np.shape[1]),
                 "n_params": int(samples_np.shape[2]),
+                "debug": self.debug,
             },
+            diagnostics=diagnostics,
         )
 
     @classmethod
@@ -1167,7 +1434,7 @@ def register_stage(cls: type) -> type:
     return cls
 
 
-for _cls in (MAPStage, SVIStage, HMCStage, MCLMCStage, BridgeStage):
+for _cls in (MAPStage, SVIStage, HessianSurrogateStage, HMCStage, MCLMCStage, BridgeStage):
     register_stage(_cls)
 
 
@@ -1195,3 +1462,27 @@ def posterior_from_disk(out_dir: str, stage: str, ctx: InferenceContext):
         )
     arrays = _load_stage_arrays(stage_dir)
     return stage_cls.to_posterior(arrays, ctx)
+
+
+def diagnostics_from_disk(out_dir: str, stage: str, ctx: InferenceContext) -> "StageDiagnostics":
+    """Reconstruct a :class:`StageDiagnostics` from a saved stage directory.
+
+    Mirrors :func:`posterior_from_disk`. ``arrays`` is empty unless the stage
+    was run with ``debug=True``. Pass the result to
+    ``gigalens_research.plotting.plot_stage_diagnostics``.
+    """
+    stage_dir = os.path.join(out_dir, stage)
+    manifest_path = os.path.join(stage_dir, _MANIFEST_FILENAME)
+    if not os.path.exists(manifest_path):
+        raise FileNotFoundError(
+            f"No manifest at {manifest_path}; either the stage didn't run "
+            f"or {out_dir!r} is the wrong directory."
+        )
+    manifest = _read_manifest(manifest_path)
+    return StageDiagnostics(
+        stage_name=stage,
+        stage_class=manifest.get("class"),
+        arrays=_load_stage_diagnostics(stage_dir),
+        config=dict(manifest.get("diagnostics_config") or {}),
+        ctx=ctx,
+    )

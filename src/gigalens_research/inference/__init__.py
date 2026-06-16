@@ -12,10 +12,12 @@ from .laps import (
 from .laps_blackjax import (
     LAPS_blackjax,
 )
+from .hessian_surrogate import HessianSurrogate
 
 __all__ = [
     "MCLMC",
     "MCLMC_JIT",
     "LAPS_JIT",
     "LAPS_blackjax",
+    "HessianSurrogate",
 ]

@@ -1,0 +1,101 @@
+{
+  "experiment": "E2 — condition-number map of lstsq marginalization",
+  "date": "2026-06-12",
+  "script": "experiments/mclmc/debugging/e2_cond_map.py",
+  "precision": "float64 (jax_enable_x64=True; float32 gram also computed for comparison)",
+  "pre_registered_hypothesis": "design/gram conditioning is position-dependent and tracks the D3 floor: much worse at frozen run-a positions than at bootstrap, explaining the 10^9x floor variation; normal equations needlessly SQUARE the conditioning: cond(gram) ≈ cond(A)^2",
+  "pre_registered_predictions": {
+    "i": "cond(A) at frozen anchors ≥ 10^3–10^5× cond(A) at bootstrap (gram cond gap ~10^6–10^10×, matching 10^9× floor gap)",
+    "ii": "cond(gram) ≈ cond(A)^2 within a factor ~10 everywhere",
+    "iii": "n_max=10 conds several orders below n_max=25 at same anchor"
+  },
+  "key_measured_values": {
+    "n_max=25": {
+      "bootstrap": {
+        "cond_A_f64": 155.6,
+        "cond_gram_f64": 24200,
+        "cond_gram_f32": 24200,
+        "gram_f32_neg_eigenvalues": 0,
+        "ratio_gram_over_cond_A_sq": 1.0
+      },
+      "run_a_late_all_8_chains": {
+        "cond_A_f64": [2454, 2822, 2912, 2830, 2875, 2803, 4888, 3079],
+        "cond_gram_f64": [6.02e6, 7.97e6, 8.48e6, 8.01e6, 8.27e6, 7.86e6, 2.39e7, 9.48e6],
+        "cond_gram_f32": [5.96e6, 7.99e6, 8.60e6, 7.92e6, 8.16e6, 7.97e6, 2.40e7, 9.50e6],
+        "gram_f32_neg_eigenvalues": "0 in all 8 anchors",
+        "median_cond_A": 2853,
+        "median_cond_gram_f64": 8139000
+      },
+      "run_b_late_all_8_chains": {
+        "note": "n_max=25 basis at the HEALTHY run_b positions (evaluated here, not in D3)",
+        "cond_A_f64": [1.151e4, 1.121e4, 1.107e4, 1.084e4, 1.036e4, 1.091e4, 1.049e4, 1.081e4],
+        "cond_gram_f64": [1.32e8, 1.26e8, 1.23e8, 1.17e8, 1.07e8, 1.19e8, 1.10e8, 1.17e8],
+        "gram_f32_neg_eigenvalues": "0 in all 8 anchors",
+        "median_cond_A": 10860,
+        "comment": "ANOMALY: run_b_late positions have HIGHER gram cond than run_a_late, yet D3 floor at n_max=10/run_b is benign (2.7e-6). Gram cond ordering does NOT predict D3 floor ordering."
+      },
+      "prior_draws_4": {
+        "cond_A_f64": [4.93e16, 6.66e16, 6.76e16, 2.78e16],
+        "cond_gram_f64": [3.30e20, 1.45e21, 6.44e19, 7.99e17],
+        "cond_gram_f32": [1.58e12, 3.60e11, 1.76e12, 5.31e9],
+        "gram_f32_neg_eigenvalues": [88, 146, 128, 105],
+        "comment": "Prior draws: cond(A) >> 1e16, svd_min below float32 range. f32 gram loses all sub-f32 singular values, making it appear better conditioned than f64 gram. Ratio cond_gram_f32/cond_gram_f64 ~ 1e-8 to 1e-13."
+      }
+    },
+    "n_max=10": {
+      "bootstrap": {
+        "cond_A_f64": 36.26,
+        "cond_gram_f64": 1315,
+        "cond_gram_f32": 1315,
+        "gram_f32_neg_eigenvalues": 0
+      },
+      "run_a_late_all_8_chains": {
+        "cond_A_f64": [17.43, 17.78, 17.36, 17.32, 17.22, 17.34, 17.30, 17.19],
+        "cond_gram_f64": [303.9, 316.1, 301.4, 299.9, 296.7, 300.7, 299.3, 295.6],
+        "gram_f32_neg_eigenvalues": "0 in all 8 anchors",
+        "median_cond_A": 17.33,
+        "note": "At n_max=10 the run_a positions have LOWER cond than bootstrap — conditioning is nearly position-independent and very small"
+      },
+      "run_b_late_all_8_chains": {
+        "cond_A_f64": [25.32, 25.16, 25.03, 25.22, 25.45, 25.31, 24.88, 24.50],
+        "cond_gram_f64": [641.1, 632.9, 626.4, 636.1, 647.8, 640.6, 619.0, 600.5],
+        "gram_f32_neg_eigenvalues": "0 in all 8 anchors"
+      }
+    }
+  },
+  "verdict_per_prediction": {
+    "prediction_i": {
+      "status": "FAILED — falsifier fired",
+      "description": "cond(A) at frozen run-a positions is only 18× larger than at bootstrap (2853 vs 156); gram cond ratio is 336× (8.1e6 vs 2.4e4). The D3 floor gap is 2.4e10× (1.42e5 vs 6e-6). Missing factor is ~7e7. The conditioning variation CANNOT account for the 10^9× floor variation.",
+      "additional_anomaly": "The run_b_late positions (healthy chains) evaluated with the n_max=25 basis have HIGHER gram cond (~1.1–1.3e8) than the frozen run_a positions (~6e6–2.4e7), yet their D3 floor is benign. The gram cond ordering is inverted relative to the D3 floor severity. Gram conditioning is NOT the cause of the position-dependent floor."
+    },
+    "prediction_ii": {
+      "status": "CONFIRMED — trivially and exactly",
+      "description": "cond(gram_f64) = cond(A)^2 to machine precision (ratio = 1.000 ± 0.015) everywhere gram is well-posed in float64 (all physically visited anchors at n_max=10 and n_max=25). The squaring is real but is irrelevant to the floor mechanism since cond(gram_f32) ≈ cond(gram_f64) at all physically visited positions (no negative eigenvalues, no saturation). Note: at prior draws, f32 gram loses singular values below ~1e-7 and appears BETTER conditioned than f64 gram — opposite of the squaring story."
+    },
+    "prediction_iii": {
+      "status": "FAILED",
+      "description": "n_max=10 cond(A) at bootstrap is 36 vs n_max=25 cond(A) = 156 — only 4.3× difference, not 'several orders'. At the run_a_late positions, n_max=10 cond(A) ~ 17 vs n_max=25 cond(A) ~ 2853, a factor ~168×. Neither is 'several orders of magnitude'."
+    }
+  },
+  "what_e2_rules_out": "The position-dependent D3 noise floor is NOT caused by position-dependent gram conditioning. The gram conditioning at the catastrophic positions (run_a_late) is only ~336× worse than at bootstrap, whereas the D3 floor is ~2.4e10× worse. The amplifier must lie elsewhere.",
+  "implications_for_diagnosis": "The REPORT.md commentary that 'cond~1e16 basis' causes the floor is WRONG for the physically visited positions. At bootstrap and run_a_late, cond(gram_f64) is only 2.4e4 and 8e6 respectively — nowhere near 1e16. The 1e16 cond figure applies to prior draws (unphysical positions) where the basis is effectively degenerate, not to the positions the chains actually visit. The catastrophic float32 floor at run_a_late must come from a different mechanism — most likely the chi^2 computation (sum of squared residuals in float32 with logp~1.5e5) or amplitude cancellation at those specific positions, not from the gram solve itself.",
+  "open_question": "What specifically is different about the run_a_late positions that makes their float32 chi^2 computation floor at 1.4e5, when: (a) their gram cond is well-behaved (8e6), (b) no negative eigenvalues in f32 gram, (c) the run_b_late positions have HIGHER gram cond (1.2e8) but benign floor? The n_max distinguishes run_b_late (n_max=10) from run_a_late (n_max=25). E2 shows it is not gram conditioning; the next diagnostic should check whether the amplitude VALUES at run_a_late create a chi^2 with unusual cancellation structure.",
+  "artifacts": {
+    "script": "experiments/mclmc/debugging/e2_cond_map.py",
+    "log": "diagnosis_2026-06/e2/e2_main.log",
+    "plots": [
+      "diagnosis_2026-06/e2/e2_sv_spectra.png",
+      "diagnosis_2026-06/e2/e2_money_plot.png",
+      "diagnosis_2026-06/e2/e2_parity_cond_sq.png"
+    ],
+    "raw_spectra_npz": [
+      "diagnosis_2026-06/e2/nmax25/spectra.npz",
+      "diagnosis_2026-06/e2/nmax10/spectra.npz"
+    ],
+    "per_nmax_summaries": [
+      "diagnosis_2026-06/e2/nmax25/summary.json",
+      "diagnosis_2026-06/e2/nmax10/summary.json"
+    ]
+  }
+}

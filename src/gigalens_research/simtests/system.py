@@ -72,6 +72,13 @@ class System:
     background_rms: float
     exp_time: float
     truth_assets: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    # Likelihood precision, propagated through sim_config to BOTH the bootstrap and the
+    # sampler models. "float32" (default), "mixed" (float32 forward + float64 reduction),
+    # or "float64" (full float64 forward + reduction; required for high-n_max shapelets).
+    # "mixed"/"float64" require jax_enable_x64. See gigalens SimulatorConfig.likelihood_precision.
+    likelihood_precision: Optional[str] = None
+    # Deprecated: True is treated as likelihood_precision="mixed".
+    high_precision_likelihood: bool = False
 
     @property
     def sim_config(self):
@@ -82,6 +89,8 @@ class System:
             num_pix=self.num_pix,
             supersample=self.supersample,
             kernel=self.psf,
+            likelihood_precision=self.likelihood_precision,
+            high_precision_likelihood=self.high_precision_likelihood,
         )
 
     # ------------------------------------------------------------------

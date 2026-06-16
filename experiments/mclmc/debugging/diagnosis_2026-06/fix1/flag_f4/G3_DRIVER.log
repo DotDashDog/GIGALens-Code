@@ -1,0 +1,105 @@
+>>>>> n25 float64, NO F4 (flag control) 2026-06-15T14:20:54-07:00
+=== repro_vela n25_f64_noF4 jobid=54496479 host=login11 date=2026-06-15T14:20:54-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --likelihood-precision float64 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --out-dir diagnosis_2026-06/fix1/flag_f4/n25_f64_noF4 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_f64_noF4.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/flag_f4/n25_f64_noF4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_142104
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  likelihood_precision=float64
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-08)
+E0615 14:21:35.239999 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:35.240232 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:35.240387 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:35.240534 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:45.240862 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:45.241069 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:45.241248 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:21:45.241415 1476601 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+W0615 14:21:45.241424 1476601 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 6.92GiB (rounded to 7435516416)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0615 14:21:45.241590 1476601 bfc_allocator.cc:513] ___________________________________________________________________________________________________*
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 405, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 215, in main
+    stage_result = bootstrap_stage.run(ctx, {}, seed=args.seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/src/gigalens_research/simtests/pipelines.py", line 248, in run
+    map_samples, lps, _ = fixed_seq.MAP(
+                          ^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/gigalens/src/gigalens/jax/inference.py", line 165, in MAP
+    final_chisq = jax.block_until_ready(final_chisq)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/api.py", line 2581, in block_until_ready
+    try_to_block(arrays[0])
+  File "/opt/jax/jax/_src/api.py", line 2564, in try_to_block
+    return x.block_until_ready()
+           ^^^^^^^^^^^^^^^^^^^^^
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 6.92GiB.
+Exception ignored in atexit callback: <function wait_for_tokens at 0x7fcb83e819e0>
+Traceback (most recent call last):
+  File "/opt/jax/jax/_src/dispatch.py", line 180, in wait_for_tokens
+    runtime_tokens.block_until_ready()
+  File "/opt/jax/jax/_src/dispatch.py", line 173, in block_until_ready
+    token.block_until_ready()
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 6.92GiB.
+srun: error: nid001077: task 0: Exited with exit code 1
+srun: Terminating StepId=54496479.10
+>>>>> n25 float64, WITH F4 (regression) 2026-06-15T14:21:46-07:00
+=== repro_vela n25_f64_F4 jobid=54496479 host=login11 date=2026-06-15T14:21:46-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --likelihood-precision float64 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --regularize-mm --out-dir diagnosis_2026-06/fix1/flag_f4/n25_f64_F4 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_f64_F4.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/flag_f4/n25_f64_F4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_142154
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  likelihood_precision=float64
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-08)
+E0615 14:22:23.914952 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:23.915134 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:23.915281 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:23.915412 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:33.915915 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:33.916090 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:33.916249 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0615 14:22:33.916397 1478754 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+W0615 14:22:33.916404 1478754 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 6.92GiB (rounded to 7435516416)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0615 14:22:33.916541 1478754 bfc_allocator.cc:513] ___________________________________________________________________________________________________*
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 405, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py", line 215, in main
+    stage_result = bootstrap_stage.run(ctx, {}, seed=args.seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/src/gigalens_research/simtests/pipelines.py", line 248, in run
+    map_samples, lps, _ = fixed_seq.MAP(
+                          ^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/gigalens/src/gigalens/jax/inference.py", line 165, in MAP
+    final_chisq = jax.block_until_ready(final_chisq)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/api.py", line 2581, in block_until_ready
+    try_to_block(arrays[0])
+  File "/opt/jax/jax/_src/api.py", line 2564, in try_to_block
+    return x.block_until_ready()
+           ^^^^^^^^^^^^^^^^^^^^^
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 6.92GiB.
+Exception ignored in atexit callback: <function wait_for_tokens at 0x7f60d1091a80>
+Traceback (most recent call last):
+  File "/opt/jax/jax/_src/dispatch.py", line 180, in wait_for_tokens
+    runtime_tokens.block_until_ready()
+  File "/opt/jax/jax/_src/dispatch.py", line 173, in block_until_ready
+    token.block_until_ready()
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 6.92GiB.
+srun: error: nid001077: task 0: Exited with exit code 1
+srun: Terminating StepId=54496479.11
+G3 DONE 2026-06-15T14:22:36-07:00

@@ -6,6 +6,7 @@ Organized so each module does one thing:
 - :mod:`.source_plane` — source plane + caustic/critical curve overlays.
 - :mod:`.convergence` — chain traces, running R-hat / ESS, loss histories.
 - :mod:`.corner` — corner plots from :class:`Posterior` objects.
+- :mod:`.diagnostics` — stage-specific debug run histories (e.g. MCLMC tuning).
 - :mod:`.labels` — LaTeX label registry and parameter flatteners.
 - :mod:`.reports` — compound multi-panel figures (single posterior or pipeline).
 """
@@ -17,6 +18,12 @@ from .convergence import (
     plot_running_rhat,
 )
 from .corner import plot_corner, plot_corner_overlay
+from .diagnostics import (
+    has_diagnostic_plotter,
+    plot_mclmc_diagnostics,
+    plot_stage_diagnostics,
+    register_diagnostic_plotter,
+)
 from .image import normalized_residual, plot_image, plot_residual_histogram
 from .labels import (
     LATEX_LABELS,
@@ -41,6 +48,7 @@ __all__ = [
     "PosteriorReport",
     "flatten_params",
     "flatten_param_names",
+    "has_diagnostic_plotter",
     "latex_label",
     "normalized_residual",
     "plot_caustics",
@@ -51,10 +59,13 @@ __all__ = [
     "plot_corner_overlay",
     "plot_image",
     "plot_loss_history",
+    "plot_mclmc_diagnostics",
     "plot_residual_histogram",
     "plot_running_ess",
     "plot_running_rhat",
     "plot_source_comparison",
     "plot_source_plane",
+    "plot_stage_diagnostics",
     "plot_z_scores",
+    "register_diagnostic_plotter",
 ]

@@ -1,0 +1,124 @@
+[d1_d2_combined] jobid=54359739 host=login17 date=2026-06-12T14:10:04-07:00
+[d1_d2_combined] Acquiring GPU lock and running D1 then D2-f32...
+--- versions ---
+jax 0.10.0.dev20260612 jaxlib 0.10.0.dev20260612
+tfp 0.26.0-dev20260505
+============================================================
+PHASE: D1 finiteness audit
+============================================================
+[14:11:14] D1 finiteness audit starting
+[14:11:14] Output: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2
+E0612 14:11:27.404171 1101211 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.404245 1101212 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.404268 1101213 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.404508 1101214 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.404616 1101215 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.404749 1101216 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.405008 1101217 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.405037 1101218 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:27.405070 1101219 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+[14:11:27] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+[14:11:27] Loading system...
+[14:11:28] System loaded: vela01_cam12_rep03
+[14:11:48] Loading Phase 0 positions...
+[14:11:48] Phase 0 positions loaded: frozen_a=(20, 17), frozen_b=(20, 17)
+[14:11:48] 
+=== n_max=10 ===
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d1_finiteness_audit.py", line 393, in <module>
+    if __name__ == "__main__":
+        ^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d1_finiteness_audit.py", line 205, in main
+    prob_model = model_seq.prob_model
+                ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ModellingSequence' object has no attribute 'simulator'
+D1 exit code: 1
+============================================================
+PHASE: D2 noise floor (float32)
+============================================================
+[14:11:52] D2 noise floor (float32) starting
+[14:11:52] Output: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2
+E0612 14:11:57.060957 1101401 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061005 1101402 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061039 1101403 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061237 1101404 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061461 1101405 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061637 1101406 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061901 1101407 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061942 1101408 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+E0612 14:11:57.061998 1101409 numa_hwloc.cc:121] Call to hwloc_set_cpubind() failed: Invalid argument [22]
+[14:11:57] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+[14:11:57] Loading system...
+[14:12:09] 
+=== n_max=10 (float32) ===
+[14:12:11]   Getting bootstrap qz...
+Final Chi-squared: 1.63145
+[14:12:34]   Bootstrap z: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7f3c001572e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7f3c00157280; dead>), 'e2': HashableWeakRef(<weakref at 0x7f3c00157220; to 'jaxlib._jax.ArrayImpl' at 0x19755ab0>), 'e1': HashableWeakRef(<weakref at 0x7f3c001571c0; to 'jaxlib._jax.ArrayImpl' at 0x194fedc0>), 'center_y': HashableWeakRef(<weakref at 0x7f3c00157160; to 'jaxlib._jax.ArrayImpl' at 0x18c24f10>), 'center_x': HashableWeakRef(<weakref at 0x7f3c001541c0; to 'jaxlib._jax.ArrayImpl' at 0x17874c30>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7f3c001572e0; dead>), 'gamma': HashableWeakRef(<weakref at 0x7f3c00157280; dead>), 'e2': HashableWeakRef(<weakref at 0x7f3c00157220; to 'jaxlib._jax.ArrayImpl' at 0x19755ab0>), 'e1': HashableWeakRef(<weakref at 0x7f3c001571c0; to 'jaxlib._jax.ArrayImpl' at 0x194fedc0>), 'center_y': HashableWeakRef(<weakref at 0x7f3c00157160; to 'jaxlib._jax.ArrayImpl' at 0x18c24f10>), 'center_x': HashableWeakRef(<weakref at 0x7f3c001541c0; to 'jaxlib._jax.ArrayImpl' at 0x17874c30>)})
+[14:12:35]   Got 3 prior samples
+[14:12:39]   logp compiled
+[14:12:39]   Probing anchor (a): bootstrap point
+[14:12:39]     Ray 1/4...
+[14:12:48]       noise=2.8611e+02, noise/target=3.11e+03, n_finite=200
+[14:12:48]     Ray 2/4...
+[14:12:55]       noise=1.6496e+02, noise/target=1.79e+03, n_finite=200
+[14:12:55]     Ray 3/4...
+[14:13:02]       noise=2.2490e+02, noise/target=2.44e+03, n_finite=200
+[14:13:02]     Ray 4/4...
+[14:13:08]       noise=1.3181e+01, noise/target=1.43e+02, n_finite=200
+[14:13:08]   Probing anchor (b1): qz samples
+[14:13:35]     qz pt 0: mean noise over 4 rays = 2.5466e+01
+[14:14:02]     qz pt 1: mean noise over 4 rays = 2.0271e+01
+[14:14:29]     qz pt 2: mean noise over 4 rays = 3.5764e+01
+[14:14:29]   Probing anchor (b2): frozen run_a positions
+[14:14:57]     frozen_a pt 0: mean noise over 4 rays = 1.2633e+01
+[14:15:24]     frozen_a pt 1: mean noise over 4 rays = 2.0929e+01
+[14:15:51]     frozen_a pt 2: mean noise over 4 rays = 5.6746e+01
+[14:15:51]   Probing anchor (b3): healthy run_b positions
+[14:16:17]     healthy_b pt 0: mean noise over 4 rays = 9.3606e+00
+[14:16:44]     healthy_b pt 1: mean noise over 4 rays = 1.7015e+01
+[14:17:10]     healthy_b pt 2: mean noise over 4 rays = 2.3632e+00
+[14:17:10]   Probing anchor (c): prior draws
+[14:17:37]     prior pt 0: mean noise over 4 rays = 2.5389e+01
+[14:18:04]     prior pt 1: mean noise over 4 rays = 1.7905e+03
+[14:18:30]     prior pt 2: mean noise over 4 rays = 6.7292e+02
+[14:18:30]   n_max=10 done in 381.3s
+[14:18:30] 
+=== n_max=25 (float32) ===
+[14:18:31]   Getting bootstrap qz...
+Final Chi-squared: 1.51841
+[14:19:48]   Bootstrap z: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+Exception ignored in: <bound method WeakStructRef._cleanup of WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7f3b9817f580; dead>), 'gamma': HashableWeakRef(<weakref at 0x7f3b9817f520; dead>), 'e2': HashableWeakRef(<weakref at 0x7f3b9817f4c0; to 'jaxlib._jax.ArrayImpl' at 0x194fed70>), 'e1': HashableWeakRef(<weakref at 0x7f3b9817f460; to 'jaxlib._jax.ArrayImpl' at 0x1ce54290>), 'center_y': HashableWeakRef(<weakref at 0x7f3b9817f400; to 'jaxlib._jax.ArrayImpl' at 0x185b6040>), 'center_x': HashableWeakRef(<weakref at 0x7f3c0017ac80; to 'jaxlib._jax.ArrayImpl' at 0x1a1b52a0>)})>
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 150, in _cleanup
+    self._callback(self)
+  File "/global/homes/l/linusu/sidecar_jax_upgrade/tensorflow_probability/substrates/jax/internal/cache_util.py", line 220, in maybe_del
+    del self[key]
+        ~~~~^^^^^
+KeyError: WeakStructRef({'theta_E': HashableWeakRef(<weakref at 0x7f3b9817f580; dead>), 'gamma': HashableWeakRef(<weakref at 0x7f3b9817f520; dead>), 'e2': HashableWeakRef(<weakref at 0x7f3b9817f4c0; to 'jaxlib._jax.ArrayImpl' at 0x194fed70>), 'e1': HashableWeakRef(<weakref at 0x7f3b9817f460; to 'jaxlib._jax.ArrayImpl' at 0x1ce54290>), 'center_y': HashableWeakRef(<weakref at 0x7f3b9817f400; to 'jaxlib._jax.ArrayImpl' at 0x185b6040>), 'center_x': HashableWeakRef(<weakref at 0x7f3c0017ac80; to 'jaxlib._jax.ArrayImpl' at 0x1a1b52a0>)})
+[14:19:48]   Got 3 prior samples
+[14:19:54]   logp compiled
+[14:19:54]   Probing anchor (a): bootstrap point
+[14:19:54]     Ray 1/4...
+[14:20:13]       noise=9.0012e-01, noise/target=9.78e+00, n_finite=200
+[14:20:13]     Ray 2/4...
+[14:20:28]       noise=7.3543e+01, noise/target=7.99e+02, n_finite=200
+[14:20:28]     Ray 3/4...
+[14:20:43]       noise=9.0784e-01, noise/target=9.87e+00, n_finite=200
+[14:20:43]     Ray 4/4...
+[14:20:58]       noise=2.9692e+00, noise/target=3.23e+01, n_finite=200
+[14:20:58]   Probing anchor (b1): qz samples
+[14:21:58]     qz pt 0: mean noise over 4 rays = 1.1932e+02
+[14:22:59]     qz pt 1: mean noise over 4 rays = 1.4226e+02
+srun: forcing job termination
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+[2026-06-12T21:23:15.801] error: *** STEP 54359739.137 ON nid001145 CANCELLED AT 2026-06-12T21:23:15 DUE to SIGNAL Killed ***
+srun: error: nid001145: task 0: Killed
+srun: Terminating StepId=54359739.137

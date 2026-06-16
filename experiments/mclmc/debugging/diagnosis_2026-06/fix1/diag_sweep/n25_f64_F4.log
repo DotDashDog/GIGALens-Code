@@ -1,0 +1,37 @@
+=== repro_vela n25_f64_F4 jobid=54496479 host=login11 date=2026-06-15T14:33:19-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --likelihood-precision float64 --no-bootstrap --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --regularize-mm --out-dir diagnosis_2026-06/fix1/flag_f4/n25_f64_F4 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_f64_F4.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/flag_f4/n25_f64_F4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_143329
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  likelihood_precision=float64
+[repro] --no-bootstrap: constructing qz from truth directly
+[repro] qz obtained in 0.3s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 450.624338864116 s
+[repro] MCLMC done in 475.4s
+[repro] saving to diagnosis_2026-06/fix1/flag_f4/n25_f64_F4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_143329
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+
+=== SUMMARY ===
+  tune1     : eps 0.02075 -> 0.1884  xi[10,50,90]=[1e-08,1.25e-08,3.44e-08]  kern_rej=0.000  step_norm_med=8.69e-06
+  tune2     : eps 0.1891 -> 0.1175  xi[10,50,90]=[6.7e-07,0.0531,1.45]  kern_rej=0.000  step_norm_med=0.00147
+  tune3     : eps 0.1175 -> 0.1175  xi[10,50,90]=[-1,-1,-1]  kern_rej=0.000  step_norm_med=0.00182
+  sampling  : eps 0.1175 -> 0.1175  xi[10,50,90]=[-1,-1,-1]  kern_rej=0.000  step_norm_med=0.00132
+  MM window step= 514: eig [4.98e-06, 8.28e-06]  cond=1.66  n_neg=0
+  MM window step= 744: eig [2.71e-06, 0.00533]  cond=1.96e+03  n_neg=0
+  MM window step=1203: eig [1.37e-06, 0.0952]  cond=6.93e+04  n_neg=0
+
+[repro] all outputs written to diagnosis_2026-06/fix1/flag_f4/n25_f64_F4/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_143329
+=== repro_vela n25_f64_F4: exit 0 ===

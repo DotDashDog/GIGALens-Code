@@ -1,0 +1,17 @@
+[d4d5] JAX 0.10.0.dev20260615 devices [CpuDevice(id=0)]
+[d4d5] exp=f4_cond1e8_baseline cond=1e+08 qz_init=honest pathology=none delta=0
+[d4d5] DE_TARGET(xi=1)=0.0922  true_std[min,med,max]=[0.393,1.23,2.65]
+[d4d5] MCLMC done in 2.2s
+/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d4_d5_synthetic.py:304: RuntimeWarning: Mean of empty slice
+  "energy_change_raw_rms": float(np.sqrt(np.nanmean(ecraw ** 2))),
+
+=== SUMMARY ===
+  tune1     : eps 1.177 -> 0.09415 (min 0) xi[10,50,90]=[0.000241,0.286,15.8] kern_rej=0.000 snorm_med=0.17 ecraw_rms=0.257 ecraw_nan=0.000
+  tune2     : eps 0.09404 -> 1.988e+05 (min 0) xi[10,50,90]=[1e-08,1e-08,1e-08] kern_rej=0.904 snorm_med=0 ecraw_rms=0.178 ecraw_nan=0.904
+  tune3     : eps 1.988e+05 -> 1.988e+05 (min 1.99e+05) xi[10,50,90]=[-1,-1,-1] kern_rej=1.000 snorm_med=0 ecraw_rms=nan ecraw_nan=1.000
+  sampling  : eps 1.988e+05 -> 1.988e+05 (min 1.99e+05) xi[10,50,90]=[-1,-1,-1] kern_rej=1.000 snorm_med=0 ecraw_rms=nan ecraw_nan=1.000
+  MM step= 514: eig[-2.06e-06,51.8] cond=8.32e+08 n_neg=2 nan=False
+  MM step= 744: eig[-3.45e-05,56.8] cond=2.39e+07 n_neg=6 nan=False
+  MM step=1203: eig[-4.08e-05,56.8] cond=2.63e+07 n_neg=6 nan=False
+
+[d4d5] outputs -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d4_d5/f4_cond1e8_baseline

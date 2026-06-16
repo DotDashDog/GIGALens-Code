@@ -1,0 +1,38 @@
+=== repro_vela n25_ds1e-8_fullf64 jobid=54496479 host=login31 date=2026-06-15T11:35:03-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --x64 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --out-dir diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_fullf64 ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_fullf64.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_fullf64/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113513
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  high_precision=False
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-08)
+Final Chi-squared: 1.51671
+[repro] qz obtained in 47.1s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 448.1215797411278 s
+[repro] MCLMC done in 470.5s
+[repro] saving to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_fullf64/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113513
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+
+=== SUMMARY ===
+  tune1     : eps 1.314 -> 7.643  xi[10,50,90]=[0.0063,0.0394,0.186]  kern_rej=0.000  step_norm_med=0.000428
+  tune2     : eps 7.66 -> 0.5337  xi[10,50,90]=[3.49e-05,0.00608,0.956]  kern_rej=0.000  step_norm_med=0.0049
+  tune3     : eps 0.5337 -> 0.5337  xi[10,50,90]=[-1,-1,-1]  kern_rej=0.000  step_norm_med=0.00971
+  sampling  : eps 0.5337 -> 0.5337  xi[10,50,90]=[-1,-1,-1]  kern_rej=0.000  step_norm_med=0.00814
+  MM window step= 514: eig [1.65e-08, 0.000836]  cond=5.05e+04  n_neg=0
+  MM window step= 744: eig [2.06e-09, 0.00533]  cond=2.59e+06  n_neg=0
+  MM window step=1203: eig [9.56e-09, 0.012]  cond=1.25e+06  n_neg=0
+
+[repro] all outputs written to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_fullf64/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113513
+=== repro_vela n25_ds1e-8_fullf64: exit 0 ===

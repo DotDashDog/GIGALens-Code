@@ -1,0 +1,32 @@
+[D3] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0)]
+[D3] n_max=25 precision=float32 K=64 n_eps=25
+[D3] output dir: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d3/nmax25_float32_K64_eps25
+[D3] run_a final metric[0,0]=6.298e-06  run_b final metric[0,0]=8.785e-06
+[D3] system loaded
+[D3] model built n_max=25
+[D3] --skip-bootstrap: using saved step-0 position as qz.mean proxy (n_max=25, diff from true mean ~1e-4)
+[D3]   bootstrap_point[:4]=[-0.03368193 -0.00262435  0.4446851  -0.8844137 ]
+[D3] eps grid: 25 points logspace(1e-07,1e+01)
+[D3] eps range: 1.000e-07 .. 1.000e+01
+
+[D3] === metric=diag_1e-8_I  anchor=bootstrap  n_anchors=1 ===
+[D3]   anchor 1/1
+      logdensity=1.548e+05  grad_norm=1.466e+05  finite_ld=True  finite_grad=True
+W0612 14:25:08.957843 1104166 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 15.89GiB (rounded to 17063749632)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0612 14:25:08.958057 1104166 bfc_allocator.cc:513] ______________________________________________________________________________________________*____*
+Traceback (most recent call last):
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d3_eevpd_vs_eps.py", line 546, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d3_eevpd_vs_eps.py", line 365, in main
+    dE_arr = measure_eevpd_at_anchor(
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/d3_eevpd_vs_eps.py", line 290, in measure_eevpd_at_anchor
+    _ = dE_for_eps_jit(eps_grid[0]).block_until_ready()
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 15.89GiB.
+srun: error: nid001145: task 0: Exited with exit code 1
+srun: Terminating StepId=54359739.138

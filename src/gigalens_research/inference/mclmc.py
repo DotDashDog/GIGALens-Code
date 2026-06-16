@@ -40,7 +40,7 @@ from threading import Lock
 
 def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
           desired_energy_variance=5e-4, init_L=None, init_step_size=None, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
-          progress_bar=False, seed=0, debug_output=False):
+          progress_bar=False, seed=0, debug_output=False, regularize_mass_matrix=False):
     lens_sim = sim.LensSimulator(
         model_seq.phys_model,
         model_seq.sim_config,
@@ -96,6 +96,7 @@ def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
         # mass_matrix_num_effective_samples=mass_matrix_num_effective_samples,
         step_size_adapt_use_psmile=False,
         windowed_mass_matrix=True,
+        regularize_mass_matrix=regularize_mass_matrix,
         progress_bar=progress_bar,
     )
 
@@ -129,6 +130,7 @@ def full_mclmc_with_adapt_sharded(
     # mass_matrix_num_effective_samples=1000,
     step_size_adapt_use_psmile=False,
     windowed_mass_matrix=True,
+    regularize_mass_matrix=False,
     progress_bar=False,
 ):
     """Sharded version of full_mclmc_with_adapt. Distributes chains across
@@ -146,6 +148,48 @@ def full_mclmc_with_adapt_sharded(
     # decay_rate_mass_matrix = (mass_matrix_num_effective_samples - 1.0) / (mass_matrix_num_effective_samples + 1.0)
 
     welford_init_fn, _, welford_cov = welford_algorithm(is_diagonal_matrix=False)
+
+    # F4 (opt-in): Stan-style regularization of EVERY window's sample covariance before it is
+    # installed as the inverse mass matrix. Baseline only regularizes window 1 (via the SVI
+    # prior); windows 2/3 accumulate from an empty Welford with no shrinkage, so a window built
+    # from frozen/correlated/multi-modal chains can be rank-deficient or (under float32 Welford)
+    # non-PSD -> cholesky NaN -> rejection cascade (diagnosis F3/F4). This mirrors blackjax's
+    # mass_matrix_adaptation: scale by n/(n+5), add a 1e-3 shrinkage*I floor on all windows, and
+    # lift any roundoff-negative eigenvalues so the downstream cholesky never sees a non-PSD
+    # metric. Default False => byte-identical to baseline.
+    def _regularize_cov(cov, n):
+        if not regularize_mass_matrix:
+            return cov
+        cov = 0.5 * (cov + jnp.swapaxes(cov, -1, -2))           # symmetrize
+        n = jnp.asarray(n, cov.dtype)
+        eye = jnp.eye(cov.shape[-1], dtype=cov.dtype)
+        shrink = 1e-3 * (5.0 / (n + 5.0))
+        reg = (n / (n + 5.0)) * cov + shrink * eye              # Stan window shrinkage
+        w, V = jnp.linalg.eigh(reg)                             # PSD floor (belt-and-suspenders)
+        w = jnp.clip(w, shrink, None)
+        return (V * w[..., jnp.newaxis, :]) @ jnp.swapaxes(V, -1, -2)
+
+    # Single-dtype sampler. The log-density / energy dtype drives EVERYTHING: it is float64
+    # when the likelihood runs in high precision under jax_enable_x64, float32 otherwise.
+    # qz.sample() can yield float32 positions/momentum even when the energy is float64 (and
+    # qz.mean()/covariance() may be float32 too), which mixes float32 state with float64
+    # energy/step_size and trips lax.select/cond dtype checks (blackjax handle_nans, the
+    # mass-matrix cond). Cast the whole initial state AND all adaptation params to the energy
+    # dtype so the scan carry is uniformly one dtype. The likelihood forward model stays
+    # float32 regardless (see gigalens.jax.model.BackwardProbModel.log_prob).
+    _canon = jnp.asarray(state_init.logdensity).dtype
+    _cast_float = lambda a: (
+        jnp.asarray(a).astype(_canon)
+        if jnp.issubdtype(jnp.asarray(a).dtype, jnp.floating)
+        else jnp.asarray(a)
+    )
+    state_init = jax.tree_util.tree_map(_cast_float, state_init)
+    svi_mean = jnp.asarray(svi_mean).astype(_canon)
+    params_init = params_init._replace(
+        inverse_mass_matrix=jnp.asarray(params_init.inverse_mass_matrix).astype(_canon),
+        step_size=jnp.asarray(params_init.step_size).astype(_canon),
+        L=jnp.asarray(params_init.L).astype(_canon),
+    )
 
     svi_inverse_mass_matrix = params_init.inverse_mass_matrix
 
@@ -344,7 +388,8 @@ def full_mclmc_with_adapt_sharded(
                         updated_welford = _sel(do_mm_adapt, new_welford, welford_state)
                         at_boundary = window_end_mask[i]
                         update_mm = jnp.logical_and(do_mm_adapt, at_boundary)
-                        sample_cov = welford_cov(updated_welford)[0]
+                        sample_cov = _regularize_cov(
+                            welford_cov(updated_welford)[0], updated_welford.sample_size)
                         mm_params = params._replace(inverse_mass_matrix=sample_cov)
                         updated_params = _sel(update_mm, mm_params, params)
                         updated_welford = _sel(update_mm, welford_empty, updated_welford)
@@ -354,7 +399,8 @@ def full_mclmc_with_adapt_sharded(
                         return updated_params, updated_welford, updated_adapt_states
 
                     new_welford = welford_combine(welford_state, update)
-                    sample_cov = welford_cov(new_welford)[0]
+                    sample_cov = _regularize_cov(
+                        welford_cov(new_welford)[0], new_welford.sample_size)
                     mm_params = params._replace(inverse_mass_matrix=sample_cov)
                     updated_params = _sel(do_mm_adapt, mm_params, params)
                     updated_welford = _sel(do_mm_adapt, new_welford, welford_state)

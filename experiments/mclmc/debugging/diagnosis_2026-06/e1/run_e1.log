@@ -1,0 +1,147 @@
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class bootstrap --n-max 25 --precision float64 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float64
+[E1] model built n_max=25
+[E1] anchor_class=bootstrap  n_anchors=1
+[E1] anchor 0: harness-vs-library logp max_abs=2.910e-11 max_rel=1.879e-16  (anchor logp=154850)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_bootstrap_nmax25_anchor0_float64.npz  (226.6s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class bootstrap --n-max 25 --precision float32 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float32
+[E1] model built n_max=25
+[E1] anchor_class=bootstrap  n_anchors=1
+/opt/jax/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype float64 requested in astype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+  return lax_numpy.astype(self, dtype, copy=copy, device=device)
+[E1] anchor 0: harness-vs-library logp max_abs=1.562e-02 max_rel=1.009e-07  (anchor logp=154850)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_bootstrap_nmax25_anchor0_float32.npz  (163.3s)
+[E1] dump complete
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class run_a_late --n-max 25 --precision float64 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float64
+[E1] model built n_max=25
+[E1] anchor_class=run_a_late  n_anchors=4
+[E1] anchor 0: harness-vs-library logp max_abs=2.910e-11 max_rel=1.820e-16  (anchor logp=159881)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor0_float64.npz  (154.6s)
+[E1] anchor 1: harness-vs-library logp max_abs=2.910e-11 max_rel=1.820e-16  (anchor logp=159871)
+[E1] anchor 1 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor1_float64.npz  (136.6s)
+[E1] anchor 2: harness-vs-library logp max_abs=2.910e-11 max_rel=1.820e-16  (anchor logp=159895)
+[E1] anchor 2 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor2_float64.npz  (122.5s)
+[E1] anchor 3: harness-vs-library logp max_abs=1.164e-10 max_rel=7.282e-16  (anchor logp=159863)
+[E1] anchor 3 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor3_float64.npz  (106.3s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class run_a_late --n-max 25 --precision float32 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float32
+[E1] model built n_max=25
+[E1] anchor_class=run_a_late  n_anchors=4
+/opt/jax/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype float64 requested in astype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+  return lax_numpy.astype(self, dtype, copy=copy, device=device)
+[E1] anchor 0: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=159881)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor0_float32.npz  (168.7s)
+[E1] anchor 1: harness-vs-library logp max_abs=1.562e-02 max_rel=9.773e-08  (anchor logp=159871)
+[E1] anchor 1 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor1_float32.npz  (127.9s)
+[E1] anchor 2: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=159895)
+[E1] anchor 2 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor2_float32.npz  (126.2s)
+[E1] anchor 3: harness-vs-library logp max_abs=3.125e-02 max_rel=1.955e-07  (anchor logp=159863)
+[E1] anchor 3 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_a_late_nmax25_anchor3_float32.npz  (118.4s)
+[E1] dump complete
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class run_b_late --n-max 25 --precision float64 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float64
+[E1] model built n_max=25
+[E1] anchor_class=run_b_late  n_anchors=4
+[E1] anchor 0: harness-vs-library logp max_abs=1.746e-10 max_rel=1.094e-15  (anchor logp=159558)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor0_float64.npz  (135.6s)
+[E1] anchor 1: harness-vs-library logp max_abs=1.164e-10 max_rel=7.295e-16  (anchor logp=159574)
+[E1] anchor 1 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor1_float64.npz  (121.0s)
+[E1] anchor 2: harness-vs-library logp max_abs=2.037e-10 max_rel=1.277e-15  (anchor logp=159567)
+[E1] anchor 2 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor2_float64.npz  (109.3s)
+[E1] anchor 3: harness-vs-library logp max_abs=8.731e-11 max_rel=5.471e-16  (anchor logp=159576)
+[E1] anchor 3 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor3_float64.npz  (109.6s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class run_b_late --n-max 25 --precision float32 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float32
+[E1] model built n_max=25
+[E1] anchor_class=run_b_late  n_anchors=4
+/opt/jax/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype float64 requested in astype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+  return lax_numpy.astype(self, dtype, copy=copy, device=device)
+[E1] anchor 0: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=159558)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor0_float32.npz  (139.7s)
+[E1] anchor 1: harness-vs-library logp max_abs=1.562e-02 max_rel=9.792e-08  (anchor logp=159574)
+[E1] anchor 1 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor1_float32.npz  (124.7s)
+[E1] anchor 2: harness-vs-library logp max_abs=3.125e-02 max_rel=1.958e-07  (anchor logp=159567)
+[E1] anchor 2 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor2_float32.npz  (107.1s)
+[E1] anchor 3: harness-vs-library logp max_abs=7.812e-02 max_rel=4.896e-07  (anchor logp=159576)
+[E1] anchor 3 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_run_b_late_nmax25_anchor3_float32.npz  (111.2s)
+[E1] dump complete
++ for cls in bootstrap run_a_late run_b_late prior_far
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class prior_far --n-max 25 --precision float64 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float64
+[E1] model built n_max=25
+[E1] anchor_class=prior_far  n_anchors=2
+[E1] anchor 0: harness-vs-library logp max_abs=9.117e-07 max_rel=3.210e-12  (anchor logp=-283996)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_prior_far_nmax25_anchor0_float64.npz  (131.1s)
+[E1] anchor 1: harness-vs-library logp max_abs=3.159e-07 max_rel=2.920e-12  (anchor logp=-108174)
+[E1] anchor 1 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_prior_far_nmax25_anchor1_float64.npz  (124.7s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class prior_far --n-max 25 --precision float32 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float32
+[E1] model built n_max=25
+[E1] anchor_class=prior_far  n_anchors=2
+/opt/jax/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype float64 requested in astype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+  return lax_numpy.astype(self, dtype, copy=copy, device=device)
+[E1] anchor 0: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=-284722)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_prior_far_nmax25_anchor0_float32.npz  (147.7s)
+[E1] anchor 1: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=-133764)
+[E1] anchor 1 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_prior_far_nmax25_anchor1_float32.npz  (139.9s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class bootstrap --n-max 10 --precision float64 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float64
+[E1] model built n_max=10
+[E1] anchor_class=bootstrap  n_anchors=1
+[E1] anchor 0: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=152585)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_bootstrap_nmax10_anchor0_float64.npz  (47.7s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py dump --anchor-class bootstrap --n-max 10 --precision float32 --K 16
+[E1] JAX 0.10.0.dev20260612 devices=[CpuDevice(id=0)] precision=float32
+[E1] model built n_max=10
+[E1] anchor_class=bootstrap  n_anchors=1
+/opt/jax/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype float64 requested in astype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+  return lax_numpy.astype(self, dtype, copy=copy, device=device)
+[E1] anchor 0: harness-vs-library logp max_abs=0.000e+00 max_rel=0.000e+00  (anchor logp=152585)
+[E1] anchor 0 dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/dumps/dump_bootstrap_nmax10_anchor0_float32.npz  (51.1s)
+[E1] dump complete
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py ray --anchor-class run_a_late --anchor-idx 0 --n-max 25 --precision float64
+/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py:471: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  logps.append(float(np.asarray(lib_jit(zj))))
+[E1] ray dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/ray_run_a_late_anchor0_float64.npz  (logp range 159881..159881)
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py ray --anchor-class bootstrap --anchor-idx 0 --n-max 25 --precision float64
+/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py:471: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  logps.append(float(np.asarray(lib_jit(zj))))
+[E1] ray dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/ray_bootstrap_anchor0_float64.npz  (logp range 154849..154850)
++ for prec in float64 float32
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py ray --anchor-class run_a_late --anchor-idx 0 --n-max 25 --precision float32
+/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py:471: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  logps.append(float(np.asarray(lib_jit(zj))))
+[E1] ray dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/ray_run_a_late_anchor0_float32.npz  (logp range 159881..159881)
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py ray --anchor-class bootstrap --anchor-idx 0 --n-max 25 --precision float32
+/global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py:471: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  logps.append(float(np.asarray(lib_jit(zj))))
+[E1] ray dumped -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/ray_bootstrap_anchor0_float32.npz  (logp range 154849..154850)
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py analyze
+[E1] summary -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/summary.json
+[E1] plot -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/noise_waterfall.png
+[E1] analyze complete
++ python -u /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/e1_stage_noise.py ray-plot
+[E1] ray plot -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/ray_bootstrap_anchor0_overlay.png
+[E1] ray plot -> /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/e1/ray_run_a_late_anchor0_overlay.png

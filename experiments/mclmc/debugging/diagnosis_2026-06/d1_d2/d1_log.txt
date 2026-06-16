@@ -1,0 +1,135 @@
+[14:27:49] D1 finiteness audit starting
+[14:27:49] Output: /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2
+[14:27:53] JAX 0.10.0.dev20260612 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+[14:27:53] Loading system...
+[14:27:53] System loaded: vela01_cam12_rep03
+[14:28:07] Loading Phase 0 positions...
+[14:28:07] Phase 0 positions loaded: frozen_a=(20, 17), frozen_b=(20, 17)
+[14:28:07] 
+=== n_max=10 ===
+[14:28:09]   Model built in 2.1s
+[14:28:09]   Getting bootstrap qz...
+[14:28:32]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:28:32]   Compiling value_and_grad...
+[14:28:41]   Compiled OK
+[14:28:41]   Anchor (a): bootstrap point
+[14:28:41]     logp=152591.6875, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:28:41]   Anchor (b1): qz draws diag_scale=1e-6
+[14:28:42]     logp=152576.1383±108.8834, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:42]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:28:42]     logp=154919.3414±39.7008, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:42]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:28:42]     logp=157594.4641±1.9880, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:42]   Anchor (c): prior draws
+[14:28:44]     Got 20 prior samples
+[14:28:44]     logp=36425.5901±49400.5874, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:28:44]   n_max=10 done in 37.0s
+[14:28:44] 
+=== n_max=15 ===
+[14:28:44]   Model built in 0.2s
+[14:28:44]   Getting bootstrap qz...
+[14:29:10]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:29:10]   Compiling value_and_grad...
+[14:29:25]   Compiled OK
+[14:29:25]   Anchor (a): bootstrap point
+[14:29:25]     logp=153759.3281, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:29:25]   Anchor (b1): qz draws diag_scale=1e-6
+[14:29:25]     logp=153743.9719±108.3163, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:25]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:29:25]     logp=158094.7766±19.2380, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:25]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:29:25]     logp=158587.7680±8.3715, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:25]   Anchor (c): prior draws
+[14:29:26]     Got 20 prior samples
+[14:29:26]     logp=43119.5750±50245.6184, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:29:26]   n_max=15 done in 42.7s
+[14:29:26] 
+=== n_max=20 ===
+[14:29:27]   Model built in 0.2s
+[14:29:27]   Getting bootstrap qz...
+[14:30:01]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:30:01]   Compiling value_and_grad...
+[14:30:19]   Compiled OK
+[14:30:19]   Anchor (a): bootstrap point
+[14:30:19]     logp=154264.0781, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:30:19]   Anchor (b1): qz draws diag_scale=1e-6
+[14:30:19]     logp=154248.4688±107.1204, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:19]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:30:19]     logp=159198.7203±9.7186, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:19]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:30:19]     logp=159219.0969±12.8323, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:19]   Anchor (c): prior draws
+[14:30:21]     Got 20 prior samples
+[14:30:21]     logp=-12719.8262±208425.3575, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:30:21]   n_max=20 done in 54.6s
+[14:30:21] 
+=== n_max=25 ===
+[14:30:21]   Model built in 0.2s
+[14:30:21]   Getting bootstrap qz...
+[14:31:39]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:31:39]   Compiling value_and_grad...
+[14:31:58]   Compiled OK
+[14:31:58]   Anchor (a): bootstrap point
+[14:31:58]     logp=154857.4531, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:31:58]   Anchor (b1): qz draws diag_scale=1e-6
+[14:31:58]     logp=154841.5914±106.4091, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:31:58]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:31:59]     logp=159858.7000±73.2526, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:31:59]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:31:59]     logp=159563.4438±15.7201, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:31:59]   Anchor (c): prior draws
+[14:32:00]     Got 20 prior samples
+[14:32:00]     logp=-668742.4868±2386100.8509, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:32:00]   n_max=25 done in 99.4s
+[14:32:00] 
+=== n_max=30 ===
+[14:32:01]   Model built in 0.2s
+[14:32:01]   Getting bootstrap qz...
+[14:33:25]   Bootstrap z[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[14:33:25]   Compiling value_and_grad...
+[14:33:42]   Compiled OK
+[14:33:42]   Anchor (a): bootstrap point
+[14:33:42]     logp=155358.6875, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 1}
+[14:33:42]   Anchor (b1): qz draws diag_scale=1e-6
+[14:33:42]     logp=155344.5688±106.6124, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:42]   Anchor (b2): late frozen positions from run_a (n_max=25 collapsed)
+[14:33:42]     logp=-73880.5547±1019875.7623, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:42]   Anchor (b3): late positions from healthy run_b (n_max=10)
+[14:33:42]     logp=159600.3039±261.7150, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:42]   Anchor (c): prior draws
+[14:33:44]     Got 20 prior samples
+[14:33:44]     logp=-649462.7630±2796345.4418, nonfinite_logp=0.000, nonfinite_grad=0.000, loc={'ok': 20}
+[14:33:44]   n_max=30 done in 103.7s
+[14:33:44] 
+D1 results saved to /global/homes/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/d1_d2/d1_results.json
+[14:33:44] 
+=== D1 SUMMARY TABLE ===
+[14:33:44]  n_max                     anchor  nonfinite_logp  nonfinite_grad  localization
+[14:33:44] -----------------------------------------------------------------------------------------------
+[14:33:44]     10                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     10                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     10               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     10              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     10                prior_draws           0.000           0.000  all_ok
+[14:33:44]     15                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     15                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     15               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     15              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     15                prior_draws           0.000           0.000  all_ok
+[14:33:44]     20                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     20                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     20               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     20              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     20                prior_draws           0.000           0.000  all_ok
+[14:33:44]     25                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     25                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     25               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     25              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     25                prior_draws           0.000           0.000  all_ok
+[14:33:44]     30                  bootstrap           0.000           0.000  all_ok
+[14:33:44]     30                  qz_ds1e-6           0.000           0.000  all_ok
+[14:33:44]     30               frozen_run_a           0.000           0.000  all_ok
+[14:33:44]     30              healthy_run_b           0.000           0.000  all_ok
+[14:33:44]     30                prior_draws           0.000           0.000  all_ok
+[14:33:44] 
+D1 audit complete.

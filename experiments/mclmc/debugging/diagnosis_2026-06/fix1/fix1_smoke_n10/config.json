@@ -1,0 +1,22 @@
+{
+  "n_max": 10,
+  "num_burnin_steps": 40,
+  "num_results": 10,
+  "n_chains": 8,
+  "diag_scale": 1e-08,
+  "seed": 0,
+  "x64": true,
+  "high_precision": true,
+  "bootstrap_map_steps": 200,
+  "bootstrap_map_samples": 100,
+  "no_bootstrap": false,
+  "total_steps": 50,
+  "tune1_steps": 8,
+  "tune2_steps": 24,
+  "tune3_steps": 8,
+  "dim": 17,
+  "jax_version": "0.10.0.dev20260615",
+  "mclmc_wall_time_s": 41.49155428796075,
+  "bootstrap_wall_time_s": 35.612405995838344,
+  "tag": "fix1_smoke_n10"
+}

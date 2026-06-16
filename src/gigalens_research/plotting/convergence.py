@@ -12,17 +12,36 @@ from typing import Optional, Sequence
 import numpy as np
 from matplotlib.axes import Axes
 
-from .labels import flatten_param_names, latex_label
+from .labels import flatten_param_names, flatten_params, latex_label
 
 
 def _param_labels(posterior) -> list:
     """Best-effort parameter labels from the bijector's nested structure."""
     try:
-        # cheap: only needs one z point to discover names
         x = posterior.z_to_x(posterior.median_z)
         return list(flatten_param_names(x))
     except Exception:
         return [f"param[{i}]" for i in range(posterior.n_params)]
+
+
+def _samples_x_chains(posterior):
+    """Push ``samples_z`` through the bijector and flatten to a matrix.
+
+    Returns ``(keys, samples_x)`` where ``keys`` is a list of flat parameter
+    names and ``samples_x`` has shape ``(n_chains, n_steps, n_flat_params)``.
+    Returns ``(None, None)`` if the bijector is unavailable.
+    """
+    try:
+        sz = posterior.samples_z          # (n_chains, n_steps, n_params)
+        n_chains, n_steps, _ = sz.shape
+        flat_z = sz.reshape(-1, sz.shape[-1])          # (n_chains*n_steps, n_params)
+        x = posterior.z_to_x(flat_z)                   # nested list-of-dicts, batch dim 0
+        flat_dict = flatten_params(x)                  # {name: (n_chains*n_steps,)}
+        keys = list(flat_dict.keys())
+        mat = np.stack([np.asarray(flat_dict[k]) for k in keys], axis=-1)
+        return keys, mat.reshape(n_chains, n_steps, -1)
+    except Exception:
+        return None, None
 
 
 def plot_running_rhat(
@@ -138,18 +157,33 @@ def plot_chain_traces(
 ) -> None:
     """Plot the per-chain trace for a single parameter (by index).
 
-    Caps at ``max_chains`` lines for readability; subsample upstream if you
-    need a different selection.
+    Traces are shown in **physical space** (bijector applied), so the y-axis
+    matches the corner plot and convergence diagnostics. ``param`` indexes into
+    the flat physical-space parameter vector in the same order as
+    ``flatten_param_names`` / the corner plot columns.
+
+    Falls back to raw ``z``-space (with a note in the title) if the bijector
+    is unavailable.
+
+    Caps at ``max_chains`` lines for readability.
     """
-    samples = posterior.samples_z  # (n_chains, n_steps, n_params)
+    keys, samples_x = _samples_x_chains(posterior)
+    if samples_x is not None:
+        samples = samples_x
+        labels = keys
+        space_note = ""
+    else:
+        samples = posterior.samples_z
+        labels = [f"param[{i}]" for i in range(samples.shape[-1])]
+        space_note = " [z-space]"
+
     n_chains = samples.shape[0]
     chains_to_show = list(range(min(n_chains, max_chains)))
-    labels = _param_labels(posterior)
     for c in chains_to_show:
         ax.plot(samples[c, :, param], alpha=alpha, linewidth=0.8)
     ax.set_xlabel("step")
     ax.set_ylabel(latex_label(labels[param]) if param < len(labels) else f"param[{param}]")
-    ax.set_title(f"Chain traces ({len(chains_to_show)}/{n_chains} chains)")
+    ax.set_title(f"Chain traces ({len(chains_to_show)}/{n_chains} chains){space_note}")
 
 
 def plot_loss_history(

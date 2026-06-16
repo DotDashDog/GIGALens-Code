@@ -75,6 +75,11 @@ def _parse_args():
                    help="Diagonal scale for qz (as variance, i.e. scale_tril = diag(sqrt(diag_scale)))")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--x64", action="store_true", help="Enable float64 (jax_enable_x64)")
+    p.add_argument("--likelihood-precision", choices=["float32", "mixed", "float64"], default=None,
+                   help="Sets System.likelihood_precision. 'mixed'/'float64' imply --x64. "
+                        "'float64' = full float64 forward+reduction (the high-n_max fix).")
+    p.add_argument("--high-precision", action="store_true",
+                   help="Deprecated alias for --likelihood-precision mixed (implies --x64).")
     p.add_argument("--out-dir", type=str, default=None,
                    help="Output directory (default: <script_dir>/diagnosis_2026-06/)")
     p.add_argument("--tag", type=str, default=None,
@@ -83,11 +88,22 @@ def _parse_args():
     p.add_argument("--bootstrap-map-samples", type=int, default=100)
     p.add_argument("--no-bootstrap", action="store_true",
                    help="Skip bootstrap MAP; use raw truth params as qz center")
+    p.add_argument("--regularize-mm", action="store_true",
+                   help="F4: Stan-style shrinkage + PSD floor on every mass-matrix window.")
     return p.parse_args()
 
 
 def main():
     args = _parse_args()
+
+    # Resolve precision: --high-precision is a deprecated alias for 'mixed'.
+    prec = args.likelihood_precision
+    if prec is None and args.high_precision:
+        prec = "mixed"
+    args.likelihood_precision = prec
+    # mixed/float64 require x64 to be real, not silently truncated.
+    if prec in ("mixed", "float64"):
+        args.x64 = True
 
     # JAX config must be set before importing jax.numpy (via other imports)
     if args.x64:
@@ -147,8 +163,15 @@ def main():
     # Import vela_shapelets to trigger registration of "epl_shear_sersic_shapelets"
     from gigalens_research.simtests.experiments import vela_shapelets  # noqa: F401
     from gigalens_research.simtests.registry import get_inference_builder
+    # Set the precision flag on the SYSTEM before building model_seq, so it propagates through
+    # system.sim_config to BOTH the bootstrap (VelaBootstrapQzStage reads system.sim_config) and
+    # the sampler (MCLMC_JIT reads model_seq.sim_config). Mirrors the notebook
+    # (`system.likelihood_precision = "float64"`).
+    if args.likelihood_precision is not None:
+        system.likelihood_precision = args.likelihood_precision
     model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
-    print(f"[repro] model built: n_max={args.n_max}", flush=True)
+    print(f"[repro] model built: n_max={args.n_max}  "
+          f"likelihood_precision={model_seq.sim_config.likelihood_precision}", flush=True)
 
     # ---------------------------------------------------------------------------
     # VelaBootstrapQzStage — inline (no Pipeline)
@@ -171,8 +194,12 @@ def main():
         )
         true_z = jnp.stack(model_seq.prob_model.bij.inverse(true_params_normed))
         d = true_z.shape[-1]
-        scale_tril = jnp.diag(jnp.ones(d) * jnp.sqrt(args.diag_scale))
-        qz = tfd.MultivariateNormalTriL(loc=true_z, scale_tril=scale_tril)
+        # Keep loc/scale_tril dtype-consistent (under x64 jnp.ones is float64 while the
+        # bij.inverse of float32 truth is float32 -> tfd dtype mismatch). Mirror the
+        # pipelines.py qz fix: cast scale_tril to loc.dtype.
+        loc = jnp.asarray(true_z)
+        scale_tril = jnp.diag(jnp.ones(d, loc.dtype) * jnp.sqrt(jnp.asarray(args.diag_scale, loc.dtype)))
+        qz = tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)
     else:
         print(f"[repro] running VelaBootstrapQzStage (map_steps={args.bootstrap_map_steps}, "
               f"map_samples={args.bootstrap_map_samples}, diag_scale={args.diag_scale})", flush=True)
@@ -220,6 +247,7 @@ def main():
         progress_bar=False,
         seed=args.seed,
         debug_output=True,
+        regularize_mass_matrix=args.regularize_mm,
     )
     mclmc_time = time.perf_counter() - t1
     print(f"[repro] MCLMC done in {mclmc_time:.1f}s", flush=True)
@@ -259,6 +287,7 @@ def main():
         "diag_scale": args.diag_scale,
         "seed": args.seed,
         "x64": args.x64,
+        "likelihood_precision": args.likelihood_precision,
         "bootstrap_map_steps": args.bootstrap_map_steps,
         "bootstrap_map_samples": args.bootstrap_map_samples,
         "no_bootstrap": args.no_bootstrap,

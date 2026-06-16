@@ -7,7 +7,7 @@ panels in :mod:`.reports` orchestrate them; the :class:`Posterior` view in
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 import matplotlib
 import numpy as np
@@ -15,6 +15,9 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import kstest, norm
+
+_SCALE_CHOICES = ("asinh", "log", "sqrt", "linear")
+Scale = Literal["asinh", "log", "sqrt", "linear"]
 
 
 def plot_image(
@@ -27,47 +30,103 @@ def plot_image(
     residual: bool = False,
     colorbar: bool = True,
     remove_axis: bool = True,
+    scale: Scale = "asinh",
+    linear_width: Optional[float] = None,
     log_vmin: float = 1e-2,
-    log_norm: bool = True,
     cmap: Optional[str] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
+    # Deprecated: use scale="log" instead.
+    log_norm: Optional[bool] = None,
 ) -> matplotlib.image.AxesImage:
     """Draw a 2-D image with GIGALens' default styling.
 
     Two presets:
 
-    - ``residual=False`` (default): inferno + ``LogNorm`` (good for lensed
-      arcs and broad dynamic range).
-    - ``residual=True``: bwr + ``CenteredNorm`` (good for normalized residuals).
+    - ``residual=False`` (default): inferno colormap with the color scale
+      set by ``scale`` (default ``"asinh"``).
+    - ``residual=True``: bwr + ``CenteredNorm``.
 
-    ``vmin`` / ``vmax`` override the auto-computed color limits. Supplying them
-    is the way to make several panels share a single color scale (e.g. a
-    truth-vs-recovered comparison); see
-    :func:`gigalens_research.plotting.truth.plot_source_comparison`.
+    Parameters
+    ----------
+    scale : {"asinh", "log", "sqrt", "linear"}
+        Color-scale normalization for non-residual images.
+
+        - ``"asinh"`` (default): :class:`matplotlib.colors.AsinhNorm`. Handles
+          zeros and mildly negative pixels gracefully; shows faint structure
+          without a hard floor. The linear-to-log transition is set by
+          ``linear_width`` (default: ``vmax / 100``).
+        - ``"log"``: :class:`matplotlib.colors.LogNorm`. Requires a positive
+          floor; set via ``log_vmin``.
+        - ``"sqrt"``: :class:`matplotlib.colors.PowerNorm` with ``gamma=0.5``.
+        - ``"linear"``: :class:`matplotlib.colors.Normalize`.
+
+        Pixels below zero are clipped to zero for ``"asinh"`` and ``"sqrt"``.
+
+    linear_width : float, optional
+        The ``a`` in ``asinh(x / a)``. Below ``a`` the scale is nearly
+        linear; above it is nearly logarithmic. Defaults to ``vmax / 100``
+        when ``scale="asinh"``. Ignored for other scales.
+    log_vmin : float
+        Lower bound for ``"log"`` scale (``LogNorm(vmin=log_vmin)``).
+        Unused for other scales.
+    vmin, vmax : float, optional
+        Explicit color limits. Supplying both is the standard way to share
+        a single colorbar across panels (e.g. truth-vs-recovered); see
+        :func:`gigalens_research.plotting.truth.plot_source_comparison`.
 
     Returns the ``AxesImage`` so callers can adjust further.
     """
+    # Backward-compat shim: log_norm=True was the old default.
+    if log_norm is not None:
+        scale = "log" if log_norm else "linear"
+
     if residual:
         norm_ = matplotlib.colors.CenteredNorm()
         cmap_ = cmap or "bwr"
     else:
-        arr = np.asarray(img)
-        finite_max = float(np.nanmax(arr)) if np.any(np.isfinite(arr)) else 0.0
+        arr = np.asarray(img, dtype=float)
+        finite_vals = arr[np.isfinite(arr)]
+        finite_max = float(finite_vals.max()) if finite_vals.size else 0.0
         hi = finite_max if vmax is None else float(vmax)
-        if log_norm and hi > log_vmin:
-            # LogNorm requires strictly positive bounds with vmin < vmax. Fall
-            # back to a linear norm when the image is too flat / non-positive
-            # (e.g. early-iteration MAP results, or all-zero source planes).
-            lo = float(max(np.nanmin(arr), log_vmin)) if vmin is None else float(vmin)
-            lo = max(lo, log_vmin)
-            lo = min(lo, hi * 0.99)  # ensure vmin < vmax
-            norm_ = matplotlib.colors.LogNorm(vmin=lo, vmax=hi, clip=True)
-        else:
+
+        if scale == "asinh":
+            arr_clipped = np.clip(arr, 0.0, None)
+            lw = float(linear_width) if linear_width is not None else max(hi / 100.0, 1e-12)
+            lo = 0.0 if vmin is None else float(vmin)
+            norm_ = matplotlib.colors.AsinhNorm(
+                linear_width=lw, vmin=lo, vmax=hi if hi > 0 else 1.0,
+            )
+            img = arr_clipped
+
+        elif scale == "sqrt":
+            arr_clipped = np.clip(arr, 0.0, None)
+            lo = 0.0 if vmin is None else float(vmin)
+            norm_ = matplotlib.colors.PowerNorm(
+                gamma=0.5, vmin=lo, vmax=hi if hi > 0 else 1.0,
+            )
+            img = arr_clipped
+
+        elif scale == "log":
+            # LogNorm requires strictly positive bounds with vmin < vmax.
+            # Fall back to linear when the image is too flat / non-positive.
+            if hi > log_vmin:
+                lo = float(max(np.nanmin(arr), log_vmin)) if vmin is None else float(vmin)
+                lo = max(lo, log_vmin)
+                lo = min(lo, hi * 0.99)
+                norm_ = matplotlib.colors.LogNorm(vmin=lo, vmax=hi, clip=True)
+            else:
+                norm_ = matplotlib.colors.Normalize(
+                    vmin=None if vmin is None else float(vmin),
+                    vmax=None if vmax is None else float(vmax),
+                )
+
+        else:  # "linear"
             norm_ = matplotlib.colors.Normalize(
                 vmin=None if vmin is None else float(vmin),
                 vmax=None if vmax is None else float(vmax),
             )
+
         cmap_ = cmap or "inferno"
 
     im = ax.imshow(img, cmap=cmap_, norm=norm_, extent=extent, origin="lower")

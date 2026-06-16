@@ -1,0 +1,209 @@
+>>>>>>>>>> START n25_ds1e-4_hp 2026-06-15T11:14:07-07:00
+=== repro_vela n25_ds1e-4_hp jobid=54496479 host=login31 date=2026-06-15T11:14:07-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-4 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --high-precision --out-dir diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-4_hp ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-4_hp.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-4_hp/nmax25_nb2000_nr500_nc8_ds1e-04_seed0_x64_20260615_111421
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  high_precision=True
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=0.0001)
+Final Chi-squared: 1.89786
+[repro] qz obtained in 58.7s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 148.4185642739758 s
+[repro] MCLMC done in 170.3s
+[repro] saving to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-4_hp/nmax25_nb2000_nr500_nc8_ds1e-04_seed0_x64_20260615_111421
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py:323: RuntimeWarning: Mean of empty slice
+  "energy_change_raw_rms": float(np.sqrt(np.nanmean(ecraw**2))) if n_steps_phase > 0 else None,
+
+=== SUMMARY ===
+  tune1     : eps 0.005642 -> 2.296e-10  xi[10,50,90]=[1.1e-08,2.81e-08,1.22e-05]  kern_rej=0.000  step_norm_med=3.24e-12
+  tune2     : eps 2.304e-10 -> 9.763e-06  xi[10,50,90]=[1e-08,1e-08,5.23e-08]  kern_rej=0.713  step_norm_med=0
+  tune3     : eps 9.763e-06 -> 9.763e-06  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  sampling  : eps 9.763e-06 -> 9.763e-06  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  MM window step= 514: eig [8.01e-06, 0.000605]  cond=75.5  n_neg=0
+  MM window step= 744: eig [-1.2e-19, 0.000648]  cond=3.24e+16  n_neg=6
+  MM window step=1203: eig [-1.78e-18, 0.000648]  cond=4.53e+16  n_neg=4
+
+[repro] all outputs written to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-4_hp/nmax25_nb2000_nr500_nc8_ds1e-04_seed0_x64_20260615_111421
+=== repro_vela n25_ds1e-4_hp: exit 0 ===
+>>>>>>>>>> END   n25_ds1e-4_hp exit=0 2026-06-15T11:18:26-07:00
+>>>>>>>>>> START n25_ds1e-6_hp 2026-06-15T11:18:26-07:00
+=== repro_vela n25_ds1e-6_hp jobid=54496479 host=login31 date=2026-06-15T11:18:26-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-6 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --high-precision --out-dir diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-6_hp ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-6_hp.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-6_hp/nmax25_nb2000_nr500_nc8_ds1e-06_seed0_x64_20260615_111835
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  high_precision=True
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-06)
+Final Chi-squared: 1.89786
+[repro] qz obtained in 58.4s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 148.25609140098095 s
+[repro] MCLMC done in 170.3s
+[repro] saving to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-6_hp/nmax25_nb2000_nr500_nc8_ds1e-06_seed0_x64_20260615_111835
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py:323: RuntimeWarning: Mean of empty slice
+  "energy_change_raw_rms": float(np.sqrt(np.nanmean(ecraw**2))) if n_steps_phase > 0 else None,
+
+=== SUMMARY ===
+  tune1     : eps 0.01096 -> 3.519e-09  xi[10,50,90]=[1.71e-08,2.19e-07,0.000215]  kern_rej=0.000  step_norm_med=3.47e-12
+  tune2     : eps 3.531e-09 -> 0.0002022  xi[10,50,90]=[1e-08,1e-08,4.29e-06]  kern_rej=0.713  step_norm_med=0
+  tune3     : eps 0.0002022 -> 0.0002022  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  sampling  : eps 0.0002022 -> 0.0002022  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  MM window step= 514: eig [8.01e-08, 6.45e-06]  cond=80.4  n_neg=0
+  MM window step= 744: eig [-2.62e-21, 6.92e-06]  cond=1.22e+16  n_neg=4
+  MM window step=1203: eig [-1.54e-20, 6.91e-06]  cond=1.69e+16  n_neg=5
+
+[repro] all outputs written to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-6_hp/nmax25_nb2000_nr500_nc8_ds1e-06_seed0_x64_20260615_111835
+=== repro_vela n25_ds1e-6_hp: exit 0 ===
+>>>>>>>>>> END   n25_ds1e-6_hp exit=0 2026-06-15T11:22:33-07:00
+>>>>>>>>>> START n25_ds1e-8_hp 2026-06-15T11:22:33-07:00
+=== repro_vela n25_ds1e-8_hp jobid=54496479 host=login31 date=2026-06-15T11:22:34-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-8 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --high-precision --out-dir diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_hp ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_hp.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_hp/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_112244
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  high_precision=True
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-08)
+Final Chi-squared: 1.90725
+[repro] qz obtained in 58.4s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 148.58665532898158 s
+[repro] MCLMC done in 170.7s
+[repro] saving to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_hp/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_112244
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py:323: RuntimeWarning: Mean of empty slice
+  "energy_change_raw_rms": float(np.sqrt(np.nanmean(ecraw**2))) if n_steps_phase > 0 else None,
+
+=== SUMMARY ===
+  tune1     : eps 0.01219 -> 2.876e-08  xi[10,50,90]=[2.9e-08,3.91e-06,1.08]  kern_rej=0.000  step_norm_med=4.18e-12
+  tune2     : eps 2.886e-08 -> 0.00441  xi[10,50,90]=[1e-08,1e-08,2.97e-05]  kern_rej=0.713  step_norm_med=0
+  tune3     : eps 0.00441 -> 0.00441  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  sampling  : eps 0.00441 -> 0.00441  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  MM window step= 514: eig [8.01e-10, 6.58e-08]  cond=82.1  n_neg=0
+  MM window step= 744: eig [-2.37e-23, 7.06e-08]  cond=1.05e+16  n_neg=3
+  MM window step=1203: eig [-2.17e-22, 7.05e-08]  cond=5.64e+17  n_neg=5
+
+[repro] all outputs written to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-8_hp/nmax25_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_112244
+=== repro_vela n25_ds1e-8_hp: exit 0 ===
+>>>>>>>>>> END   n25_ds1e-8_hp exit=0 2026-06-15T11:26:42-07:00
+>>>>>>>>>> START n25_ds1e-10_hp 2026-06-15T11:26:42-07:00
+=== repro_vela n25_ds1e-10_hp jobid=54496479 host=login31 date=2026-06-15T11:26:44-07:00 ===
+=== args: --n-max 25 --diag-scale 1e-10 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --high-precision --out-dir diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-10_hp ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-10_hp.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-10_hp/nmax25_nb2000_nr500_nc8_ds1e-10_seed0_x64_20260615_112654
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=25  high_precision=True
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-10)
+Final Chi-squared: 1.86758
+[repro] qz obtained in 58.1s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 148.7259163528215 s
+[repro] MCLMC done in 171.0s
+[repro] saving to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-10_hp/nmax25_nb2000_nr500_nc8_ds1e-10_seed0_x64_20260615_112654
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+/global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/repro_vela_shapelets.py:323: RuntimeWarning: Mean of empty slice
+  "energy_change_raw_rms": float(np.sqrt(np.nanmean(ecraw**2))) if n_steps_phase > 0 else None,
+
+=== SUMMARY ===
+  tune1     : eps 0.02792 -> 3.556e-07  xi[10,50,90]=[2.59e-08,5.57e-06,0.621]  kern_rej=0.000  step_norm_med=1.46e-12
+  tune2     : eps 3.566e-07 -> 4.274e-05  xi[10,50,90]=[1e-08,2.23e-08,1.04]  kern_rej=0.330  step_norm_med=1.06e-12
+  tune3     : eps 4.274e-05 -> 4.274e-05  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  sampling  : eps 4.274e-05 -> 4.274e-05  xi[10,50,90]=[-1,-1,-1]  kern_rej=1.000  step_norm_med=0
+  MM window step= 514: eig [8.01e-12, 6.51e-10]  cond=81.4  n_neg=0
+  MM window step= 744: eig [5.75e-27, 6.99e-10]  cond=1.22e+17  n_neg=0
+  MM window step=1203: eig [-2.71e-25, 6.98e-10]  cond=1.82e+17  n_neg=6
+
+[repro] all outputs written to diagnosis_2026-06/fix1/diag_sweep/n25_ds1e-10_hp/nmax25_nb2000_nr500_nc8_ds1e-10_seed0_x64_20260615_112654
+=== repro_vela n25_ds1e-10_hp: exit 0 ===
+>>>>>>>>>> END   n25_ds1e-10_hp exit=0 2026-06-15T11:30:53-07:00
+>>>>>>>>>> START n10_ds1e-8_hp 2026-06-15T11:30:53-07:00
+=== repro_vela n10_ds1e-8_hp jobid=54496479 host=login31 date=2026-06-15T11:30:54-07:00 ===
+=== args: --n-max 10 --diag-scale 1e-8 --num-burnin-steps 2000 --num-results 500 --n-chains 8 --seed 0 --bootstrap-map-samples 16 --high-precision --out-dir diagnosis_2026-06/fix1/diag_sweep/n10_ds1e-8_hp ===
+=== output log: /global/u1/l/linusu/GIGALens-Code/experiments/mclmc/debugging/diagnosis_2026-06/fix1/diag_sweep/n10_ds1e-8_hp.log ===
+=== acquiring GPU lock /global/homes/l/linusu/.claude/mclmc_gpu.lock ===
+[repro] float64 enabled
+[repro] JAX 0.10.0.dev20260615 devices: [CudaDevice(id=0)]
+[repro] output dir: diagnosis_2026-06/fix1/diag_sweep/n10_ds1e-8_hp/nmax10_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113105
+[repro] system loaded: vela01_cam12_rep03
+[repro] model built: n_max=10  high_precision=True
+[repro] running VelaBootstrapQzStage (map_steps=200, map_samples=16, diag_scale=1e-08)
+Final Chi-squared: 1.63136
+[repro] qz obtained in 20.2s; dim=17
+[repro] qz mean[:4]: [-0.0337585  -0.0025613   0.44475716 -0.88432705]
+[repro] starting MCLMC: n_chains=8, num_burnin=2000, num_results=500, seed=0
+Sampling took 62.71887950017117 s
+[repro] MCLMC done in 75.8s
+[repro] saving to diagnosis_2026-06/fix1/diag_sweep/n10_ds1e-8_hp/nmax10_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113105
+[repro]   saved position: shape=(8, 2500, 17)
+[repro]   saved step_size: shape=(8, 2500)
+[repro]   saved L: shape=(8, 2500)
+[repro]   saved nonan: shape=(8, 2500)
+[repro]   saved xi: shape=(8, 2500)
+[repro]   saved energy_change_raw: shape=(8, 2500)
+[repro]   saved kernel_nonan: shape=(8, 2500)
+[repro]   saved step_norm: shape=(8, 2500)
+[repro]   saved inverse_mass_matrix: shape=(8, 2500, 17, 17)
+
+=== SUMMARY ===
+  tune1     : eps 1.375 -> 7.538  xi[10,50,90]=[0.00347,0.0585,0.201]  kern_rej=0.000  step_norm_med=0.00042
+  tune2     : eps 7.554 -> 1.929  xi[10,50,90]=[0.000509,0.0395,1.57]  kern_rej=0.000  step_norm_med=0.0053
+  tune3     : eps 1.929 -> 1.929  xi[10,50,90]=[-1,-1,-1]  kern_rej=0.000  step_norm_med=0.00997
+  sampling  : eps 1.929 -> 1.929  xi[10,50,90]=[-1,-1,-1]  kern_rej=0.000  step_norm_med=0.0102
+  MM window step= 514: eig [1.64e-08, 0.000828]  cond=5.06e+04  n_neg=0
+  MM window step= 744: eig [2.3e-09, 0.011]  cond=4.76e+06  n_neg=0
+  MM window step=1203: eig [9.24e-09, 0.000547]  cond=5.92e+04  n_neg=0
+
+[repro] all outputs written to diagnosis_2026-06/fix1/diag_sweep/n10_ds1e-8_hp/nmax10_nb2000_nr500_nc8_ds1e-08_seed0_x64_20260615_113105
+=== repro_vela n10_ds1e-8_hp: exit 0 ===
+>>>>>>>>>> END   n10_ds1e-8_hp exit=0 2026-06-15T11:32:50-07:00
+ALL SWEEP RUNS DONE 2026-06-15T11:32:50-07:00
