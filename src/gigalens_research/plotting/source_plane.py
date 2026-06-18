@@ -63,13 +63,26 @@ def plot_source_plane(
     log_vmin: float = 1e-2,
     with_caustics: bool = True,
     caustic_color: str = "green",
+    with_image_border: bool = True,
+    border_color: str = "white",
 ) -> None:
     """Render the intrinsic source brightness on a fine source-plane grid.
 
     Delegates to :meth:`Posterior.source_plane` for the image data and
     :func:`plot_image` for the styling. When ``with_caustics=True`` (default),
     overlays the caustic curves — which live in the source plane — using
-    :func:`plot_caustics`.
+    :func:`plot_caustics`. When ``with_image_border=True`` (default), also
+    overlays the cutout's image-plane field-of-view boundary ray-traced into the
+    source plane (via :func:`plot_image_border`); source flux outside that curve
+    falls off the edge of the observed cutout and is not constrained by it.
+
+    Framing note: unless ``center`` is given, :meth:`Posterior.source_plane`
+    centers this panel's field of view on the first source component's
+    ``(center_x, center_y)``, whereas the ``Observed`` panel is centered on the
+    data frame (0, 0). The two panels therefore share one absolute arcsec
+    coordinate system but use *different windows*, so the source appears shifted
+    relative to the cutout even though every overlay here is internally
+    registered. Pass ``center=(0.0, 0.0)`` to align the windows.
     """
     img, extent = posterior.source_plane(
         point=point, grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center,
@@ -84,6 +97,34 @@ def plot_source_plane(
     ax.set_xlabel("x [arcsec]"); ax.set_ylabel("y [arcsec]")
     if with_caustics:
         plot_caustics(ax, posterior, point=point, color=caustic_color)
+    if with_image_border:
+        plot_image_border(ax, posterior, point=point, color=border_color)
+
+
+def _lens_model_and_kwargs(
+    posterior,
+    *,
+    point: str = "median",
+    lens_model_list: Optional[List[str]] = None,
+):
+    """Build a lenstronomy ``LensModel`` and its ``kwargs_lens`` from the
+    posterior at ``point``.
+
+    The lens kwargs are pulled straight from the gigalens mass parameters
+    (``x[0]``) and squeezed to plain floats, so the resulting model lives in the
+    same arcsec coordinate system as the gigalens simulator — which is why its
+    caustics/curves overlay directly on the source-plane and image-plane axes.
+    """
+    from lenstronomy.LensModel.lens_model import LensModel
+
+    if lens_model_list is None:
+        lens_model_list = _default_lens_model_list(posterior.ctx.phys_model)
+    lens_model = LensModel(lens_model_list=lens_model_list)
+    x = posterior.z_to_x(posterior._point_z(point))
+    kwargs_lens = jax.tree_util.tree_map(
+        lambda a: float(np.squeeze(np.asarray(a))), x[0],
+    )
+    return lens_model, kwargs_lens
 
 
 def _critical_and_caustic_curves(
@@ -102,23 +143,11 @@ def _critical_and_caustic_curves(
     or overlay yourself.
     """
     # Local imports: lenstronomy is heavy and only needed for this view.
-    import lenstronomy.Util.simulation_util as sim_util
-    from lenstronomy.Data.imaging_data import ImageData
-    from lenstronomy.LensModel.lens_model import LensModel
     from lenstronomy.LensModel.lens_model_extensions import LensModelExtensions
 
     sc = posterior.ctx.sim_config
-    kwargs_data = sim_util.data_configure_simple(
-        sc.num_pix * supersample, sc.delta_pix / supersample,
-    )
-    coords = ImageData(**kwargs_data)
-    if lens_model_list is None:
-        lens_model_list = _default_lens_model_list(posterior.ctx.phys_model)
-    lens_model = LensModel(lens_model_list=lens_model_list)
-
-    x = posterior.z_to_x(posterior._point_z(point))
-    kwargs_lens = jax.tree_util.tree_map(
-        lambda a: float(np.squeeze(np.asarray(a))), x[0],
+    lens_model, kwargs_lens = _lens_model_and_kwargs(
+        posterior, point=point, lens_model_list=lens_model_list,
     )
 
     ext = LensModelExtensions(lens_model)
@@ -132,6 +161,68 @@ def _critical_and_caustic_curves(
     critical = list(zip(crit_x, crit_y))
     caustics = list(zip(caust_x, caust_y))
     return critical, caustics
+
+
+def _image_border_in_source_plane(
+    posterior,
+    *,
+    point: str = "median",
+    lens_model_list: Optional[List[str]] = None,
+    n_per_side: int = 250,
+):
+    """Ray-trace the cutout's image-plane border into the source plane.
+
+    Walks the rectangular field-of-view boundary of the data (the same window
+    the ``Observed`` panel spans, ``[-N delta/2, +N delta/2]`` on each axis) and
+    maps each point through the lens equation ``beta = theta - alpha(theta)``
+    with :meth:`LensModel.ray_shooting`. The returned closed polyline bounds the
+    region of the source plane that has at least one image inside the cutout —
+    i.e. the part of the source actually probed by the observed image. Source
+    flux outside this curve is lensed entirely off the edge of the cutout.
+
+    Returns ``(beta_x, beta_y)`` arrays tracing the mapped border (closed).
+    """
+    lens_model, kwargs_lens = _lens_model_and_kwargs(
+        posterior, point=point, lens_model_list=lens_model_list,
+    )
+    sc = posterior.ctx.sim_config
+    half = sc.num_pix * sc.delta_pix / 2.0
+
+    # Perimeter of the image-plane FOV, traversed counter-clockwise and closed.
+    t = np.linspace(-half, half, n_per_side)
+    ones = np.ones_like(t)
+    edge_x = np.concatenate([t, half * ones, t[::-1], -half * ones, [-half]])
+    edge_y = np.concatenate([-half * ones, t, half * ones, t[::-1], [-half]])
+
+    beta_x, beta_y = lens_model.ray_shooting(edge_x, edge_y, kwargs_lens)
+    return np.asarray(beta_x), np.asarray(beta_y)
+
+
+def plot_image_border(
+    ax: Axes,
+    posterior,
+    *,
+    point: str = "median",
+    lens_model_list: Optional[List[str]] = None,
+    color: str = "white",
+    linewidth: float = 1.2,
+    linestyle: str = "--",
+    n_per_side: int = 250,
+    label: Optional[str] = None,
+) -> None:
+    """Overlay the ray-traced cutout border on a source-plane axes.
+
+    The cutout's image-plane field of view is mapped to the source plane via
+    :func:`_image_border_in_source_plane`; the resulting curve marks which part
+    of the source plane is visible in the observed image. Natural companion to
+    :func:`plot_caustics` on a :func:`plot_source_plane` axes.
+    """
+    bx, by = _image_border_in_source_plane(
+        posterior, point=point, lens_model_list=lens_model_list,
+        n_per_side=n_per_side,
+    )
+    ax.plot(bx, by, color=color, linewidth=linewidth, linestyle=linestyle,
+            label=label)
 
 
 def plot_caustics(

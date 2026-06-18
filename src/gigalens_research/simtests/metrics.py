@@ -119,6 +119,30 @@ def percent_error(posterior: Any, system: Any) -> Dict[str, float]:
         return {}
 
 
+@register_metric("median_reduced_chisq")
+def median_reduced_chisq(posterior: Any, system: Any) -> float:
+    """Reduced chi-squared ``χ²/ν`` of the median posterior sample.
+
+    Identical to the value shown in ``PosteriorReport.image_panel``: simulate the
+    forward model at the median parameters, form the normalized residual against
+    the prob_model's per-pixel error map, sum the squares, and divide by
+    ``ν = N_pix − N_params``. A well-specified, converged fit sits near 1.
+    """
+    if not hasattr(posterior, "simulate"):
+        return float("nan")
+    try:
+        observed = np.asarray(posterior.ctx.prob_model.observed_image)
+        predicted = np.asarray(posterior.simulate(point="median"))
+        err_map = np.asarray(posterior.err_map_at(predicted))
+        residual = (observed - predicted) / err_map
+        chisq = float(np.sum(residual ** 2))
+        ndof = max(observed.size - posterior.n_params, 1)
+        return chisq / ndof
+    except Exception as exc:
+        warnings.warn(f"[metrics.median_reduced_chisq] failed: {exc}", stacklevel=2)
+        return float("nan")
+
+
 # ---------------------------------------------------------------------------
 # Helpers for run.py (not registered as metrics but imported from this module)
 # ---------------------------------------------------------------------------

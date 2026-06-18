@@ -86,6 +86,7 @@ def vela_inference_prior():
             beta=tfd.LogNormal(jnp.log(0.7), 0.4),
             e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
             e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+            n_sersic=tfd.Uniform(0.3, 8.0),
             center_x=tfd.Normal(0.0, 0.5),
             center_y=tfd.Normal(0.0, 0.5),
         )),
@@ -98,11 +99,11 @@ def vela_inference_prior():
 # ---------------------------------------------------------------------------
 
 
-@register_inference_builder("epl_shear_sersic_elliptical_shapelets")
-def build_epl_shear_sersic_elliptical_shapelets(system: Any, **kwargs) -> Any:
+@register_inference_builder("epl_shear_sersic_elliptical_sersiclets")
+def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
     """Build the Vela BackwardProbModel + ModellingSequence.
 
-    Uses ``EllipticalShapelets(n_max=n_max, use_lstsq=True)`` for the source and
+    Uses ``EllipticalSersiclets(n_max=n_max, use_lstsq=True)`` for the source and
     ``BackwardProbModel`` (fixed error map from the observed image).
 
     Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
@@ -111,20 +112,20 @@ def build_epl_shear_sersic_elliptical_shapelets(system: Any, **kwargs) -> Any:
     from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic#, shapelets
-    from gigalens_research.simulations.elliptical_shapelets import EllipticalShapelets
+    from gigalens_research.simulations.sersiclets import EllipticalSersiclets
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.model import PhysicalModel
 
     if "n_max" not in kwargs:
         raise TypeError(
-            "build_epl_shear_sersic_elliptical_shapelets: 'n_max' is required "
+            "build_epl_shear_sersic_elliptical_sersiclets: 'n_max' is required "
             "(no default; it sets the source model complexity)."
         )
     n_max = int(kwargs["n_max"])
 
     prior = vela_inference_prior()
 
-    src_model = EllipticalShapelets(n_max=n_max, use_lstsq=True)
+    src_model = EllipticalSersiclets(n_max=n_max, use_lstsq=True)
 
     phys_model = PhysicalModel(
         [epl.EPL(50), shear.Shear()],

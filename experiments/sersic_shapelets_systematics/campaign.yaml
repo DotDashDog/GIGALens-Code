@@ -3,7 +3,8 @@ seed: 0
 output_dir: ~/GIGALens-Code/simtests_results/sersic_shapelets_systematics_v1
 
 # SersicShapelets source model lives in a plugin module (registers the inference
-# builder, pipeline builder, and bootstrap stage on import).
+# builder and pipeline builder on import). The bootstrap stage is the shared,
+# profile-agnostic PartialTruthBootstrapQzStage from simtests.pipelines.
 plugins:
   - gigalens_research.simtests.experiments.vela_sersic_shapelets
 

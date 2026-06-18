@@ -1,0 +1,68 @@
+name: vela_source_shapelets_v1
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/vela_source_systematics/shapelets
+
+# Source model: ShapeletsFast (circular shapelet expansion).
+plugins:
+  - gigalens_research.simtests.experiments.vela_shapelets
+
+dataset:
+  # Adapts the existing vela_sim_systems directories in-place. Identical across
+  # all three suites -> content-addressed caching generates the systems once and
+  # reuses them. EDIT vela_ids / reps to change which systems are in the suite.
+  generator: vela_existing
+  vela_ids: ["01", "03", "04", "07", "08", "10", "15", "21", "22", "23", "25", "26"]
+  reps: 5
+  cam: "12"
+  filter_tag: "a0.500_f814w"
+  system_dir_root: ~/GIGALens-Code/data/vela_sim_systems
+  source_dir_root: ~/GIGALens-Code/data/vela_sources
+  # --- Instrument / sampling geometry (must match how the systems were simulated)
+  num_pix: 200
+  supersample: 1
+  # --- Noise model (BackwardProbModel error map; must match lens_vela_system.ipynb)
+  noise_kind: forward
+  background_rms: 0.002
+  exp_time: 2000
+  # --- Numerics: gigalens default (float64). Persisted to meta.json; requires
+  # jax_enable_x64, set automatically on importing the simtests package.
+  likelihood_precision: float64
+
+inference:
+  builder: epl_shear_sersic_shapelets   # source = ShapeletsFast(n_max, use_lstsq=True)
+  pipeline: map_bootstrap_mclmc          # profile-agnostic: fixed-lens MAP -> MCLMC@truth
+  pipeline_kwargs:
+    # --- Bootstrap (PartialTruthBootstrapQzStage): recover source geometry at fixed truth lens
+    bootstrap_map_steps: 200
+    bootstrap_map_n_samples: 50
+    bootstrap_diag_scale: 1.0e-6   # variance of the qz the chains start from (init tightness)
+    bootstrap_pin_eps: 1.0e-6      # half-width of the Uniform pinning truth-constrained params
+    # --- MCLMC sampler
+    n_chains: 8
+    num_burnin_steps: 4000
+    num_results: 4000
+    desired_energy_variance: 5.0e-4
+    frac_tune1: 0.2
+    frac_tune2: 0.6
+    frac_tune3: 0.2
+    mclmc_debug: true
+
+# Sweep over shapelet order n_max. EDIT these values.
+# (n_max=50 to be added once verified to function.)
+sweep:
+  axis: n_max
+  values: [5, 10, 15, 20, 30, 40]
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - mass_zscores
+  - all_zscores
+  - percent_error
+  - median_reduced_chisq
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

@@ -26,7 +26,7 @@ inference:
   pipeline: map_bootstrap_mclmc
   pipeline_kwargs:
     bootstrap_map_steps: 200
-    bootstrap_map_n_samples: 100
+    bootstrap_map_n_samples: 50
     n_chains: 8
     num_burnin_steps: 4000
     num_results: 4000

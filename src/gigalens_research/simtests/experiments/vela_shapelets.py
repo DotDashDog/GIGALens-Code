@@ -92,7 +92,7 @@ def vela_inference_prior(use_shapelets: bool = True):
     else:
         source_prior = tfd.JointDistributionSequential([
             tfd.JointDistributionNamed(dict(
-                R_sersic=tfd.LogNormal(jnp.log(0.25), 0.25),
+                R_sersic=tfd.LogNormal(jnp.log(0.25), 0.4),
                 n_sersic=tfd.Uniform(0.5, 8.0),
                 e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
                 e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
@@ -115,7 +115,8 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     Uses ``ShapeletsFast(n_max=n_max, use_lstsq=True)`` for the source and
     ``BackwardProbModel`` (fixed error map from the observed image).
 
-    Kwargs: ``n_max`` (default 10), ``use_shapelets`` (default True).
+    Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
+    the source model complexity), ``use_shapelets`` (default True).
     """
     import jax.numpy as jnp
     from gigalens.jax.inference import ModellingSequence
@@ -124,8 +125,13 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.model import PhysicalModel
 
-    n_max = int(kwargs.get("n_max", 10))
     use_shapelets = bool(kwargs.get("use_shapelets", True))
+    if use_shapelets and "n_max" not in kwargs:
+        raise TypeError(
+            "build_epl_shear_sersic_shapelets: 'n_max' is required when "
+            "use_shapelets=True (no default; it sets the source model complexity)."
+        )
+    n_max = int(kwargs["n_max"]) if use_shapelets else None  # physics-default-ok: n_max unused when use_shapelets=False; required-check above
 
     prior = vela_inference_prior(use_shapelets=use_shapelets)
 
@@ -182,10 +188,16 @@ def generate_vela_existing(spec: Any, dataset_dir: str, seed: int) -> None:
     filter_tag = str(extra.get("filter_tag", _DEFAULT_FILTER_TAG))
     sys_root = os.path.expanduser(str(extra.get("system_dir_root", _DEFAULT_SYSTEM_DIR_ROOT)))
     src_root = os.path.expanduser(str(extra.get("source_dir_root", _DEFAULT_SOURCE_DIR_ROOT)))
-    num_pix = int(extra.get("num_pix", 200))
-    supersample = int(extra.get("supersample", 1))
-    background_rms = float(extra.get("background_rms", 0.002))
-    exp_time = float(extra.get("exp_time", 2000.0))
+    num_pix = int(extra.get("num_pix", 200))  # physics-default-ok: documented vela_existing generation default, persisted to meta.json
+    supersample = int(extra.get("supersample", 1))  # physics-default-ok: documented vela_existing generation default, persisted to meta.json
+    background_rms = float(extra.get("background_rms", 0.002))  # physics-default-ok: documented vela_existing generation default, persisted to meta.json
+    exp_time = float(extra.get("exp_time", 2000.0))  # physics-default-ok: documented vela_existing generation default, persisted to meta.json
+    # Numerics: gigalens defaults to float64 going forward (see docs/project-standards.md).
+    # Persisted to meta.json so run/plot honour it; requires jax_enable_x64 (set by the
+    # simtests package import). Override in the dataset YAML if you need float32/mixed.
+    likelihood_precision = extra.get("likelihood_precision", "float64")
+    conv_precision = extra.get("conv_precision", None)
+    high_precision_likelihood = bool(extra.get("high_precision_likelihood", False))
 
     system_ids = []
     n_adapted = 0
@@ -216,6 +228,9 @@ def generate_vela_existing(spec: Any, dataset_dir: str, seed: int) -> None:
                     supersample=supersample,
                     background_rms=background_rms,
                     exp_time=exp_time,
+                    likelihood_precision=likelihood_precision,
+                    conv_precision=conv_precision,
+                    high_precision_likelihood=high_precision_likelihood,
                 )
                 sys.save(dataset_dir)
                 system_ids.append(system_id)

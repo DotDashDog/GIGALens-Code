@@ -37,6 +37,7 @@ from .source_plane import (
     plot_caustics,
     plot_caustics_critical,
     plot_critical_curves,
+    plot_image_border,
     plot_source_plane,
 )
 from .truth import plot_source_comparison, plot_z_scores
@@ -58,6 +59,7 @@ __all__ = [
     "plot_critical_curves",
     "plot_corner_overlay",
     "plot_image",
+    "plot_image_border",
     "plot_loss_history",
     "plot_mclmc_diagnostics",
     "plot_residual_histogram",

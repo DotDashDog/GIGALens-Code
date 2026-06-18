@@ -257,6 +257,152 @@ def _hash_sim_config(sc) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Model card: an explicit, loud summary of the *effective* forward model.
+#
+# Exists to make model misspecification visible. The fields that have
+# historically been set wrong *silently* — PSF, noise model, pixel grid,
+# likelihood precision, and whether the linear (lstsq) amplitudes carry any
+# physical regularization — are reported explicitly, and anything that looks
+# like a silent degradation (e.g. no PSF on data that are normally convolved)
+# is surfaced in ``warnings``. A flexible model can hide misspecification
+# behind a good chi^2; this card does not.
+# ---------------------------------------------------------------------------
+
+
+def _profile_depth(p) -> int:
+    return int(getattr(p, "depth", getattr(p, "n_layers", 1)))
+
+
+def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
+    """Return a JSON-safe summary of the effective forward model for ``ctx``.
+
+    Written to ``<out_dir>/model_card.json`` by :meth:`Pipeline.run` and printed
+    via :func:`format_model_card`. Use directly on any context/posterior:
+    ``print(format_model_card(model_card(ctx)))``.
+    """
+    pm, sc, phys = ctx.prob_model, ctx.sim_config, ctx.phys_model
+    warns: List[str] = []
+
+    # --- PSF ---
+    kernel = getattr(sc, "kernel", None)
+    if kernel is None:
+        psf: Dict[str, Any] = {"present": False}
+        warns.append(
+            "NO PSF: sim_config.kernel is None — the forward model applies no PSF "
+            "convolution. If the data are PSF-convolved (they usually are), this "
+            "model is MISSPECIFIED. Check the asset path / loader."
+        )
+    else:
+        k = np.asarray(kernel)
+        psf = {
+            "present": True,
+            "shape": list(k.shape),
+            "sum": float(k.sum()),
+            "sha1": hashlib.sha1(
+                np.ascontiguousarray(k, dtype=np.float64).tobytes()
+            ).hexdigest()[:12],
+        }
+        if not np.isclose(float(k.sum()), 1.0, atol=1e-3):
+            warns.append(
+                f"PSF kernel does not sum to 1 (sum={float(k.sum()):.4f}); check normalization."
+            )
+
+    # --- noise model ---
+    noise: Dict[str, Any] = {"prob_model": type(pm).__name__}
+    if hasattr(pm, "err_map"):
+        em = np.asarray(pm.err_map)
+        noise.update(kind="fixed_err_map (backward)", err_map_shape=list(em.shape),
+                     err_map_min=float(em.min()), err_map_median=float(np.median(em)))
+    elif hasattr(pm, "background_rms") and hasattr(pm, "exp_time"):
+        noise.update(kind="forward (bkg_rms + poisson)",
+                     background_rms=float(np.asarray(pm.background_rms)),
+                     exp_time=float(np.asarray(pm.exp_time)))
+    else:
+        noise["kind"] = "unknown"
+        warns.append(
+            "Noise model unrecognized: prob_model exposes neither err_map nor "
+            "(background_rms, exp_time)."
+        )
+
+    # --- grid / precision (read directly; these are required fields) ---
+    grid = {"num_pix": sc.num_pix, "delta_pix": sc.delta_pix, "supersample": sc.supersample}
+    prec = getattr(sc, "likelihood_precision", None)  # physics-default-ok: reporting only
+
+    def _prof(p) -> Dict[str, Any]:
+        scalars = {k: v for k, v in vars(p).items()
+                   if not k.startswith("_") and isinstance(v, (int, float, str, bool))}
+        return {"type": type(p).__name__, **scalars}
+
+    profiles = {
+        "lens_mass": [_prof(p) for p in phys.lenses],
+        "lens_light": [_prof(p) for p in phys.lens_light],
+        "source_light": [_prof(p) for p in phys.source_light],
+    }
+
+    # --- linear amplitudes / regularization ---
+    use_lstsq = any(getattr(p, "use_lstsq", False)  # physics-default-ok: reporting only
+                    for p in list(phys.source_light) + list(phys.lens_light))
+    n_basis = (sum(_profile_depth(p) for p in phys.lens_light)
+               + sum(_profile_depth(p) for p in phys.source_light))
+    amps = {
+        "solved_by_lstsq": bool(use_lstsq),
+        "n_basis": int(n_basis),
+        # gigalens' lstsq adds only a tiny numerical jitter to the Gram matrix,
+        # not a physical (e.g. ridge/curvature) prior on the amplitudes.
+        "physical_regularization": None,
+    }
+    if use_lstsq and n_basis >= 50:
+        warns.append(
+            f"{n_basis} linear amplitudes solved by lstsq with NO physical regularization "
+            "(numerical jitter only). High-order bases can fit noise or place flux in the "
+            "lensing null space (unphysical source structure)."
+        )
+
+    return {
+        "psf": psf,
+        "noise": noise,
+        "grid": grid,
+        "likelihood_precision": prec,
+        "profiles": profiles,
+        "linear_amplitudes": amps,
+        "warnings": warns,
+    }
+
+
+def format_model_card(card: Dict[str, Any]) -> str:
+    """Human-readable one-screen summary of :func:`model_card`."""
+    bar = "=" * 72
+    lines = [bar, "EFFECTIVE FORWARD MODEL (model card)", bar]
+    psf = card["psf"]
+    if psf.get("present"):
+        lines.append(f"  PSF        : present  shape={psf['shape']} "
+                     f"sum={psf['sum']:.4f} sha1={psf['sha1']}")
+    else:
+        lines.append("  PSF        : ** ABSENT — NO PSF CONVOLUTION **")
+    n = card["noise"]
+    lines.append(f"  Noise      : {n.get('kind')}  ({n.get('prob_model')})")
+    g = card["grid"]
+    lines.append(f"  Grid       : num_pix={g['num_pix']} delta_pix={g['delta_pix']} "
+                 f"supersample={g['supersample']}")
+    lines.append(f"  Precision  : {card['likelihood_precision']}")
+    a = card["linear_amplitudes"]
+    lines.append(f"  Amplitudes : lstsq={a['solved_by_lstsq']} n_basis={a['n_basis']} "
+                 f"physical_reg={a['physical_regularization']}")
+    def _fmt(p):
+        extra = f"(n_max={p['n_max']})" if "n_max" in p else ""
+        return p["type"] + extra
+    lines.append("  Source     : " + ", ".join(_fmt(p) for p in card["profiles"]["source_light"]))
+    lines.append("  Lens mass  : " + ", ".join(p["type"] for p in card["profiles"]["lens_mass"]))
+    lines.append("  Lens light : " + ", ".join(p["type"] for p in card["profiles"]["lens_light"]))
+    if card["warnings"]:
+        lines.append("-" * 72)
+        for w in card["warnings"]:
+            lines.append("  [!] " + w)
+    lines.append(bar)
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # StageResult: the only thing a stage's ``run`` should return
 # ---------------------------------------------------------------------------
 
@@ -671,6 +817,16 @@ class Pipeline:
         ctx_hash = self.ctx.hash()
         run_log: List[Dict[str, Any]] = []
         self.results = {}
+
+        # Echo the effective forward model up front (before any compute), and
+        # persist it, so a silent misspecification (e.g. a missing PSF) is
+        # visible immediately rather than hidden behind a good chi^2.
+        if jax.process_index() == 0:
+            _card = model_card(self.ctx)
+            print(format_model_card(_card))
+            if out_dir is not None:
+                _write_manifest(os.path.join(out_dir, "model_card.json"),
+                                _make_json_safe(_card))
 
         for stage in self.stages:
             stage_dir = os.path.join(out_dir, stage.instance_name) if out_dir else None

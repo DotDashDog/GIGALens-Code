@@ -29,6 +29,16 @@ See ``experiments/hundred_systems_GL2/campaign.yaml`` and
 ``experiments/shapelets_systematics/campaign.yaml`` for reference campaigns.
 """
 
+# gigalens defaults to float64 going forward (see docs/project-standards.md).
+# float64/mixed likelihood precision requires jax_enable_x64, which JAX reads from
+# this env var at import time. setdefault() so an explicit JAX_ENABLE_X64=0 still
+# wins; importing the framework before jax (the CLI / Slurm path always does) opts
+# the process into x64. Notebook/REPL users who import jax first should set
+# jax.config.update("jax_enable_x64", True) themselves — the gigalens precision
+# guard raises a clear error otherwise.
+import os as _os
+_os.environ.setdefault("JAX_ENABLE_X64", "1")
+
 from .config import CampaignSpec, DatasetSpec, ExecutionSpec, InferenceSpec
 from .registry import (
     get_generator,

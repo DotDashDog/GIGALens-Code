@@ -125,6 +125,21 @@ class Posterior(ABC):
         """
         x = self.z_to_x(self._point_z(point))
         sim = self._lens_sim(bs=1)
+        # Cast params to the simulator's working dtype. Under jax_enable_x64 a
+        # float64 ``z`` (e.g. an MCLMC/bootstrap qz built at x64) yields float64
+        # model arrays, which clash with the float32 PSF kernel inside
+        # ``lax.conv`` ("requires arguments to have the same dtypes"). The PSF
+        # kernel defines the convolution dtype; fall back to the observed image.
+        kernel = getattr(sim, "flat_kernel", None)
+        target_dtype = (
+            kernel.dtype if kernel is not None
+            else jnp.asarray(self.ctx.prob_model.observed_image).dtype
+        )
+        x = jax.tree_util.tree_map(
+            lambda a: a.astype(target_dtype)
+            if jnp.issubdtype(jnp.asarray(a).dtype, jnp.floating) else a,
+            x,
+        )
         if self.is_backward:
             obs = self.ctx.prob_model.observed_image
             err_map = self.ctx.prob_model.err_map

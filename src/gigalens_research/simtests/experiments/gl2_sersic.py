@@ -204,12 +204,12 @@ def generate_parametric_gl2(spec: Any, dataset_dir: str, seed: int) -> None:
     extra = dict(spec.extra)
     n_systems = int(extra.get("n_systems", 100))
     gen_chunk = int(extra.get("gen_chunk", 8))
-    background_rms = float(extra.get("background_rms", 0.2))
-    exp_time = float(extra.get("exp_time", 100.0))
-    delta_pix = float(extra.get("delta_pix", 0.065))
-    num_pix = int(extra.get("num_pix", 80))
-    supersample = int(extra.get("supersample", 2))
-    psf_srcdir = extra.get("psf_srcdir", None)
+    background_rms = float(extra.get("background_rms", 0.2))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    exp_time = float(extra.get("exp_time", 100.0))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    delta_pix = float(extra.get("delta_pix", 0.065))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    num_pix = int(extra.get("num_pix", 80))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    supersample = int(extra.get("supersample", 2))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    psf_srcdir = extra.get("psf_srcdir", None)  # physics-default-ok: defaults to bundled gigalens PSF; _gl2_psf raises if missing
 
     psf = _gl2_psf(psf_srcdir)
     sim_config = SimulatorConfig(
@@ -260,12 +260,12 @@ def generate_gl2_existing(spec: Any, dataset_dir: str, seed: int) -> None:
     extra = dict(spec.extra)
     npz_path = os.path.expanduser(str(extra["npz_path"]))
     yaml_path = extra.get("yaml_path")
-    delta_pix = float(extra.get("delta_pix", 0.065))
-    num_pix = int(extra.get("num_pix", 80))
-    supersample = int(extra.get("supersample", 2))
-    background_rms = float(extra.get("background_rms", 0.2))
-    exp_time = float(extra.get("exp_time", 100.0))
-    psf_srcdir = extra.get("psf_srcdir", None)
+    delta_pix = float(extra.get("delta_pix", 0.065))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    num_pix = int(extra.get("num_pix", 80))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    supersample = int(extra.get("supersample", 2))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    background_rms = float(extra.get("background_rms", 0.2))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    exp_time = float(extra.get("exp_time", 100.0))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
+    psf_srcdir = extra.get("psf_srcdir", None)  # physics-default-ok: defaults to bundled gigalens PSF; _gl2_psf raises if missing
 
     psf = _gl2_psf(psf_srcdir)
 

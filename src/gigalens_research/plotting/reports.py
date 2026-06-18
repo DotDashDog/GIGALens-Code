@@ -101,6 +101,21 @@ class PosteriorReport:
 
     # -- image-plane panel ---------------------------------------------------
 
+    def _finalize(self, fig: Figure) -> Figure:
+        """Lay out ``fig`` with the prefix as a single figure-level title.
+
+        The prefix (e.g. a system/sweep id) goes in one ``suptitle`` instead of
+        being repeated into every subplot title — repeating a long prefix across
+        a 4-up row makes the titles (and the χ²) overlap and clip. ``rect``
+        leaves headroom so the suptitle never overlaps the top row of axes.
+        """
+        if self.prefix and self.prefix.strip():
+            fig.suptitle(self.prefix.strip(), fontsize=11)
+            fig.tight_layout(rect=(0, 0, 1, 0.94))
+        else:
+            fig.tight_layout()
+        return fig
+
     def image_panel(
         self,
         observed: Optional[np.ndarray] = None,
@@ -138,17 +153,16 @@ class PosteriorReport:
         plot_image(axs[0], observed, extent=extent, title="Observed",
                    scale=scale, linear_width=linear_width, log_vmin=log_vmin)
         plot_image(axs[1], predicted, extent=extent,
-                   title=f"{self.prefix}Model ({point}, χ²/ν={red_chisq:.3f})",
+                   title=f"Model ({point}, χ²/ν={red_chisq:.3f})",
                    scale=scale, linear_width=linear_width, log_vmin=log_vmin)
         plot_image(axs[2], residual, extent=extent,
-                   title=f"{self.prefix}Normalized residual", residual=True)
+                   title="Normalized residual", residual=True)
         plot_residual_histogram(axs[3], residual,
-                                title=f"{self.prefix}Gaussianity test")
+                                title="Gaussianity test")
         if with_caustics:
             plot_caustics_critical(axs[0], self.posterior, point=point)
             plot_caustics_critical(axs[1], self.posterior, point=point)
-        fig.tight_layout()
-        return fig
+        return self._finalize(fig)
 
     # -- convergence panel ---------------------------------------------------
 
@@ -164,8 +178,7 @@ class PosteriorReport:
         plot_chain_traces(axs[0], self.posterior, param=trace_param)
         plot_running_rhat(axs[1], self.posterior, aggregate="max")
         plot_running_ess(axs[2], self.posterior, aggregate="min")
-        fig.tight_layout()
-        return fig
+        return self._finalize(fig)
 
     # -- source-plane panel --------------------------------------------------
 
@@ -190,8 +203,7 @@ class PosteriorReport:
             fig, ax = plt.subplots(1, 1, figsize=(5, 4))
             plot_source_plane(ax, self.posterior, point=point,
                               grid_pix=grid_pix, fov_arcsec=fov_arcsec)
-            fig.tight_layout()
-            return fig
+            return self._finalize(fig)
         if observed is None:
             observed = np.asarray(self.posterior.ctx.prob_model.observed_image)
 
@@ -205,8 +217,7 @@ class PosteriorReport:
                    scale="asinh")
         if with_caustics_on_image:
             plot_caustics_critical(axs[1], self.posterior, point=point)
-        fig.tight_layout()
-        return fig
+        return self._finalize(fig)
 
     # -- corner --------------------------------------------------------------
 
@@ -257,8 +268,7 @@ class PosteriorReport:
         fig, ax = plt.subplots(figsize=(max(6, 0.45 * self.posterior.n_params), 3.5))
         plot_z_scores(ax, self.posterior, truth_x,
                       group=group, threshold=threshold, sort_by_abs=sort_by_abs)
-        fig.tight_layout()
-        return fig
+        return self._finalize(fig)
 
     def source_comparison_panel(
         self,
@@ -314,8 +324,7 @@ class PosteriorReport:
             log_vmin=log_vmin,
             grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center,
         )
-        fig.tight_layout()
-        return fig
+        return self._finalize(fig)
 
     # -- full report --------------------------------------------------------
 

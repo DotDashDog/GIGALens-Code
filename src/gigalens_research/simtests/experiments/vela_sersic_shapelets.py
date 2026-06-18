@@ -62,8 +62,8 @@ def _source_priors(tfd_mod: Any, jnp: Any) -> Dict[str, Any]:
     shapelets to model the extended envelope at low ``n_max``).
     """
     return dict(
-        R_sersic=tfd_mod.LogNormal(jnp.log(0.1), 0.2),   # <-- TUNE: compact central Sersic
-        n_sersic=tfd_mod.Uniform(3.0, 10.0),
+        R_sersic=tfd_mod.LogNormal(jnp.log(0.1), 0.3),   # <-- TUNE: compact central Sersic
+        n_sersic=tfd_mod.Uniform(1.0, 10.0),
         e1=tfd_mod.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
         e2=tfd_mod.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
         beta=tfd_mod.LogNormal(jnp.log(0.7), 0.4),
@@ -129,7 +129,7 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
     """Build the Vela BackwardProbModel + ModellingSequence with a
     ``SersicShapelets(n_max, use_lstsq=True)`` source.
 
-    Kwargs: ``n_max`` (default 10).
+    Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
     """
     import jax.numpy as jnp
     from gigalens.jax.inference import ModellingSequence
@@ -139,7 +139,12 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.model import PhysicalModel
 
-    n_max = int(kwargs.get("n_max", 10))
+    if "n_max" not in kwargs:
+        raise TypeError(
+            "build_epl_shear_sersic_sersicshapelets: 'n_max' is required "
+            "(no default; it sets the source model complexity)."
+        )
+    n_max = int(kwargs["n_max"])
 
     prior = vela_sersicshapelets_inference_prior()
 

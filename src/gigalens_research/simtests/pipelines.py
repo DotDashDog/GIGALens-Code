@@ -91,9 +91,15 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
     Kwargs consumed:
 
     ``bootstrap_map_steps`` (200), ``bootstrap_map_n_samples`` (100),
+    ``bootstrap_diag_scale`` (1e-6), ``bootstrap_pin_eps`` (1e-6),
     ``n_chains`` (8), ``num_burnin_steps`` (4000), ``num_results`` (4000),
     ``desired_energy_variance`` (5e-4),
     ``frac_tune1`` (0.2), ``frac_tune2`` (0.6), ``frac_tune3`` (0.2).
+
+    ``bootstrap_diag_scale`` is the variance of the tight diagonal ``qz`` the
+    chains are initialised from (``scale = sqrt(diag_scale)``); ``bootstrap_pin_eps``
+    is the half-width of the ``Uniform`` used to pin the truth-constrained
+    parameters during the bootstrap MAP.
     """
     return [
         PartialTruthBootstrapQzStage(
@@ -101,6 +107,8 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
             free=("source",),
             map_num_steps=int(kwargs.get("bootstrap_map_steps", 200)),
             map_n_samples=int(kwargs.get("bootstrap_map_n_samples", 100)),
+            diag_scale=float(kwargs.get("bootstrap_diag_scale", 1e-6)),
+            pin_eps=float(kwargs.get("bootstrap_pin_eps", 1e-6)),
         ),
         MCLMCStage(
             n_chains=int(kwargs.get("n_chains", 8)),
@@ -110,6 +118,7 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
             frac_tune1=float(kwargs.get("frac_tune1", 0.2)),
             frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
             frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
+            debug=bool(kwargs.get("mclmc_debug", False)),
         ),
     ]
 
@@ -338,6 +347,26 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         scale_tril = jnp.asarray(arrays["qz_scale_tril"]).astype(loc.dtype)
         qz = tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)
         return {"qz": qz}
+
+    @classmethod
+    def to_posterior(cls, arrays: Dict[str, np.ndarray], ctx: Any):
+        """Expose the bootstrap ``qz`` as a viewable posterior.
+
+        Without this, ``pipeline.posterior("bootstrap_map")`` raises and the
+        stage contributes nothing to reports.  Returning a ``SurrogatePosterior``
+        over the (tight, truth-centred) ``qz`` lets the stage appear as an
+        image-comparison / residual row in :class:`PipelineReport` and as a
+        single-posterior :class:`PosteriorReport` — visualising the model image
+        at the recovered-truth parameters that initialise MCLMC.
+        """
+        import jax.numpy as jnp
+        from gigalens_research.inference_utils.posterior import SurrogatePosterior
+
+        loc = jnp.asarray(arrays["qz_loc"])
+        # Match derive_artifacts' dtype handling (loc may be x64, scale_tril x32).
+        scale_tril = jnp.asarray(arrays["qz_scale_tril"]).astype(loc.dtype)
+        qz = tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)
+        return SurrogatePosterior(ctx, qz=qz)
 
     def _component_name(self, ci: int) -> str:
         if ci < len(_COMPONENT_NAMES):

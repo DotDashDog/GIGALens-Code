@@ -5,6 +5,7 @@ Sub-commands
 ``generate``   Generate (or load/adapt) the system dataset for a campaign.
 ``run``        Run the inference loop (with optional sharding for Slurm arrays).
 ``aggregate``  Aggregate completed runs into figures and a refreshed index.csv.
+``plot``       Render per-run diagnostic plots from saved arrays (CPU, shardable).
 ``status``     Print a quick progress summary without touching any results.
 
 Usage examples::
@@ -100,6 +101,30 @@ def cmd_aggregate(args: argparse.Namespace) -> None:
     aggregate_campaign(spec, base_dir, verbose=not args.quiet)
 
 
+def cmd_plot(args: argparse.Namespace) -> None:
+    from .plot import plot_campaign, ALL_PANELS
+
+    spec = _load_campaign(args.campaign)
+    base_dir = os.path.expanduser(args.output_dir or spec.output_dir)
+
+    shard_i, shard_n = _parse_shard(args.shard)
+    panels = ([p.strip() for p in args.panels.split(",") if p.strip()]
+              if args.panels else list(ALL_PANELS))
+
+    plot_campaign(
+        spec,
+        base_dir,
+        panels=panels,
+        stage=args.stage,
+        z_score_group=args.z_score_group,
+        shard_i=shard_i,
+        shard_n=shard_n,
+        include_failed=args.include_failed,
+        overwrite=args.overwrite,
+        verbose=not args.quiet,
+    )
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     from .config import CampaignSpec
     from .run import enumerate_runs
@@ -191,6 +216,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_agg.add_argument("--output-dir", default=None)
     p_agg.add_argument("--quiet", action="store_true")
     p_agg.set_defaults(func=cmd_aggregate)
+
+    # --- plot ---
+    p_plot = sub.add_parser(
+        "plot", help="Render per-run diagnostic plots from saved arrays (CPU).")
+    p_plot.add_argument("campaign", help="Path to campaign YAML.")
+    p_plot.add_argument("--output-dir", default=None)
+    p_plot.add_argument("--shard", default="0/1", metavar="i/N",
+                        help="Render only the strided slice runs[i::N]. Use for "
+                             "Slurm arrays: $SLURM_ARRAY_TASK_ID/$SLURM_ARRAY_TASK_COUNT.")
+    p_plot.add_argument("--panels", default=None,
+                        help="Comma-separated subset of: image,convergence,source,"
+                             "corner,z_scores,source_comparison,diagnostics. "
+                             "Default: all. Drop 'corner' for fast lightweight plots.")
+    p_plot.add_argument("--stage", default=None,
+                        help="Stage to report on (default: auto-pick the sampler).")
+    p_plot.add_argument("--z-score-group", default="mass",
+                        help="Parameter group for the z-score panel "
+                             "(mass/lens_light/src_light/all). Default: mass.")
+    p_plot.add_argument("--include-failed", action="store_true",
+                        help="Also plot runs whose run.json status != ok.")
+    p_plot.add_argument("--overwrite", action="store_true",
+                        help="Re-render panels even if their PNGs already exist.")
+    p_plot.add_argument("--quiet", action="store_true")
+    p_plot.set_defaults(func=cmd_plot)
 
     # --- status ---
     p_st = sub.add_parser("status", help="Print a progress summary.")

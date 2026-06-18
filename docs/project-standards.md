@@ -36,10 +36,46 @@ Examples:
 
 List this project's known traps — if any occurs, stop and reassess:
 
-- [FILL IN: failure mode 1 — e.g. "the result is driven entirely by <confounder/nuisance parameter>"]
-- [FILL IN: failure mode 2 — e.g. "performance correlates with <something that shouldn't matter>"]
-- [FILL IN: …]
+- **Silent scientific defaults.** A missing/empty model input (PSF, noise model, mask,
+  units, pixel grid, regularization, priors, `n_max`) must **raise**, never default to a
+  degraded-but-plausible model. A flexible model (e.g. high-`n_max` shapelets, ~hundreds of
+  lstsq amplitudes) then fits the data to a good chi² and the misspecification is invisible.
+  *(Real instance: a run modeled with no PSF because the source dir path was wrong and the
+  loader fell back to `psf=None`; chi²/ν≈1.25 hid it. See `docs/logs/`.)* Guards in place:
+  (1) `tools/lint_silent_defaults.py` + `tests/test_no_silent_scientific_defaults.py` fail on
+  any **new** silently-defaulting fallback in model-construction code (burn down the baseline
+  in `tools/silent_defaults_baseline.txt`); (2) `Pipeline.run` prints and saves a **model card**
+  (`inference_utils.model_card`) of the effective forward model — check PSF/noise/grid/precision
+  there before trusting any run.
+- **A good chi²/converged fit is not evidence the model is correctly specified** — flexible
+  source models absorb misspecification. Verify against ground truth (recovery of known
+  lens/source params), not just fit quality.
+- [FILL IN: failure mode — e.g. "the result is driven entirely by <confounder/nuisance parameter>"]
 
-## 8. Other Standards - Update as needed
+## 8. Numerics: float64 is the gigalens default
+
+gigalens runs in **float64** going forward. Two coupled settings are required — one
+without the other silently degrades precision or raises:
+
+1. **`jax_enable_x64` must be on.** JAX reads `JAX_ENABLE_X64` at import time. The
+   `gigalens_research.simtests` package sets `os.environ.setdefault("JAX_ENABLE_X64","1")`
+   on import, so the CLI / Slurm path (`python -m gigalens_research.simtests …`) gets it
+   automatically. **Notebook/REPL users who `import jax` before importing the framework
+   must call `jax.config.update("jax_enable_x64", True)` themselves** — otherwise the
+   gigalens precision guard (`gigalens/jax/simulator.py`) raises.
+2. **`SimulatorConfig(likelihood_precision="float64")`.** In simtests this is the default
+   in the `vela_existing` generator and is **persisted to each system's `meta.json`**, so
+   `run`/`plot` (which load via `System.load`) honour it. Override per-campaign with
+   `dataset.likelihood_precision: float32 | mixed | float64` in the YAML.
+
+Why: float32 leaves a basis/convolution noise floor that breaks high-`n_max` shapelet
+sampling (MCLMC adaptation collapses). Cost: float64 is ~2× memory and slower on Ampere
+FP64 units — use `conv_precision: float32` to move only the PSF convolution off the slow
+FP64 path if needed (basis/solve/reduction stay float64).
+
+Pre-change datasets (generated before precision was persisted) lack the `meta.json` keys
+and load as float32 — regenerate them to get float64.
+
+## 9. Other Standards - Update as needed
 
 [FILL IN: standards specific to this field — e.g. physical sanity checks, units/conventions, instrument or noise models, known identifiability quirks, symmetries to respect. General method discipline does not go here; it lives in `method-discipline.md`.]
