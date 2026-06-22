@@ -83,24 +83,58 @@ def latex_label(name: str, *, fallback: Optional[str] = None) -> str:
 
 _GROUP_PREFIXES = ("", "lens_", "src_")
 
+# New gigalens params are dict-keyed by component name; map each onto the same
+# label prefix the legacy positional ``_GROUP_PREFIXES`` produced.
+_GROUP_KEY_PREFIXES = {"lens_mass": "", "lens_light": "lens_", "source_light": "src_"}
+
+# Canonical [mass, lens_light, source] ordering for dict-keyed params, so the
+# flat output (and hence corner-plot column order) is stable and intuitive.
+_CANONICAL_GROUP_ORDER = ("lens_mass", "lens_light", "source_light")
+
+
+def _iter_groups(params):
+    """Yield ``(prefix, group)`` per component group, for either the dict-keyed
+    structure ``{'lens_mass': {..}, ..}`` or the legacy positional list
+    ``[[mass..], [lens_light..], [source..]]``."""
+    if isinstance(params, dict):
+        keys = [k for k in _CANONICAL_GROUP_ORDER if k in params]
+        keys += [k for k in params if k not in _CANONICAL_GROUP_ORDER]
+        for ckey in keys:
+            yield _GROUP_KEY_PREFIXES.get(ckey, f"{ckey}_"), params[ckey]
+    else:
+        for group_idx, group in enumerate(params):
+            prefix = _GROUP_PREFIXES[group_idx] if group_idx < len(_GROUP_PREFIXES) else f"group{group_idx}_"
+            yield prefix, group
+
+
+def _iter_profiles(group):
+    """Yield profile param-dicts in a group, for either a dict ``{'0': {..}, ..}``
+    keyed by stringified profile index or the legacy list of dicts."""
+    if isinstance(group, dict):
+        for pkey in sorted(group, key=int):
+            yield group[pkey]
+    else:
+        yield from group
+
 
 def flatten_params(
-    params: List[List[Dict[str, Any]]],
+    params: Any,
     *,
     _index_collisions: bool = False,
 ) -> Dict[str, Any]:
-    """Flatten a nested ``[[mass...], [lens_light...], [source_light...]]``
-    parameter structure into a flat ``{label: array}`` dict.
+    """Flatten a nested parameter structure into a flat ``{label: array}`` dict.
 
-    See module docstring for the naming convention. ``params`` follows the
+    Accepts either the new dict-keyed gigalens structure
+    ``{'lens_mass': {'0': {..}, ..}, 'lens_light': {..}, 'source_light': {..}}``
+    or the legacy positional list ``[[mass..], [lens_light..], [source..]]``.
+    See the module docstring for the naming convention. ``params`` follows the
     output convention of :meth:`ProbabilisticModel.bij.forward` (and is what
     ``LensSimulator.simulate`` expects as its argument).
     """
     flat: Dict[str, Any] = {}
     seen: Dict[str, int] = {}
-    for group_idx, group in enumerate(params):
-        prefix = _GROUP_PREFIXES[group_idx] if group_idx < len(_GROUP_PREFIXES) else f"group{group_idx}_"
-        for profile in group:
+    for prefix, group in _iter_groups(params):
+        for profile in _iter_profiles(group):
             for key, value in profile.items():
                 label = f"{prefix}{key}"
                 if label in flat:

@@ -57,8 +57,8 @@ def vela_inference_prior(use_shapelets: bool = True):
     import tensorflow_probability.substrates.jax as tfp
     tfd = tfp.distributions
 
-    lens_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    lens_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
             gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
             e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
@@ -66,13 +66,13 @@ def vela_inference_prior(use_shapelets: bool = True):
             center_x=tfd.Normal(0.0, 0.06),
             center_y=tfd.Normal(0.0, 0.06),
         )),
-        tfd.JointDistributionNamed(dict(
+        '1': tfd.JointDistributionNamed(dict(
             gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
             gamma2=tfd.Normal(0.0, 0.1),
         )),
-    ])
-    lens_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    lens_light_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
             n_sersic=tfd.Uniform(0.5, 8.0),
             e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
@@ -80,18 +80,18 @@ def vela_inference_prior(use_shapelets: bool = True):
             center_x=tfd.Normal(0.0, 0.02),
             center_y=tfd.Normal(0.0, 0.02),
         )),
-    ])
+    })
     if use_shapelets:
-        source_prior = tfd.JointDistributionSequential([
-            tfd.JointDistributionNamed(dict(
+        source_prior = tfd.JointDistributionNamed({
+            '0': tfd.JointDistributionNamed(dict(
                 beta=tfd.LogNormal(jnp.log(0.7), 0.4),
                 center_x=tfd.Normal(0.0, 0.5),
                 center_y=tfd.Normal(0.0, 0.5),
             )),
-        ])
+        })
     else:
-        source_prior = tfd.JointDistributionSequential([
-            tfd.JointDistributionNamed(dict(
+        source_prior = tfd.JointDistributionNamed({
+            '0': tfd.JointDistributionNamed(dict(
                 R_sersic=tfd.LogNormal(jnp.log(0.25), 0.4),
                 n_sersic=tfd.Uniform(0.5, 8.0),
                 e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
@@ -99,8 +99,12 @@ def vela_inference_prior(use_shapelets: bool = True):
                 center_x=tfd.Normal(0.0, 0.5),
                 center_y=tfd.Normal(0.0, 0.5),
             )),
-        ])
-    return tfd.JointDistributionSequential([lens_prior, lens_light_prior, source_prior])
+        })
+    return tfd.JointDistributionNamed({
+        'lens_mass': lens_prior,
+        'lens_light': lens_light_prior,
+        'source_light': source_prior,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -120,10 +124,10 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     """
     import jax.numpy as jnp
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.model import BackwardProbModel
+    from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic, shapelets
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.model import PhysicalModel
+    from gigalens.jax.physical_model import PhysicalModel
 
     use_shapelets = bool(kwargs.get("use_shapelets", True))
     if use_shapelets and "n_max" not in kwargs:
@@ -136,7 +140,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     prior = vela_inference_prior(use_shapelets=use_shapelets)
 
     if use_shapelets:
-        src_model = shapelets.ShapeletsFast(n_max=n_max, use_lstsq=True, interpolate=False)
+        src_model = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
     else:
         src_model = sersic.SersicEllipse(use_lstsq=True)
 
@@ -194,10 +198,9 @@ def generate_vela_existing(spec: Any, dataset_dir: str, seed: int) -> None:
     exp_time = float(extra.get("exp_time", 2000.0))  # physics-default-ok: documented vela_existing generation default, persisted to meta.json
     # Numerics: gigalens defaults to float64 going forward (see docs/project-standards.md).
     # Persisted to meta.json so run/plot honour it; requires jax_enable_x64 (set by the
-    # simtests package import). Override in the dataset YAML if you need float32/mixed.
+    # simtests package import). Override in the dataset YAML if you need float32.
     likelihood_precision = extra.get("likelihood_precision", "float64")
     conv_precision = extra.get("conv_precision", None)
-    high_precision_likelihood = bool(extra.get("high_precision_likelihood", False))
 
     system_ids = []
     n_adapted = 0
@@ -230,7 +233,6 @@ def generate_vela_existing(spec: Any, dataset_dir: str, seed: int) -> None:
                     exp_time=exp_time,
                     likelihood_precision=likelihood_precision,
                     conv_precision=conv_precision,
-                    high_precision_likelihood=high_precision_likelihood,
                 )
                 sys.save(dataset_dir)
                 system_ids.append(system_id)

@@ -32,10 +32,10 @@ if jax.process_index() == 0:
     print(f"Local device count: {jax.local_device_count()}")
 
 from gigalens.jax.inference import ModellingSequence
-from gigalens.jax.model import ForwardProbModel, BackwardProbModel
+from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel
 from gigalens.jax.simulator import LensSimulator
 from gigalens.simulator import SimulatorConfig
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear
 

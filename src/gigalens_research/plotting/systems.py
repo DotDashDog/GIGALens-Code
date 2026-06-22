@@ -18,6 +18,7 @@ from lenstronomy.Plots import lens_plot
 from lenstronomy.Data.imaging_data import ImageData
 
 from gigalens_research.inference_utils import get_noise_image, get_chisq
+from gigalens_research.inference_utils.params import to_dict_params
 
 def plot_image(fig, ax, img, extent=None, title=None, residual=False, colorbar=True, remove_axis=True, log_vmin=1e-2, log_norm=True):
     """
@@ -65,7 +66,11 @@ def add_caustics(ax, params, sim_config, lens_objects=['EPL', 'SHEAR']):
     _coords = data
     lensModel = LensModel(lens_model_list=lens_objects) #just need a list of the mass parameters, something like ['EPL', 'SHEAR']
     params = jax.tree.map(lambda a : np.array(a), params)
-    kwargs_lens = params[0] #the values for the above parameters
+    # New gigalens params are dict-keyed: {'lens_mass': {'0': {..}, '1': {..}}, ..}.
+    # lenstronomy wants a list of lens param dicts ordered to match lens_model_list.
+    params = to_dict_params(params)
+    lens_mass = params['lens_mass']
+    kwargs_lens = [lens_mass[k] for k in sorted(lens_mass, key=int)]
 
     lens_plot.caustics_plot(ax, _coords, lensModel, kwargs_lens, fast_caustic=True, color_crit='red', color_caustic='green')
 
@@ -88,6 +93,12 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
     Plot the results of a lensing fit. Given a set of predicted parameters, compare the predicted image to the true image.
     Displays normalized residuals, and a histogram of the residuals to check that they are gaussian noise
     """
+    # Normalise to the new gigalens dict-keyed param structure; legacy list-form
+    # truth (vela/GL2 pickles) would otherwise break the dict-expecting simulator.
+    if predicted_params is not None:
+        predicted_params = to_dict_params(predicted_params)
+    if true_params is not None:
+        true_params = to_dict_params(true_params)
     if resimulate:
         if lens_sim is None:
             raise ValueError("lens_sim must be provided if resimulate is True")
@@ -95,7 +106,7 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
             predicted_img = lens_sim.simulate(predicted_params)
         else:
             orig_err_map = get_noise_image(true_img, background_rms, exp_time)
-            predicted_img = lens_sim.lstsq_simulate(predicted_params, true_img, orig_err_map)[0]
+            predicted_img = lens_sim.lstsq_simulate(predicted_params, true_img, orig_err_map)
     elif predicted_img is None:
         raise ValueError("predicted_img must be provided if resimulate is False")
 

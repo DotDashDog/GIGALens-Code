@@ -21,11 +21,11 @@ import tensorflow_probability.substrates.jax as tfp
 from matplotlib import pyplot as plt
 
 from gigalens.jax.inference import ModellingSequence
-from gigalens.jax.model import BackwardProbModel
+from gigalens.jax.prob_model import BackwardProbModel
 from gigalens.jax.profiles.light import sersic, shapelets
 from gigalens.jax.profiles.mass import epl, shear
 from gigalens.jax.simulator import LensSimulator
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 from gigalens.simulator import SimulatorConfig
 
 from gigalens_research.plotting import (
@@ -244,7 +244,7 @@ def vela_priors(use_shapelets: bool = True):
 
 def _src_model(use_shapelets: bool, n_max: int):
     return (
-        shapelets.ShapeletsFast(n_max=n_max, use_lstsq=True, interpolate=False)
+        shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
         if use_shapelets
         else sersic.SersicEllipse(use_lstsq=True)
     )

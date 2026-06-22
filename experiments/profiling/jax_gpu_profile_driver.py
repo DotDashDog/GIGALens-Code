@@ -82,11 +82,11 @@ def build_sim_system_complex_context(seed: int, initialize_distributed: bool):
         jax.experimental.shard_map = types.SimpleNamespace(shard_map=jax.shard_map)
 
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.model import BackwardProbModel
+    from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic, shapelets
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.simulator import LensSimulator
-    from gigalens.model import PhysicalModel
+    from gigalens.jax.physical_model import PhysicalModel
     from gigalens.simulator import SimulatorConfig
 
     tfd = tfp.distributions
@@ -159,7 +159,7 @@ def build_sim_system_complex_context(seed: int, initialize_distributed: bool):
         phys_model = PhysicalModel(
             [epl.EPL(50), shear.Shear()],
             [sersic.SersicEllipse(use_lstsq=True)],
-            [shapelets.ShapeletsFast(n_max=n_max, use_lstsq=True, interpolate=True)],
+            [shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=True)],
         )
         sim_config = SimulatorConfig(delta_pix=delta_pix, num_pix=num_pix, supersample=1, kernel=psf)
         prob_model = BackwardProbModel(prior, observed_img, background_rms=background_rms, exp_time=exp_time)

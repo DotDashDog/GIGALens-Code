@@ -21,7 +21,7 @@ for p in (
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 from gigalens.simulator import SimulatorConfig
 from gigalens.jax.profiles.mass import epl, shear
 from gigalens.jax.profiles.light import sersic
@@ -273,14 +273,22 @@ def main():
     sim_config = SimulatorConfig(delta_pix=0.065, num_pix=80, supersample=2, kernel=kernel)
 
     lens_only_sim = LensSimulator(phys_model, sim_config, bs=1)
-    lens_only_image = lens_only_sim.simulate((true_params[0], [true_params[1][0]], []))
+    lens_only_image = lens_only_sim.simulate({
+        "lens_mass": {str(i): p for i, p in enumerate(true_params[0])},
+        "lens_light": {"0": true_params[1][0]},
+        "source_light": {},
+    })
     source_only_phys_model = PhysicalModel(
         [epl.EPL(50), shear.Shear()],
         [],
         [sersic.SersicEllipse(use_lstsq=False)],
     )
     source_only_sim = LensSimulator(source_only_phys_model, sim_config, bs=1)
-    lensed_source_for_mesh = source_only_sim.simulate((true_params[0], [true_params[2][0]]))
+    lensed_source_for_mesh = source_only_sim.simulate({
+        "lens_mass": {str(i): p for i, p in enumerate(true_params[0])},
+        "lens_light": {},
+        "source_light": {"0": true_params[2][0]},
+    })
 
     if args.adaptive_mesh:
         mesh = build_brightness_adaptive_sourceplane_delaunay_from_truth(

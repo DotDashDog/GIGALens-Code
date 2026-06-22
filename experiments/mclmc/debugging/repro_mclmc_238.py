@@ -64,8 +64,8 @@ if os.environ.get("REPRO_PATCH_NORM", "0") == "1":
     print(f"[repro:{TAG}] PATCHED _normalized_flatten_array & partially_refresh_momentum", flush=True)
 
 from gigalens.jax.inference import ModellingSequence
-from gigalens.jax.model import BackwardProbModel
-from gigalens.model import PhysicalModel
+from gigalens.jax.prob_model import BackwardProbModel
+from gigalens.jax.physical_model import PhysicalModel
 from gigalens.simulator import SimulatorConfig
 from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear

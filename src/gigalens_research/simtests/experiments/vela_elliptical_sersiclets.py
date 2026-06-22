@@ -57,41 +57,47 @@ def vela_inference_prior():
     import tensorflow_probability.substrates.jax as tfp
     tfd = tfp.distributions
 
-    lens_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
-            theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
-            gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
-            e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
-            e2=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
-            center_x=tfd.Normal(0.0, 0.06),
-            center_y=tfd.Normal(0.0, 0.06),
-        )),
-        tfd.JointDistributionNamed(dict(
-            gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
-            gamma2=tfd.Normal(0.0, 0.1),
-        )),
-    ])
-    lens_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
-            R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
-            n_sersic=tfd.Uniform(0.5, 8.0),
-            e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
-            e2=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
-            center_x=tfd.Normal(0.0, 0.02),
-            center_y=tfd.Normal(0.0, 0.02),
-        )),
-    ])
-    source_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
-            beta=tfd.LogNormal(jnp.log(0.7), 0.4),
-            e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
-            e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
-            n_sersic=tfd.Uniform(0.3, 8.0),
-            center_x=tfd.Normal(0.0, 0.5),
-            center_y=tfd.Normal(0.0, 0.5),
-        )),
-    ])
-    return tfd.JointDistributionSequential([lens_prior, lens_light_prior, source_prior])
+    # New gigalens (dev refactor) expects the prior to emit the dict-keyed param
+    # structure {'lens_mass': {'0': ..}, 'lens_light': {'0': ..}, 'source_light':
+    # {'0': ..}} rather than the old 3-list JointDistributionSequential. Each
+    # component is a JointDistributionNamed keyed by stringified profile index,
+    # matching gigalens.prior.LensPrior / CompoundPrior output.
+    return tfd.JointDistributionNamed({
+        'lens_mass': tfd.JointDistributionNamed({
+            '0': tfd.JointDistributionNamed(dict(
+                theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+                gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
+                e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+                e2=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+                center_x=tfd.Normal(0.0, 0.06),
+                center_y=tfd.Normal(0.0, 0.06),
+            )),
+            '1': tfd.JointDistributionNamed(dict(
+                gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
+                gamma2=tfd.Normal(0.0, 0.1),
+            )),
+        }),
+        'lens_light': tfd.JointDistributionNamed({
+            '0': tfd.JointDistributionNamed(dict(
+                R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+                n_sersic=tfd.Uniform(0.5, 8.0),
+                e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+                e2=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+                center_x=tfd.Normal(0.0, 0.02),
+                center_y=tfd.Normal(0.0, 0.02),
+            )),
+        }),
+        'source_light': tfd.JointDistributionNamed({
+            '0': tfd.JointDistributionNamed(dict(
+                beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+                e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+                e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+                n_sersic=tfd.Uniform(0.3, 8.0),
+                center_x=tfd.Normal(0.0, 0.5),
+                center_y=tfd.Normal(0.0, 0.5),
+            )),
+        }),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -110,11 +116,11 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
     """
     import jax.numpy as jnp
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.model import BackwardProbModel
+    from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic#, shapelets
     from gigalens_research.simulations.sersiclets import EllipticalSersiclets
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.model import PhysicalModel
+    from gigalens.jax.physical_model import PhysicalModel
 
     if "n_max" not in kwargs:
         raise TypeError(

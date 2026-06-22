@@ -103,13 +103,23 @@ class Posterior(ABC):
 
     @property
     def is_backward(self) -> bool:
-        """True iff the prob_model uses ``BackwardProbModel`` (lstsq amplitudes).
+        """True iff the model solves linear amplitudes by least squares.
 
-        Duck-typed on the ``err_map`` attribute; matches both gigalens'
-        ``BackwardProbModel`` and any drop-in replacement that publishes the
-        same field.
+        A backward (``BackwardProbModel``-style) model leaves the light-profile
+        amplitudes out of the sampled params and recovers them via
+        ``lstsq_simulate``; its light profiles therefore carry
+        ``use_lstsq=True``.  Keyed on that behavioural signal (the physical
+        model's light profiles) rather than the prob_model type, so it works for
+        drop-in prob_model replacements.
+
+        The old ``hasattr(prob_model, "err_map")`` check no longer
+        discriminates: the refactored gigalens base ``ProbModel`` builds
+        ``error_map`` for *every* model (forward and backward alike), and the
+        attribute is ``error_map``, not ``err_map``.
         """
-        return hasattr(self.ctx.prob_model, "err_map")
+        profiles = list(getattr(self.ctx.phys_model, "source_light", []) or [])
+        profiles += list(getattr(self.ctx.phys_model, "lens_light", []) or [])
+        return any(getattr(p, "use_lstsq", False) for p in profiles)
 
     # -- model-aware rendering ----------------------------------------------
 
@@ -142,10 +152,19 @@ class Posterior(ABC):
         )
         if self.is_backward:
             obs = self.ctx.prob_model.observed_image
-            err_map = self.ctx.prob_model.err_map
-            img, coeffs = sim.lstsq_simulate(x, obs, err_map)
-            img = np.asarray(img); coeffs = np.asarray(coeffs)
-            return (img, coeffs) if return_coeffs else img
+            err_map = self.ctx.prob_model.error_map
+            # lstsq_simulate returns the reconstructed image by default; the
+            # linear coeffs are a separate return_coeffs=True call (new gigalens
+            # convention). Only solve for coeffs when they're actually requested.
+            img = np.asarray(sim.lstsq_simulate(x, obs, err_map))
+            if return_coeffs:
+                # New gigalens returns coeffs shaped (bs, depth); this single-point
+                # API renders at bs=1, so flatten the batch axis to a 1-D (depth,)
+                # amplitude vector that downstream consumers (source_plane) index.
+                coeffs = np.asarray(
+                    sim.lstsq_simulate(x, obs, err_map, return_coeffs=True)).reshape(-1)
+                return img, coeffs
+            return img
         img = np.asarray(sim.simulate(x))
         return (img, None) if return_coeffs else img
 
@@ -153,26 +172,32 @@ class Posterior(ABC):
         """Per-pixel noise σ for a given predicted image, using the
         prob_model's noise convention.
 
-        - :class:`BackwardProbModel` (anything that publishes an ``err_map``
-          attribute): returns that ``err_map`` directly — it was frozen at
-          init from the *observed* image, so the ``predicted`` argument is
-          ignored.
+        - Backward (lstsq) models: returns the prob_model's ``error_map``
+          directly — it was frozen at init from the *observed* image, so the
+          ``predicted`` argument is ignored.
         - :class:`ForwardProbModel` (anything that publishes
           ``background_rms`` and ``exp_time``): returns
           ``sqrt(max(predicted, 0) / exp_time + background_rms**2)``.
 
-        Raises ``TypeError`` if the prob_model doesn't match either pattern.
+        Raises ``TypeError`` if the prob_model matches neither pattern.
+
+        Note: the gigalens base ``ProbModel`` now builds ``error_map`` for
+        every model and most carry ``background_rms``/``exp_time`` too, so this
+        branches on :attr:`is_backward` (the lstsq behaviour) rather than on
+        attribute presence.
         """
         pm = self.ctx.prob_model
-        if hasattr(pm, "err_map"):
-            return np.asarray(pm.err_map)
+        if self.is_backward and hasattr(pm, "error_map"):
+            return np.asarray(pm.error_map)
         if hasattr(pm, "background_rms") and hasattr(pm, "exp_time"):
             bg = float(np.asarray(pm.background_rms))
             et = float(np.asarray(pm.exp_time))
             pred = np.asarray(predicted)
             return np.sqrt(np.clip(pred, 0.0, np.inf) / et + bg ** 2)
+        if hasattr(pm, "error_map"):
+            return np.asarray(pm.error_map)
         raise TypeError(
-            f"prob_model {type(pm).__name__} exposes neither err_map nor "
+            f"prob_model {type(pm).__name__} exposes neither error_map nor "
             f"(background_rms, exp_time); cannot derive a per-pixel noise σ."
         )
 
@@ -212,7 +237,11 @@ class Posterior(ABC):
         extent : tuple ``(x_min, x_max, y_min, y_max)`` for ``ax.imshow``.
         """
         x = self.z_to_x(self._point_z(point))
-        src_params_list = x[-1]  # source light is the last group
+        # New gigalens params are dict-keyed: source light is x['source_light'],
+        # a dict {'0': {..}, '1': {..}} keyed by stringified profile index. Order
+        # it into a list so it lines up with ctx.phys_model.source_light below.
+        src_group = x["source_light"]
+        src_params_list = [src_group[k] for k in sorted(src_group, key=int)]
 
         first = src_params_list[0]
         if center is None:

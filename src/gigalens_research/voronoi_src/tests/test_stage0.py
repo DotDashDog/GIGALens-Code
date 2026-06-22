@@ -23,7 +23,7 @@ for p in (
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 from gigalens.simulator import SimulatorConfig
 from gigalens.jax.profiles.mass import epl, shear
 from gigalens.jax.profiles.light import sersic
@@ -164,7 +164,7 @@ def sanity_forward_consistency(
     pixelised reconstruction.
     """
     from gigalens.jax.simulator import LensSimulator
-    from gigalens.jax.model import ForwardProbModel
+    from gigalens.jax.prob_model import ForwardProbModel
 
     phys = PhysicalModel(
         [epl.EPL(50), shear.Shear()],

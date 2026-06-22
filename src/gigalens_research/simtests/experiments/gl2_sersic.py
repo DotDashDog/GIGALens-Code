@@ -48,8 +48,8 @@ def gl2_simulation_prior():
     import tensorflow_probability.substrates.jax as tfp
     tfd = tfp.distributions
 
-    lens_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    lens_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             theta_E=tfd.LogNormal(jnp.log(1.25), 0.25),
             gamma=tfd.TruncatedNormal(2.0, 0.25, 1.0, 3.0),
             e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
@@ -57,13 +57,13 @@ def gl2_simulation_prior():
             center_x=tfd.Normal(0.0, 0.03),
             center_y=tfd.Normal(0.0, 0.03),
         )),
-        tfd.JointDistributionNamed(dict(
+        '1': tfd.JointDistributionNamed(dict(
             gamma1=tfd.Normal(0.0, 0.05),
             gamma2=tfd.Normal(0.0, 0.05),
         )),
-    ])
-    lens_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    lens_light_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             R_sersic=tfd.LogNormal(jnp.log(1.6), 0.15),
             n_sersic=tfd.Uniform(2.0, 6.0),
             e1=tfd.TruncatedNormal(0.0, 0.05, -0.15, 0.15),
@@ -72,9 +72,9 @@ def gl2_simulation_prior():
             center_y=tfd.Normal(0.0, 0.01),
             Ie=tfd.LogNormal(jnp.log(300.0), 0.3),
         )),
-    ])
-    source_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    source_light_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             R_sersic=tfd.LogNormal(jnp.log(0.25), 0.25),
             n_sersic=tfd.Uniform(0.5, 4.0),
             e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
@@ -83,8 +83,12 @@ def gl2_simulation_prior():
             center_y=tfd.Normal(0.0, 0.25),
             Ie=tfd.LogNormal(jnp.log(150.0), 0.5),
         )),
-    ])
-    return tfd.JointDistributionSequential([lens_prior, lens_light_prior, source_light_prior])
+    })
+    return tfd.JointDistributionNamed({
+        'lens_mass': lens_prior,
+        'lens_light': lens_light_prior,
+        'source_light': source_light_prior,
+    })
 
 
 def gl2_inference_prior():
@@ -99,8 +103,8 @@ def gl2_inference_prior():
     import tensorflow_probability.substrates.jax as tfp
     tfd = tfp.distributions
 
-    lens_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    lens_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
             gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
             e1=tfd.Normal(0.0, 0.2),
@@ -108,13 +112,13 @@ def gl2_inference_prior():
             center_x=tfd.Normal(0.0, 0.06),
             center_y=tfd.Normal(0.0, 0.06),
         )),
-        tfd.JointDistributionNamed(dict(
+        '1': tfd.JointDistributionNamed(dict(
             gamma1=tfd.Normal(0.0, 0.1),
             gamma2=tfd.Normal(0.0, 0.1),
         )),
-    ])
-    lens_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    lens_light_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
             n_sersic=tfd.Uniform(0.5, 8.0),
             e1=tfd.TruncatedNormal(0.0, 0.1, -0.15, 0.15),
@@ -123,9 +127,9 @@ def gl2_inference_prior():
             center_y=tfd.Normal(0.0, 0.02),
             Ie=tfd.LogNormal(jnp.log(300.0), 0.5),
         )),
-    ])
-    source_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    source_light_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             R_sersic=tfd.LogNormal(jnp.log(0.25), 0.25),
             n_sersic=tfd.Uniform(0.5, 8.0),
             e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
@@ -134,14 +138,18 @@ def gl2_inference_prior():
             center_y=tfd.Normal(0.0, 0.5),
             Ie=tfd.LogNormal(jnp.log(150.0), 0.9),
         )),
-    ])
-    return tfd.JointDistributionSequential([lens_prior, lens_light_prior, source_light_prior])
+    })
+    return tfd.JointDistributionNamed({
+        'lens_mass': lens_prior,
+        'lens_light': lens_light_prior,
+        'source_light': source_light_prior,
+    })
 
 
 def _gl2_phys_model():
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.model import PhysicalModel
+    from gigalens.jax.physical_model import PhysicalModel
     return PhysicalModel(
         [epl.EPL(50), shear.Shear()],
         [sersic.SersicEllipse(use_lstsq=False)],
@@ -170,7 +178,7 @@ def build_epl_shear_sersic_sersic(system: Any, **kwargs) -> Any:
     ``ForwardProbModel`` (model-based Poisson noise).
     """
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.model import ForwardProbModel
+    from gigalens.jax.prob_model import ForwardProbModel
     import jax.numpy as jnp
 
     prior = gl2_inference_prior()

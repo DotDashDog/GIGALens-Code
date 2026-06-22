@@ -24,7 +24,7 @@ for p in (
 from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear
 from gigalens.jax.simulator import _shared_kernel_component_conv
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 from objax.functional import average_pool_2d
 
 from vela_utilities import (

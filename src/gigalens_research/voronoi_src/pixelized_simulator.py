@@ -8,7 +8,8 @@ import jax.numpy as jnp
 import numpy as np
 from jax import lax
 
-from gigalens.jax.simulator import _shared_kernel_component_conv
+from gigalens.jax.simulator import _convolve_components
+from gigalens.simulator import LensWCS
 from objax.functional import average_pool_2d
 
 from .delaunay_mesh import DelaunayMesh
@@ -56,14 +57,17 @@ class PixelizedSourceSimulator:
         self.conversion_factor = jnp.linalg.det(transform_pix2angle)
         self.transform_pix2angle = transform_pix2angle / float(self.supersample)
 
-        # Coordinate grids at supersampled resolution
-        _, _, img_X, img_Y = (
-            # Use the same static method used by LensSimulatorInterface.
-            __import__("gigalens.simulator", fromlist=["LensSimulatorInterface"])
-            .LensSimulatorInterface.get_coords(
-                self.supersample, self.num_pix, np.array(self.transform_pix2angle)
-            )
+        # Coordinate grids at supersampled resolution. get_coords was removed from
+        # gigalens; build the grid via LensWCS exactly as LensSimulator does. Pass the
+        # *undivided* transform / delta_pix — LensWCS divides by supersample internally.
+        wcs = LensWCS(
+            n=self.num_pix,
+            supersample=self.supersample,
+            transform_pix2angle=sim_config.transform_pix2angle,
+            pix_scale=sim_config.delta_pix,
+            shift=getattr(sim_config, "angular_shift", (0.0, 0.0)),
         )
+        img_X, img_Y = wcs.pixel_grid()
         # Flattened subpixel coordinates used by the mesh lookup (static)
         self.subpix_xy = jnp.array(mesh.subpix_xy, dtype=jnp.float32)  # (J_sub, 2)
         # Also keep grid-shaped coordinates for lens-light rendering / scatter
@@ -203,10 +207,11 @@ class PixelizedSourceSimulator:
         """
         Apply shared PSF convolution and average pooling to (I, H_sup, W_sup).
         """
-        # _shared_kernel_component_conv expects (bs, depth, h, w). Use bs=1.
+        # _convolve_components expects (bs, depth, h, w). Use bs=1; a single shared
+        # PSF (flat_kernel.shape[0] == 1) takes the single-kernel FFT conv path.
         img = img_sup[jnp.newaxis, ...]  # (1, I, H_sup, W_sup)
         if self.flat_kernel is not None:
-            img = _shared_kernel_component_conv(img, self.flat_kernel)
+            img = _convolve_components(img, self.flat_kernel)
         if self.supersample != 1:
             img = average_pool_2d(img, size=(self.supersample, self.supersample), padding="SAME")
         img = jnp.squeeze(img, axis=0)  # (I, H, W)

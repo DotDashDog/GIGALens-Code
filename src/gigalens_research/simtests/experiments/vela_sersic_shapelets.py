@@ -87,8 +87,8 @@ def vela_sersicshapelets_inference_prior():
     """
     import jax.numpy as jnp
 
-    lens_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    lens_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
             gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
             e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
@@ -96,13 +96,13 @@ def vela_sersicshapelets_inference_prior():
             center_x=tfd.Normal(0.0, 0.06),
             center_y=tfd.Normal(0.0, 0.06),
         )),
-        tfd.JointDistributionNamed(dict(
+        '1': tfd.JointDistributionNamed(dict(
             gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
             gamma2=tfd.Normal(0.0, 0.1),
         )),
-    ])
-    lens_light_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    lens_light_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
             n_sersic=tfd.Uniform(0.5, 8.0),
             e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
@@ -110,13 +110,17 @@ def vela_sersicshapelets_inference_prior():
             center_x=tfd.Normal(0.0, 0.02),
             center_y=tfd.Normal(0.0, 0.02),
         )),
-    ])
-    source_prior = tfd.JointDistributionSequential([
-        tfd.JointDistributionNamed(dict(
+    })
+    source_prior = tfd.JointDistributionNamed({
+        '0': tfd.JointDistributionNamed(dict(
             **_source_priors(tfd, jnp),
         )),
-    ])
-    return tfd.JointDistributionSequential([lens_prior, lens_light_prior, source_prior])
+    })
+    return tfd.JointDistributionNamed({
+        'lens_mass': lens_prior,
+        'lens_light': lens_light_prior,
+        'source_light': source_prior,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -133,11 +137,11 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
     """
     import jax.numpy as jnp
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.model import BackwardProbModel
+    from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.light.sersic_shapelets import SersicShapelets
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.model import PhysicalModel
+    from gigalens.jax.physical_model import PhysicalModel
 
     if "n_max" not in kwargs:
         raise TypeError(

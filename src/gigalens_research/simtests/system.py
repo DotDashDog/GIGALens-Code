@@ -73,12 +73,10 @@ class System:
     exp_time: float
     truth_assets: Dict[str, Any] = dataclasses.field(default_factory=dict)
     # Likelihood precision, propagated through sim_config to BOTH the bootstrap and the
-    # sampler models. "float32" (default), "mixed" (float32 forward + float64 reduction),
-    # or "float64" (full float64 forward + reduction; required for high-n_max shapelets).
-    # "mixed"/"float64" require jax_enable_x64. See gigalens SimulatorConfig.likelihood_precision.
+    # sampler models. "float32" or "float64" (full float64 forward + reduction). None
+    # resolves to "float64" (the gigalens default), which is required for high-n_max
+    # shapelets and requires jax_enable_x64. See gigalens SimulatorConfig.likelihood_precision.
     likelihood_precision: Optional[str] = None
-    # Deprecated: True is treated as likelihood_precision="mixed".
-    high_precision_likelihood: bool = False
     # PSF convolution precision override, independent of likelihood_precision.
     # None keeps the convolution in the basis dtype (default). "float32" runs ONLY the
     # PSF convolution arithmetic in float32 (basis generation, gram/solve and the
@@ -96,7 +94,6 @@ class System:
             supersample=self.supersample,
             kernel=self.psf,
             likelihood_precision=self.likelihood_precision,
-            high_precision_likelihood=self.high_precision_likelihood,
             conv_precision=self.conv_precision,
         )
 
@@ -134,7 +131,6 @@ class System:
             # (run/plot load via System.load). Dropping these silently degrades a
             # float64 dataset to float32 at inference time.
             "likelihood_precision": self.likelihood_precision,
-            "high_precision_likelihood": bool(self.high_precision_likelihood),
             "conv_precision": self.conv_precision,
             "truth_assets": {k: str(v) for k, v in self.truth_assets.items()},
         }
@@ -177,7 +173,6 @@ class System:
             # Numerics: default to None/False for datasets generated before these
             # were persisted (they ran float32); fresh datasets carry the value.
             likelihood_precision=meta.get("likelihood_precision"),
-            high_precision_likelihood=bool(meta.get("high_precision_likelihood", False)),
             conv_precision=meta.get("conv_precision"),
             truth_assets=dict(meta.get("truth_assets", {})),
         )
@@ -265,7 +260,6 @@ def from_vela_dir(
     background_rms: float,
     exp_time: float,
     likelihood_precision: Optional[str] = None,
-    high_precision_likelihood: bool = False,
     conv_precision: Optional[str] = None,
     allow_no_psf: bool = False,
 ) -> "System":
@@ -311,7 +305,6 @@ def from_vela_dir(
         background_rms=background_rms,
         exp_time=exp_time,
         likelihood_precision=likelihood_precision,
-        high_precision_likelihood=high_precision_likelihood,
         conv_precision=conv_precision,
         truth_assets={
             "vela_source_dir": source_dir,

@@ -21,7 +21,7 @@ for p in (
 
 from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 
 from vela_utilities import (
     DEFAULT_BACKGROUND_RMS,

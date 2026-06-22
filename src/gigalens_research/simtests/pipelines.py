@@ -41,6 +41,7 @@ from gigalens_research.inference_utils.pipeline import (
 )
 
 from .registry import register_pipeline_builder
+from gigalens_research.inference_utils.params import to_dict_params
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +132,29 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
 # Component index → name, matching the canonical
 # ``PhysicalModel(lens_mass, lens_light, source_light)`` / prior ordering.
 _COMPONENT_NAMES: tuple = ("lens", "lens_light", "source")
+
+# New gigalens (dev refactor) keys priors/params by component name, not position.
+# These are the dict keys emitted by the prior and consumed by the simulator,
+# in the canonical [lens, lens_light, source] order.
+# Map the simulator/prior component key onto the ``free`` predicate's vocabulary
+# (the ``("lens", "lens_light", "source")`` names a ``free=`` spec uses).
+_KEY_TO_FREE_NAME: Dict[str, str] = {
+    "lens_mass": "lens",
+    "lens_light": "lens_light",
+    "source_light": "source",
+}
+
+
+def _truth_to_dict(truth_x: Any) -> Dict[str, Dict[str, Any]]:
+    """Normalise a truth to the dict-keyed structure the new gigalens API uses.
+
+    Thin wrapper over :func:`gigalens_research.inference_utils.params.to_dict_params`
+    (shared with the plotting code).  Accepts either the dict form (the new
+    ``prior.sample`` output, as produced by freshly generated systems) or the
+    legacy 3-list form ``[lens_list, lens_light_list, source_list]`` (vela
+    ``true_params`` pickles, older ``truth_x.pkl``, and hand-built fixtures).
+    """
+    return to_dict_params(truth_x)
 
 
 @register_stage
@@ -242,26 +266,28 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         inf_prior = ctx.prob_model.prior
 
         # Build the fixed prior by walking the inference prior's nested
-        # JointDistributionSequential([JointDistributionNamed, ...]) structure:
-        # keep each free param's inference distribution, replace each pinned
-        # param with a near-delta Uniform at its truth value.  Parameters solved
-        # by lstsq (e.g. Sersic ``Ie``, shapelet amplitudes) are absent from the
-        # prior and so are correctly never pinned or freed.
-        fixed_components = []
-        for ci, comp in enumerate(inf_prior.model):
-            cname = self._component_name(ci)
-            prof_blocks = []
-            for pi, named in enumerate(comp.model):
+        # JointDistributionNamed({component: {profile_idx: {param: dist}}})
+        # structure: keep each free param's inference distribution, replace each
+        # pinned param with a near-delta Uniform at its truth value.  Parameters
+        # solved by lstsq (e.g. Sersic ``Ie``, shapelet amplitudes) are absent
+        # from the prior and so are correctly never pinned or freed.
+        truth_dict = _truth_to_dict(truth_x)
+        fixed_components: Dict[str, Any] = {}
+        for ckey, comp in inf_prior.model.items():
+            cname = _KEY_TO_FREE_NAME.get(ckey, ckey)
+            prof_blocks: Dict[str, Any] = {}
+            for pkey, named in comp.model.items():
+                pi = int(pkey)
                 dists: Dict[str, Any] = {}
                 for pname, dist in named.model.items():
                     if self._is_free(cname, pi, pname):
                         dists[pname] = dist
                     else:
-                        v = float(jnp.squeeze(jnp.asarray(truth_x[ci][pi][pname])))
+                        v = float(jnp.squeeze(jnp.asarray(truth_dict[ckey][pkey][pname])))
                         dists[pname] = tfd.Uniform(v - self.pin_eps, v + self.pin_eps)
-                prof_blocks.append(tfd.JointDistributionNamed(dists))
-            fixed_components.append(tfd.JointDistributionSequential(prof_blocks))
-        fixed_prior = tfd.JointDistributionSequential(fixed_components)
+                prof_blocks[pkey] = tfd.JointDistributionNamed(dists)
+            fixed_components[ckey] = tfd.JointDistributionNamed(prof_blocks)
+        fixed_prior = tfd.JointDistributionNamed(fixed_components)
 
         # Reuse the inference physical model (identical profiles) and rebuild the
         # prob model with the same class + the system's noise; only the prior
@@ -296,23 +322,25 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         recovered = fixed_prob.bij.forward(list(jnp.atleast_2d(map_z).T))
 
         # Compose the full constrained truth: free leaves take their recovered
-        # MAP value, pinned leaves take the exact truth value.
-        full_params: list = []
+        # MAP value, pinned leaves take the exact truth value.  Same dict-keyed
+        # structure as the inference prior.
+        full_params: Dict[str, Any] = {}
         free_vals: Dict[str, float] = {}
-        for ci, comp in enumerate(inf_prior.model):
-            cname = self._component_name(ci)
-            profs: list = []
-            for pi, named in enumerate(comp.model):
+        for ckey, comp in inf_prior.model.items():
+            cname = _KEY_TO_FREE_NAME.get(ckey, ckey)
+            profs: Dict[str, Any] = {}
+            for pkey, named in comp.model.items():
+                pi = int(pkey)
                 d: Dict[str, Any] = {}
                 for pname in named.model.keys():
                     if self._is_free(cname, pi, pname):
-                        val = float(np.asarray(jnp.squeeze(recovered[ci][pi][pname])))
+                        val = float(np.asarray(jnp.squeeze(recovered[ckey][pkey][pname])))
                         free_vals[f"{cname}{pi}_{pname}"] = val
                         d[pname] = jnp.asarray(val)
                     else:
-                        d[pname] = jnp.asarray(truth_x[ci][pi][pname])
-                profs.append(d)
-            full_params.append(profs)
+                        d[pname] = jnp.asarray(truth_dict[ckey][pkey][pname])
+                profs[pkey] = d
+            full_params[ckey] = profs
 
         # Map to unconstrained space via the FULL inference model's bijector.
         # Truth leaves may have shape (1,) while recovered leaves are scalars

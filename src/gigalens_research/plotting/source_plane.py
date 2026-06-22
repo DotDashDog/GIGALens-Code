@@ -111,9 +111,10 @@ def _lens_model_and_kwargs(
     posterior at ``point``.
 
     The lens kwargs are pulled straight from the gigalens mass parameters
-    (``x[0]``) and squeezed to plain floats, so the resulting model lives in the
-    same arcsec coordinate system as the gigalens simulator — which is why its
-    caustics/curves overlay directly on the source-plane and image-plane axes.
+    (``x['lens_mass']``) and squeezed to plain floats, so the resulting model
+    lives in the same arcsec coordinate system as the gigalens simulator — which
+    is why its caustics/curves overlay directly on the source-plane and
+    image-plane axes.
     """
     from lenstronomy.LensModel.lens_model import LensModel
 
@@ -121,9 +122,16 @@ def _lens_model_and_kwargs(
         lens_model_list = _default_lens_model_list(posterior.ctx.phys_model)
     lens_model = LensModel(lens_model_list=lens_model_list)
     x = posterior.z_to_x(posterior._point_z(point))
-    kwargs_lens = jax.tree_util.tree_map(
-        lambda a: float(np.squeeze(np.asarray(a))), x[0],
-    )
+    # New gigalens params are dict-keyed: x['lens_mass'] = {'0': {..}, '1': {..}}.
+    # lenstronomy wants a list of param dicts ordered to match lens_model_list
+    # (which is built from phys_model.lenses in the same profile order).
+    lens_mass = x["lens_mass"]
+    kwargs_lens = [
+        jax.tree_util.tree_map(
+            lambda a: float(np.squeeze(np.asarray(a))), lens_mass[k]
+        )
+        for k in sorted(lens_mass, key=int)
+    ]
     return lens_model, kwargs_lens
 
 

@@ -18,10 +18,10 @@ import jax
 # jax.config.update("jax_enable_x64", True)
 
 from gigalens.jax.inference import HarryModellingSequence
-from gigalens.jax.model import ForwardProbModel, BackwardProbModel
+from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel
 from gigalens.jax.simulator import LensSimulator
 from gigalens.simulator import SimulatorConfig
-from gigalens.model import PhysicalModel
+from gigalens.jax.physical_model import PhysicalModel
 from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear
 

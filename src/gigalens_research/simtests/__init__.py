@@ -39,6 +39,45 @@ See ``experiments/hundred_systems_GL2/campaign.yaml`` and
 import os as _os
 _os.environ.setdefault("JAX_ENABLE_X64", "1")
 
+
+def _check_runtime_jax() -> None:
+    """Fail loud if running outside the canonical JAX-2026 Shifter container.
+
+    The login-node default ``python`` is an old kernel (JAX 0.4.7); the project's
+    pinned runtime is the Shifter image ``docker:ghcr.io/nvidia/jax:jax-2026-04-13``
+    (JAX >= 0.10-dev2026). Running under the old stack silently changes precision,
+    RNG and API behaviour and invalidates generated datasets. See docs/env_setup.md
+    and .cursor/rules/gigalens-runtime-environment.mdc.
+
+    Escape hatch: set ``GIGALENS_ALLOW_LEGACY_JAX=1`` to deliberately use the
+    legacy runtime (e.g. reproducing pre-upgrade behaviour).
+    """
+    if _os.environ.get("GIGALENS_ALLOW_LEGACY_JAX") == "1":
+        return
+    try:
+        import jax as _jax
+    except ImportError:
+        return  # non-JAX tooling (e.g. config parsing) may import this package
+    _MIN = (0, 10)  # jax >= 0.10.0.dev20260505 (see docs/env_setup.md)
+    try:
+        _parts = tuple(int(p) for p in _jax.__version__.split(".")[:2])
+    except (ValueError, AttributeError):
+        return  # unparseable version string -> don't block
+    if _parts < _MIN:
+        raise RuntimeError(
+            f"gigalens_research.simtests requires JAX >= {_MIN[0]}.{_MIN[1]} "
+            f"(canonical Shifter image jax-2026-04-13) but found JAX "
+            f"{_jax.__version__}. You are almost certainly running the login-node "
+            f"default python instead of the container. Launch inside:\n"
+            f"  shifter --module=gpu,nccl-plugin "
+            f"--image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 bash -lc '...'\n"
+            f"with PYTHONPATH per docs/env_setup.md. Set GIGALENS_ALLOW_LEGACY_JAX=1 "
+            f"to override deliberately."
+        )
+
+
+_check_runtime_jax()
+
 from .config import CampaignSpec, DatasetSpec, ExecutionSpec, InferenceSpec
 from .registry import (
     get_generator,

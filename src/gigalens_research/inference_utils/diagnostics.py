@@ -2,7 +2,7 @@ from jax import numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 import optax
-from gigalens.jax.model import ForwardProbModel, BackwardProbModel
+from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel
 from gigalens.jax.simulator import LensSimulator
 import jax
 import tensorflow_probability.substrates.jax as tfp
