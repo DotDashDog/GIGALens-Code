@@ -243,6 +243,111 @@ class PartialTruthBootstrapQzStage(InferenceStage):
             "pin_eps": self.pin_eps,
         }
 
+    def _scene_free_components(self, model):
+        """Map this stage's ``free`` spec onto scene Components by ROLE (G1 E).
+
+        A light Component on a lensed plane has role ``"source"``; other light is
+        ``"lens_light"``; mass is ``"lens"``. A Component is free iff ``self._is_free``
+        returns True for it (component-level — checked with a representative param). Only
+        light Components participate in the bootstrap free set (lstsq amplitudes aside,
+        masses are pinned in the documented bootstrap use). Raises if the resolved free
+        set is empty (a no-op bootstrap is a wiring error, not a silent pass)."""
+        src_ids = {id(c) for c in model.source_plane_light()}
+        free = []
+        for comp in model.light_components:
+            role = "source" if id(comp) in src_ids else "lens_light"
+            pnames = list(comp.profile.params)
+            rep = pnames[0] if pnames else "_"
+            if self._is_free(role, 0, rep):
+                free.append(comp)
+        if not free:
+            raise ValueError(
+                "PartialTruthBootstrapQzStage (scene path): free set is empty after "
+                f"resolving {self._free_tag!r} against the scene model's light "
+                "Components; nothing would be optimised. Check the `free` spec.")
+        return free
+
+    def _run_scene(self, ctx, seed, t0, truth_x, observed_img):
+        """Scene-backed bootstrap (G1 E): fix_to(truth, free=source) + short MAP + qz."""
+        import jax.numpy as jnp
+        import optax
+
+        from gigalens.jax.inference import ModellingSequence
+        from gigalens.jax.scene_prob_model import Dataset, ProbModel
+        from gigalens_research.inference_utils.params import truth_x_to_scene_params
+
+        model = ctx.model_seq.scene_model
+        sim_config = self.system.sim_config
+
+        # D2 adapter: persisted 3-group truth -> scene structured params.
+        truth_scene = truth_x_to_scene_params(truth_x, model)
+        # D1 role mapping + partial fix: free the source-plane light, pin the rest.
+        free_components = self._scene_free_components(model)
+        fixed_model = model.fix_to(truth_scene, free=free_components)
+
+        # Scene prob model on the partially-fixed model, same dataset/noise as inference.
+        ds = Dataset(observed_img, sim_config,
+                     background_rms=self.system.background_rms,
+                     exp_time=self.system.exp_time, sees="all")
+        fixed_prob = ProbModel(fixed_model, ds, mode="lstsq")
+        fixed_seq = ModellingSequence.from_scene(fixed_model, fixed_prob, sim_config)
+
+        optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
+        map_samples, lps, _ = fixed_seq.MAP(
+            optimizer=optimizer,
+            n_samples=self.map_n_samples,
+            num_steps=self.map_num_steps,
+            seed=seed,
+            output_type="best_step",
+            pbar_interval=0,
+        )
+        lps_np = np.asarray(lps)
+        map_samples_np = np.asarray(map_samples)
+        best = int(np.nanargmax(lps_np))
+        map_z = jnp.asarray(map_samples_np[best])  # (n_params,) in fixed_model space
+
+        # Recovered free (source) params, keyed by the fixed_model's unique keys (which
+        # are a SUBSET of the inference model's unique keys, same site->key strings).
+        recovered_unique = fixed_model.bijector.forward(list(jnp.atleast_2d(map_z).T))
+        recovered_unique = {k: jnp.squeeze(jnp.asarray(v))
+                            for k, v in recovered_unique.items()}
+
+        # Compose the full inference-model unique-key dict: recovered value for the free
+        # (source) sites, truth value for every other site. The inference model has ALL
+        # params free, so we fill each of its unique keys from its site->unique map.
+        full_unique = {}
+        free_vals = {}
+        for path, ukey in model._site_to_unique:
+            if ukey in recovered_unique:
+                val = recovered_unique[ukey]
+                free_vals[ukey.replace("/", "_")] = float(np.asarray(val))
+            else:
+                # truth at this site (structured truth_scene), squeezed scalar.
+                cur = truth_scene
+                for key in path:
+                    cur = cur[key]
+                val = jnp.squeeze(jnp.asarray(cur))
+            full_unique[ukey] = val
+
+        true_z = jnp.stack(model.bijector.inverse(full_unique))
+        d_dim = true_z.shape[-1]
+        scale_tril = jnp.diag(jnp.ones(d_dim) * jnp.sqrt(self.diag_scale))
+
+        return StageResult(
+            arrays={
+                "qz_loc": np.asarray(true_z),
+                "qz_scale_tril": np.asarray(scale_tril),
+                **{f"free_{k}": np.array([v]) for k, v in free_vals.items()},
+            },
+            metadata={
+                "wall_time_s": time.perf_counter() - t0,
+                "free": self._free_tag,
+                "n_free": len(free_vals),
+                "scene_backed": True,
+                **{f"free_{k}": v for k, v in free_vals.items()},
+            },
+        )
+
     def run(
         self,
         ctx: Any,
@@ -260,6 +365,13 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         truth_x = self.system.truth_x
         sim_config = self.system.sim_config
         observed_img = jnp.asarray(self.system.observed_image)
+
+        # G1 dual-path: a scene-backed ModellingSequence uses the scene fix_to /
+        # source_plane_light helpers + the D2 truth adapter, NOT the legacy 3-group
+        # prior walk below. Branch early; the legacy path is unchanged for the other
+        # (not-yet-migrated) builders.
+        if getattr(ctx.model_seq, "scene_model", None) is not None:
+            return self._run_scene(ctx, seed, t0, truth_x, observed_img)
 
         # The inference model is the single source of truth for both the
         # profiles (physical model) and the free-parameter priors.

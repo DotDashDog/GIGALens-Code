@@ -71,6 +71,23 @@ python -c "import gigalens, gigalens_research; print(gigalens.__file__, gigalens
 
 Both paths should point under your home directory (not site-packages).
 
+### Which `python` runs code/tests (important)
+
+Inside the container, run code and pytest with the **container interpreter**
+`/usr/bin/python3` — that is the one that ships JAX 0.10. The conda env's own
+`python` (and the `pytest` on its `PATH`) has **no jax**; the conda env only
+supplies the non-JAX deps (lenstronomy, tfp, etc.) via `PYTHONPATH`. So a bare
+`python -m pytest` can silently pick the wrong interpreter depending on `PATH`.
+Be explicit:
+
+```bash
+# inside the container, with PYTHONPATH set as above (+ ~/gigalens/src etc.):
+/usr/bin/python3 -m pytest gigalens/tests/validation -q
+```
+
+`pip` (for the editable install above) is the conda env's pip on purpose — it
+writes the `.pth`; only the *run* interpreter must be the container's python.
+
 ## Why editable install instead of sys.path
 
 Three reasons:

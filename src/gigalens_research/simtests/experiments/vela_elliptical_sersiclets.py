@@ -105,22 +105,65 @@ def vela_inference_prior():
 # ---------------------------------------------------------------------------
 
 
+def _vela_scene_priors():
+    """Per-parameter scene priors (free tfd.Distributions) for the sersiclets build.
+
+    Same marginals as ``vela_inference_prior`` (the old 3-group prior), but emitted as
+    flat per-param dicts the scene ``Component`` consumes. Each distribution is a FRESH
+    object so nothing is linked by identity (independence is the scene default)."""
+    import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
+    tfd = tfp.distributions
+    epl_p = dict(
+        theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+        gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
+        e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+        e2=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+        center_x=tfd.Normal(0.0, 0.06),
+        center_y=tfd.Normal(0.0, 0.06),
+    )
+    shear_p = dict(
+        gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
+        gamma2=tfd.Normal(0.0, 0.1),
+    )
+    lens_light_p = dict(
+        R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+        n_sersic=tfd.Uniform(0.5, 8.0),
+        e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+        e2=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+        center_x=tfd.Normal(0.0, 0.02),
+        center_y=tfd.Normal(0.0, 0.02),
+    )
+    source_p = dict(
+        beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+        n_sersic=tfd.Uniform(0.3, 8.0),
+        e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+        e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+        center_x=tfd.Normal(0.0, 0.5),
+        center_y=tfd.Normal(0.0, 0.5),
+    )
+    return epl_p, shear_p, lens_light_p, source_p
+
+
 @register_inference_builder("epl_shear_sersic_elliptical_sersiclets")
 def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
-    """Build the Vela BackwardProbModel + ModellingSequence.
+    """Build the SCENE ModellingSequence for the Vela elliptical-sersiclets fit (G1).
 
-    Uses ``EllipticalSersiclets(n_max=n_max, use_lstsq=True)`` for the source and
-    ``BackwardProbModel`` (fixed error map from the observed image).
+    Migrated to the scene API: a :class:`gigalens.jax.scene.LensModel` (EPL+Shear mass +
+    Sérsic lens light on plane 0; ``EllipticalSersiclets`` source on plane 1, lstsq amps)
+    + a :class:`gigalens.jax.scene_prob_model.Dataset` + ``ProbModel(mode="lstsq")``,
+    wrapped in a scene-backed ``ModellingSequence`` (``from_scene``). The public return
+    type and role are unchanged; only the internals are scene objects.
 
     Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
     """
     import jax.numpy as jnp
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.prob_model import BackwardProbModel
-    from gigalens.jax.profiles.light import sersic#, shapelets
+    from gigalens.jax.profiles.light import sersic
     from gigalens_research.simulations.sersiclets import EllipticalSersiclets
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.jax.physical_model import PhysicalModel
+    from gigalens.jax.scene import Component, Plane, LensModel
+    from gigalens.jax.scene_prob_model import Dataset, ProbModel
 
     if "n_max" not in kwargs:
         raise TypeError(
@@ -129,19 +172,21 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
         )
     n_max = int(kwargs["n_max"])
 
-    prior = vela_inference_prior()
+    epl_p, shear_p, lens_light_p, source_p = _vela_scene_priors()
 
-    src_model = EllipticalSersiclets(n_max=n_max, use_lstsq=True)
-
-    phys_model = PhysicalModel(
-        [epl.EPL(50), shear.Shear()],
-        [sersic.SersicEllipse(use_lstsq=True)],
-        [src_model],
-    )
-    prob_model = BackwardProbModel(
-        prior,
+    model = LensModel([
+        Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
+              light=[Component(sersic.SersicEllipse(use_lstsq=True), lens_light_p)]),
+        Plane(deflection_ratio=1.0,
+              light=[Component(EllipticalSersiclets(n_max=n_max, use_lstsq=True),
+                               source_p)]),
+    ])
+    ds = Dataset(
         jnp.asarray(system.observed_image),
+        system.sim_config,
         background_rms=system.background_rms,
         exp_time=system.exp_time,
+        sees="all",
     )
-    return ModellingSequence(phys_model, prob_model, system.sim_config)
+    prob_model = ProbModel(model, ds, mode="lstsq")
+    return ModellingSequence.from_scene(model, prob_model, system.sim_config)

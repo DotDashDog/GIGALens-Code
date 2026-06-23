@@ -87,11 +87,24 @@ class Posterior(ABC):
 
     # -- shared utilities ----------------------------------------------------
 
-    def _lens_sim(self, bs: int = 1) -> _sim.LensSimulator:
+    @property
+    def _scene_model(self):
+        """The scene LensModel iff this ctx is scene-backed (G1), else None."""
+        return getattr(getattr(self.ctx, "model_seq", None), "scene_model", None)
+
+    def _lens_sim(self, bs: int = 1):
         if bs not in self._sim_cache:
-            self._sim_cache[bs] = _sim.LensSimulator(
-                self.ctx.phys_model, self.ctx.sim_config, bs=bs,
-            )
+            scene_model = self._scene_model
+            if scene_model is not None:
+                # G1 dual-path: scene-backed render uses a SceneSimulator on the scene
+                # LensModel (ctx.phys_model is a read-only view, not a real PhysicalModel).
+                from gigalens.jax.scene_simulator import SceneSimulator
+                self._sim_cache[bs] = SceneSimulator(
+                    scene_model, self.ctx.sim_config, bs=bs)
+            else:
+                self._sim_cache[bs] = _sim.LensSimulator(
+                    self.ctx.phys_model, self.ctx.sim_config, bs=bs,
+                )
         return self._sim_cache[bs]
 
     def z_to_x(self, z) -> List:
@@ -117,6 +130,12 @@ class Posterior(ABC):
         ``error_map`` for *every* model (forward and backward alike), and the
         attribute is ``error_map``, not ``err_map``.
         """
+        # G1 Q4: a scene-backed model carries the amplitude mode explicitly on the
+        # prob_model (``mode`` in {"lstsq","forward"}); prefer it. Legacy models have no
+        # ``mode`` attr, so fall back to the behavioural profile check below.
+        mode = getattr(self.ctx.prob_model, "mode", None)
+        if mode is not None:
+            return mode == "lstsq"
         profiles = list(getattr(self.ctx.phys_model, "source_light", []) or [])
         profiles += list(getattr(self.ctx.phys_model, "lens_light", []) or [])
         return any(getattr(p, "use_lstsq", False) for p in profiles)
@@ -135,6 +154,12 @@ class Posterior(ABC):
         """
         x = self.z_to_x(self._point_z(point))
         sim = self._lens_sim(bs=1)
+        # G1 dual-path: a scene-backed bijector returns the scene unique-key dict; the
+        # SceneSimulator consumes the structured (planes/cosmo) params, so scatter via
+        # to_params. Legacy LensSimulator consumes the bijector output directly.
+        scene_model = self._scene_model
+        if scene_model is not None:
+            x = scene_model.to_params(dict(x))
         # Cast params to the simulator's working dtype. Under jax_enable_x64 a
         # float64 ``z`` (e.g. an MCLMC/bootstrap qz built at x64) yields float64
         # model arrays, which clash with the float32 PSF kernel inside

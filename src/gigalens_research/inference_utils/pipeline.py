@@ -160,6 +160,30 @@ def stable_hash(obj: Any) -> str:
 # ---------------------------------------------------------------------------
 
 
+class _ScenePhysModelView:
+    """A read-only ``phys_model``-shaped view over a scene ``LensModel`` (G1 C).
+
+    ``model_card`` / ``InferenceContext.hash`` / ``posterior.py`` iterate
+    ``phys_model.{lenses, lens_light, source_light}`` as lists of gigalens profile
+    objects (reading ``.use_lstsq`` / ``.depth`` / ``vars(p)``). A scene LensModel groups
+    things into planes/Components instead, so this shim re-derives those three profile
+    lists by role:
+      - ``lenses``       : every mass Component's profile (plane order)
+      - ``source_light`` : light on lensed planes (``source_plane_light``)
+      - ``lens_light``   : the remaining (non-lensed-plane) light
+    This keeps the legacy read-only consumers working unchanged on a scene-backed model
+    WITHOUT touching the old 3-group vocabulary anywhere else."""
+
+    def __init__(self, scene_model):
+        self._model = scene_model
+        self.lenses = [c.profile for p in scene_model.planes for c in p.mass]
+        src_ids = {id(c) for c in scene_model.source_plane_light()}
+        self.source_light = [c.profile for c in scene_model.light_components
+                             if id(c) in src_ids]
+        self.lens_light = [c.profile for c in scene_model.light_components
+                           if id(c) not in src_ids]
+
+
 @dataclasses.dataclass(frozen=True)
 class InferenceContext:
     """Everything stages need to read about the system being modeled.
@@ -177,8 +201,16 @@ class InferenceContext:
 
     @classmethod
     def from_modelling_sequence(cls, model_seq) -> "InferenceContext":
+        # G1 dual-path: for a scene-backed ModellingSequence, expose a
+        # phys_model-shaped VIEW derived from the scene LensModel so the legacy
+        # read-only consumers (model_card / hash / posterior) are unchanged. The
+        # legacy path passes the real PhysicalModel through untouched.
+        if getattr(model_seq, "scene_model", None) is not None:
+            phys_view = _ScenePhysModelView(model_seq.scene_model)
+        else:
+            phys_view = model_seq.phys_model
         return cls(
-            phys_model=model_seq.phys_model,
+            phys_model=phys_view,
             prob_model=model_seq.prob_model,
             sim_config=model_seq.sim_config,
             model_seq=model_seq,
@@ -308,7 +340,20 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
             )
 
     # --- noise model ---
+    # Detection order: legacy backward (``err_map``), legacy forward
+    # (``background_rms``/``exp_time``), then the SCENE ProbModel's per-pixel ``error_map``
+    # (G1: it builds the error map inside the Dataset, so it exposes neither err_map nor
+    # background_rms/exp_time — but the noise IS present and used in the likelihood).
+    # Report the error_map DIRECTLY; do NOT fabricate background_rms/exp_time from it.
     noise: Dict[str, Any] = {"prob_model": type(pm).__name__}
+    scene_error_map = None
+    if not hasattr(pm, "err_map"):
+        try:
+            scene_error_map = pm.error_map  # scene ProbModel property (single dataset)
+        except Exception:
+            # Missing (legacy) or raises for a multi-dataset scene model — treat as
+            # "no single error_map to report" and fall through to the unknown branch.
+            scene_error_map = None
     if hasattr(pm, "err_map"):
         em = np.asarray(pm.err_map)
         noise.update(kind="fixed_err_map (backward)", err_map_shape=list(em.shape),
@@ -317,11 +362,15 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
         noise.update(kind="forward (bkg_rms + poisson)",
                      background_rms=float(np.asarray(pm.background_rms)),
                      exp_time=float(np.asarray(pm.exp_time)))
+    elif scene_error_map is not None:
+        em = np.asarray(scene_error_map)
+        noise.update(kind="fixed error_map (scene)", err_map_shape=list(em.shape),
+                     err_map_min=float(em.min()), err_map_median=float(np.median(em)))
     else:
         noise["kind"] = "unknown"
         warns.append(
             "Noise model unrecognized: prob_model exposes neither err_map nor "
-            "(background_rms, exp_time)."
+            "(background_rms, exp_time) nor a scene error_map."
         )
 
     # --- grid / precision (read directly; these are required fields) ---

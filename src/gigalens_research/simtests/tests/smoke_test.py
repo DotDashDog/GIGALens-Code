@@ -191,6 +191,68 @@ def pytest_approx(v, rel=1e-4):
     return _Approx()
 
 
+def test_scene_model_card_reports_noise():
+    """G1: model_card() for a SCENE-backed InferenceContext must report a RECOGNIZED
+    noise model — never the "unknown"/"unrecognized" branch — when the scene Dataset
+    carries an error_map. A silent/unreported noise model is exactly what the §7 card
+    guard exists to surface (project-standards.md), so a scene-backed card that says
+    "unknown" while the likelihood uses a real error_map is a blind spot, not a pass.
+
+    CPU-only; builds a tiny synthetic system + the migrated sersiclets builder.
+    """
+    import os as _os
+    _os.environ.setdefault("JAX_ENABLE_X64", "1")
+    _os.environ.setdefault("JAX_PLATFORMS", "cpu")
+    import jax
+    jax.config.update("jax_enable_x64", True)
+
+    import gigalens_research.simtests.experiments.vela_elliptical_sersiclets  # register
+    from gigalens_research.simtests.registry import get_inference_builder
+    from gigalens_research.simtests.system import System
+    from gigalens_research.inference_utils.pipeline import (
+        InferenceContext, model_card, format_model_card,
+    )
+
+    num_pix = 20
+    obs = (np.random.default_rng(0).standard_normal((num_pix, num_pix)) * 0.01
+           + 0.05).astype(np.float32)
+    psf = np.zeros((9, 9), dtype=np.float32); psf[4, 4] = 1.0
+    truth = {
+        'lens_mass': {'0': dict(theta_E=0.9, gamma=2.0, e1=0.0, e2=0.0,
+                                center_x=0.0, center_y=0.0),
+                      '1': dict(gamma1=0.0, gamma2=0.0)},
+        'lens_light': {'0': dict(R_sersic=1.0, n_sersic=2.0, e1=0.0, e2=0.0,
+                                 center_x=0.0, center_y=0.0)},
+        'source_light': {'0': dict(center_x=0.0, center_y=0.0)},
+    }
+    system = System(
+        system_id="smoke_card", observed_image=obs, truth_x=truth,
+        delta_pix=0.08, num_pix=num_pix, supersample=1, psf=psf,
+        noise_kind="gaussian_poisson", background_rms=0.01, exp_time=1000.0,
+        likelihood_precision="float64",
+    )
+    model_seq = get_inference_builder(
+        "epl_shear_sersic_elliptical_sersiclets")(system, n_max=3)
+    assert model_seq.is_scene_backed, "builder must produce a scene-backed ModellingSequence"
+
+    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    card = model_card(ctx)
+    kind = card["noise"]["kind"]
+    assert kind not in (None, "unknown"), (
+        f"scene-backed model_card reported an UNRECOGNIZED noise model (kind={kind!r}) "
+        "even though the Dataset carries an error_map — the §7 noise guard is blind here.")
+    # The scene noise must be reported via the error_map (not fabricated bkg_rms/exp_time).
+    assert "error_map" in kind, f"expected an error_map-based scene noise kind, got {kind!r}"
+    assert card["noise"].get("err_map_median") is not None, \
+        "scene noise must report the error_map median sigma"
+    # No 'unrecognized' warning should be present.
+    assert not any("unrecognized" in w.lower() for w in card["warnings"]), \
+        f"model_card still warns 'unrecognized': {card['warnings']}"
+    # The rendered card text must not show the ABSENT-noise marker.
+    text = format_model_card(card)
+    assert "unrecognized" not in text.lower(), text
+
+
 def main():
     print("Running simtests smoke tests...")
     test_config_roundtrip()
@@ -198,6 +260,7 @@ def main():
     test_registry()
     test_generate_minimal()
     test_enumerate_runs()
+    test_scene_model_card_reports_noise()
     print("\nAll smoke tests passed.")
 
 
