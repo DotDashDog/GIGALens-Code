@@ -31,8 +31,6 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow_probability.substrates.jax as tfp
 
-import gigalens.jax.simulator as _sim
-
 _tfd = tfp.distributions
 
 #: Default cap on the number of (chain-flattened) samples returned by
@@ -89,22 +87,21 @@ class Posterior(ABC):
 
     @property
     def _scene_model(self):
-        """The scene LensModel iff this ctx is scene-backed (G1), else None."""
-        return getattr(getattr(self.ctx, "model_seq", None), "scene_model", None)
+        """The scene LensModel for this (scene-only) ctx."""
+        model = getattr(getattr(self.ctx, "model_seq", None), "scene_model", None)
+        if model is None:
+            raise TypeError(
+                "Posterior requires a scene-backed InferenceContext; the legacy "
+                "PhysicalModel path was removed with the old gigalens API.")
+        return model
 
     def _lens_sim(self, bs: int = 1):
         if bs not in self._sim_cache:
-            scene_model = self._scene_model
-            if scene_model is not None:
-                # G1 dual-path: scene-backed render uses a SceneSimulator on the scene
-                # LensModel (ctx.phys_model is a read-only view, not a real PhysicalModel).
-                from gigalens.jax.scene_simulator import SceneSimulator
-                self._sim_cache[bs] = SceneSimulator(
-                    scene_model, self.ctx.sim_config, bs=bs)
-            else:
-                self._sim_cache[bs] = _sim.LensSimulator(
-                    self.ctx.phys_model, self.ctx.sim_config, bs=bs,
-                )
+            # Scene-only: render via a SceneSimulator on the scene LensModel
+            # (ctx.phys_model is a read-only view, not a real PhysicalModel).
+            from gigalens.jax.scene_simulator import SceneSimulator
+            self._sim_cache[bs] = SceneSimulator(
+                self._scene_model, self.ctx.sim_config, bs=bs)
         return self._sim_cache[bs]
 
     def z_to_x(self, z) -> List:
@@ -130,8 +127,6 @@ class Posterior(ABC):
         """
         x = self.z_to_x(self._point_z(point))
         scene = self._scene_model
-        if scene is None:
-            return x  # legacy bijector already returns the 3-group nested dict
         params = scene.to_params(dict(x))
         lens_mass, lens_light, source_light = {}, {}, {}
         mi = li = si = 0
@@ -161,8 +156,6 @@ class Posterior(ABC):
         (values are carried as-is).
         """
         scene = self._scene_model
-        if scene is None:
-            return x_flat
         loc = {}  # (plane_i, role, local_j) -> (group_name, global_idx)
         mi = li = si = 0
         for i, plane in enumerate(scene.planes):
@@ -188,29 +181,12 @@ class Posterior(ABC):
 
     @property
     def is_backward(self) -> bool:
-        """True iff the model solves linear amplitudes by least squares.
+        """True iff the model solves linear amplitudes by least squares (lstsq mode).
 
-        A backward (``BackwardProbModel``-style) model leaves the light-profile
-        amplitudes out of the sampled params and recovers them via
-        ``lstsq_simulate``; its light profiles therefore carry
-        ``use_lstsq=True``.  Keyed on that behavioural signal (the physical
-        model's light profiles) rather than the prob_model type, so it works for
-        drop-in prob_model replacements.
-
-        The old ``hasattr(prob_model, "err_map")`` check no longer
-        discriminates: the refactored gigalens base ``ProbModel`` builds
-        ``error_map`` for *every* model (forward and backward alike), and the
-        attribute is ``error_map``, not ``err_map``.
-        """
-        # G1 Q4: a scene-backed model carries the amplitude mode explicitly on the
-        # prob_model (``mode`` in {"lstsq","forward"}); prefer it. Legacy models have no
-        # ``mode`` attr, so fall back to the behavioural profile check below.
-        mode = getattr(self.ctx.prob_model, "mode", None)
-        if mode is not None:
-            return mode == "lstsq"
-        profiles = list(getattr(self.ctx.phys_model, "source_light", []) or [])
-        profiles += list(getattr(self.ctx.phys_model, "lens_light", []) or [])
-        return any(getattr(p, "use_lstsq", False) for p in profiles)
+        Scene-only (Q4): the scene ProbModel carries the amplitude mode explicitly
+        (``mode`` in {"lstsq", "forward"}); ``"lstsq"`` is the backward (linear-amplitude)
+        path that recovers amplitudes via ``lstsq_simulate``."""
+        return self.ctx.prob_model.mode == "lstsq"
 
     # -- model-aware rendering ----------------------------------------------
 
@@ -226,12 +202,9 @@ class Posterior(ABC):
         """
         x = self.z_to_x(self._point_z(point))
         sim = self._lens_sim(bs=1)
-        # G1 dual-path: a scene-backed bijector returns the scene unique-key dict; the
-        # SceneSimulator consumes the structured (planes/cosmo) params, so scatter via
-        # to_params. Legacy LensSimulator consumes the bijector output directly.
-        scene_model = self._scene_model
-        if scene_model is not None:
-            x = scene_model.to_params(dict(x))
+        # Scene-only: the bijector returns the scene unique-key dict; the SceneSimulator
+        # consumes the structured (planes/cosmo) params, so scatter via to_params.
+        x = self._scene_model.to_params(dict(x))
         # Cast params to the simulator's working dtype. Under jax_enable_x64 a
         # float64 ``z`` (e.g. an MCLMC/bootstrap qz built at x64) yields float64
         # model arrays, which clash with the float32 PSF kernel inside

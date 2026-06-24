@@ -201,14 +201,15 @@ class InferenceContext:
 
     @classmethod
     def from_modelling_sequence(cls, model_seq) -> "InferenceContext":
-        # G1 dual-path: for a scene-backed ModellingSequence, expose a
-        # phys_model-shaped VIEW derived from the scene LensModel so the legacy
-        # read-only consumers (model_card / hash / posterior) are unchanged. The
-        # legacy path passes the real PhysicalModel through untouched.
-        if getattr(model_seq, "scene_model", None) is not None:
-            phys_view = _ScenePhysModelView(model_seq.scene_model)
-        else:
-            phys_view = model_seq.phys_model
+        # Scene-only (old gigalens API dropped): expose a phys_model-shaped VIEW derived
+        # from the scene LensModel so the read-only consumers (model_card / hash /
+        # posterior) read a stable profile listing without the old PhysicalModel.
+        if getattr(model_seq, "scene_model", None) is None:
+            raise TypeError(
+                "InferenceContext.from_modelling_sequence requires a scene-backed "
+                "ModellingSequence (build it with ModellingSequence.from_scene). The "
+                "legacy PhysicalModel path was removed with the old gigalens API.")
+        phys_view = _ScenePhysModelView(model_seq.scene_model)
         return cls(
             phys_model=phys_view,
             prob_model=model_seq.prob_model,

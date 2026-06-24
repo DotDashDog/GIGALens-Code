@@ -31,8 +31,6 @@ import functools
 from typing import Callable, NamedTuple, Optional
 from collections import namedtuple
 
-import gigalens.jax.simulator as sim
-
 import time
 from threading import Lock
 
@@ -41,17 +39,9 @@ from threading import Lock
 def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
           desired_energy_variance=5e-4, init_L=None, init_step_size=None, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
           progress_bar=False, seed=0, debug_output=False, regularize_mass_matrix=False):
-    # G1 dual-path: a scene-backed ModellingSequence builds a SceneSimulator via
-    # make_lens_sim (Q2: sampler owns the sim and passes it to prob.log_prob(sim, z));
-    # the legacy path builds a LensSimulator exactly as before (byte-unchanged).
-    if getattr(model_seq, "scene_model", None) is not None:
-        lens_sim = model_seq.make_lens_sim(1)
-    else:
-        lens_sim = sim.LensSimulator(
-            model_seq.phys_model,
-            model_seq.sim_config,
-            bs=1,
-        )
+    # Scene-only (old gigalens API dropped): the ModellingSequence builds a SceneSimulator
+    # via make_lens_sim (Q2: the sampler owns the sim and passes it to prob.log_prob(sim, z)).
+    lens_sim = model_seq.make_lens_sim(1)
 
     def log_prob(z):
         return model_seq.prob_model.log_prob(lens_sim, z)[0]

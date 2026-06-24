@@ -84,7 +84,7 @@ def generate_parametric(
     dataset_dir: str,
     seed: int,
     *,
-    build_phys_model_fn: Any,
+    build_scene_model_fn: Any,
     build_sim_prior_fn: Any,
     sim_config: Any,
     noise_kind: str = "forward",
@@ -106,10 +106,11 @@ def generate_parametric(
 
     Parameters
     ----------
-    build_phys_model_fn : callable() -> PhysicalModel
-        Returns the *truth* physical model (used for simulation).
+    build_scene_model_fn : callable() -> gigalens.jax.scene.LensModel
+        Returns the *truth* scene model (used for simulation via SceneSimulator).
     build_sim_prior_fn : callable() -> tfd.Distribution
-        Returns the simulation prior (typically tighter than inference prior).
+        Returns the simulation prior (typically tighter than inference prior). Emits the
+        legacy 3-group truth structure; the persisted ``truth_x`` is unchanged.
     sim_config : SimulatorConfig
     noise_kind : str
     background_rms : float
@@ -122,13 +123,21 @@ def generate_parametric(
     """
     import jax
     import jax.numpy as jnp
+    import jax.tree_util as jtu
     from jax import random
 
-    from gigalens.jax.simulator import LensSimulator
+    from gigalens.jax.scene_simulator import SceneSimulator
 
+    from gigalens_research.inference_utils.params import truth_x_to_scene_params
     from .system import System, write_manifest
 
-    phys_model = build_phys_model_fn()
+    # G1 scene migration: the truth model is now a scene LensModel; the simulation prior
+    # still emits the legacy 3-group truth (``{lens_mass, lens_light, source_light}``) so
+    # the PERSISTED ``truth_x`` is unchanged (downstream plotting / bootstrap read it).
+    # Each 3-group truth is adapted to scene structured params (truth_x_to_scene_params)
+    # and rendered with SceneSimulator. Verified byte-identical to the old LensSimulator
+    # render (single + batched) at the float64 floor.
+    scene_model = build_scene_model_fn()
     prior = build_sim_prior_fn()
 
     n_digits = len(str(n_systems - 1))
@@ -146,17 +155,33 @@ def generate_parametric(
 
     psf = sim_config.kernel
 
+    def _stack_scene_params(truth_dicts):
+        """Stack per-system scene structured params (from truth_x_to_scene_params) into a
+        single batched params dict (leading batch axis on every leaf), as SceneSimulator
+        expects for ``bs>1`` (verified equivalent to per-system renders)."""
+        per_sys = [truth_x_to_scene_params(t, scene_model) for t in truth_dicts]
+        leaves0, treedef = jtu.tree_flatten(per_sys[0])
+        stacked = [jnp.stack([jtu.tree_flatten(p)[0][i] for p in per_sys])
+                   for i in range(len(leaves0))]
+        return jtu.tree_unflatten(treedef, stacked)
+
     # Simulate in chunks to bound GPU memory.
     for chunk_start in range(0, n_systems, gen_chunk):
         chunk_end = min(chunk_start + gen_chunk, n_systems)
         bs = chunk_end - chunk_start
 
-        # Slice the truth params for this chunk.
+        # Slice the truth params for this chunk (kept in 3-group form for persistence).
         chunk_truth = jax.tree.map(lambda a: jnp.asarray(a[chunk_start:chunk_end]), all_truth_np)
+        # Per-system 3-group truth dicts -> stacked scene params for a batched render.
+        chunk_truth_list = [
+            jax.tree.map(lambda a: np.asarray(a[j]), chunk_truth) for j in range(bs)
+        ]
+        chunk_truth_list = [_unbatch_truth(t) for t in chunk_truth_list]
+        scene_params = _stack_scene_params(chunk_truth_list)
 
         chunk_key, key = random.split(key)
-        lens_sim = LensSimulator(phys_model, sim_config, bs=bs)
-        noiseless = lens_sim.simulate(chunk_truth)  # (bs, H, W)
+        lens_sim = SceneSimulator(scene_model, sim_config, bs=bs)
+        noiseless = lens_sim.simulate(scene_params)  # (bs, H, W)
 
         noisy_batch = _add_noise(noiseless, background_rms, exp_time, chunk_key)
         noisy_np = np.asarray(noisy_batch)
@@ -164,9 +189,8 @@ def generate_parametric(
         for j in range(bs):
             idx = chunk_start + j
             system_id = system_ids[idx]
-            truth_x_j = jax.tree.map(lambda a: np.asarray(a[j]), chunk_truth)
-            # Wrap scalars in a structure matching prior.sample(1) output
-            truth_x_nested = _unbatch_truth(truth_x_j)
+            # 3-group truth (already unbatched above) — persisted unchanged.
+            truth_x_nested = chunk_truth_list[j]
 
             sys = System(
                 system_id=system_id,

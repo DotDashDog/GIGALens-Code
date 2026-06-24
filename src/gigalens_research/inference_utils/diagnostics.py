@@ -2,8 +2,10 @@ from jax import numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 import optax
-from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel
-from gigalens.jax.simulator import LensSimulator
+# NOTE: the old gigalens API (ForwardProbModel / BackwardProbModel / LensSimulator) was
+# imported here but never used in any function body; removed with the old API. The
+# functions below (get_noise_image / get_chisq / log_prob_image*) are pure and stay on
+# the working path (e.g. plotting/systems.py uses get_noise_image/get_chisq).
 import jax
 import tensorflow_probability.substrates.jax as tfp
 import os

@@ -22,7 +22,9 @@ import jax.numpy as jnp
 import blackjax.util as _blackjax_util
 from blackjax.adaptation.laps import laps as _blackjax_laps
 
-import gigalens.jax.simulator as sim
+# NOTE: experimental; NOT migrated to the scene API (it built a legacy LensSimulator from
+# model_seq.phys_model, removed with the old gigalens API). Module stays IMPORT-SAFE;
+# LAPS_blackjax raises if CALLED. Restore from git b82397c to re-enable.
 
 
 @contextlib.contextmanager
@@ -116,6 +118,10 @@ def LAPS_blackjax(
     actually used by blackjax after its dimension-dependent defaults).
     """
 
+    raise NotImplementedError(
+        "LAPS_blackjax was not migrated to the scene API; it used the legacy "
+        "LensSimulator, which was removed with the old gigalens API. Restore from git "
+        "b82397c if needed.")
     lens_sim = sim.LensSimulator(
         model_seq.phys_model,
         model_seq.sim_config,

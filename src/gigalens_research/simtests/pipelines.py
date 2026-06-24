@@ -358,129 +358,18 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         artifacts: Dict[str, Any],
         seed: int,
     ) -> StageResult:
+        # Scene-only (old gigalens API dropped): the bootstrap uses the scene fix_to /
+        # source_plane_light helpers + the D2 truth adapter (see ``_run_scene``). The
+        # legacy 3-group prior-walk path was removed.
         import jax.numpy as jnp
-        import jax.tree_util as jtu
-        import optax
 
-        from gigalens.jax.inference import ModellingSequence
-
-        t0 = time.perf_counter()
-
-        truth_x = self.system.truth_x
-        sim_config = self.system.sim_config
-        observed_img = jnp.asarray(self.system.observed_image)
-
-        # G1 dual-path: a scene-backed ModellingSequence uses the scene fix_to /
-        # source_plane_light helpers + the D2 truth adapter, NOT the legacy 3-group
-        # prior walk below. Branch early; the legacy path is unchanged for the other
-        # (not-yet-migrated) builders.
-        if getattr(ctx.model_seq, "scene_model", None) is not None:
-            return self._run_scene(ctx, seed, t0, truth_x, observed_img)
-
-        # The inference model is the single source of truth for both the
-        # profiles (physical model) and the free-parameter priors.
-        inf_prior = ctx.prob_model.prior
-
-        # Build the fixed prior by walking the inference prior's nested
-        # JointDistributionNamed({component: {profile_idx: {param: dist}}})
-        # structure: keep each free param's inference distribution, replace each
-        # pinned param with a near-delta Uniform at its truth value.  Parameters
-        # solved by lstsq (e.g. Sersic ``Ie``, shapelet amplitudes) are absent
-        # from the prior and so are correctly never pinned or freed.
-        truth_dict = _truth_to_dict(truth_x)
-        fixed_components: Dict[str, Any] = {}
-        for ckey, comp in inf_prior.model.items():
-            cname = _KEY_TO_FREE_NAME.get(ckey, ckey)
-            prof_blocks: Dict[str, Any] = {}
-            for pkey, named in comp.model.items():
-                pi = int(pkey)
-                dists: Dict[str, Any] = {}
-                for pname, dist in named.model.items():
-                    if self._is_free(cname, pi, pname):
-                        dists[pname] = dist
-                    else:
-                        v = float(jnp.squeeze(jnp.asarray(truth_dict[ckey][pkey][pname])))
-                        dists[pname] = tfd.Uniform(v - self.pin_eps, v + self.pin_eps)
-                prof_blocks[pkey] = tfd.JointDistributionNamed(dists)
-            fixed_components[ckey] = tfd.JointDistributionNamed(prof_blocks)
-        fixed_prior = tfd.JointDistributionNamed(fixed_components)
-
-        # Reuse the inference physical model (identical profiles) and rebuild the
-        # prob model with the same class + the system's noise; only the prior
-        # changes.  Noise comes from ``system`` (not from ``ctx.prob_model``
-        # attributes) because ``BackwardProbModel`` stores a precomputed
-        # ``err_map`` rather than ``background_rms`` / ``exp_time``.
-        fixed_prob = type(ctx.prob_model)(
-            fixed_prior,
-            observed_img,
-            background_rms=self.system.background_rms,
-            exp_time=self.system.exp_time,
-        )
-        fixed_seq = ModellingSequence(ctx.phys_model, fixed_prob, sim_config)
-
-        optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-        map_samples, lps, _ = fixed_seq.MAP(
-            optimizer=optimizer,
-            n_samples=self.map_n_samples,
-            num_steps=self.map_num_steps,
-            seed=seed,
-            output_type="best_step",
-            pbar_interval=0,
-        )
-        # output_type="best_step" → samples shape (num_steps, n_params).
-        # Pick the globally best step.
-        lps_np = np.asarray(lps)
-        map_samples_np = np.asarray(map_samples)
-        best = int(np.nanargmax(lps_np))
-        map_z = jnp.asarray(map_samples_np[best])  # (n_params,)
-        # Constrained-space params recovered by the MAP, same nested structure
-        # as the inference model.
-        recovered = fixed_prob.bij.forward(list(jnp.atleast_2d(map_z).T))
-
-        # Compose the full constrained truth: free leaves take their recovered
-        # MAP value, pinned leaves take the exact truth value.  Same dict-keyed
-        # structure as the inference prior.
-        full_params: Dict[str, Any] = {}
-        free_vals: Dict[str, float] = {}
-        for ckey, comp in inf_prior.model.items():
-            cname = _KEY_TO_FREE_NAME.get(ckey, ckey)
-            profs: Dict[str, Any] = {}
-            for pkey, named in comp.model.items():
-                pi = int(pkey)
-                d: Dict[str, Any] = {}
-                for pname in named.model.keys():
-                    if self._is_free(cname, pi, pname):
-                        val = float(np.asarray(jnp.squeeze(recovered[ckey][pkey][pname])))
-                        free_vals[f"{cname}{pi}_{pname}"] = val
-                        d[pname] = jnp.asarray(val)
-                    else:
-                        d[pname] = jnp.asarray(truth_dict[ckey][pkey][pname])
-                profs[pkey] = d
-            full_params[ckey] = profs
-
-        # Map to unconstrained space via the FULL inference model's bijector.
-        # Truth leaves may have shape (1,) while recovered leaves are scalars
-        # (), so squeeze everything to () for a consistent stackable list.
-        full_params = jtu.tree_map(
-            lambda x: jnp.squeeze(jnp.asarray(x)), full_params
-        )
-        true_z = jnp.stack(ctx.prob_model.bij.inverse(full_params))
-        d_dim = true_z.shape[-1]
-        scale_tril = jnp.diag(jnp.ones(d_dim) * jnp.sqrt(self.diag_scale))
-
-        return StageResult(
-            arrays={
-                "qz_loc": np.asarray(true_z),
-                "qz_scale_tril": np.asarray(scale_tril),
-                **{f"free_{k}": np.array([v]) for k, v in free_vals.items()},
-            },
-            metadata={
-                "wall_time_s": time.perf_counter() - t0,
-                "free": self._free_tag,
-                "n_free": len(free_vals),
-                **{f"free_{k}": v for k, v in free_vals.items()},
-            },
-        )
+        if getattr(ctx.model_seq, "scene_model", None) is None:
+            raise TypeError(
+                "PartialTruthBootstrapQzStage requires a scene-backed InferenceContext; "
+                "the legacy 3-group prior-walk path was removed with the old gigalens API.")
+        return self._run_scene(
+            ctx, seed, time.perf_counter(),
+            self.system.truth_x, jnp.asarray(self.system.observed_image))
 
     def derive_artifacts(self, arrays: Dict[str, np.ndarray]) -> Dict[str, Any]:
         import jax.numpy as jnp

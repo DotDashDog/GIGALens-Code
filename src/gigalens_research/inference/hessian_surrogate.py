@@ -32,7 +32,10 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow_probability.substrates.jax as tfp
 
-import gigalens.jax.simulator as _sim
+# NOTE: this experimental surrogate was NOT migrated to the scene API; it built a legacy
+# ``LensSimulator`` from ``model_seq.phys_model``, which was removed with the old gigalens
+# API. The module stays IMPORT-SAFE (no module-level old-API import); ``HessianSurrogate``
+# raises if actually CALLED. Restore from git b82397c to re-enable.
 
 _tfd = tfp.distributions
 
@@ -86,6 +89,10 @@ def HessianSurrogate(
         Emitted (once, with eigenvalue details) if any eigenvalues of ``M``
         are non-positive, regardless of the value of ``fix_indefinite``.
     """
+    raise NotImplementedError(
+        "HessianSurrogate was not migrated to the scene API; it used the legacy "
+        "LensSimulator, which was removed with the old gigalens API. Restore from git "
+        "b82397c if needed.")
     # --- build the scalar log-density callable ----------------------------
     # Create a throw-away LensSimulator; same pattern as MCLMC_JIT.
     lens_sim = _sim.LensSimulator(

@@ -973,6 +973,10 @@ def LAPS_JIT(
     `init_inverse_mass_matrix` is always treated as a full-rank inverse mass
     matrix and must therefore be a `(dim, dim)` array.
     """
+    raise NotImplementedError(
+        "LAPS_JIT was not migrated to the scene API; it used the legacy LensSimulator "
+        "(and an `alternate_inference` package not present here), removed with the old "
+        "gigalens API. Restore from git b82397c if needed.")
 
     del progress_bar
 
