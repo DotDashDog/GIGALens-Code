@@ -83,6 +83,12 @@ class System:
     # reduction stay float64), which moves the FLOP-dominant per-component conv off the
     # slow Ampere FP64 path. See gigalens SimulatorConfig.conv_precision.
     conv_precision: Optional[str] = None
+    # Light-basis precision override (independent of likelihood/conv precision). None
+    # keeps the basis in the float64-promoted dtype (default). "float32" runs the light
+    # basis generation + its VJP in float32 (gram/solve and reduction stay float64). This
+    # is an OPEN ablation (does MCLMC step-size adaptation stay equivalent?) — not a
+    # default. See gigalens SimulatorConfig.basis_precision.
+    basis_precision: Optional[str] = None
 
     @property
     def sim_config(self):
@@ -95,6 +101,7 @@ class System:
             kernel=self.psf,
             likelihood_precision=self.likelihood_precision,
             conv_precision=self.conv_precision,
+            basis_precision=self.basis_precision,
         )
 
     # ------------------------------------------------------------------
