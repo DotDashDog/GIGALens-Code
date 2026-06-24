@@ -1,0 +1,74 @@
+# Revised Vela simulated-system campaign (Route B: simulate fresh systems).
+#
+# Generation is performed by the `vela_simulated` generator, which draws lens
+# truth, lenses the PRISTINE (pre-PSF) Vela source, applies a Gaussian PSF, and
+# adds noise -- so every science choice is recorded here, not buried in a
+# notebook. See src/gigalens_research/simtests/experiments/vela_simulated.py.
+#
+# The five science choices below are intentionally UNSET. Generation will fail
+# loudly until each is filled in -- this is deliberate (decisions pending):
+#   scale_factor       (redshift; choose the VELA scale factor)
+#   source_flux_scale  (arc S/N; target "arcs ~0.5x source" NOT yet calibrated)
+#   psf_fwhm_arcsec    (Gaussian PSF width)
+#   background_rms     (noise; pending research-group input)
+#   exp_time           (noise; pending research-group input)
+
+name: vela_revised_v1
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/vela_revised_v1
+
+plugins:
+  - gigalens_research.simtests.experiments.vela_simulated
+
+dataset:
+  generator: vela_simulated
+
+  # ---- REQUIRED, currently UNSPECIFIED (fail loud until set) --------------
+  scale_factor: "a0.400"                # e.g. "a0.500" -> z=1.0 ; smaller a -> higher z
+  source_flux_scale: 1.0           # multiplicative source-SB scale (manual knob)
+  psf_fwhm_arcsec: 0.13             # Gaussian FWHM in arcsec, applied post-lensing
+  background_rms: 0.005              # Gaussian background sigma (image units)
+  exp_time: 2000                    # exposure time (s) for the Poisson term
+
+  # ---- Exposed structural choices (defaults shown; override freely) -------
+  vela_ids: ["02", "03", "04", "07", "08", "09", "10", "21", "22", "23", "25", "26"]
+  cam: "12"
+  filter: "f814w"
+  version: "v3"
+  n_reps: 1                     # truth+noise realisations per source
+  num_pix: 200
+  supersample: 4                # inference MUST use the same value (see note)
+  transpose_image: false
+  source_root: ~/GIGALens-Code/data/vela_sources_pristine
+  datadir: ~/GIGALens-Code/data/vela_downloads
+  allow_unverified_sources: false   # refuse legacy (PSF-convolved) source dirs
+  likelihood_precision: float64
+
+inference:
+  builder: epl_shear_sersic_shapelets
+  pipeline: map_bootstrap_mclmc
+  pipeline_kwargs:
+    bootstrap_map_steps: 200
+    bootstrap_map_n_samples: 50
+    n_chains: 8
+    num_burnin_steps: 4000
+    num_results: 4000
+    desired_energy_variance: 5.0e-4
+
+# NOTE: the inference SimulatorConfig (supersample, num_pix, precision) is read
+# back from each System's meta.json, so it automatically matches generation.
+sweep:
+  axis: n_max
+  values: [10, 15, 20, 30]
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - mass_zscores
+  - all_zscores
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

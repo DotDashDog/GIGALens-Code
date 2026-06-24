@@ -9,6 +9,7 @@ This is a **scientific-research** project: the goal is a *defensible answer to a
 3. `docs/project-standards.md` — project-specific standards (controls/baselines, validation, failure-modes-to-watch, domain conventions).
 4. `README.md` - project structure, code conventions.
 5. The lab-notebook log for the area you're working in (see *The record*, below).
+6. `env_setup.md` - python environment standards for the project (the canonical environment)
 
 ## Operating modes
 

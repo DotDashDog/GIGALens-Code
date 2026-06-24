@@ -1,0 +1,46 @@
+---
+description: Canonical Python runtime for GIGALens-Code (NERSC Perlmutter Shifter container). Read before running ANY Python.
+alwaysApply: true
+---
+
+# GIGALens runtime environment
+
+**NEVER run bare `python`.** On the Perlmutter login node the default `python`
+is an old kernel (**JAX 0.4.7**). The project's pinned runtime is a Shifter
+container shipping **JAX 2026**. Running under the old stack silently changes
+precision / RNG / API behaviour and **invalidates any generated data**. A tell:
+if the repo's own code uses an API that is "missing" (e.g. `jax.tree.map`), you
+are in the wrong environment — do not add a shim, switch environments.
+
+The `gigalens_research.simtests` package enforces this with a JAX-version guard
+at import (override only with `GIGALENS_ALLOW_LEGACY_JAX=1`).
+
+## Canonical runtime
+
+| Layer | Value |
+|---|---|
+| Shifter image | `docker:ghcr.io/nvidia/jax:jax-2026-04-13` |
+| Conda env | `gigalens_multinode_env` (Python 3.12) |
+| Sidecar overlay (must be first on PYTHONPATH) | `/global/homes/l/linusu/sidecar_jax_upgrade` |
+
+Expected: `jax >= 0.10.0.dev20260505`, `numpy >= 2.4`, `astropy >= 7.2`,
+`tensorflow_probability >= 0.26.0-dev20260505`.
+
+## How to run anything
+
+```bash
+shifter --module=gpu,nccl-plugin --image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 bash -lc '
+  export PYTHONPATH="/global/homes/l/linusu/sidecar_jax_upgrade:$HOME/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages"
+  export PYTHONPATH="$HOME/gigalens/src:$HOME/GIGALens-Code/src:$PYTHONPATH"
+  python --version   # must be 3.12.x
+  python <your script or -m gigalens_research.simtests ...>
+'
+```
+
+The sidecar **must** come first so its `tfp-nightly` shadows the conda env's
+older TFP; swapping the order breaks the NumPy 2.x / JAX 0.7+ TFP import.
+
+For batch runs use `src/gigalens_research/simtests/slurm/campaign_array.slurm`,
+which already bakes in this invocation. Full details + editable-install setup:
+`docs/env_setup.md`. Legacy runtime (JAX 0.6 / 2025) is documented there too;
+use it only to reproduce pre-upgrade behaviour.
