@@ -121,10 +121,10 @@ def _lens_model_and_kwargs(
     if lens_model_list is None:
         lens_model_list = _default_lens_model_list(posterior.ctx.phys_model)
     lens_model = LensModel(lens_model_list=lens_model_list)
-    x = posterior.z_to_x(posterior._point_z(point))
-    # New gigalens params are dict-keyed: x['lens_mass'] = {'0': {..}, '1': {..}}.
-    # lenstronomy wants a list of param dicts ordered to match lens_model_list
-    # (which is built from phys_model.lenses in the same profile order).
+    # x['lens_mass'] = {'0': {..}, '1': {..}} keyed by stringified profile index, ordered
+    # to match lens_model_list (built from phys_model.lenses). x_grouped regroups the
+    # scene-backed flat-key bijector output into this 3-group form (legacy unchanged).
+    x = posterior.x_grouped(point)
     lens_mass = x["lens_mass"]
     kwargs_lens = [
         jax.tree_util.tree_map(

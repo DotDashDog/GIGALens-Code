@@ -131,6 +131,17 @@ def flatten_params(
     output convention of :meth:`ProbabilisticModel.bij.forward` (and is what
     ``LensSimulator.simulate`` expects as its argument).
     """
+    # Scene-API (G1) flat form: the scene bijector returns a flat
+    # ``{unique_key: array}`` dict (keys like ``planes/0/mass/0/theta_E`` or
+    # ``shared_<uid>``) where every value is a leaf array — there is no group/profile
+    # nesting to walk, and each key already IS one parameter column. Detect it (all
+    # top-level values are non-dict/non-list) and return it as-is. The legacy 3-group
+    # dict has dict values at the top, and the positional form is a list, so neither
+    # trips this.
+    if isinstance(params, dict) and params and all(
+            not isinstance(v, (dict, list)) for v in params.values()):
+        return dict(params)
+
     flat: Dict[str, Any] = {}
     seen: Dict[str, int] = {}
     for prefix, group in _iter_groups(params):

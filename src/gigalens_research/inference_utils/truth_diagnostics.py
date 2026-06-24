@@ -97,10 +97,13 @@ def z_scores(
             f"z_scores requires a posterior with quantiles_z(); "
             f"{type(posterior).__name__} has no posterior uncertainty."
         )
+    # grouped_free_x regroups a scene-backed flat bijector output into the legacy
+    # 3-group label space (pass-through for legacy posteriors), so the truth (3-group)
+    # and the posterior points share labels and the shared params are actually scored.
     flat_truth = _flat_floats(truth_x)
-    flat_med = _flat_floats(posterior.z_to_x(posterior.median_z))
-    flat_lo = _flat_floats(posterior.z_to_x(posterior.quantiles_z(low_q)))
-    flat_hi = _flat_floats(posterior.z_to_x(posterior.quantiles_z(high_q)))
+    flat_med = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.median_z)))
+    flat_lo = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.quantiles_z(low_q))))
+    flat_hi = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.quantiles_z(high_q))))
     skipped = [k for k in flat_truth if k not in flat_med]
     if skipped:
         warnings.warn(

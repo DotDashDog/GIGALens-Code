@@ -114,6 +114,78 @@ class Posterior(ABC):
         z = jnp.atleast_2d(jnp.asarray(z))
         return self.ctx.prob_model.bij.forward(list(z.T))
 
+    def x_grouped(self, point: str = "median"):
+        """Physical params at ``point`` in the legacy 3-group nested form
+        ``{'lens_mass': {...}, 'lens_light': {...}, 'source_light': {...}}`` (keys
+        are stringified profile indices), for BOTH legacy and scene-backed ctx.
+
+        The scene bijector returns a flat unique-key dict (``planes/i/role/j/param``),
+        so plotting / source-plane consumers that index the old group keys would
+        ``KeyError`` on a scene-backed posterior. This funnels them through one place:
+        a legacy ctx returns its already-grouped ``x`` unchanged; a scene ctx scatters
+        to the structured ``planes`` params and regroups by role — mass -> lens_mass,
+        light on a lensed plane -> source_light, other light -> lens_light — in the SAME
+        order as :class:`_ScenePhysModelView`, so the regrouped param dicts line up
+        index-for-index with ``ctx.phys_model.{lenses,lens_light,source_light}``.
+        """
+        x = self.z_to_x(self._point_z(point))
+        scene = self._scene_model
+        if scene is None:
+            return x  # legacy bijector already returns the 3-group nested dict
+        params = scene.to_params(dict(x))
+        lens_mass, lens_light, source_light = {}, {}, {}
+        mi = li = si = 0
+        for i, plane in enumerate(scene.planes):
+            lensed = any(scene.planes[j].has_mass for j in range(i))
+            for j in range(len(plane.mass)):
+                lens_mass[str(mi)] = params["planes"][i]["mass"][j]; mi += 1
+            for j in range(len(plane.light)):
+                if lensed:
+                    source_light[str(si)] = params["planes"][i]["light"][j]; si += 1
+                else:
+                    lens_light[str(li)] = params["planes"][i]["light"][j]; li += 1
+        return {"lens_mass": lens_mass, "lens_light": lens_light,
+                "source_light": source_light}
+
+    def grouped_free_x(self, x_flat):
+        """Regroup the FREE params of a scene bijector output (flat
+        ``{unique_key: array}`` dict) into the legacy 3-group nested form, so the
+        flatten / latex-label / truth-overlay machinery (corner plots, z-scores)
+        applies unchanged and a 3-group truth aligns label-for-label.
+
+        Differs from :meth:`x_grouped` (which scatters ALL params incl. constants for
+        rendering): this places ONLY the sampled (free) params — constants are not
+        corner columns. A ``shared()`` param is fanned out to each of its sites (matching
+        how a 3-group truth carries it per site). Legacy (already-grouped) ``x_flat``
+        passes through unchanged. Accepts a single point or a batched bijector output
+        (values are carried as-is).
+        """
+        scene = self._scene_model
+        if scene is None:
+            return x_flat
+        loc = {}  # (plane_i, role, local_j) -> (group_name, global_idx)
+        mi = li = si = 0
+        for i, plane in enumerate(scene.planes):
+            lensed = any(scene.planes[k].has_mass for k in range(i))
+            for j in range(len(plane.mass)):
+                loc[(i, "mass", j)] = ("lens_mass", mi); mi += 1
+            for j in range(len(plane.light)):
+                if lensed:
+                    loc[(i, "light", j)] = ("source_light", si); si += 1
+                else:
+                    loc[(i, "light", j)] = ("lens_light", li); li += 1
+        groups = {"lens_mass": {}, "lens_light": {}, "source_light": {}}
+        for path, ukey in scene._site_to_unique:
+            if not path or path[0] != "planes":
+                continue  # cosmo etc. are not corner groups
+            _, i, role, j, param = path
+            info = loc.get((i, role, j))
+            if info is None:
+                continue
+            grp, idx = info
+            groups[grp].setdefault(str(idx), {})[param] = x_flat[ukey]
+        return groups
+
     @property
     def is_backward(self) -> bool:
         """True iff the model solves linear amplitudes by least squares.
@@ -261,10 +333,11 @@ class Posterior(ABC):
         img : ndarray, shape ``(grid_pix, grid_pix)``
         extent : tuple ``(x_min, x_max, y_min, y_max)`` for ``ax.imshow``.
         """
-        x = self.z_to_x(self._point_z(point))
-        # New gigalens params are dict-keyed: source light is x['source_light'],
-        # a dict {'0': {..}, '1': {..}} keyed by stringified profile index. Order
-        # it into a list so it lines up with ctx.phys_model.source_light below.
+        # Source-light params in the 3-group form for BOTH legacy and scene ctx
+        # (x_grouped regroups the scene flat-key bijector output). x['source_light'] is
+        # {'0': {..}, '1': {..}} keyed by stringified profile index, ordered to line up
+        # with ctx.phys_model.source_light below.
+        x = self.x_grouped(point)
         src_group = x["source_light"]
         src_params_list = [src_group[k] for k in sorted(src_group, key=int)]
 
@@ -396,8 +469,10 @@ class SamplerPosterior(Posterior):
 
     @cached_property
     def flat_x(self):
-        """Physical-space view of ``flat_z`` (nested dicts of arrays)."""
-        return self.z_to_x(self.flat_z)
+        """Physical-space view of ``flat_z`` (nested dicts of arrays), in the legacy
+        3-group label space (scene-backed samples are regrouped so corner plots and
+        truth overlays align; see :meth:`grouped_free_x`)."""
+        return self.grouped_free_x(self.z_to_x(self.flat_z))
 
     def subsample(self, n: Optional[int]) -> "SamplerPosterior":
         return SamplerPosterior(self.ctx, self._samples_z, subsample_n=n, seed=self.seed)
@@ -523,7 +598,7 @@ class SurrogatePosterior(Posterior):
 
     @cached_property
     def flat_x(self):
-        return self.z_to_x(self.flat_z)
+        return self.grouped_free_x(self.z_to_x(self.flat_z))
 
     def quantiles_z(self, q) -> np.ndarray:
         # No closed form for arbitrary q on a multivariate normal in general;
