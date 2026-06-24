@@ -1,0 +1,8 @@
+# Baseline of accepted silent-default findings (known debt).
+# Triage each: make the missing input RAISE, or annotate the source line
+# `# physics-default-ok: <reason>` and remove it here. New violations not
+# in this list fail the lint (tools/lint_silent_defaults.py).
+src/gigalens_research/simtests/experiments/vela_simulated.py :: "approx_psf_fwhm_arcsec": float(primary_hdr.get("APROXPSF")) if "APROXPSF" in primary_hdr else None,
+src/gigalens_research/simtests/experiments/vela_simulated.py :: "psf_file": str(primary_hdr.get("PSFFILE")) if "PSFFILE" in primary_hdr else None,
+src/gigalens_research/simtests/experiments/vela_simulated.py :: num_pix = int(extra.get("num_pix", 200))
+src/gigalens_research/simtests/experiments/vela_simulated.py :: supersample = int(extra.get("supersample", 4))

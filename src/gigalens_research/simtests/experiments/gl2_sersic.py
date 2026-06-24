@@ -170,26 +170,73 @@ def _gl2_psf(srcdir: str | None = None) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 
+def _gl2_scene_priors():
+    """Per-parameter scene priors for the GL2 FORWARD build (G1b).
+
+    Mirrors ``gl2_inference_prior``. In forward mode the Sérsic amplitudes are SAMPLED:
+    both the lens light and the source carry ``Ie`` as a free param (the scene
+    ``SersicEllipse(use_lstsq=False)`` profile includes ``Ie`` in ``params``)."""
+    import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
+    tfd = tfp.distributions
+    epl_p = dict(
+        theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+        gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
+        e1=tfd.Normal(0.0, 0.2),
+        e2=tfd.Normal(0.0, 0.2),
+        center_x=tfd.Normal(0.0, 0.06),
+        center_y=tfd.Normal(0.0, 0.06),
+    )
+    shear_p = dict(gamma1=tfd.Normal(0.0, 0.1), gamma2=tfd.Normal(0.0, 0.1))
+    lens_light_p = dict(
+        R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+        n_sersic=tfd.Uniform(0.5, 8.0),
+        e1=tfd.TruncatedNormal(0.0, 0.1, -0.15, 0.15),
+        e2=tfd.TruncatedNormal(0.0, 0.1, -0.15, 0.15),
+        center_x=tfd.Normal(0.0, 0.02),
+        center_y=tfd.Normal(0.0, 0.02),
+        Ie=tfd.LogNormal(jnp.log(300.0), 0.5),
+    )
+    source_p = dict(
+        R_sersic=tfd.LogNormal(jnp.log(0.25), 0.25),
+        n_sersic=tfd.Uniform(0.5, 8.0),
+        e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+        e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+        center_x=tfd.Normal(0.0, 0.5),
+        center_y=tfd.Normal(0.0, 0.5),
+        Ie=tfd.LogNormal(jnp.log(150.0), 0.9),
+    )
+    return epl_p, shear_p, lens_light_p, source_p
+
+
 @register_inference_builder("epl_shear_sersic_sersic")
 def build_epl_shear_sersic_sersic(system: Any, **kwargs) -> Any:
-    """Build the standard GL2 ForwardProbModel + ModellingSequence.
+    """Build the SCENE GL2 forward ModellingSequence (G1b).
 
-    Uses ``gl2_inference_prior()`` (the broad paper prior) and
-    ``ForwardProbModel`` (model-based Poisson noise).
+    Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light + Sérsic source, ALL
+    ``use_lstsq=False`` so the ``Ie`` amplitudes are SAMPLED) + ``Dataset`` +
+    ``ProbModel(mode="forward")`` in a scene-backed ``ModellingSequence``. This is the
+    forward-mode analogue of the lstsq builders; the public signature/return is unchanged.
     """
-    from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.prob_model import ForwardProbModel
     import jax.numpy as jnp
+    from gigalens.jax.inference import ModellingSequence
+    from gigalens.jax.profiles.light import sersic
+    from gigalens.jax.profiles.mass import epl, shear
+    from gigalens.jax.scene import Component, Plane, LensModel
+    from gigalens.jax.scene_prob_model import Dataset, ProbModel
 
-    prior = gl2_inference_prior()
-    phys_model = _gl2_phys_model()
-    prob_model = ForwardProbModel(
-        prior,
-        jnp.asarray(system.observed_image),
-        background_rms=system.background_rms,
-        exp_time=system.exp_time,
-    )
-    return ModellingSequence(phys_model, prob_model, system.sim_config)
+    epl_p, shear_p, lens_light_p, source_p = _gl2_scene_priors()
+    model = LensModel([
+        Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
+              light=[Component(sersic.SersicEllipse(use_lstsq=False), lens_light_p)]),
+        Plane(deflection_ratio=1.0,
+              light=[Component(sersic.SersicEllipse(use_lstsq=False), source_p)]),
+    ])
+    ds = Dataset(jnp.asarray(system.observed_image), system.sim_config,
+                 background_rms=system.background_rms, exp_time=system.exp_time,
+                 sees="all")
+    prob_model = ProbModel(model, ds, mode="forward")
+    return ModellingSequence.from_scene(model, prob_model, system.sim_config)
 
 
 # ---------------------------------------------------------------------------

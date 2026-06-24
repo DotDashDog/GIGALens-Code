@@ -252,6 +252,67 @@ def test_scene_model_card_reports_noise():
     text = format_model_card(card)
     assert "unrecognized" not in text.lower(), text
 
+    # Phase 7b: the scene section must report amplitude mode, trace mode, and sees.
+    scene = card.get("scene")
+    assert scene is not None, "scene-backed model_card must carry a 'scene' section"
+    assert scene.get("amplitude_mode") == "lstsq", scene
+    assert scene.get("trace_mode") == "deflection_ratio", scene  # single source plane
+    assert scene.get("sees") is not None and len(scene["sees"]) == 1, scene
+    assert "Trace      :" in text and "Sees       :" in text, text
+
+
+def test_scene_model_card_multiplane_distances():
+    """G1b/Phase-7b: a MULTIPLANE scene model card reports the active trace mode AND
+    per-plane transverse comoving distances from the model's own cosmology.
+    CPU-only; builds the scene model directly (no real data)."""
+    import os as _os
+    _os.environ.setdefault("JAX_ENABLE_X64", "1")
+    _os.environ.setdefault("JAX_PLATFORMS", "cpu")
+    import jax
+    jax.config.update("jax_enable_x64", True)
+
+    from gigalens.jax.cosmo import wCDM_Cosmo
+    from gigalens.jax.profiles.mass.epl import EPL
+    from gigalens.jax.profiles.light.sersic import SersicEllipse
+    from gigalens.jax.scene import Component, Plane, LensModel
+    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    from gigalens.jax.inference import ModellingSequence
+    from gigalens.simulator import SimulatorConfig
+    from gigalens_research.inference_utils.pipeline import (
+        InferenceContext, model_card, format_model_card,
+    )
+
+    num_pix = 20
+    obs = (np.random.default_rng(2).standard_normal((num_pix, num_pix)) * 0.01
+           + 0.05).astype(np.float32)
+    psf = np.zeros((9, 9), dtype=np.float32); psf[4, 4] = 1.0
+    epl0 = dict(theta_E=1.0, gamma=2.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0)
+    epl1 = dict(theta_E=0.5, gamma=2.0, e1=0.0, e2=0.0, center_x=0.2, center_y=0.0)
+    cosmo = Component(wCDM_Cosmo(z_lens=0.4), dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0))
+    model = LensModel([
+        Plane(redshift=0.4, mass=[Component(EPL(50), epl0)]),
+        Plane(redshift=0.8, mass=[Component(EPL(50), epl1)]),
+        Plane(redshift=2.5, light=[Component(SersicEllipse(use_lstsq=True),
+              dict(R_sersic=0.2, n_sersic=1.0, e1=0.0, e2=0.0,
+                   center_x=0.0, center_y=0.0))]),
+    ], cosmo=cosmo)
+    cfg = SimulatorConfig(delta_pix=0.08, num_pix=num_pix, supersample=1, kernel=psf,
+                          likelihood_precision="float64")
+    ds = Dataset(obs, cfg, background_rms=0.01, exp_time=1000.0, sees="all")
+    pm = ProbModel(model, ds, mode="lstsq")
+    ctx = InferenceContext.from_modelling_sequence(
+        ModellingSequence.from_scene(model, pm, cfg))
+
+    card = model_card(ctx)
+    scene = card["scene"]
+    assert scene["trace_mode"] == "multiplane", scene
+    d = scene.get("distances_obs_to_plane")
+    assert d is not None and len(d) == 3, scene
+    # transverse comoving distance is monotonically increasing with redshift.
+    assert d[0] < d[1] < d[2], f"distances not monotonic in z: {d}"
+    assert all(np.isfinite(d)) and all(x > 0 for x in d), d
+    assert "Distances  :" in format_model_card(card)
+
 
 def main():
     print("Running simtests smoke tests...")
@@ -261,6 +322,7 @@ def main():
     test_generate_minimal()
     test_enumerate_runs()
     test_scene_model_card_reports_noise()
+    test_scene_model_card_multiplane_distances()
     print("\nAll smoke tests passed.")
 
 

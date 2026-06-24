@@ -407,7 +407,7 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
             "lensing null space (unphysical source structure)."
         )
 
-    return {
+    card = {
         "psf": psf,
         "noise": noise,
         "grid": grid,
@@ -416,6 +416,69 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
         "linear_amplitudes": amps,
         "warnings": warns,
     }
+
+    # --- scene-specific section (Phase 7b): trace mode, per-plane distances, sees ---
+    # Only for scene-backed contexts; legacy card output is unchanged (no "scene" key).
+    scene = _scene_card_section(ctx)
+    if scene is not None:
+        card["scene"] = scene
+    return card
+
+
+def _scene_card_section(ctx) -> Optional[Dict[str, Any]]:
+    """Phase-7b scene card: amplitude mode, active trace mode, per-plane redshifts +
+    (multiplane) distances from the model's own cosmology, and the per-dataset ``sees``.
+
+    Returns None for a legacy (non-scene) context so the legacy card is unchanged."""
+    model = getattr(getattr(ctx, "model_seq", None), "scene_model", None)
+    if model is None:
+        return None
+    pm = ctx.prob_model
+    out: Dict[str, Any] = {"amplitude_mode": getattr(pm, "mode", None)}
+
+    # Active trace mode (deflection_ratio vs multiplane) from a built simulator.
+    sims = getattr(pm, "simulators", None)
+    out["trace_mode"] = (getattr(sims[0], "trace_mode", None)
+                         if sims else None)
+
+    # Per-plane geometry: redshift (cosmology) or deflection_ratio (single-plane).
+    planes_info = []
+    has_cosmo = model.cosmo is not None
+    for i, p in enumerate(model.planes):
+        geom = {"plane": i,
+                "n_mass": len(p.mass), "n_light": len(p.light)}
+        if has_cosmo:
+            geom["redshift"] = p.redshift
+        else:
+            geom["deflection_ratio"] = p.deflection_ratio
+        planes_info.append(geom)
+    out["planes"] = planes_info
+
+    # Multiplane: per-plane transverse comoving distances from the model's OWN cosmology
+    # (cosmo.distance_matrix). Reportable when every plane redshift + the cosmology are
+    # CONSTANTS (read from model.constants); if any is sampled there is no single value to
+    # report on the card, which is noted rather than guessed.
+    if has_cosmo and out["trace_mode"] == "multiplane":
+        try:
+            consts = model.constants
+            zs = [consts["planes"][i]["geometry"]["redshift"]
+                  for i in range(len(model.planes))]
+            cosmo_params = consts.get("cosmo", {})
+            D = np.asarray(model.cosmo.profile.distance_matrix(zs, **cosmo_params))
+            # observer(0) -> plane_k transverse comoving distance (D has shape (N+1, N+1)).
+            out["redshifts"] = [float(np.asarray(z).squeeze()) for z in zs]
+            out["distances_obs_to_plane"] = [float(D[k + 1, 0])
+                                             for k in range(len(model.planes))]
+        except (KeyError, TypeError) as exc:
+            out["distances_note"] = (
+                "multiplane distances not reported (a plane redshift or a cosmology "
+                f"param is sampled, not constant): {type(exc).__name__}")
+
+    # Per-dataset sees selection (resolved Component profile types).
+    resolved = getattr(pm, "_resolved_sees", None)
+    if resolved is not None:
+        out["sees"] = [[type(c.profile).__name__ for c in seen] for seen in resolved]
+    return out
 
 
 def format_model_card(card: Dict[str, Any]) -> str:
@@ -443,6 +506,21 @@ def format_model_card(card: Dict[str, Any]) -> str:
     lines.append("  Source     : " + ", ".join(_fmt(p) for p in card["profiles"]["source_light"]))
     lines.append("  Lens mass  : " + ", ".join(p["type"] for p in card["profiles"]["lens_mass"]))
     lines.append("  Lens light : " + ", ".join(p["type"] for p in card["profiles"]["lens_light"]))
+    # Phase 7b: scene section (only present for scene-backed models; legacy unchanged).
+    s = card.get("scene")
+    if s is not None:
+        lines.append(f"  Trace      : {s.get('trace_mode')}  (amplitude mode "
+                     f"{s.get('amplitude_mode')})")
+        if "distances_obs_to_plane" in s:
+            zr = ", ".join(f"z={z:.3g}->{d:.1f}Mpc"
+                           for z, d in zip(s.get("redshifts", []),
+                                           s["distances_obs_to_plane"]))
+            lines.append(f"  Distances  : {zr}")
+        elif "distances_note" in s:
+            lines.append(f"  Distances  : {s['distances_note']}")
+        if s.get("sees") is not None:
+            lines.append("  Sees       : " + " | ".join(
+                "[" + ", ".join(view) + "]" for view in s["sees"]))
     if card["warnings"]:
         lines.append("-" * 72)
         for w in card["warnings"]:

@@ -285,11 +285,15 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         free_components = self._scene_free_components(model)
         fixed_model = model.fix_to(truth_scene, free=free_components)
 
-        # Scene prob model on the partially-fixed model, same dataset/noise as inference.
+        # Scene prob model on the partially-fixed model, same dataset/noise AND amplitude
+        # MODE as the inference model (lstsq vs forward). Hardcoding "lstsq" would render a
+        # forward (sampled-amplitude) model through the lstsq solver and crash; the
+        # bootstrap must mirror the inference mode so gl2 (forward) works too.
         ds = Dataset(observed_img, sim_config,
                      background_rms=self.system.background_rms,
                      exp_time=self.system.exp_time, sees="all")
-        fixed_prob = ProbModel(fixed_model, ds, mode="lstsq")
+        mode = getattr(ctx.prob_model, "mode", "lstsq")
+        fixed_prob = ProbModel(fixed_model, ds, mode=mode)
         fixed_seq = ModellingSequence.from_scene(fixed_model, fixed_prob, sim_config)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)

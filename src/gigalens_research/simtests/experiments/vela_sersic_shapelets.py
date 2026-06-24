@@ -130,18 +130,25 @@ def vela_sersicshapelets_inference_prior():
 
 @register_inference_builder("epl_shear_sersic_sersicshapelets")
 def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
-    """Build the Vela BackwardProbModel + ModellingSequence with a
-    ``SersicShapelets(n_max, use_lstsq=True)`` source.
+    """Build the SCENE ModellingSequence with a ``SersicShapelets(n_max, use_lstsq=True)``
+    source (G1b).
+
+    Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light; SersicShapelets composite
+    source, lstsq amps) + ``Dataset`` + ``ProbModel(mode="lstsq")`` in a scene-backed
+    ``ModellingSequence``. Source shape priors come from ``_source_priors`` (the single
+    source-of-truth, shared with the bootstrap). Public signature/return unchanged.
 
     Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
     """
     import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.light.sersic_shapelets import SersicShapelets
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.jax.physical_model import PhysicalModel
+    from gigalens.jax.scene import Component, Plane, LensModel
+    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    tfd = tfp.distributions
 
     if "n_max" not in kwargs:
         raise TypeError(
@@ -150,20 +157,40 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
         )
     n_max = int(kwargs["n_max"])
 
-    prior = vela_sersicshapelets_inference_prior()
-
-    src_model = SersicShapelets(n_max=n_max, use_lstsq=True, interpolate=False)
-
-    phys_model = PhysicalModel(
-        [epl.EPL(50), shear.Shear()],
-        [sersic.SersicEllipse(use_lstsq=True)],
-        [src_model],
+    # Lens (EPL+Shear) + lens-light scene priors mirror vela_shapelets exactly.
+    epl_p = dict(
+        theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+        gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
+        e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+        e2=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+        center_x=tfd.Normal(0.0, 0.06),
+        center_y=tfd.Normal(0.0, 0.06),
     )
-    prob_model = BackwardProbModel(
-        prior,
-        jnp.asarray(system.observed_image),
-        background_rms=system.background_rms,
-        exp_time=system.exp_time,
+    shear_p = dict(
+        gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
+        gamma2=tfd.Normal(0.0, 0.1),
     )
-    return ModellingSequence(phys_model, prob_model, system.sim_config)
+    lens_light_p = dict(
+        R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+        n_sersic=tfd.Uniform(0.5, 8.0),
+        e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+        e2=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+        center_x=tfd.Normal(0.0, 0.02),
+        center_y=tfd.Normal(0.0, 0.02),
+    )
+    # Source shape priors: the single source-of-truth (shared with the bootstrap).
+    source_p = dict(_source_priors(tfd, jnp))
+
+    model = LensModel([
+        Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
+              light=[Component(sersic.SersicEllipse(use_lstsq=True), lens_light_p)]),
+        Plane(deflection_ratio=1.0,
+              light=[Component(SersicShapelets(n_max=n_max, use_lstsq=True,
+                                               interpolate=False), source_p)]),
+    ])
+    ds = Dataset(jnp.asarray(system.observed_image), system.sim_config,
+                 background_rms=system.background_rms, exp_time=system.exp_time,
+                 sees="all")
+    prob_model = ProbModel(model, ds, mode="lstsq")
+    return ModellingSequence.from_scene(model, prob_model, system.sim_config)
 

@@ -112,22 +112,56 @@ def vela_inference_prior(use_shapelets: bool = True):
 # ---------------------------------------------------------------------------
 
 
+def _vela_scene_lens_priors():
+    """Shared scene priors for EPL + Shear mass and the Sérsic lens light (per-param
+    dicts; fresh objects). Mirrors ``vela_inference_prior``'s lens/lens-light blocks,
+    which are identical across the vela shapelets/sersiclets builders."""
+    import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
+    tfd = tfp.distributions
+    epl_p = dict(
+        theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
+        gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
+        e1=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+        e2=tfd.TruncatedNormal(0.0, 0.2, -0.5, 0.5),
+        center_x=tfd.Normal(0.0, 0.06),
+        center_y=tfd.Normal(0.0, 0.06),
+    )
+    shear_p = dict(
+        gamma1=tfd.TruncatedNormal(0.0, 0.1, -0.5, 0.5),
+        gamma2=tfd.Normal(0.0, 0.1),
+    )
+    lens_light_p = dict(
+        R_sersic=tfd.LogNormal(jnp.log(1.6), 0.25),
+        n_sersic=tfd.Uniform(0.5, 8.0),
+        e1=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+        e2=tfd.TruncatedNormal(0.0, 0.1, -0.2, 0.2),
+        center_x=tfd.Normal(0.0, 0.02),
+        center_y=tfd.Normal(0.0, 0.02),
+    )
+    return epl_p, shear_p, lens_light_p
+
+
 @register_inference_builder("epl_shear_sersic_shapelets")
 def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
-    """Build the Vela BackwardProbModel + ModellingSequence.
+    """Build the SCENE ModellingSequence for the Vela shapelets fit (G1b).
 
-    Uses ``ShapeletsFast(n_max=n_max, use_lstsq=True)`` for the source and
-    ``BackwardProbModel`` (fixed error map from the observed image).
+    Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light on plane 0; a Shapelets
+    source — or a Sérsic source when ``use_shapelets=False`` — on plane 1, lstsq amps)
+    + ``Dataset`` + ``ProbModel(mode="lstsq")`` wrapped in a scene-backed
+    ``ModellingSequence`` (``from_scene``). Public signature/return unchanged.
 
     Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
     the source model complexity), ``use_shapelets`` (default True).
     """
     import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
     from gigalens.jax.inference import ModellingSequence
-    from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic, shapelets
     from gigalens.jax.profiles.mass import epl, shear
-    from gigalens.jax.physical_model import PhysicalModel
+    from gigalens.jax.scene import Component, Plane, LensModel
+    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    tfd = tfp.distributions
 
     use_shapelets = bool(kwargs.get("use_shapelets", True))
     if use_shapelets and "n_max" not in kwargs:
@@ -137,25 +171,36 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         )
     n_max = int(kwargs["n_max"]) if use_shapelets else None  # physics-default-ok: n_max unused when use_shapelets=False; required-check above
 
-    prior = vela_inference_prior(use_shapelets=use_shapelets)
-
+    epl_p, shear_p, lens_light_p = _vela_scene_lens_priors()
     if use_shapelets:
-        src_model = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
+        src_profile = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
+        source_p = dict(
+            beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+            center_x=tfd.Normal(0.0, 0.5),
+            center_y=tfd.Normal(0.0, 0.5),
+        )
     else:
-        src_model = sersic.SersicEllipse(use_lstsq=True)
+        src_profile = sersic.SersicEllipse(use_lstsq=True)
+        source_p = dict(
+            R_sersic=tfd.LogNormal(jnp.log(0.25), 0.4),
+            n_sersic=tfd.Uniform(0.5, 8.0),
+            e1=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+            e2=tfd.TruncatedNormal(0.0, 0.3, -0.5, 0.5),
+            center_x=tfd.Normal(0.0, 0.5),
+            center_y=tfd.Normal(0.0, 0.5),
+        )
 
-    phys_model = PhysicalModel(
-        [epl.EPL(50), shear.Shear()],
-        [sersic.SersicEllipse(use_lstsq=True)],
-        [src_model],
-    )
-    prob_model = BackwardProbModel(
-        prior,
-        jnp.asarray(system.observed_image),
-        background_rms=system.background_rms,
-        exp_time=system.exp_time,
-    )
-    return ModellingSequence(phys_model, prob_model, system.sim_config)
+    model = LensModel([
+        Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
+              light=[Component(sersic.SersicEllipse(use_lstsq=True), lens_light_p)]),
+        Plane(deflection_ratio=1.0,
+              light=[Component(src_profile, source_p)]),
+    ])
+    ds = Dataset(jnp.asarray(system.observed_image), system.sim_config,
+                 background_rms=system.background_rms, exp_time=system.exp_time,
+                 sees="all")
+    prob_model = ProbModel(model, ds, mode="lstsq")
+    return ModellingSequence.from_scene(model, prob_model, system.sim_config)
 
 
 # ---------------------------------------------------------------------------
