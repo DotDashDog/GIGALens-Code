@@ -21,6 +21,7 @@ from .corner import plot_corner, plot_corner_overlay
 from .diagnostics import (
     has_diagnostic_plotter,
     plot_mclmc_diagnostics,
+    plot_mclmc_surrogate_corner,
     plot_stage_diagnostics,
     register_diagnostic_plotter,
 )
@@ -33,7 +34,6 @@ from .labels import (
 )
 from .reports import PipelineReport, PosteriorReport
 from .source_plane import (
-    LENS_MODEL_NAME_MAP,
     plot_caustics,
     plot_caustics_critical,
     plot_critical_curves,
@@ -44,7 +44,6 @@ from .truth import plot_source_comparison, plot_z_scores
 
 __all__ = [
     "LATEX_LABELS",
-    "LENS_MODEL_NAME_MAP",
     "PipelineReport",
     "PosteriorReport",
     "flatten_params",
@@ -62,6 +61,7 @@ __all__ = [
     "plot_image_border",
     "plot_loss_history",
     "plot_mclmc_diagnostics",
+    "plot_mclmc_surrogate_corner",
     "plot_residual_histogram",
     "plot_running_ess",
     "plot_running_rhat",

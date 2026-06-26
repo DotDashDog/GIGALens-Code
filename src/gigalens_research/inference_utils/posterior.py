@@ -95,14 +95,74 @@ class Posterior(ABC):
                 "PhysicalModel path was removed with the old gigalens API.")
         return model
 
-    def _lens_sim(self, bs: int = 1):
-        if bs not in self._sim_cache:
-            # Scene-only: render via a SceneSimulator on the scene LensModel
-            # (ctx.phys_model is a read-only view, not a real PhysicalModel).
+    def _lens_sim(self):
+        """Legacy fallback simulator over the whole scene (all light, single PSF).
+
+        Only used when the prob_model does not expose per-dataset ``simulators``
+        (non-scene / older prob_models). Scene-backed multi-dataset models render
+        through :meth:`_sim_for`, which returns the prob_model's per-dataset
+        simulators (each with the correct ``sees`` filter and PSF). The new
+        SceneSimulator is batch-flexible, so no ``bs`` is threaded here."""
+        if "all" not in self._sim_cache:
             from gigalens.jax.scene_simulator import SceneSimulator
-            self._sim_cache[bs] = SceneSimulator(
-                self._scene_model, self.ctx.sim_config, bs=bs)
-        return self._sim_cache[bs]
+            self._sim_cache["all"] = SceneSimulator(
+                self._scene_model, self.ctx.sim_config)
+        return self._sim_cache["all"]
+
+    # -- per-dataset accessors (multi-band aware; single-dataset by default) ----
+
+    @property
+    def _prob_datasets(self):
+        """The prob_model's Dataset list if it is dataset-aware, else ``None``."""
+        return getattr(self.ctx.prob_model, "datasets", None)
+
+    def n_datasets(self) -> int:
+        """Number of observed datasets/bands this posterior was fit against."""
+        ds = self._prob_datasets
+        return len(ds) if ds is not None else 1
+
+    def observed_for(self, dataset: int = 0) -> np.ndarray:
+        """The observed image for band ``dataset`` (avoids the single-dataset-only
+        ``observed_image`` property, which raises for multi-dataset models)."""
+        ds = self._prob_datasets
+        if ds is not None:
+            return np.asarray(ds[dataset].image)
+        return np.asarray(self.ctx.prob_model.observed_image)
+
+    def _error_for(self, dataset: int = 0) -> Optional[np.ndarray]:
+        ds = self._prob_datasets
+        if ds is not None:
+            return np.asarray(ds[dataset].error_map)
+        return np.asarray(getattr(self.ctx.prob_model, "error_map"))
+
+    def mask_for(self, dataset: int = 0):
+        """Per-dataset fit mask (or ``None`` for legacy prob_models without one).
+
+        Returns a boolean array where ``True`` = valid/kept pixel and
+        ``False`` = excluded (hot/bad) pixel, matching the convention used by
+        :meth:`~gigalens.jax.scene_prob_model.ProbModel._dataset_chi2`.
+
+        Passed to ``lstsq_simulate`` so the plotted model matches the likelihood,
+        which solves amplitudes over the masked pixels (see ProbModel._model_image).
+        Returns ``None`` for legacy prob_models that have no per-dataset ``mask``
+        (treat as all-True, i.e. no masking)."""
+        ds = self._prob_datasets
+        if ds is not None:
+            return ds[dataset].mask
+        return None
+
+    # Keep the private alias so internal callers and any external code that
+    # used the underscore name continue to work during the transition.
+    _mask_for = mask_for
+
+    def _sim_for(self, dataset: int = 0):
+        """The simulator for band ``dataset``: the prob_model's per-dataset
+        simulator when available (correct ``sees`` + PSF), else the legacy
+        whole-scene fallback."""
+        sims = getattr(self.ctx.prob_model, "simulators", None)
+        if sims is not None:
+            return sims[dataset]
+        return self._lens_sim()
 
     def z_to_x(self, z) -> List:
         """Apply the bijector forward to a ``z`` of shape ``(n_params,)`` or
@@ -190,18 +250,22 @@ class Posterior(ABC):
 
     # -- model-aware rendering ----------------------------------------------
 
-    def simulate(self, point: str = "median", *, return_coeffs: bool = False):
-        """Render the predicted PSF-convolved image at a representative point.
+    def simulate(self, point: str = "median", *, dataset: int = 0,
+                 return_coeffs: bool = False):
+        """Render the predicted PSF-convolved image for one band at a representative point.
 
-        Auto-selects between :meth:`LensSimulator.simulate` (forward model)
-        and :meth:`LensSimulator.lstsq_simulate` (backward / linear-amplitude
-        model) by checking the prob_model for an ``err_map`` attribute.
+        ``dataset`` selects the band (0 by default; single-dataset models ignore it).
+        The simulator, observed image, noise map and fit mask are all taken from that
+        band, so for a multi-dataset model each band is rendered through its own
+        ``sees`` filter and PSF — matching the per-dataset likelihood.
 
-        With ``return_coeffs=True``, also returns the solved linear amplitudes
-        (or ``None`` for forward models).
+        Auto-selects between :meth:`SceneSimulator.simulate` (forward model) and
+        :meth:`SceneSimulator.lstsq_simulate` (backward / linear-amplitude model) via
+        :attr:`is_backward`. With ``return_coeffs=True``, also returns the solved linear
+        amplitudes (or ``None`` for forward models).
         """
         x = self.z_to_x(self._point_z(point))
-        sim = self._lens_sim(bs=1)
+        sim = self._sim_for(dataset)
         # Scene-only: the bijector returns the scene unique-key dict; the SceneSimulator
         # consumes the structured (planes/cosmo) params, so scatter via to_params.
         x = self._scene_model.to_params(dict(x))
@@ -213,7 +277,7 @@ class Posterior(ABC):
         kernel = getattr(sim, "flat_kernel", None)
         target_dtype = (
             kernel.dtype if kernel is not None
-            else jnp.asarray(self.ctx.prob_model.observed_image).dtype
+            else jnp.asarray(self.observed_for(dataset)).dtype
         )
         x = jax.tree_util.tree_map(
             lambda a: a.astype(target_dtype)
@@ -221,28 +285,30 @@ class Posterior(ABC):
             x,
         )
         if self.is_backward:
-            obs = self.ctx.prob_model.observed_image
-            err_map = self.ctx.prob_model.error_map
+            obs = self.observed_for(dataset)
+            err_map = self._error_for(dataset)
+            mask = self.mask_for(dataset)
             # lstsq_simulate returns the reconstructed image by default; the
             # linear coeffs are a separate return_coeffs=True call (new gigalens
             # convention). Only solve for coeffs when they're actually requested.
-            img = np.asarray(sim.lstsq_simulate(x, obs, err_map))
+            img = np.asarray(sim.lstsq_simulate(x, obs, err_map, mask))
             if return_coeffs:
                 # New gigalens returns coeffs shaped (bs, depth); this single-point
                 # API renders at bs=1, so flatten the batch axis to a 1-D (depth,)
                 # amplitude vector that downstream consumers (source_plane) index.
                 coeffs = np.asarray(
-                    sim.lstsq_simulate(x, obs, err_map, return_coeffs=True)).reshape(-1)
+                    sim.lstsq_simulate(x, obs, err_map, mask,
+                                       return_coeffs=True)).reshape(-1)
                 return img, coeffs
             return img
         img = np.asarray(sim.simulate(x))
         return (img, None) if return_coeffs else img
 
-    def err_map_at(self, predicted) -> np.ndarray:
+    def err_map_at(self, predicted, *, dataset: int = 0) -> np.ndarray:
         """Per-pixel noise σ for a given predicted image, using the
-        prob_model's noise convention.
+        prob_model's noise convention. ``dataset`` selects the band.
 
-        - Backward (lstsq) models: returns the prob_model's ``error_map``
+        - Backward (lstsq) models: returns band ``dataset``'s ``error_map``
           directly — it was frozen at init from the *observed* image, so the
           ``predicted`` argument is ignored.
         - :class:`ForwardProbModel` (anything that publishes
@@ -257,6 +323,9 @@ class Posterior(ABC):
         attribute presence.
         """
         pm = self.ctx.prob_model
+        # Multi-dataset-aware: read the band's frozen error map directly.
+        if self.is_backward and self._prob_datasets is not None:
+            return self._error_for(dataset)
         if self.is_backward and hasattr(pm, "error_map"):
             return np.asarray(pm.error_map)
         if hasattr(pm, "background_rms") and hasattr(pm, "exp_time"):
@@ -286,38 +355,62 @@ class Posterior(ABC):
         grid_pix: int = 400,
         fov_arcsec: Optional[float] = None,
         center: Optional[Tuple[float, float]] = None,
+        dataset: int = 0,
+        plane_index: Optional[int] = None,
     ) -> Tuple[np.ndarray, Tuple[float, float, float, float]]:
-        """Render the intrinsic source brightness on a fine source-plane grid.
+        """Render the intrinsic source brightness on a fine source-plane grid,
+        reconstructed from band ``dataset``.
 
-        The grid is centered on the first source-light component's
+        Multi-dataset aware: each band sees only the light Components in its
+        ``sees`` view and solves its OWN linear amplitudes, so the source is
+        reconstructed from band ``dataset``'s coefficients over exactly the
+        (lensed) source Components that band sees. Iterating *all* of the model's
+        sources against a single band's coefficient vector would mis-align the
+        slices (and raise once a source the band doesn't see is reached).
+        ``dataset`` selects the band (default 0).
+
+        ``plane_index`` optionally restricts the rendered source light to the
+        Components on a single (lensed) plane — used to render one source plane at
+        a time, since a model can carry several source planes at different
+        redshifts (hence different caustics). ``None`` (default) renders every
+        source Component the band sees. The coefficient offset still walks over
+        *all* seen light so the per-band amplitude slices stay aligned; only the
+        accumulation into the image is filtered.
+
+        The grid is centered on the first seen source Component's
         ``(center_x, center_y)`` (or ``center`` if supplied) and spans
         ``fov_arcsec`` on a side. No lensing, no PSF.
 
-        For backward (lstsq) models, each profile's basis stack is contracted
-        against the corresponding slice of the solved coefficients from
-        :meth:`simulate`. This handles both single-component profiles
-        (Sersic with ``use_lstsq=True``, contributing 1 basis function) and
-        multi-component ones (Shapelets, contributing ``(n_max+1)(n_max+2)/2``
-        basis functions). For forward models, each profile's light is rendered
-        directly with its modeled amplitude.
+        For backward (lstsq) models, each Component's basis stack is contracted
+        against the matching slice of band ``dataset``'s solved coefficients
+        (single-component Sersic -> 1 basis function; Shapelets ->
+        ``(n_max+1)(n_max+2)/2``). For forward models, each Component's light is
+        rendered directly with its modeled amplitude.
 
         Returns
         -------
         img : ndarray, shape ``(grid_pix, grid_pix)``
         extent : tuple ``(x_min, x_max, y_min, y_max)`` for ``ax.imshow``.
         """
-        # Source-light params in the 3-group form for BOTH legacy and scene ctx
-        # (x_grouped regroups the scene flat-key bijector output). x['source_light'] is
-        # {'0': {..}, '1': {..}} keyed by stringified profile index, ordered to line up
-        # with ctx.phys_model.source_light below.
-        x = self.x_grouped(point)
-        src_group = x["source_light"]
-        src_params_list = [src_group[k] for k in sorted(src_group, key=int)]
+        sim = self._sim_for(dataset)
+        # Structured (planes/cosmo) params at the point -- the same layout the simulator
+        # consumes; each leaf carries a singleton batch axis.
+        params = self._scene_model.to_params(dict(self.z_to_x(self._point_z(point))))
+        # Lensed source Components, by identity (lens-plane light is excluded).
+        source_ids = {id(c) for c in self._scene_model.source_plane_light()}
+        # The band's seen light in the simulator's basis/coefficient order -- this is the
+        # order lstsq_simulate concatenates (and solves) amplitudes in, so it is the
+        # authoritative layout for slicing the per-band coefficient vector.
+        seen_light = sim._light  # list of (plane_idx, light_idx, Component, depth)
 
-        first = src_params_list[0]
         if center is None:
-            cx = float(np.squeeze(np.asarray(first.get("center_x", 0.0))))
-            cy = float(np.squeeze(np.asarray(first.get("center_y", 0.0))))
+            cx = cy = 0.0
+            for i, j, comp, _ in seen_light:
+                if id(comp) in source_ids and (plane_index is None or i == plane_index):
+                    lp = params["planes"][i]["light"][j]
+                    cx = float(np.squeeze(np.asarray(lp.get("center_x", 0.0))))
+                    cy = float(np.squeeze(np.asarray(lp.get("center_y", 0.0))))
+                    break
         else:
             cx, cy = float(center[0]), float(center[1])
         if fov_arcsec is None:
@@ -329,43 +422,84 @@ class Posterior(ABC):
         X = jnp.broadcast_to(gx[None, :, None], (grid_pix, grid_pix, 1))
         Y = jnp.broadcast_to(gy[:, None, None], (grid_pix, grid_pix, 1))
 
+        img = jnp.zeros((grid_pix, grid_pix))
         if self.is_backward:
-            # lstsq path: each profile's light() returns a basis stack of shape
-            # (n_layers_i, h, w, depth); contract with the matching coeff slice.
-            _, coeffs = self.simulate(point=point, return_coeffs=True)
-            # lstsq_simulate squeezes a single-basis solve down to a scalar;
-            # keep it indexable as a length-1 coefficient vector.
+            # lstsq path: walk the band's seen light in coefficient order, contracting
+            # each source Component's basis stack with its slice of THIS band's coeffs.
+            # ``offset`` advances over every seen Component (lens light included) to stay
+            # aligned with the coefficient vector; only source Components are summed.
+            _, coeffs = self.simulate(point=point, dataset=dataset, return_coeffs=True)
             coeffs = np.atleast_1d(np.asarray(coeffs))
-            offset = sum(_n_basis(lm) for lm in self.ctx.phys_model.lens_light)
-            src_offset = 0
-            img = jnp.zeros((grid_pix, grid_pix))
-            for light_model, p in zip(self.ctx.phys_model.source_light, src_params_list):
-                stack = light_model.light(X, Y, **p)  # (n_layers, h, w, depth)
-                n_layers = _n_basis(light_model)
-                c = jnp.asarray(coeffs[offset + src_offset : offset + src_offset + n_layers])
-                # contract basis axis: sum_i c_i * stack[i]
-                contribution = jnp.tensordot(c, stack, axes=([0], [0]))  # (h, w, depth)
-                img = img + jnp.squeeze(contribution)
-                src_offset += n_layers
+            offset = 0
+            for i, j, comp, depth in seen_light:
+                if id(comp) in source_ids and (plane_index is None or i == plane_index):
+                    lp = params["planes"][i]["light"][j]
+                    stack = comp.profile.light(X, Y, **lp)  # (depth, h, w, 1)
+                    c = jnp.asarray(coeffs[offset:offset + depth])
+                    img = img + jnp.squeeze(jnp.tensordot(c, stack, axes=([0], [0])))
+                offset += depth
             # The lstsq design matrix omits the simulator's pixel-area
-            # conversion_factor (= det(transform_pix2angle) = delta_pix^2),
-            # which LensSimulator.simulate applies to convert surface
-            # brightness -> flux/pixel. The solved coefficients therefore
-            # absorb that factor, so the contracted source is in flux/pixel
-            # units. Divide it back out to express the recovered source as a
-            # surface brightness, matching both the forward path below and an
-            # intrinsic-SB truth (e.g. ImageBasedLight in cps/arcsec^2).
-            img = img / self._lens_sim(bs=1).conversion_factor
+            # conversion_factor (= det(transform_pix2angle) = delta_pix^2); the solved
+            # coefficients absorb it, so divide it back out to express the source as a
+            # surface brightness (matching the forward path and intrinsic-SB truths).
+            img = img / sim.conversion_factor
         else:
-            # Forward path: each profile's light() returns (h, w, depth) with
-            # its modeled amplitude baked in; sum directly.
-            img = jnp.zeros((grid_pix, grid_pix))
-            for light_model, p in zip(self.ctx.phys_model.source_light, src_params_list):
-                contribution = jnp.squeeze(light_model.light(X, Y, **p))
-                img = img + contribution
+            # Forward path: each Component's light() returns (h, w, 1) with its modeled
+            # amplitude baked in; sum the band's seen sources directly.
+            for i, j, comp, depth in seen_light:
+                if id(comp) in source_ids and (plane_index is None or i == plane_index):
+                    lp = params["planes"][i]["light"][j]
+                    img = img + jnp.squeeze(comp.profile.light(X, Y, **lp))
 
         extent = (cx - half, cx + half, cy - half, cy + half)
         return np.asarray(img), extent
+
+    def _deflection_ratio_at(self, plane_index: int, params) -> float:
+        """The deflection ratio of (lensed) plane ``plane_index`` at a structured
+        params dict, mirroring :meth:`SceneSimulator._trace_deflection_ratio`.
+
+        Either read directly from ``deflection_ratio`` geometry (no cosmology) or
+        derived from the cosmology as ``deflection_ratio(z_source)`` (the D_ls/D_s
+        ratio normalized to the cosmology's ``z_source_ref``). Raises if the plane
+        carries neither — it is then not a well-defined source plane.
+        """
+        geom = params["planes"][plane_index].get("geometry", {})
+        if "deflection_ratio" in geom:
+            return float(np.squeeze(np.asarray(geom["deflection_ratio"])))
+        cosmo = self._scene_model.cosmo
+        if cosmo is not None and "redshift" in geom:
+            dr = cosmo.profile.deflection_ratio(geom["redshift"], **params["cosmo"])
+            return float(np.squeeze(np.asarray(dr)))
+        raise ValueError(
+            f"plane {plane_index} has no deflection_ratio and no cosmology+redshift "
+            "to derive one from; it is not a well-defined source plane.")
+
+    def source_plane_views(self, point: str = "median"):
+        """Enumerate the distinct source planes this posterior can reconstruct.
+
+        Returns a list of ``(dataset, plane_index, deflection_ratio)`` tuples, one
+        per distinct lensed plane that carries source light, in plane-index order.
+        ``dataset`` is the first band whose ``sees`` view includes a source on that
+        plane (the band whose solved coefficients reconstruct it).
+
+        A model can carry several source planes at different redshifts — each with
+        its own deflection ratio and therefore its own caustic/critical curve — so
+        this is what the source-plane report iterates to render one panel per plane.
+        Deduplicated by plane index: a plane seen by more than one band is rendered
+        once, from the first band that sees it.
+        """
+        params = self._scene_model.to_params(dict(self.z_to_x(self._point_z(point))))
+        source_ids = {id(c) for c in self._scene_model.source_plane_light()}
+        views = []
+        seen_planes = set()
+        for d in range(self.n_datasets()):
+            sim = self._sim_for(d)
+            for i, j, comp, depth in sim._light:
+                if id(comp) in source_ids and i not in seen_planes:
+                    seen_planes.add(i)
+                    views.append((d, int(i), self._deflection_ratio_at(i, params)))
+        views.sort(key=lambda t: t[1])
+        return views
 
     # -- common conveniences -------------------------------------------------
 

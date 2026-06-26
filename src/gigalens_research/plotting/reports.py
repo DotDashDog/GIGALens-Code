@@ -26,7 +26,7 @@ from .convergence import (
 )
 from .corner import plot_corner, plot_corner_overlay
 from .image import normalized_residual, plot_image, plot_residual_histogram
-from .source_plane import plot_caustics_critical, plot_source_plane
+from .source_plane import plot_critical_curves, plot_source_plane
 from .truth import plot_source_comparison, plot_z_scores
 
 
@@ -121,47 +121,76 @@ class PosteriorReport:
         observed: Optional[np.ndarray] = None,
         *,
         point: str = "median",
-        with_caustics: bool = False,
+        with_critical_curves: bool = False,
         scale: str = "asinh",
         linear_width: Optional[float] = None,
         log_vmin: float = 1e-3,
     ) -> Figure:
-        """1×4 panel: observed, model, normalized residual, residual histogram.
+        """Per-band image panel: one row of (observed, model, normalized residual,
+        residual histogram) for **each** dataset the posterior was fit against.
 
-        ``observed`` defaults to ``posterior.ctx.prob_model.observed_image``;
-        pass it only if you want to compare against something else (e.g. a
-        noise-free truth image). Noise σ comes from
-        :meth:`Posterior.err_map_at`, so this works for both
+        A single-dataset model gives the classic 1×4 figure; an N-dataset model gives
+        an N×4 grid, one row per band, each rendered through its own ``sees`` filter,
+        PSF, noise map and mask (see :meth:`Posterior.simulate`).
+
+        ``observed`` overrides the observed image for *every* row (e.g. a noise-free
+        truth image); leave it ``None`` to use each band's own observed image. Noise σ
+        comes from :meth:`Posterior.err_map_at`, so this works for both
         :class:`ForwardProbModel` and :class:`BackwardProbModel`.
+
+        ``with_critical_curves`` overlays the **critical** curves (image/lens plane
+        only — caustics belong on the source plane, see :meth:`source_panel`) on the
+        observed and model panels, one per source plane the model carries (each at
+        its own deflection ratio).
         """
-        if observed is None:
-            observed = np.asarray(self.posterior.ctx.prob_model.observed_image)
-        else:
-            observed = np.asarray(observed)
-        predicted = np.asarray(self.posterior.simulate(point=point))
-        err_map = self.posterior.err_map_at(predicted)
-        residual = normalized_residual(observed, predicted, err_map)
-        chisq = float(np.sum(residual ** 2))
-        ndof = max(observed.size - self.posterior.n_params, 1)
-        red_chisq = chisq / ndof
+        n_ds = self.posterior.n_datasets()
+        views = (self.posterior.source_plane_views(point=point)
+                 if with_critical_curves else [])
+        obs_override = None if observed is None else np.asarray(observed)
 
         sc = self.posterior.ctx.sim_config
         extent = (-sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix,
                   -sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix)
 
-        fig, axs = plt.subplots(1, 4, figsize=(13, 3.2))
-        plot_image(axs[0], observed, extent=extent, title="Observed",
-                   scale=scale, linear_width=linear_width, log_vmin=log_vmin)
-        plot_image(axs[1], predicted, extent=extent,
-                   title=f"Model ({point}, χ²/ν={red_chisq:.3f})",
-                   scale=scale, linear_width=linear_width, log_vmin=log_vmin)
-        plot_image(axs[2], residual, extent=extent,
-                   title="Normalized residual", residual=True)
-        plot_residual_histogram(axs[3], residual,
-                                title="Gaussianity test")
-        if with_caustics:
-            plot_caustics_critical(axs[0], self.posterior, point=point)
-            plot_caustics_critical(axs[1], self.posterior, point=point)
+        fig, axs = plt.subplots(n_ds, 4, figsize=(13, 3.2 * n_ds), squeeze=False)
+        for k, row_ax in enumerate(axs):
+            observed_k = (obs_override if obs_override is not None
+                          else np.asarray(self.posterior.observed_for(k)))
+            predicted = np.asarray(self.posterior.simulate(point=point, dataset=k))
+            err_map = self.posterior.err_map_at(predicted, dataset=k)
+            residual = normalized_residual(observed_k, predicted, err_map)
+
+            # Apply per-band fit mask so chi², color scales, and residual panels
+            # are not dominated by excluded (hot/bad) pixels.
+            m = self.posterior.mask_for(k)
+            mbool = None if m is None else np.asarray(m).astype(bool)
+
+            resid_fit = residual if mbool is None else residual[mbool]
+            chisq = float(np.sum(resid_fit ** 2))
+            n_pix = residual.size if mbool is None else int(mbool.sum())
+            ndof = max(n_pix - self.posterior.n_params, 1)
+            red_chisq = chisq / ndof
+
+            # NaN-mask display arrays so excluded pixels appear blank (not hot).
+            # plot_image derives its vmax from finite values only.
+            obs_disp = observed_k if mbool is None else np.where(mbool, observed_k, np.nan)
+            res_disp = residual if mbool is None else np.where(mbool, residual, np.nan)
+
+            band = f" band {k}" if n_ds > 1 else ""
+            plot_image(row_ax[0], obs_disp, extent=extent, title=f"Observed{band}",
+                       scale=scale, linear_width=linear_width, log_vmin=log_vmin)
+            plot_image(row_ax[1], predicted, extent=extent,
+                       title=f"Model{band} ({point}, χ²/ν={red_chisq:.3f})",
+                       scale=scale, linear_width=linear_width, log_vmin=log_vmin)
+            plot_image(row_ax[2], res_disp, extent=extent,
+                       title=f"Normalized residual{band}", residual=True)
+            # Histogram gets a 1-D finite array (NaNs break the Gaussianity fit).
+            plot_residual_histogram(row_ax[3], resid_fit.ravel(), title="Gaussianity test")
+            for _d, plane_i, dr in views:
+                for col in (0, 1):  # observed + model (both image plane)
+                    plot_critical_curves(row_ax[col], self.posterior, point=point,
+                                         deflection_ratio=dr,
+                                         label=f"crit z-plane {plane_i}")
         return self._finalize(fig)
 
     # -- convergence panel ---------------------------------------------------
@@ -188,35 +217,60 @@ class PosteriorReport:
         point: str = "median",
         grid_pix: int = 400,
         fov_arcsec: Optional[float] = None,
-        with_caustics_on_image: bool = True,
         observed: Optional[np.ndarray] = None,
         with_observed: bool = True,
     ) -> Figure:
-        """1×2 panel: intrinsic source-plane image, plus the observed image
-        with caustic/critical overlay.
+        """One row **per source plane**: the intrinsic source-plane image (with that
+        plane's *caustic*) and, optionally, the observed image of the band that
+        reconstructs it (with that plane's *critical* curve).
 
-        ``observed`` defaults to ``posterior.ctx.prob_model.observed_image``;
-        pass it explicitly to use something else, or set ``with_observed=False``
-        to drop the second panel and show only the source plane.
+        A model can carry several source planes at different redshifts; each has its
+        own deflection ratio and therefore its own caustic/critical pair. The rows
+        come from :meth:`Posterior.source_plane_views` — one per distinct lensed
+        plane carrying source light. Each row renders only that plane's source light
+        (``plane_index=``) from the band that sees it (``dataset=``).
+
+        Plane convention (no mixing): the left/source panel carries only the
+        **caustic**; the right/observed panel carries only the **critical** curve.
+
+        ``observed`` overrides the observed image for every row (e.g. a noise-free
+        truth); leave it ``None`` to use each band's own image. ``with_observed=False``
+        drops the right column. Masked pixels (band fit mask False) are shown blank
+        so hot/bad pixels do not hijack the color scale.
         """
-        if not with_observed:
-            fig, ax = plt.subplots(1, 1, figsize=(5, 4))
-            plot_source_plane(ax, self.posterior, point=point,
-                              grid_pix=grid_pix, fov_arcsec=fov_arcsec)
-            return self._finalize(fig)
-        if observed is None:
-            observed = np.asarray(self.posterior.ctx.prob_model.observed_image)
-
-        fig, axs = plt.subplots(1, 2, figsize=(10, 4))
-        plot_source_plane(axs[0], self.posterior, point=point,
-                          grid_pix=grid_pix, fov_arcsec=fov_arcsec)
+        views = self.posterior.source_plane_views(point=point)
+        if not views:
+            raise ValueError(
+                "no source planes to plot: this posterior's model carries no lensed "
+                "source light.")
+        obs_override = None if observed is None else np.asarray(observed)
         sc = self.posterior.ctx.sim_config
         extent = (-sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix,
                   -sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix)
-        plot_image(axs[1], np.asarray(observed), extent=extent, title="Observed",
-                   scale="asinh")
-        if with_caustics_on_image:
-            plot_caustics_critical(axs[1], self.posterior, point=point)
+
+        ncols = 2 if with_observed else 1
+        n = len(views)
+        fig, axs = plt.subplots(n, ncols, figsize=(5 * ncols, 4 * n), squeeze=False)
+        for row, (d, plane_i, dr) in enumerate(views):
+            band = f", band {d}" if self.posterior.n_datasets() > 1 else ""
+            plot_source_plane(
+                axs[row][0], self.posterior, point=point,
+                grid_pix=grid_pix, fov_arcsec=fov_arcsec,
+                dataset=d, plane_index=plane_i, deflection_ratio=dr,
+                title=f"Source plane {plane_i} (dr={dr:.3f}{band})",
+            )
+            if not with_observed:
+                continue
+            observed_k = (obs_override if obs_override is not None
+                          else np.asarray(self.posterior.observed_for(d)))
+            m = self.posterior.mask_for(d)
+            mbool = None if m is None else np.asarray(m).astype(bool)
+            obs_disp = (observed_k if mbool is None
+                        else np.where(mbool, observed_k, np.nan))
+            plot_image(axs[row][1], obs_disp, extent=extent,
+                       title=f"Observed{band}", scale="asinh")
+            plot_critical_curves(axs[row][1], self.posterior, point=point,
+                                 deflection_ratio=dr)
         return self._finalize(fig)
 
     # -- corner --------------------------------------------------------------
@@ -338,8 +392,9 @@ class PosteriorReport:
     ) -> Dict[str, Figure]:
         """Build all panels and (optionally) save each as a PNG to ``save_dir``.
 
-        ``observed`` defaults to ``posterior.ctx.prob_model.observed_image``.
-        Noise model is read from the prob_model in all cases.
+        ``observed`` defaults to each band's own observed image (via
+        :meth:`Posterior.observed_for`). Noise model is read from the prob_model
+        in all cases.
 
         If the report was constructed with truth inputs (``truth_x`` or
         ``truth_source_image``), this also generates a z-score bar plot
@@ -356,7 +411,10 @@ class PosteriorReport:
         if hasattr(self.posterior, "samples_z"):
             figs["convergence"] = self.convergence_panel()
         figs["source"] = self.source_panel(observed=observed)
-        figs["corner"] = self.corner(truth=truth)
+        # Corner needs a sample distribution; a point estimate (MAP) has a single
+        # point with no dynamic range, so skip it there (mirrors the convergence guard).
+        if hasattr(self.posterior, "flat_z"):
+            figs["corner"] = self.corner(truth=truth)
 
         # Truth-aware panels: included automatically if the inputs are there.
         if (truth if truth is not None else self.truth_x) is not None \
@@ -475,6 +533,28 @@ class PipelineReport:
             )
         return plot_stage_diagnostics(diag, **kwargs)
 
+    def diagnostics_surrogate_corner(self, stage: str, **kwargs) -> Figure:
+        """Corner plot of an MCLMC stage's final draws vs. a Gaussian surrogate
+        (mean = sample mean, covariance = final inverse mass matrix), in the
+        unconstrained z-space. Requires the stage was run with ``debug=True``.
+
+        Extra kwargs are forwarded to
+        :func:`gigalens_research.plotting.plot_mclmc_surrogate_corner` (e.g.
+        ``max_samples=``, ``seed=``)."""
+        from .diagnostics import plot_mclmc_surrogate_corner
+
+        if self._pipeline is not None:
+            diag = self._pipeline.diagnostics(stage)
+        elif self._out_dir is not None:
+            from ..inference_utils.pipeline import diagnostics_from_disk
+            diag = diagnostics_from_disk(self._out_dir, stage, self.ctx)
+        else:
+            raise RuntimeError(
+                "This report has no pipeline or out_dir to read diagnostics "
+                "from; build it from a Pipeline or via PipelineReport.from_disk."
+            )
+        return plot_mclmc_surrogate_corner(diag, **kwargs)
+
     # -- compound corner -----------------------------------------------------
 
     def compound_corner(
@@ -520,31 +600,49 @@ class PipelineReport:
         stages: Optional[Iterable[str]] = None,
         point: str = "median",
     ) -> Figure:
-        """One row of (observed, model, residual, hist) per requested stage.
+        """One row of (observed, model, residual, hist) per (stage, dataset).
 
-        ``observed`` defaults to ``ctx.prob_model.observed_image``. Each
-        stage's noise σ is sourced from its prob_model (works for both
-        Forward and Backward variants)."""
-        if observed is None:
-            observed = np.asarray(self.ctx.prob_model.observed_image)
-        else:
-            observed = np.asarray(observed)
+        Single-dataset stages give one row each (the classic layout); multi-dataset
+        stages expand to one row per band, each rendered through its own ``sees``/PSF/
+        noise/mask. ``observed`` overrides the observed image for every row; leave it
+        ``None`` to use each band's own observed image. Each stage's noise σ is sourced
+        from its prob_model (works for both Forward and Backward variants)."""
+        obs_override = None if observed is None else np.asarray(observed)
         if stages is None:
             stages = list(self.stages.keys())
-        n_rows = len(list(stages))
-        fig, axs = plt.subplots(n_rows, 4, figsize=(13, 3.2 * n_rows),
+        stages = list(stages)
+        # rows = flattened (stage, band); multi-dataset stages contribute n_datasets rows.
+        rows = [(name, k) for name in stages
+                for k in range(self.stages[name].n_datasets())]
+        fig, axs = plt.subplots(len(rows), 4, figsize=(13, 3.2 * len(rows)),
                                 squeeze=False)
-        for row_ax, name in zip(axs, stages):
+        for row_ax, (name, k) in zip(axs, rows):
             p = self.stages[name]
-            predicted = np.asarray(p.simulate(point=point))
-            residual = normalized_residual(observed, predicted, p.err_map_at(predicted))
-            chisq = float(np.sum(residual ** 2))
-            ndof = max(observed.size - p.n_params, 1)
-            plot_image(row_ax[0], observed, title="Observed", scale="asinh")
+            band = f"/band {k}" if p.n_datasets() > 1 else ""
+            observed_k = (obs_override if obs_override is not None
+                          else np.asarray(p.observed_for(k)))
+            predicted = np.asarray(p.simulate(point=point, dataset=k))
+            residual = normalized_residual(observed_k, predicted,
+                                           p.err_map_at(predicted, dataset=k))
+
+            # Apply per-band fit mask so chi², color scales, and residual panels
+            # are not dominated by excluded (hot/bad) pixels.
+            m = p.mask_for(k)
+            mbool = None if m is None else np.asarray(m).astype(bool)
+
+            resid_fit = residual if mbool is None else residual[mbool]
+            chisq = float(np.sum(resid_fit ** 2))
+            n_pix = residual.size if mbool is None else int(mbool.sum())
+            ndof = max(n_pix - p.n_params, 1)
+
+            obs_disp = observed_k if mbool is None else np.where(mbool, observed_k, np.nan)
+            res_disp = residual if mbool is None else np.where(mbool, residual, np.nan)
+
+            plot_image(row_ax[0], obs_disp, title=f"Observed{band}", scale="asinh")
             plot_image(row_ax[1], predicted,
-                       title=f"{name} model (χ²/ν={chisq / ndof:.3f})",
+                       title=f"{name}{band} model (χ²/ν={chisq / ndof:.3f})",
                        scale="asinh")
-            plot_image(row_ax[2], residual, title=f"{name} residual", residual=True)
-            plot_residual_histogram(row_ax[3], residual, title=f"{name} hist")
+            plot_image(row_ax[2], res_disp, title=f"{name}{band} residual", residual=True)
+            plot_residual_histogram(row_ax[3], resid_fit.ravel(), title=f"{name}{band} hist")
         fig.tight_layout()
         return fig
