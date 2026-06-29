@@ -107,6 +107,147 @@ def _build_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
 
     return kernel
 
+
+class AdjustedKernelExtras(NamedTuple):
+    """Diagnostic fields for the MAMS (adjusted MCLMC) kernel; instrumentation only.
+
+    energy_change_raw
+        The raw MH log-ratio ``delta = logp_new - logp_old - kinetic_change``
+        BEFORE the NaN -> -inf guard. Lets diagnostics distinguish a genuinely
+        large (rejected) energy error from a NaN-forced rejection.
+    kernel_nonan
+        True iff the proposed endpoint (position + energy) was finite.
+    """
+    energy_change_raw: jnp.ndarray
+    kernel_nonan: jnp.ndarray
+
+
+class AdjustedMCLMCInfo(NamedTuple):
+    """Per-transition info for the MAMS kernel (analog of MCLMCInfoWithExtras).
+
+    acceptance_rate
+        The Metropolis acceptance probability ``min(1, e^delta)``.
+    is_accepted
+        Whether the proposal was accepted (and finite).
+    energy_change
+        The MH log-ratio ``delta`` after the NaN -> -inf guard (so a NaN step
+        reads as -inf, i.e. certain rejection).
+    num_integration_steps
+        Number of deterministic isokinetic steps in the trajectory.
+    nonans
+        Finite-proposal flag (same as extras.kernel_nonan; kept for parity with
+        MCLMCInfoWithExtras.nonans).
+    extras
+        AdjustedKernelExtras diagnostic bundle.
+    """
+    acceptance_rate: jnp.ndarray
+    is_accepted: jnp.ndarray
+    energy_change: jnp.ndarray
+    num_integration_steps: jnp.ndarray
+    nonans: jnp.ndarray
+    extras: AdjustedKernelExtras
+
+
+def _build_adjusted_kernel_shardmap(logdensity_fn, inverse_mass_matrix, integrator):
+    """shard_map-safe MAMS (Metropolis-Adjusted Microcanonical Sampler) kernel.
+
+    Mirrors `_build_kernel_shardmap` (the unadjusted MCLMC kernel) but implements
+    the *adjusted*, pure-Hamiltonian variant of Robnik et al. (MAMS):
+
+      * the momentum is FULLY refreshed (unit vector) once per transition,
+      * the trajectory is `num_integration_steps` DETERMINISTIC isokinetic steps
+        with NO Maruyama/Langevin partial refreshment (the "Hamiltonian, not
+        Langevin" variant -- equivalent to blackjax adjusted_mclmc with
+        L_proposal_factor=inf),
+      * a Metropolis-Hastings step accepts/rejects the trajectory endpoint.
+
+    Like `_build_kernel_shardmap`, all branching is done with `jnp.where`
+    (never `jax.lax.cond`) so the kernel passes shard_map's varying-manual-axis
+    check. The dense (non-diagonal) inverse mass matrix is handled entirely
+    inside `integrator` -- pass `isokinetic_mclachlan_smart`, exactly as MCLMC
+    does -- so MAMS inherits the dense-metric support for free.
+
+    The returned kernel signature is
+        kernel(rng_key, state, step_size, num_integration_steps)
+    -- note `num_integration_steps` replaces MCLMC's momentum-decoherence `L`;
+    the driver computes it (shared across chains) from L and the step size.
+    """
+    # Raw deterministic isokinetic integrator: (state, step_size) -> (state, kinetic_change).
+    # No with_isokinetic_maruyama wrapper => no intra-trajectory momentum noise.
+    isokinetic_step = integrator(
+        logdensity_fn=logdensity_fn, inverse_mass_matrix=inverse_mass_matrix
+    )
+
+    def kernel(rng_key, state, step_size, num_integration_steps):
+        key_momentum, key_accept = jax.random.split(rng_key, 2)
+
+        # Full momentum refresh. Cast to the position dtype so the carry is a
+        # single dtype (generate_unit_vector draws float32 normals even under
+        # x64); mirrors _single_init.
+        momentum = jax.tree_util.tree_map(
+            lambda m, p: m.astype(p.dtype),
+            generate_unit_vector(key_momentum, state.position),
+            state.position,
+        )
+        start = IntegratorState(
+            state.position, momentum, state.logdensity, state.logdensity_grad
+        )
+
+        # Deterministic trajectory: integrate num_integration_steps isokinetic
+        # steps, accumulating the kinetic-energy change (the MH "work" term).
+        # num_integration_steps is identical across chains (shared Halton), so
+        # the fori_loop trip count never varies within a vmapped/sharded batch.
+        def body(_, carry):
+            st, ke = carry
+            new_st, dke = isokinetic_step(st, step_size)
+            return new_st, ke + dke
+
+        end_state, kinetic_change = jax.lax.fori_loop(
+            0, num_integration_steps,
+            body, (start, jnp.zeros_like(state.logdensity)),
+        )
+
+        # MH log-ratio, same convention as blackjax.adjusted_mclmc_proposal:
+        #   delta = logp_new - logp_old - kinetic_change ;  p_accept = min(1, e^delta).
+        # (This equals -energy_error of the unadjusted MCLMC kernel.)
+        delta_energy_raw = -state.logdensity + end_state.logdensity - kinetic_change
+        finite = jnp.logical_and(
+            jnp.all(jnp.isfinite(ravel_pytree(end_state.position)[0])),
+            jnp.isfinite(delta_energy_raw),
+        )
+        # NaN/Inf -> certain rejection (matches the upstream NaN -> -inf guard).
+        delta_energy = jnp.where(finite, delta_energy_raw, -jnp.inf)
+
+        p_accept = jnp.minimum(jnp.exp(delta_energy), 1.0)
+        do_accept = jnp.logical_and(jax.random.bernoulli(key_accept, p_accept), finite)
+
+        select = lambda a, b: jax.tree.map(
+            lambda x, y: jnp.where(do_accept, x, y), a, b
+        )
+        new_state = IntegratorState(
+            *select(
+                (end_state.position, end_state.momentum,
+                 end_state.logdensity, end_state.logdensity_grad),
+                (state.position, state.momentum,
+                 state.logdensity, state.logdensity_grad),
+            )
+        )
+        new_info = AdjustedMCLMCInfo(
+            acceptance_rate=p_accept,
+            is_accepted=do_accept,
+            energy_change=delta_energy,
+            num_integration_steps=num_integration_steps,
+            nonans=finite,
+            extras=AdjustedKernelExtras(
+                energy_change_raw=delta_energy_raw,
+                kernel_nonan=finite,
+            ),
+        )
+        return new_state, new_info
+
+    return kernel
+
+
 def _gen_scan_fn_one_bar(num_samples, progress_bar, print_rate=None, axis_name=None):
     if not progress_bar:
         return jax.lax.scan
