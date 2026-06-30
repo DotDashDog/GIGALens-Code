@@ -100,6 +100,10 @@ def z_scores(
     # grouped_free_x regroups a scene-backed flat bijector output into the legacy
     # 3-group label space (pass-through for legacy posteriors), so the truth (3-group)
     # and the posterior points share labels and the shared params are actually scored.
+    # In multi-profile groups every parameter carries a ``__<i>`` profile-index
+    # suffix (see plotting.labels.flatten_params), so each profile's params are
+    # scored separately rather than colliding onto one column. This requires the
+    # truth's profiles to be in the same order as the model's within each group.
     flat_truth = _flat_floats(truth_x)
     flat_med = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.median_z)))
     flat_lo = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.quantiles_z(low_q))))

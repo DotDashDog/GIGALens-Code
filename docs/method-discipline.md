@@ -2,6 +2,8 @@
 
 **Required reading, high priority.** This file is the project's *general* research-method discipline — the standards for not fooling yourself when evaluating a method, metric, model, or inference procedure. It is domain-independent. The *project-specific* standards (controls/baselines, validation, failure modes, domain conventions) live in the project-standards file and are equally required reading.
 
+> **This file is canonical** for the general method discipline and is **auto-injected at session start** by `.claude/hooks/inject-method-discipline.sh` — you should already have it in context without a Read. It supersedes any shorter "debugging/method-evaluation protocol" in a personal global CLAUDE.md; where they differ, this file wins. Edit the discipline here first, then propagate.
+
 The governing idea (Feynman, *Cargo Cult Science*): **you are the easiest person to fool.** Following the letter of a rigor checklist — even performing the pre-registration ritual below — does not protect you if the test itself is mis-specified. A confident "PASS" certified against an arbitrary threshold, while a plot of the same result shows a structured disagreement plainly, is the canonical failure these rules exist to prevent.
 
 ---

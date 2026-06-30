@@ -38,6 +38,49 @@ _tfd = tfp.distributions
 DEFAULT_SUBSAMPLE_N = 5000
 
 
+# ---------------------------------------------------------------------------
+# Rank-normalized split convergence diagnostics (Vehtari et al. 2021,
+# "Rank-Normalization, Folding, and Localization: An Improved R̂").
+#
+# Why this and not plain Gelman-Rubin / tfp.effective_sample_size: the sampler
+# works in unconstrained (z) space, where a prior bound induces a z->inf
+# bijector stretch -> heavy-tailed / non-normal marginals. The classic PSRF
+# badly over-reports R̂ there (we measured z-PSRF ~12 where the *physical*
+# posterior is essentially one mode; rank-R̂ ~1.7). Rank normalization is
+# invariant to any monotone reparameterization, so it neither invents nor
+# hides convergence because of the prior's parameterization.
+#
+# We defer to ArviZ's reference implementation rather than re-derive the
+# rank/fold/Geyer machinery here (a hand-rolled ESS is an easy way to fool
+# yourself). ArviZ is part of the canonical env (docs/env_setup.md); runtime
+# deps are env-managed, not declared in pyproject.
+# ---------------------------------------------------------------------------
+
+
+def _require_arviz():
+    try:
+        import arviz as az
+    except ImportError as e:  # pragma: no cover
+        raise ImportError(
+            "Rank-normalized R̂/ESS diagnostics require ArviZ. It is part of the "
+            "canonical gigalens env (docs/env_setup.md); install with `pip install arviz`."
+        ) from e
+    return az
+
+
+def _az_diag(sz: np.ndarray, fn) -> np.ndarray:
+    """Apply an ArviZ diagnostic ``fn`` (e.g. ``az.rhat``) per parameter.
+
+    ArviZ's array API only takes a uni-dimensional ``(chain, draw)`` variable,
+    so we wrap our canonical ``(chains, steps, params)`` array as a dataset
+    (chain, draw, param) and read the per-param result back.
+    """
+    az = _require_arviz()
+    ds = az.convert_to_dataset(np.asarray(sz))
+    var = list(ds.data_vars)[0]
+    return np.atleast_1d(np.asarray(fn(ds)[var].values))
+
+
 def _n_basis(light_model) -> int:
     """Number of linear-amplitude basis functions a light profile contributes
     when used with ``use_lstsq=True``.
@@ -601,12 +644,12 @@ class SamplerPosterior(Posterior):
 
     @cached_property
     def rhat(self) -> np.ndarray:
-        """Gelman-Rubin R-hat per parameter (shape ``(n_params,)``)."""
+        """Rank-normalized split-R-hat per parameter (shape ``(n_params,)``)."""
         return self._rhat(self._samples_z)
 
     @cached_property
     def ess(self) -> np.ndarray:
-        """Effective sample size per parameter (shape ``(n_params,)``)."""
+        """Rank-normalized bulk-ESS per parameter (shape ``(n_params,)``)."""
         return self._ess(self._samples_z)
 
     def running_rhat(self, *, schedule=None) -> Tuple[np.ndarray, np.ndarray]:
@@ -634,15 +677,24 @@ class SamplerPosterior(Posterior):
 
     @staticmethod
     def _rhat(sz: np.ndarray) -> np.ndarray:
-        # tfp wants (num_results, num_chains, ...) so we transpose from our
-        # canonical (chains, steps, params) layout.
-        sz_t = jnp.transpose(jnp.asarray(sz), (1, 0, 2))
-        return np.asarray(tfp.mcmc.potential_scale_reduction(sz_t))
+        """Rank-normalized split-R-hat (Vehtari et al. 2021), per parameter.
+
+        Reported as ``max(rank, folded)``: the *rank* term catches location
+        non-convergence; the *folded* term (ranks of ``|theta - median|``)
+        catches scale/variance non-convergence. ArviZ expects ``(chain, draw,
+        ...)``, which is our canonical layout, so the trailing param axis maps
+        straight through. Standard (sqrt-form) R̂ -> thresholds 1.01/1.1 apply.
+        """
+        az = _require_arviz()
+        rank = _az_diag(sz, lambda ds: az.rhat(ds, method="rank"))
+        folded = _az_diag(sz, lambda ds: az.rhat(ds, method="folded"))
+        return np.maximum(rank, folded)
 
     @staticmethod
     def _ess(sz: np.ndarray) -> np.ndarray:
-        sz_t = jnp.transpose(jnp.asarray(sz), (1, 0, 2))
-        return np.asarray(tfp.mcmc.effective_sample_size(sz_t))
+        """Rank-normalized bulk-ESS (Vehtari et al. 2021), per parameter."""
+        az = _require_arviz()
+        return _az_diag(sz, lambda ds: az.ess(ds, method="bulk"))
 
     # -- representative point ----------------------------------------------
 

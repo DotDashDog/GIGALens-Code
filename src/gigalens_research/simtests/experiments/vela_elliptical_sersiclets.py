@@ -189,4 +189,4 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
         sees="all",
     )
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence.from_scene(model, prob_model, system.sim_config)
+    return ModellingSequence.from_scene(prob_model)

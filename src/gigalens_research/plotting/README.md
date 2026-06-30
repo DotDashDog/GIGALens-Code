@@ -335,8 +335,22 @@ fig = pr.diagnostics("mclmc", chain=3)  # extra kwargs forwarded to the plotter
 For MCLMC this produces five stacked panels vs. step: per-chain step size,
 trajectory length `L`, inverse-mass-matrix eigenvalue spread, the energy-error
 ratio `xi` for one chain, and a finite-step (NaN) heatmap — with dashed lines
-marking the three tuning-stage boundaries. It's the quickest way to see *where*
+marking the three tuning-stage boundaries. The eigenvalue panel also overlays
+the final output samples' covariance eigenvalue spread (min/mean/max) as
+horizontal dashed lines, so you can see whether the inverse mass matrix settled
+toward the posterior covariance it targets. It's the quickest way to see *where*
 a sampling run blew up.
+
+An optional companion plot corner-plots the final draws against a Gaussian
+surrogate — a multivariate normal with mean equal to the sample mean and
+covariance equal to the **final inverse mass matrix** used during sampling.
+Everything is in the unconstrained (z) space, where both the positions and the
+inverse mass matrix live. It shows how Gaussian the posterior is and whether the
+preconditioner the sampler used matches the realized draw covariance:
+
+```python
+fig = pr.diagnostics_surrogate_corner("mclmc")  # max_samples=, seed= forwarded
+```
 
 ---
 
@@ -387,15 +401,32 @@ plot_source_plane(
     log_vmin=1e-2,
 )
 
-# Caustic / critical-curve overlays:
-plot_caustics_critical(ax, posterior, point="median")  # both on one axes
-plot_caustics(ax, posterior, point="median")            # source plane only
-plot_critical_curves(ax, posterior, point="median")     # image plane only
+# Caustic / critical-curve overlays. Both accept deflection_ratio= to select
+# which source plane (a model can carry several at different redshifts):
+plot_caustics(ax, posterior, point="median", deflection_ratio=0.7)         # source plane only
+plot_critical_curves(ax, posterior, point="median", deflection_ratio=0.7)  # image plane only
+plot_caustics_critical(ax, posterior, point="median")                      # both on one axes
 ```
 
-Caustics and critical curves are computed via `lenstronomy` using the
-mass-profile name map in `LENS_MODEL_NAME_MAP`. Add entries there for
-profiles not yet covered.
+Caustics and critical curves are computed **natively** from the gigalens lens
+model — the deflection comes straight from each `profile.deriv`, its Jacobian
+from `jax.jacfwd`, and the critical-curve contours from
+`skimage.measure.find_contours`. There is no lenstronomy translation layer (no
+name map): adding a new mass profile needs nothing here.
+
+For a source plane with deflection ratio `r` the lens map is
+`beta = theta - r * alpha(theta)`, so both the **critical** curve
+(`det(I - r * dalpha/dtheta) = 0`, image plane) and its **caustic** (the lens
+map of that curve, source plane) depend on `r`. Pass `deflection_ratio=` to draw
+the pair for a given source plane; the per-plane ratios come from
+`Posterior.source_plane_views()`, which `PosteriorReport.source_panel` iterates
+to build one row (source plane + observed image) per source plane.
+
+> Validated against lenstronomy's `critical_curve_caustics` at `r=1`
+> (EPL + SHEAR + NFW_ELLIPSE): the physical critical/caustic curves agree to
+> <5e-3 arcsec (≪ the contour grid spacing); lenstronomy's only extra output is
+> spurious few-point loops on the compute-window edge, which the native path
+> does not produce.
 
 ---
 

@@ -41,9 +41,9 @@ Discipline documents get ritualized — followed in letter, not spirit. These st
 
 The durable record is split into **one lab-notebook log per rough research area**, so each stays short and relevant. Each log holds: current state, what's been tried (including **negative results**), and a **claims register** — every claim with a status of `proposed` / `certified (scope: …)` / `withdrawn`.
 
-Areas → logs (lab-notebook logs live in `docs/`, one per area):
-- [FILL IN: area name] → `docs/logs/[area].md`
-- [FILL IN: area name] → `docs/logs/[area].md`
+Areas → logs (lab-notebook logs live in `docs/logs/`, one per area):
+- Compute / likelihood-gradient profiling → `docs/logs/compute-profiling.md`
+- Carousel-lens MCLMC sampling diagnosis → `docs/logs/carousel-mclmc-sampling.md`
 
 Update the relevant log after any substantive step. Stale state is worse than none.
 

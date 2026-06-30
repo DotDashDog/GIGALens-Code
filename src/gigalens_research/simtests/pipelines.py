@@ -294,7 +294,7 @@ class PartialTruthBootstrapQzStage(InferenceStage):
                      exp_time=self.system.exp_time, sees="all")
         mode = getattr(ctx.prob_model, "mode", "lstsq")
         fixed_prob = ProbModel(fixed_model, ds, mode=mode)
-        fixed_seq = ModellingSequence.from_scene(fixed_model, fixed_prob, sim_config)
+        fixed_seq = ModellingSequence.from_scene(fixed_prob)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
         map_samples, lps, _ = fixed_seq.MAP(

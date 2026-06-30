@@ -39,12 +39,10 @@ from threading import Lock
 def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
           desired_energy_variance=5e-4, init_L=None, init_step_size=None, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
           progress_bar=False, seed=0, debug_output=False, regularize_mass_matrix=False):
-    # Scene-only (old gigalens API dropped): the ModellingSequence builds a SceneSimulator
-    # via make_lens_sim (Q2: the sampler owns the sim and passes it to prob.log_prob(sim, z)).
-    lens_sim = model_seq.make_lens_sim(1)
-
+    # Scene-only: the ProbModel owns batch-flexible per-dataset SceneSimulators, so
+    # log_prob(z) renders through them directly -- no separately-built simulator.
     def log_prob(z):
-        return model_seq.prob_model.log_prob(lens_sim, z)[0]
+        return model_seq.prob_model.log_prob(z)[0]
 
     n_chains = n_hmc
     integrator = isokinetic_mclachlan_smart
@@ -326,13 +324,20 @@ def full_mclmc_with_adapt_sharded(
 
                 def skip_adapt(_):
                     success_placeholder = jnp.isfinite(new_state.position.reshape(-1)[0])
-                    xi_placeholder = jnp.sum(new_state.position) * 0.0 - 1.0
+                    # Log the real energy-error ratio xi even when step-size adaptation
+                    # is off (modes 0=results and 3=L-tuning), instead of the old -1
+                    # sentinel. Uses the SAME definition as step_size_adapt
+                    # (info.energy_change is already NaN-zeroed by the kernel), so the
+                    # burn-in and results-phase xi are directly comparable. This value
+                    # is logged only (it feeds the Hist diagnostic, never the kernel or
+                    # step-size), so it does not change sampling.
+                    xi_val = jnp.square(info.energy_change) / (dim * desired_energy_var) + 1e-8
                     return (
                         new_state,
                         step_size,
                         adapt_state,
                         success_placeholder,
-                        xi_placeholder.astype(step_size.dtype),
+                        xi_val.astype(step_size.dtype),
                     )
 
                 result = jax.lax.cond(

@@ -33,11 +33,19 @@ def _samples_to_matrix(
     parameter labels. For point estimates (no flat_x), a single-row matrix is
     returned for completeness, though corner plots aren't meaningful in that case.
     """
+    # ``_index_collisions=True`` (the default) is essential here: without it,
+    # two profiles in the same group that share a parameter name (e.g.
+    # ``e1``/``center_x`` across several mass profiles, or ``center_x`` across
+    # multiple source profiles) collapse to a single column and the rest are
+    # silently dropped — a multi-profile / multi-band model would lose ~half its
+    # parameters. The ``__<i>`` profile-index suffix keeps every parameter a
+    # distinct, attributable column. Passed explicitly to pin the behavior.
     if hasattr(posterior, "flat_x"):
-        flat = flatten_params(posterior.flat_x)
+        flat = flatten_params(posterior.flat_x, _index_collisions=True)
     else:
         flat = flatten_params(posterior.x if hasattr(posterior, "x") else
-                              posterior.z_to_x(posterior.median_z))
+                              posterior.z_to_x(posterior.median_z),
+                              _index_collisions=True)
     if plot_params is None:
         plot_params = list(flat.keys())
     cols = [np.asarray(flat[k]).reshape(-1) for k in plot_params]
@@ -61,7 +69,9 @@ def _point_to_row(
     source (``src_beta``, ``src_n_max``, …). ``corner`` skips non-finite
     truth/overlay entries, so unmatched parameters simply get no marker.
     """
-    flat = flatten_params(point_x)
+    # Must match _samples_to_matrix's disambiguation so truth columns align
+    # with the sample columns when profiles share parameter names.
+    flat = flatten_params(point_x, _index_collisions=True)
     missing = [k for k in plot_params if k not in flat]
     if missing:
         warnings.warn(

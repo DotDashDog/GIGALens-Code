@@ -100,6 +100,11 @@ def _feed(h: "hashlib._Hash", obj: Any) -> None:
         h.update(b"float:"); h.update(repr(float(obj)).encode())
     elif isinstance(obj, (str, bytes)):
         h.update(b"str:"); h.update(obj.encode() if isinstance(obj, str) else obj)
+    elif isinstance(obj, np.dtype):
+        # Precision specs (SimulatorConfig.likelihood/basis/conv_precision) are
+        # stored as numpy dtypes; hash by canonical name so they don't reach the
+        # repr() fallback. ``str(dtype)`` is stable ("float32"/"float64").
+        h.update(b"dtype:"); h.update(str(obj).encode())
     elif isinstance(obj, np.ndarray):
         h.update(b"arr:")
         h.update(str(obj.dtype).encode()); h.update(b":")
@@ -220,26 +225,39 @@ class InferenceContext:
     def hash(self) -> str:
         """Stable hash of the *modeling inputs* (not the ``model_seq`` impl).
 
-        Picks up whichever noise-model attributes the prob_model actually
-        carries: gigalens' ``ForwardProbModel`` exposes ``background_rms`` /
-        ``exp_time``; ``BackwardProbModel`` exposes ``err_map``. Both forms
-        (and any reasonable third-party variant that mixes them) are covered.
-        The prob_model class name is folded in so two models with overlapping
-        but differently-interpreted attributes don't alias.
+        Multi-dataset-aware: a scene ``ProbModel`` carries a ``datasets`` list, so the
+        fingerprint folds in every band's image, noise map, mask AND that band's own
+        ``sim_config`` (the per-band PSF/grid lives there, not in the single
+        ``ctx.sim_config``, which is only the first band's). For a legacy single-image
+        prob_model (no ``datasets``), it falls back to the singular ``observed_image``
+        plus whichever noise-model attributes the model carries: ``ForwardProbModel``
+        exposes ``background_rms`` / ``exp_time``; ``BackwardProbModel`` exposes
+        ``err_map``. The prob_model class name is folded in so two models with
+        overlapping but differently-interpreted attributes don't alias.
         """
         pm = self.prob_model
-        noise: Dict[str, Any] = {
-            "class": type(pm).__name__,
-            "observed_image": np.asarray(pm.observed_image),
-        }
-        for attr in ("background_rms", "exp_time", "err_map"):
-            if hasattr(pm, attr):
-                noise[attr] = np.asarray(getattr(pm, attr))
+        noise: Dict[str, Any] = {"class": type(pm).__name__}
+        datasets = getattr(pm, "datasets", None)
+        if datasets is not None:
+            # Per-band: image + noise + mask, and each band's own sim_config (PSF/grid).
+            noise["datasets"] = [
+                {"image": np.asarray(d.image),
+                 "error_map": np.asarray(d.error_map),
+                 "mask": np.asarray(d.mask)}
+                for d in datasets
+            ]
+            sim_config_hash: Any = [_hash_sim_config(d.sim_config) for d in datasets]
+        else:
+            noise["observed_image"] = np.asarray(pm.observed_image)
+            for attr in ("background_rms", "exp_time", "err_map"):
+                if hasattr(pm, attr):
+                    noise[attr] = np.asarray(getattr(pm, attr))
+            sim_config_hash = _hash_sim_config(self.sim_config)
         return stable_hash({
             "phys_model": _hash_phys_model(self.phys_model),
             "prior": pm.prior,
             "noise": noise,
-            "sim_config": _hash_sim_config(self.sim_config),
+            "sim_config": sim_config_hash,
         })
 
 
@@ -348,13 +366,17 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
     # Report the error_map DIRECTLY; do NOT fabricate background_rms/exp_time from it.
     noise: Dict[str, Any] = {"prob_model": type(pm).__name__}
     scene_error_map = None
+    scene_datasets = getattr(pm, "datasets", None)
     if not hasattr(pm, "err_map"):
-        try:
-            scene_error_map = pm.error_map  # scene ProbModel property (single dataset)
-        except Exception:
-            # Missing (legacy) or raises for a multi-dataset scene model — treat as
-            # "no single error_map to report" and fall through to the unknown branch.
-            scene_error_map = None
+        if scene_datasets:
+            # Scene ProbModel: read band 0 directly (the property raises for multi-band).
+            # Per-band detail is reported in the scene card section below.
+            scene_error_map = scene_datasets[0].error_map
+        else:
+            try:
+                scene_error_map = pm.error_map  # legacy single-image prob_model
+            except Exception:
+                scene_error_map = None
     if hasattr(pm, "err_map"):
         em = np.asarray(pm.err_map)
         noise.update(kind="fixed_err_map (backward)", err_map_shape=list(em.shape),
@@ -367,6 +389,10 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
         em = np.asarray(scene_error_map)
         noise.update(kind="fixed error_map (scene)", err_map_shape=list(em.shape),
                      err_map_min=float(em.min()), err_map_median=float(np.median(em)))
+        n_bands = len(scene_datasets) if scene_datasets else 1
+        if n_bands > 1:
+            noise["n_bands"] = n_bands
+            noise["note"] = "summary is band 0; per-band detail in scene.datasets"
     else:
         noise["kind"] = "unknown"
         warns.append(
@@ -423,6 +449,13 @@ def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
     scene = _scene_card_section(ctx)
     if scene is not None:
         card["scene"] = scene
+        # The top-level PSF/noise fields describe band 0 only; surface any OTHER band
+        # that is missing a PSF (silent misspecification the single-line card would hide).
+        for b in scene.get("datasets", []):
+            if b["band"] != 0 and not b["psf"].get("present"):
+                card["warnings"].append(
+                    f"band {b['band']}: NO PSF — that dataset applies no PSF convolution "
+                    "(the single-line card shows band 0). Check that band's sim_config.kernel.")
     return card
 
 
@@ -479,6 +512,31 @@ def _scene_card_section(ctx) -> Optional[Dict[str, Any]]:
     resolved = getattr(pm, "_resolved_sees", None)
     if resolved is not None:
         out["sees"] = [[type(c.profile).__name__ for c in seen] for seen in resolved]
+
+    # Per-band PSF + noise + grid (the single top-level card fields only describe band 0;
+    # each band has its OWN sim_config/PSF/noise, so report them all to stay honest).
+    datasets = getattr(pm, "datasets", None)
+    if datasets is not None:
+        bands = []
+        for k, d in enumerate(datasets):
+            kern = getattr(d.sim_config, "kernel", None)
+            if kern is None:
+                psf_b = {"present": False}
+            else:
+                kk = np.asarray(kern)
+                psf_b = {"present": True, "shape": list(kk.shape), "sum": float(kk.sum()),
+                         "sha1": hashlib.sha1(np.ascontiguousarray(
+                             kk, dtype=np.float64).tobytes()).hexdigest()[:12]}
+            em = np.asarray(d.error_map)
+            bands.append({
+                "band": k,
+                "sees": out["sees"][k] if out.get("sees") and k < len(out["sees"]) else None,
+                "psf": psf_b,
+                "err_map_median": float(np.median(em)),
+                "grid": {"num_pix": d.sim_config.num_pix,
+                         "delta_pix": d.sim_config.delta_pix},
+            })
+        out["datasets"] = bands
     return out
 
 
@@ -522,6 +580,16 @@ def format_model_card(card: Dict[str, Any]) -> str:
         if s.get("sees") is not None:
             lines.append("  Sees       : " + " | ".join(
                 "[" + ", ".join(view) + "]" for view in s["sees"]))
+        if s.get("datasets") and len(s["datasets"]) > 1:
+            lines.append(f"  Bands      : {len(s['datasets'])} datasets")
+            for b in s["datasets"]:
+                p = b["psf"]
+                psf_str = (f"PSF {p['shape']} sha1={p['sha1']}" if p.get("present")
+                           else "** NO PSF **")
+                g = b["grid"]
+                lines.append(
+                    f"    band {b['band']}: {psf_str}  err_med={b['err_map_median']:.3g}  "
+                    f"grid={g['num_pix']}@{g['delta_pix']}")
     if card["warnings"]:
         lines.append("-" * 72)
         for w in card["warnings"]:
@@ -1193,7 +1261,7 @@ class Pipeline:
         # Order from richest to leanest posterior; pick the last entry whose
         # stage class has its own ``to_posterior`` override. Bridges and
         # other stages without a view are skipped.
-        scores = {"HMCStage": 2, "MCLMCStage": 2, "SVIStage": 1, "MAPStage": 0}
+        scores = {"HMCStage": 2, "MCLMCStage": 2, "MAMSStage": 2, "SVIStage": 1, "MAPStage": 0}
         best, best_score = None, -1
         for s in self.stages:
             if s.instance_name not in self.results:
@@ -1656,12 +1724,160 @@ class MCLMCStage(InferenceStage):
             # chains, so we keep only chain 0 to bound the on-disk size.
             hist = out
             samples = np.asarray(hist.position[:, -self.num_results:, :])
+            # Empirical covariance of the kept draws (chains flattened together),
+            # so the plotter can overlay the posterior-covariance eigenvalue
+            # spread on the inverse-mass-matrix panel. Shape (n_params, n_params),
+            # so it's cheap to store alongside the tuning traces.
+            flat = samples.reshape(-1, samples.shape[-1])
+            samples_cov = np.cov(flat, rowvar=False)
             diagnostics = {
                 "step_size": np.asarray(hist.step_size),
                 "L": np.asarray(hist.L),
                 "xi": np.asarray(hist.xi),
                 "nonan": np.asarray(hist.nonan),
                 "inverse_mass_matrix": np.asarray(hist.inverse_mass_matrix[:1]),
+                "samples_cov": np.asarray(samples_cov),
+                # The kept draws themselves (unconstrained z-space), so the
+                # surrogate corner plot can compare them against an MVN built
+                # from the final inverse mass matrix. Duplicates the published
+                # samples but only when debug=True.
+                "samples_z": np.asarray(samples),
+            }
+        else:
+            samples = np.asarray(out)
+        samples_np = np.asarray(samples)
+        return StageResult(
+            arrays={"samples_z": samples_np},
+            metadata={
+                "wall_time_s": time.perf_counter() - t0,
+                "num_chains": int(samples_np.shape[0]),
+                "num_steps": int(samples_np.shape[1]),
+                "n_params": int(samples_np.shape[2]),
+                "debug": self.debug,
+            },
+            diagnostics=diagnostics,
+        )
+
+    @classmethod
+    def to_posterior(cls, arrays, ctx):
+        from .posterior import SamplerPosterior
+        return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
+
+
+class MAMSStage(InferenceStage):
+    """MAMS sampler (Metropolis-adjusted microcanonical). Wraps
+    ``gigalens_research.inference.MAMS_JIT``.
+
+    The Metropolis-adjusted counterpart to :class:`MCLMCStage`: same interface
+    and outputs, but asymptotically unbiased (each trajectory ends in an
+    accept/reject step), with the step size tuned by dual averaging to a target
+    acceptance rate rather than to an energy-variance setpoint.
+
+    Requires ``qz`` (used for chain initialization, initial mass matrix, and
+    SVI-mean reference). Produces ``samples_z`` of canonical shape
+    ``(num_chains, num_steps, n_params)``.
+    """
+
+    name: ClassVar[str] = "mams"
+    schema_version: ClassVar[int] = 1
+    requires: ClassVar[Tuple[str, ...]] = ("qz",)
+    produces: ClassVar[Tuple[str, ...]] = ("samples_z",)
+
+    def __init__(
+        self,
+        *,
+        n_chains: int = 16,
+        num_burnin_steps: int = 1000,
+        num_results: int = 2000,
+        target_acceptance: float = 0.9,
+        init_L: Optional[float] = None,
+        init_step_size: Optional[float] = None,
+        frac_tune1: float = 0.2,
+        frac_tune2: float = 0.6,
+        frac_tune3: float = 0.2,
+        regularize_mass_matrix: bool = True,
+        progress_bar: bool = False,
+        debug: bool = False,
+        name: Optional[str] = None,
+        seed: Optional[int] = None,
+    ):
+        super().__init__(name=name, seed=seed)
+        self.n_chains = int(n_chains)
+        self.num_burnin_steps = int(num_burnin_steps)
+        self.num_results = int(num_results)
+        self.target_acceptance = float(target_acceptance)
+        self.init_L = None if init_L is None else float(init_L)
+        self.init_step_size = None if init_step_size is None else float(init_step_size)
+        self.frac_tune1 = float(frac_tune1)
+        self.frac_tune2 = float(frac_tune2)
+        self.frac_tune3 = float(frac_tune3)
+        self.progress_bar = bool(progress_bar)
+        self.debug = bool(debug)
+        self.regularize_mass_matrix = bool(regularize_mass_matrix)
+
+    def diagnostics_config(self):
+        # What the MAMS diagnostic plotter needs to draw the tuning-stage
+        # boundaries and the acceptance-rate target line (see
+        # plotting.diagnostics.plot_mams_diagnostics).
+        return {
+            "num_burnin_steps": self.num_burnin_steps,
+            "num_results": self.num_results,
+            "frac_tune1": self.frac_tune1,
+            "frac_tune2": self.frac_tune2,
+            "frac_tune3": self.frac_tune3,
+            "target_acceptance": self.target_acceptance,
+        }
+
+    def run(self, ctx, artifacts, seed):
+        # Local import: keeps MAMS's heavy blackjax dependency optional for
+        # users who only need MAP/SVI/HMC.
+        from gigalens_research.inference import MAMS_JIT
+        t0 = time.perf_counter()
+        out = MAMS_JIT(
+            model_seq=ctx.model_seq,
+            qz=artifacts["qz"],
+            n_hmc=self.n_chains,
+            num_burnin_steps=self.num_burnin_steps,
+            num_results=self.num_results,
+            target_acceptance=self.target_acceptance,
+            init_L=self.init_L,
+            init_step_size=self.init_step_size,
+            frac_tune1=self.frac_tune1,
+            frac_tune2=self.frac_tune2,
+            frac_tune3=self.frac_tune3,
+            regularize_mass_matrix=self.regularize_mass_matrix,
+            progress_bar=self.progress_bar,
+            seed=seed,
+            debug_output=self.debug,
+        )
+        diagnostics: Dict[str, np.ndarray] = {}
+        if self.debug:
+            # debug_output=True returns the full tuning `Hist`; the kept draws
+            # are the last `num_results` positions. We also capture the tuning
+            # traces (step_size, L, acceptance_rate, trajectory length in
+            # integrator steps, success mask, mass matrix) for the diagnostic
+            # plotter. The inverse mass matrix is replicated across chains, so we
+            # keep only chain 0 to bound the on-disk size.
+            hist = out
+            samples = np.asarray(hist.position[:, -self.num_results:, :])
+            # Empirical covariance of the kept draws (chains flattened together),
+            # so the plotter can overlay the posterior-covariance eigenvalue
+            # spread on the inverse-mass-matrix panel.
+            flat = samples.reshape(-1, samples.shape[-1])
+            samples_cov = np.cov(flat, rowvar=False)
+            diagnostics = {
+                "step_size": np.asarray(hist.step_size),
+                "L": np.asarray(hist.L),
+                "acceptance_rate": np.asarray(hist.acceptance_rate),
+                "num_integration_steps": np.asarray(hist.num_integration_steps),
+                "nonan": np.asarray(hist.nonan),
+                "inverse_mass_matrix": np.asarray(hist.inverse_mass_matrix[:1]),
+                "samples_cov": np.asarray(samples_cov),
+                # The kept draws themselves (unconstrained z-space), so the
+                # surrogate corner plot can compare them against an MVN built
+                # from the final inverse mass matrix. Duplicates the published
+                # samples but only when debug=True.
+                "samples_z": np.asarray(samples),
             }
         else:
             samples = np.asarray(out)
@@ -1718,7 +1934,7 @@ def register_stage(cls: type) -> type:
     return cls
 
 
-for _cls in (MAPStage, SVIStage, HessianSurrogateStage, HMCStage, MCLMCStage, BridgeStage):
+for _cls in (MAPStage, SVIStage, HessianSurrogateStage, HMCStage, MCLMCStage, MAMSStage, BridgeStage):
     register_stage(_cls)
 
 

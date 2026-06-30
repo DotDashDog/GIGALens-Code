@@ -177,4 +177,4 @@ def build_epl_shear_sersic_elliptical_shapelets(system: Any, **kwargs) -> Any:
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence.from_scene(model, prob_model, system.sim_config)
+    return ModellingSequence.from_scene(prob_model)

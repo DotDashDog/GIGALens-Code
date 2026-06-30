@@ -180,7 +180,9 @@ def generate_parametric(
         scene_params = _stack_scene_params(chunk_truth_list)
 
         chunk_key, key = random.split(key)
-        lens_sim = SceneSimulator(scene_model, sim_config, bs=bs)
+        # The SceneSimulator is batch-flexible: the batch comes from the stacked
+        # scene_params broadcasting onto the grid's singleton axis, so no bs= is needed.
+        lens_sim = SceneSimulator(scene_model, sim_config)
         noiseless = lens_sim.simulate(scene_params)  # (bs, H, W)
 
         noisy_batch = _add_noise(noiseless, background_rms, exp_time, chunk_key)

@@ -6,6 +6,7 @@ live in :mod:`gigalens_research.inference_utils`.
 """
 
 from .mclmc import MCLMC, MCLMC_JIT
+from .mams import MAMS, MAMS_JIT
 from .laps import (
     LAPS_JIT,
 )
@@ -17,6 +18,8 @@ from .hessian_surrogate import HessianSurrogate
 __all__ = [
     "MCLMC",
     "MCLMC_JIT",
+    "MAMS",
+    "MAMS_JIT",
     "LAPS_JIT",
     "LAPS_blackjax",
     "HessianSurrogate",
