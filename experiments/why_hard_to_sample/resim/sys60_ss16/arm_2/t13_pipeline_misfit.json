@@ -1,0 +1,33 @@
+{
+  "experiment": "T13' Step 4 -- MAP->SVI pipeline on d'",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-03T00:45:07.685811+00:00",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "arm": "ss2",
+  "model_supersample": 2,
+  "pipeline_config": {
+    "MAPStage": {
+      "num_steps": 350,
+      "n_samples": 200
+    },
+    "SVIStage": {
+      "num_steps": 1000,
+      "n_vi": 500
+    },
+    "pipeline_seed": 0,
+    "source": "TestSersic60.ipynb",
+    "deviation": null
+  },
+  "svi_arrays": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/svi/arrays.npz",
+  "model_side_misfit": {
+    "metric": "max|m_arm(truth) - m16(truth)| / err_map",
+    "measured_sigma": 13.879165427258934,
+    "loc_row_col": [
+      57,
+      12
+    ],
+    "threshold_recommend_ss8": 0.3,
+    "recommend_ss8_arm": true,
+    "truth_roundtrip_err": 1.1368683772161603e-13
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "out_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed2.npz",
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "mclmc_kwargs": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false,
+    "seed": 2,
+    "debug_output": true
+  },
+  "seed": 2,
+  "target_desc": "Gaussian clone (full-cov fit to real run's z-space post-burn-in samples)",
+  "provenance": {
+    "clone_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/clone.npz",
+    "qz_data_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/sys60",
+    "qz": "SAME as real run: qz rebuilt by load_target(data_dir) (MultivariateNormalTriL); carousel=MAP-centered 1e-2 ball, sys60=saved SVI Gaussian, vela=saved bootstrap Gaussian"
+  },
+  "position_shape": [
+    8,
+    4000,
+    22
+  ],
+  "sampling_wall_s": 17.909704876999967,
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "timestamp_utc": "2026-07-02T18:13:40.964631+00:00"
+}

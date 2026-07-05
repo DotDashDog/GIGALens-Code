@@ -1,0 +1,191 @@
+{
+  "experiment": "T28 observable-slope prior -- analysis",
+  "status": "proposed (UNCERTIFIED)",
+  "present": true,
+  "smoke": false,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "num_results_used": 2000,
+  "per_seed": [
+    {
+      "seed": 1,
+      "present": true,
+      "eps_results_mean": 0.9148856212312514,
+      "min_ess_bulk": 1594.1202144394847,
+      "min_ess_bulk_param": "planes/0/mass/0/Rs",
+      "min_ess_tail": 1563.6155772111836,
+      "min_ess_tail_param": "planes/0/mass/0/Rs",
+      "min_ess": 1563.6155772111836,
+      "max_rhat": 1.0074019674069863,
+      "max_rhat_param": "planes/0/mass/0/center_y",
+      "frac_xi_gt10": 0.028125,
+      "xi_p99": 61.662628845189,
+      "xi_max": 17834.86519928288
+    },
+    {
+      "seed": 2,
+      "present": true,
+      "eps_results_mean": 0.9634001287734452,
+      "min_ess_bulk": 1613.8889994035806,
+      "min_ess_bulk_param": "planes/1/light/0/beta",
+      "min_ess_tail": 1762.751921866483,
+      "min_ess_tail_param": "planes/0/mass/0/Rs",
+      "min_ess": 1613.8889994035806,
+      "max_rhat": 1.0040272729094848,
+      "max_rhat_param": "planes/1/light/1/center_y",
+      "frac_xi_gt10": 0.024625,
+      "xi_p99": 31.714318166055158,
+      "xi_max": 44608.46184239233
+    },
+    {
+      "seed": 3,
+      "present": true,
+      "eps_results_mean": 0.7747750027445799,
+      "min_ess_bulk": 1186.9202325922854,
+      "min_ess_bulk_param": "planes/1/light/0/beta",
+      "min_ess_tail": 1283.3144820363825,
+      "min_ess_tail_param": "planes/0/mass/0/Rs",
+      "min_ess": 1186.9202325922854,
+      "max_rhat": 1.0056704872868263,
+      "max_rhat_param": "planes/0/mass/0/e1",
+      "frac_xi_gt10": 0.009125,
+      "xi_p99": 9.054106815987396,
+      "xi_max": 5952.1737838613435
+    }
+  ],
+  "pooled_health": {
+    "max_rhat": 1.0049527652355126,
+    "max_rhat_param": "planes/0/mass/0/e2",
+    "min_ess_bulk": 4392.568477740776,
+    "min_ess_tail": 4483.312282866253,
+    "min_ess": 4392.568477740776
+  },
+  "hard_gate": {
+    "max_rel_roundtrip": 6.342251826599413e-14,
+    "max_rel_Rs": 6.336049873020002e-16,
+    "max_rel_theta_E": 6.342251826599413e-14,
+    "grid_n": 64,
+    "c_grid_min": 3.4844062908295292,
+    "c_grid_max": 9.005837920000388,
+    "bracket": {
+      "lo": 0.1,
+      "hi_registered": 100.0,
+      "hi_used": 100.0,
+      "widened": false,
+      "n_below_floor": 0
+    },
+    "all_converged": true
+  },
+  "hard_gate_passed": true,
+  "quantiles": {
+    "T28": {
+      "s": [
+        0.5405404794501021,
+        0.5654567387583438,
+        0.5911874800515701
+      ],
+      "Rs_arcsec": [
+        84.7504880365861,
+        98.69933441587207,
+        117.13256242467203
+      ],
+      "theta_E": [
+        13.800174710395964,
+        13.814671329012441,
+        13.82954844673702
+      ],
+      "log10M200": [
+        15.178603991510554,
+        15.245778859142021,
+        15.321438437201028
+      ],
+      "c": [
+        3.132181353028402,
+        3.5075916563432163,
+        3.8795209135476116
+      ],
+      "n": 48000
+    },
+    "routeA": {
+      "s": [
+        0.5388151235132286,
+        0.557415064000955,
+        0.5665241834712704
+      ],
+      "Rs_arcsec": [
+        83.89709672853404,
+        93.83843807900078,
+        99.37327826794785
+      ],
+      "log10M200": [
+        15.174102815896992,
+        15.223479651615014,
+        15.248777360922642
+      ],
+      "c": [
+        3.491734996052765,
+        3.626542652305839,
+        3.9056270887412983
+      ],
+      "n": 20000
+    }
+  },
+  "P_T28a": {
+    "eps_results_mean_per_seed": {
+      "1": 0.9148856212312514,
+      "2": 0.9634001287734452,
+      "3": 0.7747750027445799
+    },
+    "min_min_ess": 1186.9202325922854,
+    "max_rhat": 1.0074019674069863,
+    "thresholds": {
+      "eps_fail": 0.4,
+      "minESS_fail": 50.0,
+      "rhat_fail": 1.2
+    },
+    "fired_eps": false,
+    "fired_minESS": false,
+    "fired_rhat": false,
+    "F_T28a_fired": false
+  },
+  "P_T28b": {
+    "Rs_p95": 117.13256242467203,
+    "s_p95": 0.5911874800515701,
+    "s_edge_pileup": false,
+    "branch": "likelihood-limited",
+    "delta_median_log10M200_vs_routeA": 0.022299207527007425,
+    "delta_median_c_vs_routeA": -0.11895099596262249,
+    "too_much": false,
+    "thresholds": {
+      "s_edge": 0.73,
+      "s_prior_limited_margin": 0.02,
+      "Rs_likelihood_limited": 200.0,
+      "too_much_dlogM": 0.15,
+      "too_much_dc": 0.5
+    }
+  },
+  "F_T28b_fired": false,
+  "plots": {
+    "marginals": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_s_Rs_marginals.png",
+    "overlay": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_m200c_overlay.png"
+  },
+  "inputs": {
+    "runmeta": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_runmeta.json",
+    "routeA_t27": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t27/t27_m200c.npz"
+  },
+  "prior_spec": {
+    "observable": "s(Rs) = dln(alpha)/dln(r) at r=theta_E*",
+    "theta_E_star": 13.8126953867242,
+    "s_prior": "Uniform(0.0, 0.75)",
+    "Rs_at_s0": 10.478,
+    "Rs_at_s075": 614.4,
+    "other_priors": "UNCHANGED from carousel_min_new"
+  },
+  "old_Rs_edges": [
+    20.0,
+    100.0
+  ]
+}

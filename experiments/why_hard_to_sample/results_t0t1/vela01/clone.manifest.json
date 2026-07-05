@@ -1,0 +1,17 @@
+{
+  "clone_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/clone.npz",
+  "source_run": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/clone_source.npz",
+  "num_results_pooled": 5000,
+  "n_chains": 8,
+  "n_pooled_samples": 40000,
+  "dim": 20,
+  "cov_min_eigenvalue": 7.151062539757858e-08,
+  "cholesky_jitter_added": 0.0,
+  "source_run_min_bulk_ess": 9196.426294630814,
+  "source_run_min_ess_param": "17",
+  "source_run_max_rank_rhat": 1.0011008714633112,
+  "source_run_max_rhat_param": "13",
+  "note": "Clone is built from this run's post-burn-in z-samples; its difficulty is only meaningful if the source run converged. See source_run_* fields.",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "timestamp_utc": "2026-07-02T17:57:54.999630+00:00"
+}

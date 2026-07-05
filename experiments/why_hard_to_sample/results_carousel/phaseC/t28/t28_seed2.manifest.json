@@ -1,0 +1,42 @@
+{
+  "out_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_seed2.npz",
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "mclmc_kwargs": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false,
+    "seed": 2,
+    "debug_output": true
+  },
+  "seed": 2,
+  "target_desc": "carousel_min NEW arm, T28 observable-slope prior (s~Uniform(0.0,0.75)), typical init mapped to s-chart",
+  "provenance": {
+    "experiment": "T28",
+    "artifact": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/transform_sprior.npz",
+    "artifact_sha256": "55dff80e9acb7c5dfbf573bc342d9ab8f50046190a7749d53a43bf98946d852a",
+    "qz": "MVNDiag(loc=u_init, scale_diag=0.001)",
+    "z_init_median_draw": {
+      "chain": 6,
+      "t": 6147,
+      "logp": -119526.5363246717
+    }
+  },
+  "position_shape": [
+    8,
+    4000,
+    14
+  ],
+  "sampling_wall_s": 1029.0010293470114,
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "timestamp_utc": "2026-07-04T20:09:56.896861+00:00"
+}

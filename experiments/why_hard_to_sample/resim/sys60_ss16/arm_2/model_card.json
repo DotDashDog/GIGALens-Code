@@ -1,0 +1,109 @@
+{
+  "grid": {
+    "delta_pix": 0.065,
+    "num_pix": 80,
+    "supersample": 2
+  },
+  "likelihood_precision": null,
+  "linear_amplitudes": {
+    "n_basis": 2,
+    "physical_regularization": null,
+    "solved_by_lstsq": false
+  },
+  "noise": {
+    "err_map_median": 0.24234478846713062,
+    "err_map_min": 0.2,
+    "err_map_shape": [
+      80,
+      80
+    ],
+    "kind": "fixed error_map (scene)",
+    "prob_model": "ProbModel"
+  },
+  "profiles": {
+    "lens_light": [
+      {
+        "cosmo_sample": true,
+        "depth": 1,
+        "name": "SERSIC_ELLIPSE",
+        "type": "SersicEllipse"
+      }
+    ],
+    "lens_mass": [
+      {
+        "name": "EPL",
+        "niter": 50,
+        "type": "EPL"
+      },
+      {
+        "name": "SHEAR",
+        "type": "Shear"
+      }
+    ],
+    "source_light": [
+      {
+        "cosmo_sample": true,
+        "depth": 1,
+        "name": "SERSIC_ELLIPSE",
+        "type": "SersicEllipse"
+      }
+    ]
+  },
+  "psf": {
+    "present": true,
+    "sha1": "7e6f6afb14ef",
+    "shape": [
+      13,
+      13
+    ],
+    "sum": 0.9999998493876774
+  },
+  "scene": {
+    "amplitude_mode": "forward",
+    "datasets": [
+      {
+        "band": 0,
+        "err_map_median": 0.24234478846713062,
+        "grid": {
+          "delta_pix": 0.065,
+          "num_pix": 80
+        },
+        "psf": {
+          "present": true,
+          "sha1": "7e6f6afb14ef",
+          "shape": [
+            13,
+            13
+          ],
+          "sum": 0.9999998493876774
+        },
+        "sees": [
+          "SersicEllipse",
+          "SersicEllipse"
+        ]
+      }
+    ],
+    "planes": [
+      {
+        "deflection_ratio": null,
+        "n_light": 1,
+        "n_mass": 2,
+        "plane": 0
+      },
+      {
+        "deflection_ratio": 1.0,
+        "n_light": 1,
+        "n_mass": 0,
+        "plane": 1
+      }
+    ],
+    "sees": [
+      [
+        "SersicEllipse",
+        "SersicEllipse"
+      ]
+    ],
+    "trace_mode": "deflection_ratio"
+  },
+  "warnings": []
+}

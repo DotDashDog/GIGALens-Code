@@ -1,0 +1,27 @@
+=== E1 T6/T7 float64 (Fisher-metric survey) ===
+[E1] pos shape=(8, 20000, 22) sigma_bar=3.7167e-02 eps_move/sigma_bar=3.444e-02 h*/sigma_bar=9.417e-02
+[E1] event_size=6400 (from prob_model); names[0..3]=['planes/0/light/0/Ie', 'planes/0/light/0/R_sersic', 'planes/0/light/0/center_x', 'planes/0/light/0/center_y']
+[E1] 32 iid points; 56 lag pairs (lags=[1, 4, 16, 64, 256, 1024, 4096] x 8)
+[E1] chi2 gate pt0: recomputed=6.1939834417e+03 aux*event_size=6.1939834417e+03 rel=0.000e+00
+[E1] chi2 gate pt1: recomputed=6.2093469632e+03 aux*event_size=6.2093469632e+03 rel=0.000e+00
+[E1] chi2 gate pt2: recomputed=6.2051170515e+03 aux*event_size=6.2051170515e+03 rel=0.000e+00
+[E1] chi^2 gate PASSED (worst rel=0.000e+00; <=1e-8)
+[E1] bijector diagonality: max|offdiag|/max|diag|=0.000e+00 min|s|=5.802e-02
+[E1] r pt0: r_fro=0.1302 r_spec=0.1291
+[E1] r pt1: r_fro=0.2150 r_spec=0.1917
+[E1] r pt2: r_fro=0.0584 r_spec=0.0582
+[E1] r pt3: r_fro=0.3506 r_spec=0.3500
+[E1] r pt4: r_fro=0.0444 r_spec=0.0443
+[E1] r pt5: r_fro=0.1592 r_spec=0.1204
+[E1] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/e1/e1_results.json
+
+=== E1 summary (PROPOSED / UNCERTIFIED) ===
+  chi^2 render gate: PASSED, worst relative error 0.000e+00
+  bijector per-coordinate: max|offdiag|/max|diag| = 0.000e+00 (per-coordinate confirmed)
+  sigma_bar = 3.7167e-02; h*/sigma_bar = 9.417e-02; eps_move/sigma_bar = 3.444e-02
+  [T6] measured median TOP-VECTOR rotation (z) at h*-scale (9 pairs) = 5.04 deg
+       T6 prediction >= 15 deg ; T6 falsifier < 3 deg
+  [T7] measured median TOP-VECTOR rotation (theta) at h*-scale (9 pairs) = 5.03 deg
+       z/theta median rotation ratio (matched bins) = 1.00 ; T7 jackpot >~ 3, innocent ~ 1
+  [r]  Frobenius r range over 6 points = [0.044, 0.351] (r<<1 => GN/manifold dominant; r>~1 => residual/prior matter)
+[E1] done.

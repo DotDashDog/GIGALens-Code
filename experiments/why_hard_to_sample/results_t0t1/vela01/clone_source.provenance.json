@@ -1,0 +1,6 @@
+{
+  "converted_from": "/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc",
+  "note": "position=samples_z (post-burn-in only) from pipeline MCLMCStage arrays.npz; converted for build_clone.py",
+  "upstream_qz_hash": "1d80d19891ea0749",
+  "seed": 0
+}

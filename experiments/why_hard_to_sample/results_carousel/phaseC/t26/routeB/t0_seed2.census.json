@@ -1,0 +1,107 @@
+{
+  "n_chains": 8,
+  "num_results": 2000,
+  "half": 1000,
+  "sigma": 2.0,
+  "per_chain": [
+    {
+      "chain": 0,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.13293431039353718,
+        0.2821837912092606
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 1,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.13908747054834972,
+        0.38669427882944796
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 2,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.2598839616835687,
+        0.2346608364353073
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 3,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.2543223734677462,
+        0.2747451545933414
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 4,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.43929871398339737,
+        0.10751591693300415
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 5,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.36753950713283423,
+        0.2656977200704153
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 6,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.31211205267395814,
+        0.3549991999831127
+      ],
+      "persistent": false
+    },
+    {
+      "chain": 7,
+      "half_flags": [
+        false,
+        false
+      ],
+      "half_max_dev_sigma": [
+        0.26725920898629096,
+        0.5309680352934513
+      ],
+      "persistent": false
+    }
+  ],
+  "persistent_chains": [],
+  "n_persistent": 0,
+  "any_half_flagged": 0
+}

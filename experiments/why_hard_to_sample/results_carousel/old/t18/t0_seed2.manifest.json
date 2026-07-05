@@ -1,0 +1,37 @@
+{
+  "out_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/old/t18/t0_seed2.npz",
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "mclmc_kwargs": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false,
+    "seed": 2,
+    "debug_output": true
+  },
+  "seed": 2,
+  "target_desc": "carousel_min_old, qz re-centered on improved T18 MAP",
+  "provenance": {
+    "system": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/carousel_min_old",
+    "improved_map": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/old/t18/map_arrays.npz",
+    "qz": "MVNDiag(loc=improved z_best, scale_diag=0.001)",
+    "max_abs_dev_from_ref_center": 0.008067201755331599
+  },
+  "position_shape": [
+    8,
+    4000,
+    14
+  ],
+  "sampling_wall_s": 340.673450125003,
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "timestamp_utc": "2026-07-03T23:23:04.283850+00:00"
+}

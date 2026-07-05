@@ -1,0 +1,11 @@
+{
+  "experiment": "T13' GATE B ladder",
+  "status": "FAILED -- STOP",
+  "top_pair_max_over_err": 0.06818249991267891,
+  "threshold_lt": 0.05,
+  "loc": [
+    40,
+    39
+  ],
+  "timestamp_utc": "2026-07-03T00:18:11.459517+00:00"
+}

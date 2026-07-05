@@ -1,0 +1,12 @@
+{
+  "calibration_met": true,
+  "ref_old_fail": true,
+  "ref_new_fail": true,
+  "improved_pass": true,
+  "results": {
+    "ref_old_500": 2,
+    "ref_new_500": 2,
+    "improved_5000": 0
+  },
+  "status": "proposed (UNCERTIFIED)"
+}

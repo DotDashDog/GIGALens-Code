@@ -1,0 +1,28 @@
+{
+  "experiment": "T1_report",
+  "status": "proposed (UNCERTIFIED)",
+  "real_run": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed1.npz",
+  "clone_run": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed1.npz",
+  "real_min_bulk_ess": 2584.4251746314967,
+  "real_min_ess_param": "17",
+  "real_max_rank_rhat": 1.0065269929267575,
+  "clone_min_bulk_ess": 2236.8436019717738,
+  "clone_min_ess_param": "17",
+  "clone_max_rank_rhat": 1.0031760757690351,
+  "T0_band": {
+    "min_ess_lo": 803.4297751696463,
+    "min_ess_hi": 2584.4251746314967,
+    "ratio": 3.216740597005866
+  },
+  "verdict": "CONSISTENT WITH H2-SUFFICIENCY: clone min-ESS (2237) is within the T0 seed band (x3.22) of the real run's min-ESS (2584) -- the clone is as slow as the real run, so z-space conditioning/parameterization alone can account for the slowness. Program shifts toward preconditioning/reparameterization (NFW first); T3/T4 deprioritized.",
+  "verdict_status": "proposed (UNCERTIFIED)",
+  "ess_table_csv": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/report/t1_ess_table.csv",
+  "trace_figures": [
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/report/t1_traces_realVSclone_block1.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/report/t1_traces_realVSclone_block2.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/report/t1_traces_realVSclone_block3.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/report/t1_traces_realVSclone_block4.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/report/t1_traces_realVSclone_block5.png"
+  ],
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908"
+}

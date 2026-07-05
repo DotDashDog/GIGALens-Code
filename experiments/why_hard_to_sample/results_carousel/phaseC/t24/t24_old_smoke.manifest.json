@@ -1,0 +1,64 @@
+{
+  "experiment": "T24 encounter-geometry census (carousel)",
+  "arm": "old",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T05:11:42.587865+00:00",
+  "smoke_limit": 16,
+  "hvp_chunk": 8,
+  "xi_alignment": "xi[t] belongs to the transition INTO position[t] (z_{t-1} -> z_t); the displacement generating xi[t] is Dz_t = position[t]-position[t-1]; Hessian centered at endpoint z_t. Traced from mclmc.py:281,298,448,453,334,204 and blackjax MCLMCInfo.energy_change; NOT fitted.",
+  "metric_note": "saved inverse_mass_matrix is the covariance-like preconditioner Sigma (NOT its inverse): init=qz.covariance() (mclmc.py:67), adapt=sample_cov (mclmc.py:392-394), kernel Cholesky-factors it as the metric (blackjax_updated_utils.py:416,436,448). c_t denominator uses Sigma^{-1}; Sigma frozen over results phase (asserted).",
+  "census": {
+    "start": 2500,
+    "end": 2515,
+    "seg_len": 16,
+    "n_chains": 8,
+    "spike_factor": 3.0
+  },
+  "power_iter": {
+    "iters": 12,
+    "init": "ref_eigvec_1",
+    "n_spike": 12,
+    "n_calm": 12
+  },
+  "param_names": [
+    "planes/0/mass/0/Rs",
+    "planes/0/mass/0/alpha_Rs",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/beta",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/1/beta",
+    "planes/1/light/1/center_x",
+    "planes/1/light/1/center_y"
+  ],
+  "bounded": {
+    "idx": [
+      0,
+      1,
+      4,
+      5,
+      6,
+      7
+    ],
+    "names": [
+      "planes/0/mass/0/Rs",
+      "planes/0/mass/0/alpha_Rs",
+      "planes/0/mass/0/e1",
+      "planes/0/mass/0/e2",
+      "planes/0/mass/1/gamma1",
+      "planes/0/mass/1/gamma2"
+    ],
+    "rs_index": 0,
+    "alpha_rs_index": 1
+  },
+  "sigma_frozen_maxdiff": {
+    "real_seed1": 0.0,
+    "clone": 0.0
+  },
+  "ref_eig_top": 23584189.67942127
+}

@@ -1,0 +1,56 @@
+[t2] diagnostics.npz samples_z shape=(8, 5000, 20) vs arrays.npz samples_z shape=(8, 5000, 20): identical
+[t2] loaded pipeline stage dir /global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc
+[t2]   manifest num_burnin_steps=5000 num_results=5000
+[t2]   arrays.npz samples_z shape=(8, 5000, 20) -> variant=post_burnin_only
+[t2] run=/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc
+[t2] position shape=(8, 5000, 20)  post-burn-in slice: nr=5000 -> post shape=(8, 5000, 20)  flat n=40000
+==============================================================================
+[t2] WARNING: parameter names are NOT independently verified this session.
+[t2]   name_source = z_index_no_data_dir
+[t2]   --data-dir not given; falling back to raw z[i] indices.
+==============================================================================
+[t2] min bulk-ESS = 9.2e+03  (param 'z[17]', idx 17)
+[t2] max rank-Rhat = 1.0011  (param 'z[13]', idx 13)
+[t2] worst-8-ESS z-directions (feed T3 transects):
+    idx= 17  z[17]                             ESS= 9196.43  Rhat=1.0007
+    idx=  3  z[3]                              ESS= 9788.18  Rhat=1.0003
+    idx= 16  z[16]                             ESS=10074.85  Rhat=1.0005
+    idx= 10  z[10]                             ESS=10078.18  Rhat=1.0006
+    idx= 14  z[14]                             ESS=10081.35  Rhat=1.0005
+    idx=  0  z[0]                              ESS=10084.56  Rhat=1.0007
+    idx=  5  z[5]                              ESS=10095.15  Rhat=1.0004
+    idx=  4  z[4]                              ESS=10118.79  Rhat=1.0008
+[t2] saved worst-ESS directions -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/vela01/t2_worst_ess_directions_mclmc.json
+[t2] saved 5 cornerplot chunk(s), 2 z-marginal histogram chunk(s) -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/vela01
+==============================================================================
+[t2] PART 3 SKIPPED (bound-crowding, theta-space): status=skipped_no_data_dir
+[t2]   reason: no --data-dir given
+[t2]   No theta-space bound-crowding fraction is reported; NOT fabricated.
+==============================================================================
+
+[t2] per-parameter table (worst-ESS first):
+ idx param                                 zESS   zRhat   zSkew   zKurt  MADtail  crowdFrac  thSkew  thKurt
+  17 z[17]                              9196.43  1.0007   -1.32    2.71   0.0400        N/A     N/A     N/A
+   3 z[3]                               9788.18  1.0003    0.01   -0.03   0.0065        N/A     N/A     N/A
+  16 z[16]                             10074.85  1.0005   -0.01    0.07   0.0081        N/A     N/A     N/A
+  10 z[10]                             10078.18  1.0006   -0.02    0.09   0.0086        N/A     N/A     N/A
+  14 z[14]                             10081.35  1.0005   -0.07    0.10   0.0083        N/A     N/A     N/A
+   0 z[0]                              10084.56  1.0007    0.02    0.03   0.0067        N/A     N/A     N/A
+   5 z[5]                              10095.15  1.0004    0.03    0.01   0.0066        N/A     N/A     N/A
+   4 z[4]                              10118.79  1.0008    0.02   -0.02   0.0065        N/A     N/A     N/A
+  12 z[12]                             10128.68  1.0004   -0.04    0.01   0.0076        N/A     N/A     N/A
+   9 z[9]                              10163.62  1.0005   -0.06   -0.06   0.0054        N/A     N/A     N/A
+  18 z[18]                             10188.66  1.0007   -0.02   -0.05   0.0065        N/A     N/A     N/A
+  19 z[19]                             10245.42  1.0008   -0.05    0.02   0.0072        N/A     N/A     N/A
+   8 z[8]                              10262.23  1.0001    0.01    0.02   0.0074        N/A     N/A     N/A
+   7 z[7]                              10320.37  1.0006    0.03    0.05   0.0072        N/A     N/A     N/A
+  13 z[13]                             10491.97  1.0011    0.01   -0.07   0.0061        N/A     N/A     N/A
+   6 z[6]                              10492.86  1.0006   -0.00   -0.04   0.0063        N/A     N/A     N/A
+  15 z[15]                             10622.50  1.0008   -0.01    0.03   0.0077        N/A     N/A     N/A
+  11 z[11]                             11952.03  1.0007   -0.01   -0.02   0.0066        N/A     N/A     N/A
+   2 z[2]                              22884.94  1.0000    0.00    0.04   0.0076        N/A     N/A     N/A
+   1 z[1]                              36572.01  1.0006   -0.00   -0.03   0.0064        N/A     N/A     N/A
+
+[t2] saved full report -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/vela01/t2_zspace_diagnostics_mclmc.json
+[t2] falsifier check: z-marginals as Gaussian as theta-marginals and bound-crowding ~ 0 for the worst-ESS parameters (threshold: a posterior comfortably inside the box puts ~0 mass in the outer 1%; anything >~ a few % is crowding -- derive the exact number from the actual histograms before judging, and record it).
+[t2] verdict: proposed (UNCERTIFIED) -- inspect the table/plots above; this script does not certify a result.

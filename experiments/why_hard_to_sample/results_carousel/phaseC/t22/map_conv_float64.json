@@ -1,0 +1,9 @@
+{
+  "conv_precision": "float64",
+  "best_lp": -119514.80017785852,
+  "best_step": 388,
+  "loglike_z_best": -119479.79298507216,
+  "wall_s": 301.57107000797987,
+  "P_T22c_reached_typical_set": false,
+  "status": "proposed (UNCERTIFIED)"
+}

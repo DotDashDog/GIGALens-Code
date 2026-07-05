@@ -1,0 +1,158 @@
+{
+  "experiment": "T13' Step 5 -- MCLMC arm",
+  "arm": "ss2",
+  "model_supersample": 2,
+  "seed": 4,
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-03T00:51:58.943388+00:00",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "min_ess": 1109.2313993962741,
+  "min_ess_param": "planes/0/mass/0/gamma",
+  "max_rhat": 1.0077399150361221,
+  "max_rhat_param": "planes/0/light/0/Ie",
+  "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed4.npz",
+  "param_names": [
+    "planes/0/light/0/Ie",
+    "planes/0/light/0/R_sersic",
+    "planes/0/light/0/center_x",
+    "planes/0/light/0/center_y",
+    "planes/0/light/0/e1",
+    "planes/0/light/0/e2",
+    "planes/0/light/0/n_sersic",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/0/gamma",
+    "planes/0/mass/0/theta_E",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/Ie",
+    "planes/1/light/0/R_sersic",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/0/e1",
+    "planes/1/light/0/e2",
+    "planes/1/light/0/n_sersic"
+  ],
+  "table": [
+    {
+      "param": "planes/0/light/0/Ie",
+      "ess": 1483.6455046571045,
+      "rhat": 1.0077399150361221
+    },
+    {
+      "param": "planes/0/light/0/R_sersic",
+      "ess": 1485.0282796386718,
+      "rhat": 1.007585202269001
+    },
+    {
+      "param": "planes/0/light/0/center_x",
+      "ess": 4641.574700473877,
+      "rhat": 1.002117439800425
+    },
+    {
+      "param": "planes/0/light/0/center_y",
+      "ess": 4479.683860741413,
+      "rhat": 1.0032151253755954
+    },
+    {
+      "param": "planes/0/light/0/e1",
+      "ess": 1415.345666603478,
+      "rhat": 1.0061992563889237
+    },
+    {
+      "param": "planes/0/light/0/e2",
+      "ess": 1471.4126195969495,
+      "rhat": 1.0074166508382314
+    },
+    {
+      "param": "planes/0/light/0/n_sersic",
+      "ess": 1492.1645180357236,
+      "rhat": 1.006913600341362
+    },
+    {
+      "param": "planes/0/mass/0/center_x",
+      "ess": 1253.8691463682098,
+      "rhat": 1.0066375210446645
+    },
+    {
+      "param": "planes/0/mass/0/center_y",
+      "ess": 1299.3702040036972,
+      "rhat": 1.0039639336617499
+    },
+    {
+      "param": "planes/0/mass/0/e1",
+      "ess": 1256.8399903293723,
+      "rhat": 1.0063564133596894
+    },
+    {
+      "param": "planes/0/mass/0/e2",
+      "ess": 1293.5923344649045,
+      "rhat": 1.0016444896261436
+    },
+    {
+      "param": "planes/0/mass/0/gamma",
+      "ess": 1109.2313993962741,
+      "rhat": 1.0057244988642715
+    },
+    {
+      "param": "planes/0/mass/0/theta_E",
+      "ess": 1329.087394598964,
+      "rhat": 1.0024672300939061
+    },
+    {
+      "param": "planes/0/mass/1/gamma1",
+      "ess": 1290.2812046295003,
+      "rhat": 1.0045530243856502
+    },
+    {
+      "param": "planes/0/mass/1/gamma2",
+      "ess": 1263.02005223629,
+      "rhat": 1.0039020941325825
+    },
+    {
+      "param": "planes/1/light/0/Ie",
+      "ess": 1347.8440912235035,
+      "rhat": 1.0047465732564949
+    },
+    {
+      "param": "planes/1/light/0/R_sersic",
+      "ess": 1263.518293937434,
+      "rhat": 1.0052955492068558
+    },
+    {
+      "param": "planes/1/light/0/center_x",
+      "ess": 1126.0126214804723,
+      "rhat": 1.0041686481879084
+    },
+    {
+      "param": "planes/1/light/0/center_y",
+      "ess": 1156.2804740912418,
+      "rhat": 1.0059292860347362
+    },
+    {
+      "param": "planes/1/light/0/e1",
+      "ess": 1360.913580501734,
+      "rhat": 1.005073382172797
+    },
+    {
+      "param": "planes/1/light/0/e2",
+      "ess": 1356.4340115146726,
+      "rhat": 1.0027952212845483
+    },
+    {
+      "param": "planes/1/light/0/n_sersic",
+      "ess": 1315.5071756935051,
+      "rhat": 1.0055129382393813
+    }
+  ]
+}

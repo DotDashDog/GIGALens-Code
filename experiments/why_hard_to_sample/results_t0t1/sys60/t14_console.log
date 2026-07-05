@@ -1,0 +1,46 @@
+=== T14 exact-Hessian vs GN-comb dial (float64) ===
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/t12_flank_crossing.py:231: RuntimeWarning: overflow encountered in exp
+  return {"ratio": float(np.exp(dmax - dmin)),
+[T14] top spike: seg6 ch6 step16302 lam1=5.988e+07
+[T14] samples_z (8, 20000, 22); std_z[:3]=[0.01491271 0.00926588 0.00037679]; z0[:3]=[ 5.98971256e+00  7.31397177e-01 -2.84240887e-03]
+[T14] === building OLD target (systems/sys60, ss2 data) ===
+[T14] dial calibrated: R=
+[[22.51795536  6.42579038]
+ [ 6.61482831 23.85340298]]
+ d_dir=[ 0.04822529 -0.01337344] x_c0=12.1994 y_c0=57.1316 rt_err=0.00e+00
+[T14] === building NEW target (systems/sys60_ss16data, d' ss128 data) ===
+[T14/OLD] chi2 gate pt0: recomputed=2.3562808079e+04 aux*event_size=2.3562808079e+04 rel=0.000e+00
+[T14/OLD] chi2 gate pt1: recomputed=6.2503491898e+03 aux*event_size=6.2503491898e+03 rel=0.000e+00
+[T14/OLD] chi2 gate pt2: recomputed=6.6441128089e+04 aux*event_size=6.6441128089e+04 rel=2.190e-16
+[T14/OLD] chi^2 gate PASSED (worst rel=2.190e-16)
+[T14] OLD:  32/97 points ( 18.5s)
+[T14] OLD:  64/97 points ( 19.1s)
+[T14] OLD:  96/97 points ( 19.7s)
+[T14] OLD:  97/97 points ( 25.2s)
+[T14/NEW] chi2 gate pt0: recomputed=2.1823093126e+04 aux*event_size=2.1823093126e+04 rel=0.000e+00
+[T14/NEW] chi2 gate pt1: recomputed=7.2002668097e+03 aux*event_size=7.2002668097e+03 rel=0.000e+00
+[T14/NEW] chi2 gate pt2: recomputed=6.4221566991e+04 aux*event_size=6.4221566991e+04 rel=1.133e-16
+[T14/NEW] chi^2 gate PASSED (worst rel=1.133e-16)
+[T14] NEW:  32/97 points ( 18.4s)
+[T14] NEW:  64/97 points ( 19.0s)
+[T14] NEW:  96/97 points ( 19.6s)
+[T14] NEW:  97/97 points ( 24.7s)
+[T14] max relative W diff over counter-image window = 4.619e-01
+
+=== T14 summary (PROPOSED, UNCERTIFIED) ===
+  W max rel diff (counter-image window): 4.619e-01
+  cross-target g_M corr OLD vs NEW: 0.99999 (max rel diff 3.320e-01)
+  --- OLD ---
+    corr_gH_gM: {'measured': 0.9993992682545602, 'predicted': '>= 0.8', 'meets': True}
+    gH_p2t_over_gM_p2t: {'measured': 2.692498596208944, 'predicted': 'within x3 ([0.333, 3])', 'meets': True}
+    f_teeth_nats: {'measured': 420.35141979764154, 'predicted': '>= 3.0 nats', 'meets': True}
+  --- NEW ---
+    gH_suppression_old_over_new: {'measured': 0.29372035980040534, 'predicted': '>= 10.0x', 'meets': False}
+    f_reduction_old_over_new: {'measured': 1.0292185763610213, 'predicted': '>= 10.0x', 'meets': False}
+    corr_gR_gM: {'measured': -0.9999752252333929, 'predicted': '>= 0.8', 'meets': False}
+    falsifier_gH_over_gM: {'measured': 6.8821102740291815, 'falsifier': '>= 0.333 (g_H >= g_M/3) while arm samples fast => wash-out wrong', 'fired': True}
+  amplitudes: {'amp_gM_old': 59887733.8830432, 'amp_gH_old': 161247639.41022864, 'amp_gR_old': 101369328.24419087, 'amp_f_old_nats': 420.35141979764154, 'amp_gM_new': 79769650.04661748, 'amp_gH_new': 548983528.1415385, 'amp_gR_new': 469221958.6642247, 'amp_f_new_nats': 408.4180265030447}
+  saved: ./results_t0t1/sys60/t14/t14_results.json
+           ./results_t0t1/sys60/t14/t14_main.png
+           ./results_t0t1/sys60/t14/t14_f_nats.png
+[wall] T14 = 128 s

@@ -1,0 +1,159 @@
+{
+  "experiment": "T26 acceptance-battery analysis",
+  "status": "proposed (UNCERTIFIED)",
+  "smoke": false,
+  "thresholds": {
+    "eps_bar": 0.8,
+    "eps_fail": 0.5,
+    "miness_bar": 500.0,
+    "frac_bar": 0.04,
+    "uniformity_bar": 3.0,
+    "clone_gap_bar": 2.0
+  },
+  "routes": {
+    "A": {
+      "route": "A",
+      "present": true,
+      "nr": 2000,
+      "artifact_sha256": "38cfa7429e00862591cdb0ba285c923bfcee2de59cbcebb8eec41a693be277f7",
+      "real_per_seed": {
+        "seed1": {
+          "eps_results_mean": 1.1902778976892872,
+          "min_ess": 478.38404428988315,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0284338937551722,
+          "frac_xi_gt10": 0.026875,
+          "ess_max_min": 5.5338718002752705
+        },
+        "seed2": {
+          "eps_results_mean": 1.1633912231980512,
+          "min_ess": 435.88848967994085,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0121131684548808,
+          "frac_xi_gt10": 0.0175625,
+          "ess_max_min": 5.660897949199492
+        },
+        "seed3": {
+          "eps_results_mean": 1.1473541067026662,
+          "min_ess": 462.5112345290379,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0118382509279624,
+          "frac_xi_gt10": 0.0149375,
+          "ess_max_min": 5.273475220909363
+        }
+      },
+      "verdict": {
+        "eps_results_mean": 1.1670077425300016,
+        "eps_meets_0p8": true,
+        "eps_FAILS_below_0p5": false,
+        "min_min_ess": 435.88848967994085,
+        "miness_meets_500": false,
+        "frac_xi_gt10_mean": 0.01979166666666667,
+        "frac_meets_0p04": true,
+        "ess_uniformity_max": 5.660897949199492,
+        "uniformity_meets_3": false,
+        "clone_min_ess": 531.0150451289481,
+        "clone_eps": 1.2604470371887295,
+        "clone_gap": 1.2182359885640837,
+        "clone_gap_meets_2x": true,
+        "SUCCESS_primary": false,
+        "fix_FAILED_eps": false
+      },
+      "ess_per_param_mean": {
+        "planes/0/mass/0/Rs": 458.927922832954,
+        "planes/0/mass/0/center_x": 2352.865329857737,
+        "planes/0/mass/0/center_y": 2408.8493391465236,
+        "planes/0/mass/0/e1": 2408.0523702898495,
+        "planes/0/mass/0/e2": 2423.84411430767,
+        "planes/0/mass/0/theta_E": 2220.502328086203,
+        "planes/0/mass/1/gamma1": 756.7159643150644,
+        "planes/0/mass/1/gamma2": 1009.0094606590277,
+        "planes/1/light/0/beta": 499.6318644038206,
+        "planes/1/light/0/center_x": 736.4267341488679,
+        "planes/1/light/0/center_y": 880.2094070207013,
+        "planes/1/light/1/beta": 2088.422927144807,
+        "planes/1/light/1/center_x": 1722.4958140832694,
+        "planes/1/light/1/center_y": 538.6821618278398
+      },
+      "Rs_marginal": {
+        "min": 71.90387783563524,
+        "p01": 79.18339602914186,
+        "median": 93.80709287165755,
+        "max": 99.99950846603183,
+        "below_24_frac": 0.0
+      }
+    },
+    "B": {
+      "route": "B",
+      "present": true,
+      "nr": 2000,
+      "artifact_sha256": "dd233fc411c568dc352fca162381a5e2ff2000a984d25a5767fa24f7d0250b8f",
+      "real_per_seed": {
+        "seed1": {
+          "eps_results_mean": 0.4247401005029017,
+          "min_ess": 172.32484209983218,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.047986524539828,
+          "frac_xi_gt10": 0.004375,
+          "ess_max_min": 5.269104469263678
+        },
+        "seed2": {
+          "eps_results_mean": 0.3780104594213399,
+          "min_ess": 143.2802614450655,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.060999890796737,
+          "frac_xi_gt10": 0.0040625,
+          "ess_max_min": 5.600048011652495
+        },
+        "seed3": {
+          "eps_results_mean": 0.3134094186362892,
+          "min_ess": 90.75444761945118,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0811978303867686,
+          "frac_xi_gt10": 0.00225,
+          "ess_max_min": 6.971267715204393
+        }
+      },
+      "verdict": {
+        "eps_results_mean": 0.37205332618684356,
+        "eps_meets_0p8": false,
+        "eps_FAILS_below_0p5": true,
+        "min_min_ess": 90.75444761945118,
+        "miness_meets_500": false,
+        "frac_xi_gt10_mean": 0.0035625,
+        "frac_meets_0p04": true,
+        "ess_uniformity_max": 6.971267715204393,
+        "uniformity_meets_3": false,
+        "clone_min_ess": 404.9137041880803,
+        "clone_eps": 1.2209195884880581,
+        "clone_gap": 4.4616403361954475,
+        "clone_gap_meets_2x": false,
+        "SUCCESS_primary": false,
+        "fix_FAILED_eps": true
+      },
+      "ess_per_param_mean": {
+        "planes/0/mass/0/Rs": 135.45318372144962,
+        "planes/0/mass/0/center_x": 725.2005021914947,
+        "planes/0/mass/0/center_y": 743.2668549376921,
+        "planes/0/mass/0/e1": 761.4749812557175,
+        "planes/0/mass/0/e2": 758.7052676389026,
+        "planes/0/mass/0/theta_E": 693.9245069370536,
+        "planes/0/mass/1/gamma1": 194.8353179684461,
+        "planes/0/mass/1/gamma2": 223.18266847105556,
+        "planes/1/light/0/beta": 148.58871058200285,
+        "planes/1/light/0/center_x": 186.52919749594878,
+        "planes/1/light/0/center_y": 217.39775198519783,
+        "planes/1/light/1/beta": 610.822248150842,
+        "planes/1/light/1/center_x": 440.01550606451997,
+        "planes/1/light/1/center_y": 156.4928340187292
+      },
+      "Rs_marginal": {
+        "min": 72.37090457527603,
+        "p01": 78.68018258539999,
+        "median": 91.05209985680554,
+        "max": 99.99950846603183,
+        "below_24_frac": 0.0
+      }
+    }
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "experiment": "T23 momentum-space xi accounting (carousel)",
+  "arm": "old",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T05:09:58.186358+00:00",
+  "smoke_limit": 16,
+  "hvp_chunk": 8,
+  "xi_alignment": "xi[t] belongs to the transition INTO position[t] (z_{t-1} -> z_t); the displacement generating xi[t] is Dz_t = position[t]-position[t-1]; Hessian centered at endpoint z_t. Traced from mclmc.py:281,298,448,453,334,204 and blackjax MCLMCInfo.energy_change; NOT fitted.",
+  "metric_note": "saved inverse_mass_matrix is the covariance-like preconditioner Sigma (NOT its inverse): init=qz.covariance() (mclmc.py:67), adapt=sample_cov (mclmc.py:392-394), kernel Cholesky-factors it as the metric (blackjax_updated_utils.py:416,436,448). c_t denominator uses Sigma^{-1}; Sigma frozen over results phase (asserted).",
+  "seed_subsample": 20260703,
+  "registered_constants": {
+    "XI_SPIKE_THRESH": 10.0,
+    "XI_TOP_FRAC": 0.001,
+    "N_SPIKE_MAX": 512,
+    "N_CALM_MAX": 512,
+    "SEEDS": [
+      1,
+      2,
+      3
+    ],
+    "results_phase": [
+      2000,
+      4000
+    ]
+  },
+  "param_names": [
+    "planes/0/mass/0/Rs",
+    "planes/0/mass/0/alpha_Rs",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/beta",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/1/beta",
+    "planes/1/light/1/center_x",
+    "planes/1/light/1/center_y"
+  ],
+  "bounded": {
+    "idx": [
+      0,
+      1,
+      4,
+      5,
+      6,
+      7
+    ],
+    "names": [
+      "planes/0/mass/0/Rs",
+      "planes/0/mass/0/alpha_Rs",
+      "planes/0/mass/0/e1",
+      "planes/0/mass/0/e2",
+      "planes/0/mass/1/gamma1",
+      "planes/0/mass/1/gamma2"
+    ],
+    "tokens": [
+      "Rs",
+      "alpha_Rs",
+      "e1",
+      "e2",
+      "gamma1",
+      "gamma2"
+    ],
+    "rs_index": 0,
+    "alpha_rs_index": 1
+  },
+  "z_ref": {
+    "source": "z_init_recovered(ref_samples[chain,t])",
+    "chain": 5,
+    "t": 1371,
+    "logp": -119509.12633386423,
+    "logp_expected": -119509.12633386465,
+    "logp_gap": 4.220055416226387e-10
+  },
+  "ref_eig_range": [
+    -893.9898498692602,
+    23584189.67942126
+  ],
+  "real_selection_meta": {
+    "xi_top_thresh": 5348.532357174012,
+    "n_always_top": 48,
+    "n_spike": 48,
+    "n_calm": 16,
+    "spike_alloc": {
+      "1_0": 0,
+      "1_1": 0,
+      "1_2": 0,
+      "1_3": 1,
+      "1_4": 0,
+      "1_5": 0,
+      "1_6": 0,
+      "1_7": 0,
+      "2_0": 0,
+      "2_1": 7,
+      "2_2": 0,
+      "2_3": 1,
+      "2_4": 4,
+      "2_5": 9,
+      "2_6": 7,
+      "2_7": 2,
+      "3_0": 0,
+      "3_1": 12,
+      "3_2": 0,
+      "3_3": 5,
+      "3_4": 0,
+      "3_5": 0,
+      "3_6": 0,
+      "3_7": 0
+    },
+    "per_chain_median": {
+      "1_0": 0.04583218000730083,
+      "1_1": 0.0744600044310837,
+      "1_2": 0.037704412601181556,
+      "1_3": 0.217756435867263,
+      "1_4": 0.001781097011075808,
+      "1_5": 0.003761512041337088,
+      "1_6": 0.0011258273127168414,
+      "1_7": 0.0067131808466693605,
+      "2_0": 0.005851449333173949,
+      "2_1": 0.12777277937830855,
+      "2_2": 0.22601463781132813,
+      "2_3": 0.029630366140625294,
+      "2_4": 0.023697469091669768,
+      "2_5": 0.016227029704311814,
+      "2_6": 0.004497917422206767,
+      "2_7": 0.11394521835611879,
+      "3_0": 0.02315475075100068,
+      "3_1": 0.0048328221367893625,
+      "3_2": 0.04693497579057117,
+      "3_3": 1.064219336882331,
+      "3_4": 0.002088619861818847,
+      "3_5": 0.02096664247777283,
+      "3_6": 0.010259515502041443,
+      "3_7": 0.010065994945702511
+    }
+  },
+  "clone_selection_meta": {
+    "xi_top_thresh": 61.734693383135024,
+    "n_always_top": 16,
+    "n_spike": 16,
+    "n_calm": 16,
+    "spike_alloc": {
+      "1_0": 5,
+      "1_1": 1,
+      "1_2": 2,
+      "1_3": 1,
+      "1_4": 2,
+      "1_5": 2,
+      "1_6": 0,
+      "1_7": 3
+    },
+    "per_chain_median": {
+      "1_0": 0.13276771095533735,
+      "1_1": 0.10107710897955975,
+      "1_2": 0.11815495809101142,
+      "1_3": 0.11056795456181692,
+      "1_4": 0.11755292347601247,
+      "1_5": 0.1380805916176372,
+      "1_6": 0.10902777731686322,
+      "1_7": 0.10231565821073091
+    }
+  },
+  "counts": {
+    "real_spike": 48,
+    "real_calm": 16,
+    "clone_spike": 16,
+    "clone_calm": 16
+  }
+}

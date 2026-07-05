@@ -1,0 +1,5 @@
+seed,min_ess,min_ess_param,max_rhat,max_rhat_param
+1,12.828,planes/1/light/0/center_y,1.65596,planes/1/light/0/center_y
+2,11.654,planes/0/mass/0/gamma,1.84132,planes/0/mass/0/gamma
+3,11.224,planes/1/light/0/center_y,1.89436,planes/1/light/0/center_y
+4,15.3401,planes/0/mass/0/gamma,1.4775,planes/0/mass/0/gamma

@@ -1,0 +1,94 @@
+=== T0 sys60 ===
+[T0] target dim=22, seeds=[1, 2, 3, 4]
+[T0] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 52.65458760299953 s
+[run_standard_mclmc] seed=1 sampling wall 63.8s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed1.manifest.json
+
+=== diagnostics: T0 seed 1 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 12.8  (param planes/1/light/0/center_y)
+  max rank-Rhat = 1.6560  (param planes/1/light/0/center_y)
+Sampling took 49.37396066800102 s
+[run_standard_mclmc] seed=2 sampling wall 57.8s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed2.manifest.json
+
+=== diagnostics: T0 seed 2 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 11.7  (param planes/0/mass/0/gamma)
+  max rank-Rhat = 1.8413  (param planes/0/mass/0/gamma)
+Sampling took 49.935109983000075 s
+[run_standard_mclmc] seed=3 sampling wall 58.4s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed3.manifest.json
+
+=== diagnostics: T0 seed 3 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 11.2  (param planes/1/light/0/center_y)
+  max rank-Rhat = 1.8944  (param planes/1/light/0/center_y)
+Sampling took 49.482237029000316 s
+[run_standard_mclmc] seed=4 sampling wall 58.1s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed4.manifest.json
+
+=== diagnostics: T0 seed 4 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 15.3  (param planes/0/mass/0/gamma)
+  max rank-Rhat = 1.4775  (param planes/0/mass/0/gamma)
+
+===== T0 FULL SET (report this, not a summary) =====
+  seed    1: min-ESS=12.83 (planes/1/light/0/center_y)  max-Rhat=1.6560 (planes/1/light/0/center_y)
+  seed    2: min-ESS=11.65 (planes/0/mass/0/gamma)  max-Rhat=1.8413 (planes/0/mass/0/gamma)
+  seed    3: min-ESS=11.22 (planes/1/light/0/center_y)  max-Rhat=1.8944 (planes/1/light/0/center_y)
+  seed    4: min-ESS=15.34 (planes/0/mass/0/gamma)  max-Rhat=1.4775 (planes/0/mass/0/gamma)
+----- T0-derived band (threshold input for T1) -----
+  min-ESS across seeds: 11.22 .. 15.34  (ratio 1.37)
+  max-Rhat across seeds: 1.4775 .. 1.8944
+
+wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_summary.json
+wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_summary.csv
+=== T0 vela ===
+[T0] target dim=20, seeds=[1, 2, 3, 4]
+[T0] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 104.04776241200125 s
+[run_standard_mclmc] seed=1 sampling wall 131.3s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed1.manifest.json
+
+=== diagnostics: T0 seed 1 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 2.58e+03  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0065  (param planes/0/light/0/R_sersic)
+Sampling took 98.73075817499921 s
+[run_standard_mclmc] seed=2 sampling wall 119.7s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed2.manifest.json
+
+=== diagnostics: T0 seed 2 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.73e+03  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0097  (param planes/1/light/0/e1)
+Sampling took 98.21004978000019 s
+[run_standard_mclmc] seed=3 sampling wall 119.0s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed3.manifest.json
+
+=== diagnostics: T0 seed 3 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.28e+03  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0110  (param planes/1/light/0/e1)
+Sampling took 96.55324533500061 s
+[run_standard_mclmc] seed=4 sampling wall 117.7s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_seed4.manifest.json
+
+=== diagnostics: T0 seed 4 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 803  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0186  (param planes/1/light/0/e1)
+
+===== T0 FULL SET (report this, not a summary) =====
+  seed    1: min-ESS=2584 (planes/1/light/0/e1)  max-Rhat=1.0065 (planes/0/light/0/R_sersic)
+  seed    2: min-ESS=1732 (planes/1/light/0/e1)  max-Rhat=1.0097 (planes/1/light/0/e1)
+  seed    3: min-ESS=1276 (planes/1/light/0/e1)  max-Rhat=1.0110 (planes/1/light/0/e1)
+  seed    4: min-ESS=803.4 (planes/1/light/0/e1)  max-Rhat=1.0186 (planes/1/light/0/e1)
+----- T0-derived band (threshold input for T1) -----
+  min-ESS across seeds: 803.4 .. 2584  (ratio 3.22)
+  max-Rhat across seeds: 1.0065 .. 1.0186
+
+wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_summary.json
+wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t0/t0_summary.csv

@@ -1,0 +1,41 @@
+{
+  "experiment": "T28 GPU gates",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T19:35:29.854206+00:00",
+  "artifact": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/transform_sprior.npz",
+  "artifact_sha256": "55dff80e9acb7c5dfbf573bc342d9ab8f50046190a7749d53a43bf98946d852a",
+  "gates": {
+    "tols": {
+      "G4": 1e-08,
+      "G1": 1e-08,
+      "G2": 1e-10,
+      "G3": 1e-08,
+      "CHART": 0.0001,
+      "INIT": 1e-05
+    },
+    "G4_s_consistency_max": 4.101163741943026e-09,
+    "G4_pass": true,
+    "G1_jnp_roundtrip_max": 8.585909760938648e-09,
+    "G1_pass": true,
+    "chart_consistency_jnp_max": 3.133950030675958e-05,
+    "chart_consistency_is_blocking": true,
+    "chart_pass": true,
+    "G2_prior_identity_max": 0.0,
+    "G2_pass": true,
+    "G3_loglike_identity_max": 1.7462298274040222e-10,
+    "G3_pass": true,
+    "prior_draw_max_Rs": 549.941112757333,
+    "prior_draw_nonfinite_logp": 0,
+    "render_finite_pass": true,
+    "all_pass": true,
+    "INIT_identity": {
+      "theta_identity_max": 4.796228836312366e-08,
+      "pass": true,
+      "z_Rs": 3.63617747915683,
+      "u_Rs": 1.1110969647124347,
+      "max_abs_other_coord_change": 1.6653345369377348e-16
+    },
+    "all_gates_pass": true
+  },
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908"
+}

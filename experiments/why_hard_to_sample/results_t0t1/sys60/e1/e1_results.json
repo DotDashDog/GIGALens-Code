@@ -1,0 +1,3701 @@
+{
+  "experiment": "E1 -- T6 Fisher-metric survey + T7 bijector curvature",
+  "status": "proposed (UNCERTIFIED) -- grader inspects artifacts, not this summary",
+  "timestamp_utc": "2026-07-02T20:43:21.460933+00:00",
+  "args": {
+    "data_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/sys60",
+    "samples": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/clone_source.npz",
+    "clone": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/clone.npz",
+    "out_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/e1",
+    "seed": 1,
+    "smoke": false
+  },
+  "dim": 22,
+  "param_names": [
+    "planes/0/light/0/Ie",
+    "planes/0/light/0/R_sersic",
+    "planes/0/light/0/center_x",
+    "planes/0/light/0/center_y",
+    "planes/0/light/0/e1",
+    "planes/0/light/0/e2",
+    "planes/0/light/0/n_sersic",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/0/gamma",
+    "planes/0/mass/0/theta_E",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/Ie",
+    "planes/1/light/0/R_sersic",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/0/e1",
+    "planes/1/light/0/e2",
+    "planes/1/light/0/n_sersic"
+  ],
+  "render_path": {
+    "mode": "forward",
+    "render": "SceneSimulator.simulate(model.to_params(bij.forward(list(z.T)))), flattened",
+    "W": "1/err_map**2 (err_map FIXED: Dataset built it once from the OBSERVED image via background_rms=0.2, exp_time=100; z-independent)",
+    "chi2_aux_convention": "log_prob(z)[1] is REDUCED chi^2 = chi2_total/event_size; chi2_from_aux = aux * prob_model.event_size",
+    "event_size": 6400,
+    "amplitude_params_note": "mode=forward => Sersic Ie amplitudes are ORDINARY sampled params; they enter J(z) as ordinary columns (no lstsq layer).",
+    "chi2_verification": [
+      {
+        "iid_point": 0,
+        "chi2_recomputed": 6193.98344174345,
+        "reduced_chi2_aux": 0.9678099127724141,
+        "event_size": 6400,
+        "chi2_from_aux": 6193.98344174345,
+        "relative_error": 0.0
+      },
+      {
+        "iid_point": 1,
+        "chi2_recomputed": 6209.34696324715,
+        "reduced_chi2_aux": 0.9702104630073671,
+        "event_size": 6400,
+        "chi2_from_aux": 6209.34696324715,
+        "relative_error": 0.0
+      },
+      {
+        "iid_point": 2,
+        "chi2_recomputed": 6205.117051543668,
+        "reduced_chi2_aux": 0.9695495393036981,
+        "event_size": 6400,
+        "chi2_from_aux": 6205.117051543668,
+        "relative_error": 0.0
+      }
+    ],
+    "chi2_gate_worst_relative_error": 0.0
+  },
+  "bijector_diagonality": {
+    "max_abs_offdiag": 0.0,
+    "max_abs_diag": 402.7249475220968,
+    "offdiag_to_diag_ratio": 0.0,
+    "min_abs_s": 0.05801844002312911
+  },
+  "hessian_note": "H_post = -Hessian(log_prob[0]) includes prior + logdet terms; for r this is intended -- r bounds EVERYTHING-not-GN (residual second-order + prior) on the stiff subspace. M for r is the RAW-z GN metric J^T W J.",
+  "standardization": {
+    "sigma_bar": 0.0371672988674461,
+    "std_z_from": "pooled post-burn-in samples (per-coordinate, ddof=1)",
+    "std_theta_from": "bij.forward(pooled samples) (per-coordinate, ddof=1)",
+    "z_space_units": "zhat = z/std_z ; J_zhat = J_z*std_z ; Delta zhat = Delta z/std_z",
+    "theta_space_units": "thetahat = theta/std_theta ; J_thetahat = J_theta*std_theta",
+    "std_z": [
+      0.014912706045619631,
+      0.009265879717536554,
+      0.0003767937519230881,
+      0.00039197433314096605,
+      0.012703170499703048,
+      0.015885257358473126,
+      0.009925225941076084,
+      0.008738103334378529,
+      0.007921200594000841,
+      0.011459558821687211,
+      0.013555370556108667,
+      0.09910950640996258,
+      0.004136755301542729,
+      0.00644753261517172,
+      0.008790611957325986,
+      0.1637826891680576,
+      0.11420716564101581,
+      0.013868183682233887,
+      0.009886537386506446,
+      0.09376745390433308,
+      0.06794055092503894,
+      0.13060834713897776
+    ],
+    "std_theta": [
+      6.01683322725487,
+      0.01912208319926094,
+      0.0003767937519230881,
+      0.00039197433314096605,
+      0.0009370045913086836,
+      0.0009187799767972765,
+      0.017869073545277663,
+      0.008738103334378529,
+      0.007921200594000841,
+      0.011459558821687211,
+      0.013555370556108667,
+      0.04889635504002039,
+      0.006771080199824191,
+      0.00644753261517172,
+      0.008790611957325986,
+      18.468498610165263,
+      0.025334195022722675,
+      0.013868183682233887,
+      0.009886537386506446,
+      0.01728384700014511,
+      0.015535637748643095,
+      0.23263052961041486
+    ]
+  },
+  "k_stiff": 3,
+  "iid_points": [
+    {
+      "iid_point": 0,
+      "flat_index": 39870,
+      "chain": 1,
+      "step": 19870,
+      "M_zhat_top3_eigenvalues": [
+        733081.4340239813,
+        4411.484611326611,
+        2023.4983148101003
+      ],
+      "M_raw_top3_eigenvalues": [
+        4725941905.456276,
+        30686496.59009032,
+        18601260.637953512
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7335896539237191
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.4705699620085812
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.32996515523617426
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.21322441143019985
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.173748846217813
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.16007063646408473
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.14631900290468292
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.08810248985718955
+        }
+      ]
+    },
+    {
+      "iid_point": 1,
+      "flat_index": 86098,
+      "chain": 4,
+      "step": 6098,
+      "M_zhat_top3_eigenvalues": [
+        76194.91766965322,
+        3220.837935434287,
+        1587.823976164689
+      ],
+      "M_raw_top3_eigenvalues": [
+        713510199.3155781,
+        34708285.45931202,
+        13281445.571079932
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.5443799500469931
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.5430900588118461
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.3462898020203202
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.2939146161933354
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.2884348497325736
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.27012551683150793
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": 0.13920381085603395
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1259572124448631
+        }
+      ]
+    },
+    {
+      "iid_point": 2,
+      "flat_index": 65465,
+      "chain": 3,
+      "step": 5465,
+      "M_zhat_top3_eigenvalues": [
+        346364.41154734744,
+        5324.642249152193,
+        2946.6829218048865
+      ],
+      "M_raw_top3_eigenvalues": [
+        2959541916.1176186,
+        33429962.66619237,
+        26478542.5885717
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6062568413951296
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.4542680536529689
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.3914511116223272
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.3693147091461219
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.28978234904182065
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.14296365122012308
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.11224942265995791
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.10848679854984745
+        }
+      ]
+    },
+    {
+      "iid_point": 3,
+      "flat_index": 151761,
+      "chain": 7,
+      "step": 11761,
+      "M_zhat_top3_eigenvalues": [
+        362132.0090263105,
+        4346.474837719896,
+        1625.529412488874
+      ],
+      "M_raw_top3_eigenvalues": [
+        2702237707.2453127,
+        26769752.826962456,
+        15215372.603364525
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7102479617104533
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.4188555973065967
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.3404042275447539
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.3249921588505248
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.2296777455309126
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.17559558996236813
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.08179448816377245
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": 0.06284599013603137
+        }
+      ]
+    },
+    {
+      "iid_point": 4,
+      "flat_index": 19907,
+      "chain": 0,
+      "step": 19907,
+      "M_zhat_top3_eigenvalues": [
+        955185.9140311745,
+        4021.5759563923084,
+        2171.814680650236
+      ],
+      "M_raw_top3_eigenvalues": [
+        6413271384.116423,
+        26151626.51824365,
+        20210806.387185104
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.7224880610371637
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.4333542044241362
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.37053270559982154
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.226099348899475
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.1839935831739154
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.17259609079102223
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.15797517284446083
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.10351166558918386
+        }
+      ]
+    },
+    {
+      "iid_point": 5,
+      "flat_index": 130801,
+      "chain": 6,
+      "step": 10801,
+      "M_zhat_top3_eigenvalues": [
+        182961.46238446774,
+        4692.618577520526,
+        2278.997764497879
+      ],
+      "M_raw_top3_eigenvalues": [
+        2223967639.352064,
+        39100779.03663097,
+        18869566.061434157
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.5428049498583665
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.5200690176067524
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.43232997484768537
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.3104835542262545
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.24883641406001045
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": 0.17914781305579872
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.15305910170551715
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": 0.14566803478032606
+        }
+      ]
+    },
+    {
+      "iid_point": 6,
+      "flat_index": 126145,
+      "chain": 6,
+      "step": 6145,
+      "M_zhat_top3_eigenvalues": [
+        58390.39132408655,
+        4398.088351822872,
+        1714.2345112786275
+      ],
+      "M_raw_top3_eigenvalues": [
+        488997757.1463126,
+        43308415.97484237,
+        15827049.432064313
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6086927070775208
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.5650030991788126
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.31044727268651845
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.30258492260012193
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.2082080467288544
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.15707724070435033
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1468509133173493
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.11463666371059054
+        }
+      ]
+    },
+    {
+      "iid_point": 7,
+      "flat_index": 139025,
+      "chain": 6,
+      "step": 19025,
+      "M_zhat_top3_eigenvalues": [
+        178699.53234790073,
+        2988.1389357680196,
+        1751.4429113530045
+      ],
+      "M_raw_top3_eigenvalues": [
+        1227512580.555262,
+        21861404.989187848,
+        16215582.012192622
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7148926432758225
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.5214665765841969
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.28313820642948173
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.2355414747447655
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.20076568511718934
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.1801707695941437
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.07811371114351989
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.03661334317658782
+        }
+      ]
+    },
+    {
+      "iid_point": 8,
+      "flat_index": 134054,
+      "chain": 6,
+      "step": 14054,
+      "M_zhat_top3_eigenvalues": [
+        210317.39898076223,
+        3816.076075007534,
+        1792.343980967671
+      ],
+      "M_raw_top3_eigenvalues": [
+        1436467599.980011,
+        25192672.991016593,
+        16971992.962096572
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7295579922540452
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.4712102609427507
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.34354375242992635
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.18720032610408058
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.1838290590494635
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.17200100886621297
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.1417909025097134
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.08921753274627378
+        }
+      ]
+    },
+    {
+      "iid_point": 9,
+      "flat_index": 43701,
+      "chain": 2,
+      "step": 3701,
+      "M_zhat_top3_eigenvalues": [
+        79883.55114146101,
+        3100.3144390011753,
+        1529.3773891548203
+      ],
+      "M_raw_top3_eigenvalues": [
+        592844430.8249294,
+        27969316.9143657,
+        14367022.227269646
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.6997579543778873
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.5481584080345059
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.2656735908338115
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.21766679448108633
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.1845736455105309
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.1769627258994249
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.11429694526981642
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.06842954508998328
+        }
+      ]
+    },
+    {
+      "iid_point": 10,
+      "flat_index": 138484,
+      "chain": 6,
+      "step": 18484,
+      "M_zhat_top3_eigenvalues": [
+        470348.91402705177,
+        3253.131304362286,
+        1969.608686294231
+      ],
+      "M_raw_top3_eigenvalues": [
+        3440172882.39841,
+        20074561.28665066,
+        18034576.957203258
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.705131631085015
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.4123515938923764
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.36874175198988773
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.3055353970359315
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.22443235234080566
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.17302473228728113
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.12092899199663443
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.060990831106442926
+        }
+      ]
+    },
+    {
+      "iid_point": 11,
+      "flat_index": 152047,
+      "chain": 7,
+      "step": 12047,
+      "M_zhat_top3_eigenvalues": [
+        194141.36423008112,
+        3126.8377086470496,
+        1828.3442377188537
+      ],
+      "M_raw_top3_eigenvalues": [
+        1958740307.2427697,
+        23315897.47695693,
+        15559247.697805986
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.5494941672702515
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.4849301420221588
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.4669659349959203
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.3970097697513082
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": 0.13884985008558584
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.13664703955634813
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.13606760890047245
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.12274424806894571
+        }
+      ]
+    },
+    {
+      "iid_point": 12,
+      "flat_index": 13717,
+      "chain": 0,
+      "step": 13717,
+      "M_zhat_top3_eigenvalues": [
+        689311.2549057616,
+        3367.676808481725,
+        1819.38018311497
+      ],
+      "M_raw_top3_eigenvalues": [
+        4545425969.1310835,
+        23982717.64011287,
+        14638076.562910106
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7383372438551978
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.4353684266606328
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.3598374841935115
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.21211376794457876
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.17848308822158923
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.16660593854987107
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.1323921370139872
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.11004429402936249
+        }
+      ]
+    },
+    {
+      "iid_point": 13,
+      "flat_index": 120554,
+      "chain": 6,
+      "step": 554,
+      "M_zhat_top3_eigenvalues": [
+        321948.64562149736,
+        4547.639209333551,
+        1925.6142645442628
+      ],
+      "M_raw_top3_eigenvalues": [
+        2356353409.4524236,
+        26625387.815168377,
+        19024129.20307103
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.704661377719622
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.40967076197162056
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.3826744086128619
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.29353128272408185
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.21596539679349694
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.17348277027551878
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.13183573654771702
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.058392747943752404
+        }
+      ]
+    },
+    {
+      "iid_point": 14,
+      "flat_index": 41114,
+      "chain": 2,
+      "step": 1114,
+      "M_zhat_top3_eigenvalues": [
+        356475.06307363545,
+        5033.080177560461,
+        2636.505924384734
+      ],
+      "M_raw_top3_eigenvalues": [
+        2719673506.336407,
+        29738100.713558067,
+        26010808.392858714
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6777716317924339
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.42788207777722037
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.3394702737670468
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.33588947182577705
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.27932932409835765
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1601737835407169
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.12070916950346874
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.0835465124067836
+        }
+      ]
+    },
+    {
+      "iid_point": 15,
+      "flat_index": 19826,
+      "chain": 0,
+      "step": 19826,
+      "M_zhat_top3_eigenvalues": [
+        487565.6894520532,
+        3639.9639602578286,
+        1906.4034655967985
+      ],
+      "M_raw_top3_eigenvalues": [
+        4354750000.042271,
+        26510155.084262438,
+        15676507.474164268
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.611639978972633
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.4544677580777613
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.43543729979055495
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.37117620449782013
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.20089637547399022
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.14500202996419123
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": 0.10972658028829564
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": 0.10592147869799254
+        }
+      ]
+    },
+    {
+      "iid_point": 16,
+      "flat_index": 103002,
+      "chain": 5,
+      "step": 3002,
+      "M_zhat_top3_eigenvalues": [
+        432636.71996145236,
+        3697.37613305889,
+        1849.9870122780233
+      ],
+      "M_raw_top3_eigenvalues": [
+        2969680118.789846,
+        22568082.675548848,
+        17113939.213796347
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.7278428292555705
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.39134836305949605
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.38745002500117137
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.2707394927718912
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.19260000512448325
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1731996785035218
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.13370101876469345
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.06544615510738361
+        }
+      ]
+    },
+    {
+      "iid_point": 17,
+      "flat_index": 120804,
+      "chain": 6,
+      "step": 804,
+      "M_zhat_top3_eigenvalues": [
+        176338.06524915728,
+        5535.818870554166,
+        2290.4349407554505
+      ],
+      "M_raw_top3_eigenvalues": [
+        1714219195.2003949,
+        34157849.222815715,
+        21222040.624517206
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.5548973251311231
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.47874362802329923
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.4450081985759844
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.39712219977609053
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.22982682302996768
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1440177420030119
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.11282109356459989
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.11229335953758943
+        }
+      ]
+    },
+    {
+      "iid_point": 18,
+      "flat_index": 4409,
+      "chain": 0,
+      "step": 4409,
+      "M_zhat_top3_eigenvalues": [
+        302786.4768034075,
+        3598.1269475393033,
+        1865.1125664015728
+      ],
+      "M_raw_top3_eigenvalues": [
+        2247204173.7171226,
+        35490959.67446795,
+        16004774.662765726
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6565064039488755
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.5492594300146619
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.3029181066068875
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.2859316061280402
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.16668969765688574
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.15040843519402672
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.13689638231224624
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.10602786560194556
+        }
+      ]
+    },
+    {
+      "iid_point": 19,
+      "flat_index": 49886,
+      "chain": 2,
+      "step": 9886,
+      "M_zhat_top3_eigenvalues": [
+        194203.113762594,
+        3552.637758383363,
+        1832.4949111056537
+      ],
+      "M_raw_top3_eigenvalues": [
+        1488275019.5845568,
+        21665645.847776078,
+        18133368.703489847
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6966225598497504
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.45310124372519994
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.39299900389201586
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.23916337721372424
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.19358671759547566
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.15783599358488534
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.14680193503510952
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.1067195288733177
+        }
+      ]
+    },
+    {
+      "iid_point": 20,
+      "flat_index": 72426,
+      "chain": 3,
+      "step": 12426,
+      "M_zhat_top3_eigenvalues": [
+        49422.05812569162,
+        3437.048305442107,
+        1769.4948263487133
+      ],
+      "M_raw_top3_eigenvalues": [
+        665651300.6948183,
+        34243039.72626758,
+        14391053.44137504
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.5526001885750287
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.49362856066393784
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.35256716734957955
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.343991721706469
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.29006350118943464
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.23809287519899644
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.20267986223920129
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.1478372208712788
+        }
+      ]
+    },
+    {
+      "iid_point": 21,
+      "flat_index": 81876,
+      "chain": 4,
+      "step": 1876,
+      "M_zhat_top3_eigenvalues": [
+        65564.33273902597,
+        4197.108547078129,
+        1897.9196637669938
+      ],
+      "M_raw_top3_eigenvalues": [
+        856533274.950257,
+        37715721.77258934,
+        15677855.237270001
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.5599906497369749
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.505930521193146
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.4078508672352782
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.29837215297107295
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.20014633333671383
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.1980334459336712
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.19340108985189464
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.17945761452642292
+        }
+      ]
+    },
+    {
+      "iid_point": 22,
+      "flat_index": 87927,
+      "chain": 4,
+      "step": 7927,
+      "M_zhat_top3_eigenvalues": [
+        751583.2955357203,
+        3614.922006778689,
+        1507.1698291092825
+      ],
+      "M_raw_top3_eigenvalues": [
+        5265286123.452543,
+        31481780.26308438,
+        11188017.327209089
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7038548338093541
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.537245396450826
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.258971220830277
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.24755641936695905
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.22151123322539204
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.18064003707740248
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.049916851673381626
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.045342758803012397
+        }
+      ]
+    },
+    {
+      "iid_point": 23,
+      "flat_index": 75695,
+      "chain": 3,
+      "step": 15695,
+      "M_zhat_top3_eigenvalues": [
+        127184.25915655727,
+        3583.624017686796,
+        1740.9532135825957
+      ],
+      "M_raw_top3_eigenvalues": [
+        861091395.6583935,
+        30498851.505595677,
+        15381802.861344447
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.7205704978734179
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.5269376716655583
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": -0.23958831032674838
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.2383361011264512
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.22654635619992963
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.1726761597043696
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.05365535975078667
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.05025029196686291
+        }
+      ]
+    },
+    {
+      "iid_point": 24,
+      "flat_index": 131650,
+      "chain": 6,
+      "step": 11650,
+      "M_zhat_top3_eigenvalues": [
+        108578.84127569594,
+        3903.4907586178674,
+        1951.499813973723
+      ],
+      "M_raw_top3_eigenvalues": [
+        1023389934.6006764,
+        26311957.235018693,
+        17421427.36350034
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6000889242628763
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.4711959684065835
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.43994539483743345
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.3529791488073561
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.2158207711086782
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.15241307045979027
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.11457034594077144
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.09609337152969151
+        }
+      ]
+    },
+    {
+      "iid_point": 25,
+      "flat_index": 132417,
+      "chain": 6,
+      "step": 12417,
+      "M_zhat_top3_eigenvalues": [
+        82823.2435736641,
+        3449.37803093622,
+        1910.535122753133
+      ],
+      "M_raw_top3_eigenvalues": [
+        685950849.9244565,
+        32152225.555159576,
+        18187474.135425586
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.5976829620229721
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.5654720236323442
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.32640262559676503
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.3096209810905516
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.2110505196057975
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.15412935671494601
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.14305369398537524
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.11919592514701993
+        }
+      ]
+    },
+    {
+      "iid_point": 26,
+      "flat_index": 23061,
+      "chain": 1,
+      "step": 3061,
+      "M_zhat_top3_eigenvalues": [
+        43385.37890851882,
+        3545.4512450490006,
+        1736.640685913957
+      ],
+      "M_raw_top3_eigenvalues": [
+        518838909.24748594,
+        36446435.269688584,
+        14661126.11609163
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.4573781407164738
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.4428169895880243
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.44039688022541246
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.37248196219232227
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.30775484554719995
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.27869212508475694
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.18327580194722815
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.17969966947137306
+        }
+      ]
+    },
+    {
+      "iid_point": 27,
+      "flat_index": 52755,
+      "chain": 2,
+      "step": 12755,
+      "M_zhat_top3_eigenvalues": [
+        96574.99813151601,
+        3377.2406608004044,
+        1747.9053212075164
+      ],
+      "M_raw_top3_eigenvalues": [
+        912628159.076482,
+        23604667.614359044,
+        14877623.039355889
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6034251276731957
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.47195901638301174
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.4375232847222662
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.3428789896211132
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.22507595910936445
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1580979452922091
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.11365813991798773
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.09285311365944758
+        }
+      ]
+    },
+    {
+      "iid_point": 28,
+      "flat_index": 48510,
+      "chain": 2,
+      "step": 8510,
+      "M_zhat_top3_eigenvalues": [
+        487982.2520637725,
+        4449.213062083489,
+        1855.6401568232827
+      ],
+      "M_raw_top3_eigenvalues": [
+        3969187366.7738476,
+        26777738.632576957,
+        17814036.769970987
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6671093946607592
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.43959696919941105
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.353655656772541
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.34406496542679
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.2584320424454056
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.1774729502544202
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.09962825852041342
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.06872615417606344
+        }
+      ]
+    },
+    {
+      "iid_point": 29,
+      "flat_index": 67723,
+      "chain": 3,
+      "step": 7723,
+      "M_zhat_top3_eigenvalues": [
+        80924.12802859796,
+        4608.1038542318465,
+        1978.9853870717022
+      ],
+      "M_raw_top3_eigenvalues": [
+        716436413.9904095,
+        47531245.514851876,
+        17396699.263332285
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": -0.5534576159040562
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": -0.5447574825453521
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": 0.331239286120302
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.3303773101773301
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.28414513956934573
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.22894501331789913
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.14083622178991304
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": 0.12362510391436296
+        }
+      ]
+    },
+    {
+      "iid_point": 30,
+      "flat_index": 5575,
+      "chain": 0,
+      "step": 5575,
+      "M_zhat_top3_eigenvalues": [
+        316575.00611469895,
+        4417.7992846849575,
+        2051.724695787558
+      ],
+      "M_raw_top3_eigenvalues": [
+        3458982186.4465327,
+        33268429.15891639,
+        17161677.590141114
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": -0.5147628387340625
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": 0.47626805421530166
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.45243208115314226
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.45206252327954893
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": 0.19069175657192466
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "index": 8,
+          "loading": -0.15470252921823657
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "index": 7,
+          "loading": -0.1340980768082757
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.10337550486549528
+        }
+      ]
+    },
+    {
+      "iid_point": 31,
+      "flat_index": 72559,
+      "chain": 3,
+      "step": 12559,
+      "M_zhat_top3_eigenvalues": [
+        105032.51051207472,
+        4031.683967789628,
+        1879.8761736795057
+      ],
+      "M_raw_top3_eigenvalues": [
+        834539826.9820573,
+        37734447.92355171,
+        18445413.394440364
+      ],
+      "top_eigenvector_loadings": [
+        {
+          "param": "planes/0/mass/0/gamma",
+          "index": 11,
+          "loading": 0.6299092522933892
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "index": 14,
+          "loading": 0.558745302850566
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "index": 10,
+          "loading": -0.30295974672996234
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "index": 18,
+          "loading": -0.3002552315974443
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "index": 9,
+          "loading": -0.19186116182432372
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "index": 12,
+          "loading": -0.14901607757313642
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "index": 13,
+          "loading": 0.13656185677099444
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "index": 17,
+          "loading": 0.12013398849125502
+        }
+      ]
+    }
+  ],
+  "r_values": {
+    "records": [
+      {
+        "iid_point": 0,
+        "r_frobenius": 0.1302200377848265,
+        "r_spectral": 0.12909374538648496
+      },
+      {
+        "iid_point": 1,
+        "r_frobenius": 0.21497180105555985,
+        "r_spectral": 0.19170717881782523
+      },
+      {
+        "iid_point": 2,
+        "r_frobenius": 0.05839677536714473,
+        "r_spectral": 0.05821025958399188
+      },
+      {
+        "iid_point": 3,
+        "r_frobenius": 0.3505981369444984,
+        "r_spectral": 0.34998116890479064
+      },
+      {
+        "iid_point": 4,
+        "r_frobenius": 0.044380902163852196,
+        "r_spectral": 0.044312438656651285
+      },
+      {
+        "iid_point": 5,
+        "r_frobenius": 0.15916943179884294,
+        "r_spectral": 0.12038061717864684
+      }
+    ],
+    "r_frobenius_range": [
+      0.044380902163852196,
+      0.3505981369444984
+    ],
+    "interpretation": "r << 1 => GN/manifold curvature dominant on stiff subspace; r >~ 1 => residual/prior terms matter. NOT adjudicated."
+  },
+  "pairs": [
+    {
+      "lag": 1,
+      "chain": 0,
+      "start": 8491,
+      "dz_norm": 0.011610271117840264,
+      "sep_zhat": 0.17599492076955967,
+      "sep_thetahat": 0.17600690662754612,
+      "z": {
+        "principal_angles_deg": [
+          0.10436798494164543,
+          1.5557482949359929,
+          38.71622350395584
+        ],
+        "max_principal_angle_deg": 38.71622350395584,
+        "mean_principal_angle_deg": 13.458779927944493,
+        "top_vector_angle_deg": 37.11839855847721
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.13325984150348777,
+          1.3154354280694658,
+          38.50460589492867
+        ],
+        "max_principal_angle_deg": 38.50460589492867,
+        "mean_principal_angle_deg": 13.317767054833874,
+        "top_vector_angle_deg": 37.108709197807194
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 4,
+      "start": 9111,
+      "dz_norm": 0.006770693706385356,
+      "sep_zhat": 0.09717865532123224,
+      "sep_thetahat": 0.09719728481144828,
+      "z": {
+        "principal_angles_deg": [
+          0.019721325718128284,
+          0.45873763797502537,
+          1.8942173604344574
+        ],
+        "max_principal_angle_deg": 1.8942173604344574,
+        "mean_principal_angle_deg": 0.7908921080425371,
+        "top_vector_angle_deg": 1.8494315066087952
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.04131153594290081,
+          0.3534455069574167,
+          1.8911580669003283
+        ],
+        "max_principal_angle_deg": 1.8911580669003283,
+        "mean_principal_angle_deg": 0.761971703266882,
+        "top_vector_angle_deg": 1.8602577760277828
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 6,
+      "start": 7256,
+      "dz_norm": 0.005783001816432566,
+      "sep_zhat": 0.12114450281367067,
+      "sep_thetahat": 0.12081777209735477,
+      "z": {
+        "principal_angles_deg": [
+          0.015700954115670476,
+          0.6965652945773148,
+          4.73039328566036
+        ],
+        "max_principal_angle_deg": 4.73039328566036,
+        "mean_principal_angle_deg": 1.8142198447844482,
+        "top_vector_angle_deg": 5.035218307115602
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.04614192333373633,
+          0.7649374437318501,
+          4.760436699765794
+        ],
+        "max_principal_angle_deg": 4.760436699765794,
+        "mean_principal_angle_deg": 1.8571720222771269,
+        "top_vector_angle_deg": 5.031530017796338
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 4,
+      "start": 15455,
+      "dz_norm": 0.0023688211533205127,
+      "sep_zhat": 0.11788592696036845,
+      "sep_thetahat": 0.118051081570668,
+      "z": {
+        "principal_angles_deg": [
+          0.036166180530938875,
+          0.12034110404324419,
+          1.6070491350767901
+        ],
+        "max_principal_angle_deg": 1.6070491350767901,
+        "mean_principal_angle_deg": 0.5878521398836577,
+        "top_vector_angle_deg": 1.6045277018491229
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.03513478025073853,
+          0.1195241469144811,
+          1.6080791305126279
+        ],
+        "max_principal_angle_deg": 1.6080791305126279,
+        "mean_principal_angle_deg": 0.5875793525592825,
+        "top_vector_angle_deg": 1.6059800696856208
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 7,
+      "start": 8545,
+      "dz_norm": 0.005100906572244698,
+      "sep_zhat": 0.11264906882076427,
+      "sep_thetahat": 0.11301789457186702,
+      "z": {
+        "principal_angles_deg": [
+          0.07429175720040584,
+          2.8250733463622004,
+          31.587458203366932
+        ],
+        "max_principal_angle_deg": 31.587458203366932,
+        "mean_principal_angle_deg": 11.495607768976512,
+        "top_vector_angle_deg": 34.13412281063757
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.08654369651774813,
+          3.030769472337448,
+          31.81277529802247
+        ],
+        "max_principal_angle_deg": 31.81277529802247,
+        "mean_principal_angle_deg": 11.643362822292554,
+        "top_vector_angle_deg": 34.13297986308568
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 0,
+      "start": 14369,
+      "dz_norm": 0.0076936890139295225,
+      "sep_zhat": 0.10326489357504538,
+      "sep_thetahat": 0.10429939210392852,
+      "z": {
+        "principal_angles_deg": [
+          0.03960286512742993,
+          0.07138939893665901,
+          0.5023853875552202
+        ],
+        "max_principal_angle_deg": 0.5023853875552202,
+        "mean_principal_angle_deg": 0.20445921720643637,
+        "top_vector_angle_deg": 0.5684218568373437
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.06293205008624671,
+          0.12592370736408298,
+          0.5088781393554725
+        ],
+        "max_principal_angle_deg": 0.5088781393554725,
+        "mean_principal_angle_deg": 0.23257796560193408,
+        "top_vector_angle_deg": 0.5707685592341256
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 4,
+      "start": 17441,
+      "dz_norm": 0.0072877447689958675,
+      "sep_zhat": 0.10899079411641933,
+      "sep_thetahat": 0.1084612778490805,
+      "z": {
+        "principal_angles_deg": [
+          0.039023861310502714,
+          0.3222522230446178,
+          0.9767881688713613
+        ],
+        "max_principal_angle_deg": 0.9767881688713613,
+        "mean_principal_angle_deg": 0.44602141774216064,
+        "top_vector_angle_deg": 0.9360873007191657
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.05126042233138232,
+          0.27847850582193046,
+          0.9757638844420948
+        ],
+        "max_principal_angle_deg": 0.9757638844420948,
+        "mean_principal_angle_deg": 0.43516760419846917,
+        "top_vector_angle_deg": 0.9238666730395433
+      }
+    },
+    {
+      "lag": 1,
+      "chain": 3,
+      "start": 7361,
+      "dz_norm": 0.007688583046382214,
+      "sep_zhat": 0.13253362203984984,
+      "sep_thetahat": 0.1336292725923079,
+      "z": {
+        "principal_angles_deg": [
+          0.05043298653608526,
+          5.986513484315358,
+          34.31250435209454
+        ],
+        "max_principal_angle_deg": 34.31250435209454,
+        "mean_principal_angle_deg": 13.449816940981995,
+        "top_vector_angle_deg": 33.153290757967056
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.05621742816508486,
+          6.313037141642007,
+          34.62325978079992
+        ],
+        "max_principal_angle_deg": 34.62325978079992,
+        "mean_principal_angle_deg": 13.664171450202337,
+        "top_vector_angle_deg": 33.053099539547475
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 0,
+      "start": 9141,
+      "dz_norm": 0.017008357698896952,
+      "sep_zhat": 0.4619608185272873,
+      "sep_thetahat": 0.46128419849965346,
+      "z": {
+        "principal_angles_deg": [
+          0.18554611660496753,
+          3.3934175543203633,
+          70.5798918595786
+        ],
+        "max_principal_angle_deg": 70.5798918595786,
+        "mean_principal_angle_deg": 24.719618510167976,
+        "top_vector_angle_deg": 65.03063517787403
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.21809982108387246,
+          3.4233524880999244,
+          70.58100330978576
+        ],
+        "max_principal_angle_deg": 70.58100330978576,
+        "mean_principal_angle_deg": 24.740818539656516,
+        "top_vector_angle_deg": 65.07485503706076
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 5,
+      "start": 15398,
+      "dz_norm": 0.00849025741657613,
+      "sep_zhat": 0.16583016612069273,
+      "sep_thetahat": 0.16369807387431226,
+      "z": {
+        "principal_angles_deg": [
+          0.2648500692018269,
+          0.6535417807634037,
+          46.00568717778068
+        ],
+        "max_principal_angle_deg": 46.00568717778068,
+        "mean_principal_angle_deg": 15.641359675915304,
+        "top_vector_angle_deg": 42.900668202528145
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.25362948463137436,
+          0.8793976633883651,
+          45.23860376892032
+        ],
+        "max_principal_angle_deg": 45.23860376892032,
+        "mean_principal_angle_deg": 15.457210305646688,
+        "top_vector_angle_deg": 42.71429458200789
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 6,
+      "start": 4296,
+      "dz_norm": 0.015157394568742941,
+      "sep_zhat": 0.4895014865113282,
+      "sep_thetahat": 0.49192284766949135,
+      "z": {
+        "principal_angles_deg": [
+          0.32681216202119956,
+          3.0807484379041337,
+          71.9734342428134
+        ],
+        "max_principal_angle_deg": 71.9734342428134,
+        "mean_principal_angle_deg": 25.12699828091291,
+        "top_vector_angle_deg": 76.8268122342051
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.30271566314045373,
+          3.257262870923187,
+          72.4945209070016
+        ],
+        "max_principal_angle_deg": 72.4945209070016,
+        "mean_principal_angle_deg": 25.351499813688417,
+        "top_vector_angle_deg": 76.61053796757338
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 4,
+      "start": 16085,
+      "dz_norm": 0.030302395502350768,
+      "sep_zhat": 0.4584645711757974,
+      "sep_thetahat": 0.4707982599201355,
+      "z": {
+        "principal_angles_deg": [
+          0.09490602213373531,
+          1.631445382155585,
+          17.112646231797925
+        ],
+        "max_principal_angle_deg": 17.112646231797925,
+        "mean_principal_angle_deg": 6.279665878695749,
+        "top_vector_angle_deg": 17.241416763491348
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.21588651129447686,
+          1.6733582722119844,
+          17.023382314683463
+        ],
+        "max_principal_angle_deg": 17.023382314683463,
+        "mean_principal_angle_deg": 6.3042090327299745,
+        "top_vector_angle_deg": 16.969966688379944
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 2,
+      "start": 6891,
+      "dz_norm": 0.01223285349961456,
+      "sep_zhat": 0.44762203387606925,
+      "sep_thetahat": 0.4474643171086864,
+      "z": {
+        "principal_angles_deg": [
+          0.07446781050858549,
+          0.3247818079826224,
+          0.6600809836602969
+        ],
+        "max_principal_angle_deg": 0.6600809836602969,
+        "mean_principal_angle_deg": 0.35311020071716825,
+        "top_vector_angle_deg": 0.7107543206562227
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.08484947445364377,
+          0.3856117074319183,
+          0.6596185600762378
+        ],
+        "max_principal_angle_deg": 0.6596185600762378,
+        "mean_principal_angle_deg": 0.37669324732059994,
+        "top_vector_angle_deg": 0.6964103885081567
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 6,
+      "start": 11629,
+      "dz_norm": 0.02112897944176214,
+      "sep_zhat": 0.41098169403541085,
+      "sep_thetahat": 0.4110991843489597,
+      "z": {
+        "principal_angles_deg": [
+          0.10454994580221694,
+          1.3422291755919928,
+          4.742637284660033
+        ],
+        "max_principal_angle_deg": 4.742637284660033,
+        "mean_principal_angle_deg": 2.0631388020180808,
+        "top_vector_angle_deg": 4.613310903548627
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.16894499858309772,
+          1.6539618379494316,
+          4.785526755055391
+        ],
+        "max_principal_angle_deg": 4.785526755055391,
+        "mean_principal_angle_deg": 2.2028111971959734,
+        "top_vector_angle_deg": 4.636629336768534
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 4,
+      "start": 13470,
+      "dz_norm": 0.0441963668363556,
+      "sep_zhat": 0.49535535601690706,
+      "sep_thetahat": 0.49880818215673467,
+      "z": {
+        "principal_angles_deg": [
+          0.09112890625656912,
+          0.2754178948701685,
+          3.308622674490988
+        ],
+        "max_principal_angle_deg": 3.308622674490988,
+        "mean_principal_angle_deg": 1.2250564918725753,
+        "top_vector_angle_deg": 3.3077218620023787
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.23608993223947453,
+          0.7336717448808272,
+          3.327258014987531
+        ],
+        "max_principal_angle_deg": 3.327258014987531,
+        "mean_principal_angle_deg": 1.4323398973692776,
+        "top_vector_angle_deg": 3.3134809049697025
+      }
+    },
+    {
+      "lag": 4,
+      "chain": 4,
+      "start": 19614,
+      "dz_norm": 0.025604691949133094,
+      "sep_zhat": 0.5891569005460142,
+      "sep_thetahat": 0.5881857203763838,
+      "z": {
+        "principal_angles_deg": [
+          0.41763644537065103,
+          2.5636144449523384,
+          72.9060595357238
+        ],
+        "max_principal_angle_deg": 72.9060595357238,
+        "mean_principal_angle_deg": 25.295770142015595,
+        "top_vector_angle_deg": 69.57479939837512
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.4114559734203627,
+          2.4846735734202747,
+          72.63625928449142
+        ],
+        "max_principal_angle_deg": 72.63625928449142,
+        "mean_principal_angle_deg": 25.177462943777353,
+        "top_vector_angle_deg": 69.56177373413222
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 6,
+      "start": 1081,
+      "dz_norm": 0.18412428853564214,
+      "sep_zhat": 1.9229025459077647,
+      "sep_thetahat": 1.9586182789316529,
+      "z": {
+        "principal_angles_deg": [
+          1.4896107761417645,
+          2.137706710944521,
+          19.068922014897616
+        ],
+        "max_principal_angle_deg": 19.068922014897616,
+        "mean_principal_angle_deg": 7.565413167327968,
+        "top_vector_angle_deg": 19.8628300329819
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.9123436608706832,
+          5.597566862258161,
+          19.596724916243417
+        ],
+        "max_principal_angle_deg": 19.596724916243417,
+        "mean_principal_angle_deg": 9.035545146457421,
+        "top_vector_angle_deg": 19.82851970557936
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 1,
+      "start": 10892,
+      "dz_norm": 0.13442329948113427,
+      "sep_zhat": 2.032465347263504,
+      "sep_thetahat": 2.0223772481650237,
+      "z": {
+        "principal_angles_deg": [
+          0.3407566445148736,
+          2.4124169388694967,
+          52.97754354434626
+        ],
+        "max_principal_angle_deg": 52.97754354434626,
+        "mean_principal_angle_deg": 18.576905709243544,
+        "top_vector_angle_deg": 49.967246956644956
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.5885813558965115,
+          2.0841604066432127,
+          52.554695385577844
+        ],
+        "max_principal_angle_deg": 52.554695385577844,
+        "mean_principal_angle_deg": 18.409145716039188,
+        "top_vector_angle_deg": 49.987106053358715
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 6,
+      "start": 1379,
+      "dz_norm": 0.07027901492179739,
+      "sep_zhat": 1.3709069673270304,
+      "sep_thetahat": 1.3772648583287244,
+      "z": {
+        "principal_angles_deg": [
+          0.9207325449147441,
+          4.302361969439327,
+          22.517226223218433
+        ],
+        "max_principal_angle_deg": 22.517226223218433,
+        "mean_principal_angle_deg": 9.246773579190835,
+        "top_vector_angle_deg": 21.204050883642584
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.972519893327606,
+          3.724193046892573,
+          22.352750816090186
+        ],
+        "max_principal_angle_deg": 22.352750816090186,
+        "mean_principal_angle_deg": 9.016487918770123,
+        "top_vector_angle_deg": 21.15296220487329
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 5,
+      "start": 15177,
+      "dz_norm": 0.09575965223043979,
+      "sep_zhat": 1.6511689563295504,
+      "sep_thetahat": 1.6773962522510617,
+      "z": {
+        "principal_angles_deg": [
+          0.20554916882105112,
+          7.475460254592512,
+          42.84235770680605
+        ],
+        "max_principal_angle_deg": 42.84235770680605,
+        "mean_principal_angle_deg": 16.84112237673987,
+        "top_vector_angle_deg": 44.77735193433386
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.42454973265218227,
+          7.26337968959711,
+          42.64397220586415
+        ],
+        "max_principal_angle_deg": 42.64397220586415,
+        "mean_principal_angle_deg": 16.77730054270448,
+        "top_vector_angle_deg": 44.70731693748631
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 6,
+      "start": 17452,
+      "dz_norm": 0.06547630426365991,
+      "sep_zhat": 1.7128430601811286,
+      "sep_thetahat": 1.7169936521752922,
+      "z": {
+        "principal_angles_deg": [
+          0.321178429132133,
+          6.751620124453952,
+          69.02681276297365
+        ],
+        "max_principal_angle_deg": 69.02681276297365,
+        "mean_principal_angle_deg": 25.36653710551991,
+        "top_vector_angle_deg": 69.54845080956125
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.4283161570458091,
+          6.663698333425205,
+          69.04898456952537
+        ],
+        "max_principal_angle_deg": 69.04898456952537,
+        "mean_principal_angle_deg": 25.380333019998798,
+        "top_vector_angle_deg": 69.42480612093446
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 1,
+      "start": 11096,
+      "dz_norm": 0.06593310759146592,
+      "sep_zhat": 1.9481950741919323,
+      "sep_thetahat": 1.9464084318927344,
+      "z": {
+        "principal_angles_deg": [
+          0.6026911573139115,
+          4.217903093336777,
+          51.16012140997526
+        ],
+        "max_principal_angle_deg": 51.16012140997526,
+        "mean_principal_angle_deg": 18.660238553541983,
+        "top_vector_angle_deg": 47.04859672621521
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.6843293276615466,
+          4.897382980444274,
+          51.083019609799415
+        ],
+        "max_principal_angle_deg": 51.083019609799415,
+        "mean_principal_angle_deg": 18.888243972635077,
+        "top_vector_angle_deg": 47.20444235689968
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 6,
+      "start": 7154,
+      "dz_norm": 0.06522023997941566,
+      "sep_zhat": 1.5570240351176639,
+      "sep_thetahat": 1.5550782058860213,
+      "z": {
+        "principal_angles_deg": [
+          0.7693135652192814,
+          7.746239890818557,
+          69.62612715057965
+        ],
+        "max_principal_angle_deg": 69.62612715057965,
+        "mean_principal_angle_deg": 26.047226868872496,
+        "top_vector_angle_deg": 67.2259756494224
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.750675493725529,
+          7.045310102469642,
+          69.5892752773405
+        ],
+        "max_principal_angle_deg": 69.5892752773405,
+        "mean_principal_angle_deg": 25.795086957845225,
+        "top_vector_angle_deg": 67.39242454475698
+      }
+    },
+    {
+      "lag": 16,
+      "chain": 1,
+      "start": 9582,
+      "dz_norm": 0.10802023036866755,
+      "sep_zhat": 1.4625994143610794,
+      "sep_thetahat": 1.4673888296633109,
+      "z": {
+        "principal_angles_deg": [
+          0.3308156478122791,
+          1.0048578368284802,
+          28.018774990981427
+        ],
+        "max_principal_angle_deg": 28.018774990981427,
+        "mean_principal_angle_deg": 9.784816158540728,
+        "top_vector_angle_deg": 26.398240073476938
+      },
+      "theta": {
+        "principal_angles_deg": [
+          0.7880847364808936,
+          2.5016542515050064,
+          27.7589255643386
+        ],
+        "max_principal_angle_deg": 27.7589255643386,
+        "mean_principal_angle_deg": 10.349554850774833,
+        "top_vector_angle_deg": 26.44339132437639
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 0,
+      "start": 4385,
+      "dz_norm": 0.1852836750060257,
+      "sep_zhat": 6.199285868307852,
+      "sep_thetahat": 6.18110332208196,
+      "z": {
+        "principal_angles_deg": [
+          2.8462198603201436,
+          5.546659068648045,
+          24.31599226120947
+        ],
+        "max_principal_angle_deg": 24.31599226120947,
+        "mean_principal_angle_deg": 10.902957063392554,
+        "top_vector_angle_deg": 24.998825065392115
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.9549610657731655,
+          4.2173469758985895,
+          24.556298248721887
+        ],
+        "max_principal_angle_deg": 24.556298248721887,
+        "mean_principal_angle_deg": 10.242868763464548,
+        "top_vector_angle_deg": 25.142913074701553
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 6,
+      "start": 13309,
+      "dz_norm": 0.3757993445707083,
+      "sep_zhat": 5.126931726720608,
+      "sep_thetahat": 5.124754494715707,
+      "z": {
+        "principal_angles_deg": [
+          1.2783464827969604,
+          6.490696844330998,
+          60.37025891731011
+        ],
+        "max_principal_angle_deg": 60.37025891731011,
+        "mean_principal_angle_deg": 22.713100748146022,
+        "top_vector_angle_deg": 61.761171493582204
+      },
+      "theta": {
+        "principal_angles_deg": [
+          4.606212051871125,
+          6.963129588359323,
+          60.56135040541821
+        ],
+        "max_principal_angle_deg": 60.56135040541821,
+        "mean_principal_angle_deg": 24.04356401521622,
+        "top_vector_angle_deg": 61.649021543595026
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 6,
+      "start": 16746,
+      "dz_norm": 0.18705557470794135,
+      "sep_zhat": 3.261840178959631,
+      "sep_thetahat": 3.264544793722439,
+      "z": {
+        "principal_angles_deg": [
+          0.41691215799826753,
+          2.737297087080735,
+          8.143566118260074
+        ],
+        "max_principal_angle_deg": 8.143566118260074,
+        "mean_principal_angle_deg": 3.765925121113025,
+        "top_vector_angle_deg": 8.237051222052985
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.6382465951546457,
+          3.4068686645706467,
+          8.47077537090596
+        ],
+        "max_principal_angle_deg": 8.47077537090596,
+        "mean_principal_angle_deg": 4.505296876877084,
+        "top_vector_angle_deg": 8.289993162814396
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 7,
+      "start": 6190,
+      "dz_norm": 0.5353211979240363,
+      "sep_zhat": 4.710804608530686,
+      "sep_thetahat": 4.6293687969159985,
+      "z": {
+        "principal_angles_deg": [
+          1.913008829331932,
+          5.580373033166369,
+          18.10620004185187
+        ],
+        "max_principal_angle_deg": 18.10620004185187,
+        "mean_principal_angle_deg": 8.533193968116725,
+        "top_vector_angle_deg": 18.015445301939874
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.1754746418046316,
+          9.238536916530373,
+          18.33767695622768
+        ],
+        "max_principal_angle_deg": 18.33767695622768,
+        "mean_principal_angle_deg": 9.917229504854228,
+        "top_vector_angle_deg": 18.0700912521484
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 3,
+      "start": 12308,
+      "dz_norm": 0.16043625762468422,
+      "sep_zhat": 4.856489971131706,
+      "sep_thetahat": 4.847412951482866,
+      "z": {
+        "principal_angles_deg": [
+          1.1459345345747376,
+          3.1271839598783298,
+          7.809163877367388
+        ],
+        "max_principal_angle_deg": 7.809163877367388,
+        "mean_principal_angle_deg": 4.027427457273485,
+        "top_vector_angle_deg": 8.260653429157909
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.0334496739966805,
+          2.351917093105257,
+          7.677570198775254
+        ],
+        "max_principal_angle_deg": 7.677570198775254,
+        "mean_principal_angle_deg": 3.6876456552923975,
+        "top_vector_angle_deg": 8.148823490263347
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 2,
+      "start": 18329,
+      "dz_norm": 0.18921121089885626,
+      "sep_zhat": 7.295107596286192,
+      "sep_thetahat": 7.294907496986062,
+      "z": {
+        "principal_angles_deg": [
+          1.4841787413178344,
+          2.8575199690688877,
+          56.66057442438395
+        ],
+        "max_principal_angle_deg": 56.66057442438395,
+        "mean_principal_angle_deg": 20.334091044923557,
+        "top_vector_angle_deg": 54.859554732077136
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.58930591001864,
+          3.4781404397652125,
+          56.86010351728655
+        ],
+        "max_principal_angle_deg": 56.86010351728655,
+        "mean_principal_angle_deg": 20.642516622356798,
+        "top_vector_angle_deg": 55.06595488316374
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 0,
+      "start": 16710,
+      "dz_norm": 0.2840729051874201,
+      "sep_zhat": 6.1069320296606655,
+      "sep_thetahat": 6.098378139805101,
+      "z": {
+        "principal_angles_deg": [
+          1.1814047660089961,
+          1.8726426693127174,
+          28.151843288099386
+        ],
+        "max_principal_angle_deg": 28.151843288099386,
+        "mean_principal_angle_deg": 10.4019635744737,
+        "top_vector_angle_deg": 28.31208980243743
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.710947497727043,
+          4.4526287779426985,
+          27.962261490105437
+        ],
+        "max_principal_angle_deg": 27.962261490105437,
+        "mean_principal_angle_deg": 11.375279255258393,
+        "top_vector_angle_deg": 28.11502462837738
+      }
+    },
+    {
+      "lag": 64,
+      "chain": 5,
+      "start": 5050,
+      "dz_norm": 0.12672748028683517,
+      "sep_zhat": 5.669696885222814,
+      "sep_thetahat": 5.665622965657374,
+      "z": {
+        "principal_angles_deg": [
+          1.9630698174113073,
+          9.010173427632873,
+          50.18957881943273
+        ],
+        "max_principal_angle_deg": 50.18957881943273,
+        "mean_principal_angle_deg": 20.387607354825636,
+        "top_vector_angle_deg": 53.51585835751361
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.8404563147550246,
+          8.135496987781343,
+          50.26237379763851
+        ],
+        "max_principal_angle_deg": 50.26237379763851,
+        "mean_principal_angle_deg": 20.079442366724958,
+        "top_vector_angle_deg": 53.748304458844466
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 5,
+      "start": 8154,
+      "dz_norm": 0.25442333919442933,
+      "sep_zhat": 4.738488658264818,
+      "sep_thetahat": 4.736799460076226,
+      "z": {
+        "principal_angles_deg": [
+          2.6666002648188725,
+          8.712744899183582,
+          22.662455796813266
+        ],
+        "max_principal_angle_deg": 22.662455796813266,
+        "mean_principal_angle_deg": 11.347266986938573,
+        "top_vector_angle_deg": 20.55240461328077
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.7798328718438974,
+          8.060119207542996,
+          22.462781158309497
+        ],
+        "max_principal_angle_deg": 22.462781158309497,
+        "mean_principal_angle_deg": 11.100911079232128,
+        "top_vector_angle_deg": 20.449362389532382
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 6,
+      "start": 19709,
+      "dz_norm": 0.44069258013312923,
+      "sep_zhat": 6.473207084657299,
+      "sep_thetahat": 6.478341345417891,
+      "z": {
+        "principal_angles_deg": [
+          1.8911873496056428,
+          4.658845991122683,
+          9.780609602663528
+        ],
+        "max_principal_angle_deg": 9.780609602663528,
+        "mean_principal_angle_deg": 5.443547647797285,
+        "top_vector_angle_deg": 9.90734682199578
+      },
+      "theta": {
+        "principal_angles_deg": [
+          3.832253429475184,
+          7.2510438315078884,
+          9.875110735721337
+        ],
+        "max_principal_angle_deg": 9.875110735721337,
+        "mean_principal_angle_deg": 6.98613599890147,
+        "top_vector_angle_deg": 9.92799885638184
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 2,
+      "start": 9280,
+      "dz_norm": 0.5047145463899387,
+      "sep_zhat": 7.58752658525003,
+      "sep_thetahat": 7.670534357301472,
+      "z": {
+        "principal_angles_deg": [
+          5.780675396726894,
+          8.318300777187206,
+          15.558936048567508
+        ],
+        "max_principal_angle_deg": 15.558936048567508,
+        "mean_principal_angle_deg": 9.885970740827203,
+        "top_vector_angle_deg": 12.426446311142962
+      },
+      "theta": {
+        "principal_angles_deg": [
+          5.5501147331629355,
+          9.835769837174173,
+          19.13357959540668
+        ],
+        "max_principal_angle_deg": 19.13357959540668,
+        "mean_principal_angle_deg": 11.506488055247928,
+        "top_vector_angle_deg": 12.286081902335829
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 1,
+      "start": 13673,
+      "dz_norm": 0.6507493096165907,
+      "sep_zhat": 7.98427103243788,
+      "sep_thetahat": 7.99056007112792,
+      "z": {
+        "principal_angles_deg": [
+          1.116703535706543,
+          2.5728157277525177,
+          31.211930289475458
+        ],
+        "max_principal_angle_deg": 31.211930289475458,
+        "mean_principal_angle_deg": 11.633816517644838,
+        "top_vector_angle_deg": 34.5162423278607
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.2732337320001568,
+          10.524333495624075,
+          31.751019138249635
+        ],
+        "max_principal_angle_deg": 31.751019138249635,
+        "mean_principal_angle_deg": 14.849528788624623,
+        "top_vector_angle_deg": 34.50469986787709
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 5,
+      "start": 16674,
+      "dz_norm": 0.7526279601473522,
+      "sep_zhat": 7.686649738499657,
+      "sep_thetahat": 7.628678213127999,
+      "z": {
+        "principal_angles_deg": [
+          2.8674725529653773,
+          3.453285806484246,
+          62.81538803740753
+        ],
+        "max_principal_angle_deg": 62.81538803740753,
+        "mean_principal_angle_deg": 23.04538213228572,
+        "top_vector_angle_deg": 57.596541883559816
+      },
+      "theta": {
+        "principal_angles_deg": [
+          3.0960563720757572,
+          11.943013084333279,
+          62.2771620352156
+        ],
+        "max_principal_angle_deg": 62.2771620352156,
+        "mean_principal_angle_deg": 25.77207716387488,
+        "top_vector_angle_deg": 57.69590136774287
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 6,
+      "start": 19288,
+      "dz_norm": 0.16703097822047397,
+      "sep_zhat": 4.939411909568754,
+      "sep_thetahat": 4.948315006474618,
+      "z": {
+        "principal_angles_deg": [
+          1.0842683783065086,
+          10.238103051541716,
+          66.52257259273017
+        ],
+        "max_principal_angle_deg": 66.52257259273017,
+        "mean_principal_angle_deg": 25.9483146741928,
+        "top_vector_angle_deg": 68.1507633040061
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.0849652057375903,
+          9.83738562972076,
+          67.53087326409074
+        ],
+        "max_principal_angle_deg": 67.53087326409074,
+        "mean_principal_angle_deg": 26.151074699849698,
+        "top_vector_angle_deg": 68.28254335550116
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 7,
+      "start": 17668,
+      "dz_norm": 0.36050816922341267,
+      "sep_zhat": 5.675518874997482,
+      "sep_thetahat": 5.686371849224503,
+      "z": {
+        "principal_angles_deg": [
+          1.0462325400337897,
+          2.7723396962656617,
+          48.70966305452684
+        ],
+        "max_principal_angle_deg": 48.70966305452684,
+        "mean_principal_angle_deg": 17.509411763608764,
+        "top_vector_angle_deg": 46.33840309053793
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.6900118059624587,
+          7.363238246064136,
+          48.25775711432566
+        ],
+        "max_principal_angle_deg": 48.25775711432566,
+        "mean_principal_angle_deg": 19.10366905545075,
+        "top_vector_angle_deg": 46.19249644698035
+      }
+    },
+    {
+      "lag": 256,
+      "chain": 1,
+      "start": 833,
+      "dz_norm": 0.2425293410937119,
+      "sep_zhat": 4.369402402077611,
+      "sep_thetahat": 4.380850669906669,
+      "z": {
+        "principal_angles_deg": [
+          0.9409119211934003,
+          3.3289271572109036,
+          41.62286081171012
+        ],
+        "max_principal_angle_deg": 41.62286081171012,
+        "mean_principal_angle_deg": 15.29756663003814,
+        "top_vector_angle_deg": 39.03078214505838
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.7349325258973392,
+          2.7223632236979594,
+          41.69816872300706
+        ],
+        "max_principal_angle_deg": 41.69816872300706,
+        "mean_principal_angle_deg": 15.385154824200784,
+        "top_vector_angle_deg": 39.25599418124222
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 3,
+      "start": 6546,
+      "dz_norm": 0.5551789433253449,
+      "sep_zhat": 8.364619652146933,
+      "sep_thetahat": 8.352962804205081,
+      "z": {
+        "principal_angles_deg": [
+          2.5411743021630997,
+          5.935337188502049,
+          20.455198373018078
+        ],
+        "max_principal_angle_deg": 20.455198373018078,
+        "mean_principal_angle_deg": 9.643903287894409,
+        "top_vector_angle_deg": 18.548687680507765
+      },
+      "theta": {
+        "principal_angles_deg": [
+          3.9975753553431956,
+          9.528877036948392,
+          20.470841328441168
+        ],
+        "max_principal_angle_deg": 20.470841328441168,
+        "mean_principal_angle_deg": 11.332431240244253,
+        "top_vector_angle_deg": 18.738477480426713
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 7,
+      "start": 15122,
+      "dz_norm": 0.30034639673113395,
+      "sep_zhat": 6.449353499070752,
+      "sep_thetahat": 6.484335508633427,
+      "z": {
+        "principal_angles_deg": [
+          1.1982357315942738,
+          2.8009603589254253,
+          16.905760995821232
+        ],
+        "max_principal_angle_deg": 16.905760995821232,
+        "mean_principal_angle_deg": 6.968319028780311,
+        "top_vector_angle_deg": 16.78061336936847
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.4588191447515784,
+          3.3198986604065195,
+          16.899973727974736
+        ],
+        "max_principal_angle_deg": 16.899973727974736,
+        "mean_principal_angle_deg": 7.226230511044278,
+        "top_vector_angle_deg": 16.803999856855885
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 3,
+      "start": 10921,
+      "dz_norm": 0.25254473885814827,
+      "sep_zhat": 5.332485747907821,
+      "sep_thetahat": 5.308732525760896,
+      "z": {
+        "principal_angles_deg": [
+          1.072065713531269,
+          1.9341897402967316,
+          5.825406250835593
+        ],
+        "max_principal_angle_deg": 5.825406250835593,
+        "mean_principal_angle_deg": 2.9438872348878644,
+        "top_vector_angle_deg": 1.7156576541830049
+      },
+      "theta": {
+        "principal_angles_deg": [
+          1.146969044241968,
+          2.0274544143289184,
+          3.401707363836541
+        ],
+        "max_principal_angle_deg": 3.401707363836541,
+        "mean_principal_angle_deg": 2.192043607469142,
+        "top_vector_angle_deg": 1.7126562840028456
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 4,
+      "start": 16905,
+      "dz_norm": 0.24519557381486953,
+      "sep_zhat": 7.146022466839655,
+      "sep_thetahat": 7.158993698200617,
+      "z": {
+        "principal_angles_deg": [
+          1.0272004248768096,
+          2.7426846576184474,
+          77.91932313908137
+        ],
+        "max_principal_angle_deg": 77.91932313908137,
+        "mean_principal_angle_deg": 27.229736073858874,
+        "top_vector_angle_deg": 81.30084184752528
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.265306182669346,
+          3.065912835911933,
+          77.62991725728564
+        ],
+        "max_principal_angle_deg": 77.62991725728564,
+        "mean_principal_angle_deg": 27.65371209195564,
+        "top_vector_angle_deg": 81.25280931478642
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 0,
+      "start": 9292,
+      "dz_norm": 0.24669414422438238,
+      "sep_zhat": 6.134751150417101,
+      "sep_thetahat": 6.147035478678147,
+      "z": {
+        "principal_angles_deg": [
+          3.0299121348649,
+          8.2855890812743,
+          29.439232642833908
+        ],
+        "max_principal_angle_deg": 29.439232642833908,
+        "mean_principal_angle_deg": 13.58491128632437,
+        "top_vector_angle_deg": 30.19869460639893
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.841563460355943,
+          5.959999942221249,
+          29.13466191994631
+        ],
+        "max_principal_angle_deg": 29.13466191994631,
+        "mean_principal_angle_deg": 12.645408440841168,
+        "top_vector_angle_deg": 29.912348132863595
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 5,
+      "start": 8597,
+      "dz_norm": 0.643872553645207,
+      "sep_zhat": 7.266230118307237,
+      "sep_thetahat": 7.212587790872761,
+      "z": {
+        "principal_angles_deg": [
+          2.2777770931235577,
+          4.223557186824717,
+          49.24635658728963
+        ],
+        "max_principal_angle_deg": 49.24635658728963,
+        "mean_principal_angle_deg": 18.582563622412636,
+        "top_vector_angle_deg": 47.779492736168564
+      },
+      "theta": {
+        "principal_angles_deg": [
+          3.8585645553540133,
+          11.96053790124719,
+          48.92483161452004
+        ],
+        "max_principal_angle_deg": 48.92483161452004,
+        "mean_principal_angle_deg": 21.581311357040416,
+        "top_vector_angle_deg": 47.56970102751958
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 7,
+      "start": 18037,
+      "dz_norm": 0.3636990368799833,
+      "sep_zhat": 6.0166597770069625,
+      "sep_thetahat": 5.998214631706552,
+      "z": {
+        "principal_angles_deg": [
+          2.588366999569034,
+          6.031710251320573,
+          52.787659117587445
+        ],
+        "max_principal_angle_deg": 52.787659117587445,
+        "mean_principal_angle_deg": 20.46924545615902,
+        "top_vector_angle_deg": 52.0649685361919
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.6013047076033082,
+          6.311950471400857,
+          52.74912208752677
+        ],
+        "max_principal_angle_deg": 52.74912208752677,
+        "mean_principal_angle_deg": 20.554125755510313,
+        "top_vector_angle_deg": 52.03078931171755
+      }
+    },
+    {
+      "lag": 1024,
+      "chain": 6,
+      "start": 8812,
+      "dz_norm": 0.29426363929562366,
+      "sep_zhat": 6.130465329479465,
+      "sep_thetahat": 6.085572767367438,
+      "z": {
+        "principal_angles_deg": [
+          1.874211758156304,
+          10.72108247038636,
+          51.40284208230804
+        ],
+        "max_principal_angle_deg": 51.40284208230804,
+        "mean_principal_angle_deg": 21.332712103616903,
+        "top_vector_angle_deg": 49.06259786940913
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.1857535473595076,
+          7.781672602840489,
+          51.35864676855861
+        ],
+        "max_principal_angle_deg": 51.35864676855861,
+        "mean_principal_angle_deg": 20.44202430625287,
+        "top_vector_angle_deg": 49.138828181102575
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 7,
+      "start": 1165,
+      "dz_norm": 0.6652899316507132,
+      "sep_zhat": 9.117893849857781,
+      "sep_thetahat": 9.180319648487732,
+      "z": {
+        "principal_angles_deg": [
+          4.751905871798417,
+          18.734123831339378,
+          66.88706584033673
+        ],
+        "max_principal_angle_deg": 66.88706584033673,
+        "mean_principal_angle_deg": 30.12436518115818,
+        "top_vector_angle_deg": 64.58909338449035
+      },
+      "theta": {
+        "principal_angles_deg": [
+          5.383312792966116,
+          11.111496114129546,
+          67.22944497686889
+        ],
+        "max_principal_angle_deg": 67.22944497686889,
+        "mean_principal_angle_deg": 27.908084627988185,
+        "top_vector_angle_deg": 64.72383556915642
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 5,
+      "start": 4263,
+      "dz_norm": 0.5203362853726039,
+      "sep_zhat": 5.818478001604593,
+      "sep_thetahat": 5.750163252740283,
+      "z": {
+        "principal_angles_deg": [
+          1.0486721376456756,
+          5.498953176827732,
+          89.86052730489594
+        ],
+        "max_principal_angle_deg": 89.86052730489594,
+        "mean_principal_angle_deg": 32.13605087312312,
+        "top_vector_angle_deg": 85.28840775936337
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.104175912108299,
+          10.95256170952409,
+          89.7656331760395
+        ],
+        "max_principal_angle_deg": 89.7656331760395,
+        "mean_principal_angle_deg": 34.27412359922396,
+        "top_vector_angle_deg": 85.54932645915201
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 1,
+      "start": 10806,
+      "dz_norm": 0.7185229634367862,
+      "sep_zhat": 7.531387047224944,
+      "sep_thetahat": 7.553965464923529,
+      "z": {
+        "principal_angles_deg": [
+          1.2302796795399817,
+          4.541729336075432,
+          23.071642687047127
+        ],
+        "max_principal_angle_deg": 23.071642687047127,
+        "mean_principal_angle_deg": 9.614550567554181,
+        "top_vector_angle_deg": 24.086458336225835
+      },
+      "theta": {
+        "principal_angles_deg": [
+          4.290854523283409,
+          11.334870497322896,
+          23.154619726005603
+        ],
+        "max_principal_angle_deg": 23.154619726005603,
+        "mean_principal_angle_deg": 12.92678158220397,
+        "top_vector_angle_deg": 23.989391569865482
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 6,
+      "start": 14130,
+      "dz_norm": 0.2998222545073603,
+      "sep_zhat": 8.794571390616428,
+      "sep_thetahat": 8.783252660775466,
+      "z": {
+        "principal_angles_deg": [
+          1.7427903325491363,
+          3.548998569901078,
+          28.248901188607046
+        ],
+        "max_principal_angle_deg": 28.248901188607046,
+        "mean_principal_angle_deg": 11.18023003035242,
+        "top_vector_angle_deg": 28.24182382792674
+      },
+      "theta": {
+        "principal_angles_deg": [
+          3.507012692410854,
+          4.380196273039648,
+          28.362386979423288
+        ],
+        "max_principal_angle_deg": 28.362386979423288,
+        "mean_principal_angle_deg": 12.083198648291264,
+        "top_vector_angle_deg": 28.296771058064117
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 1,
+      "start": 13863,
+      "dz_norm": 0.5142469748328549,
+      "sep_zhat": 6.286480085160137,
+      "sep_thetahat": 6.327164834290829,
+      "z": {
+        "principal_angles_deg": [
+          2.9453553253564864,
+          3.8641301522755502,
+          12.570109671244818
+        ],
+        "max_principal_angle_deg": 12.570109671244818,
+        "mean_principal_angle_deg": 6.459865049625619,
+        "top_vector_angle_deg": 12.464912157280995
+      },
+      "theta": {
+        "principal_angles_deg": [
+          4.087955833620739,
+          9.379232596400628,
+          12.691906048710354
+        ],
+        "max_principal_angle_deg": 12.691906048710354,
+        "mean_principal_angle_deg": 8.71969815957724,
+        "top_vector_angle_deg": 12.586814264626552
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 6,
+      "start": 5001,
+      "dz_norm": 0.14985910139758551,
+      "sep_zhat": 3.5623921601960946,
+      "sep_thetahat": 3.568031908154803,
+      "z": {
+        "principal_angles_deg": [
+          2.0610524119559632,
+          9.388056129817313,
+          69.68683746937103
+        ],
+        "max_principal_angle_deg": 69.68683746937103,
+        "mean_principal_angle_deg": 27.0453153370481,
+        "top_vector_angle_deg": 72.76930956518828
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.0859820728368184,
+          7.450688950814089,
+          69.8564516379
+        ],
+        "max_principal_angle_deg": 69.8564516379,
+        "mean_principal_angle_deg": 26.46437422051697,
+        "top_vector_angle_deg": 72.73296692948269
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 0,
+      "start": 12275,
+      "dz_norm": 0.7644547407077006,
+      "sep_zhat": 8.66954322347929,
+      "sep_thetahat": 8.691527656609564,
+      "z": {
+        "principal_angles_deg": [
+          1.7410856480272046,
+          3.797804470466131,
+          5.618077622363549
+        ],
+        "max_principal_angle_deg": 5.618077622363549,
+        "mean_principal_angle_deg": 3.718989246952295,
+        "top_vector_angle_deg": 4.372300914204803
+      },
+      "theta": {
+        "principal_angles_deg": [
+          3.1227451062140643,
+          5.411302475442285,
+          17.75342691740784
+        ],
+        "max_principal_angle_deg": 17.75342691740784,
+        "mean_principal_angle_deg": 8.762491499688062,
+        "top_vector_angle_deg": 4.068832232047899
+      }
+    },
+    {
+      "lag": 4096,
+      "chain": 6,
+      "start": 7325,
+      "dz_norm": 0.3876056374125524,
+      "sep_zhat": 6.509684127478699,
+      "sep_thetahat": 6.501461537225536,
+      "z": {
+        "principal_angles_deg": [
+          2.8610023514150775,
+          9.756528655479578,
+          22.22639656327621
+        ],
+        "max_principal_angle_deg": 22.22639656327621,
+        "mean_principal_angle_deg": 11.614642523390287,
+        "top_vector_angle_deg": 21.33202574981384
+      },
+      "theta": {
+        "principal_angles_deg": [
+          2.946750953386628,
+          6.324187318007452,
+          21.83446960197042
+        ],
+        "max_principal_angle_deg": 21.83446960197042,
+        "mean_principal_angle_deg": 10.3684692911215,
+        "top_vector_angle_deg": 21.52750143580043
+      }
+    }
+  ],
+  "sampler_scales": {
+    "eps_move_zunits": 0.00128,
+    "h_star_zunits": 0.0035,
+    "eps_move_over_sigma_bar": 0.034438876082036725,
+    "h_star_over_sigma_bar": 0.09416880178681915
+  },
+  "T6": {
+    "prediction": "top-vector rotation >= 15 deg at ~h* separations (0.0035 z-units), growing ~linearly below sigma",
+    "falsifier": "median rotation < 3 deg at h*-scale => the curved-valley reading of T3 is wrong",
+    "median_top_vector_rotation_z_at_hstar_deg": 5.035218307115602,
+    "hstar_window_standardized": [
+      0.047084400893409574,
+      0.1883376035736383
+    ],
+    "n_pairs_in_window_z": 9
+  },
+  "T7": {
+    "jackpot_branch": "z/theta rotation ratio >~ 3 => transform-induced curvature is a major term (prior/bijector redesign)",
+    "innocent_branch": "ratio ~ 1 => curvature is intrinsic physics (reparameterize the physical family)",
+    "median_top_vector_rotation_theta_at_hstar_deg": 5.031530017796338,
+    "ratio_bins": [
+      {
+        "sep_center": 0.11768353711472086,
+        "median_top_z_deg": 1.8494315066087952,
+        "median_top_theta_deg": 1.8602577760277828,
+        "ratio_z_over_theta": 0.9941802316009639,
+        "n_z": 7,
+        "n_theta": 7
+      },
+      {
+        "sep_center": 0.2130690403386846,
+        "median_top_z_deg": 40.009533380502674,
+        "median_top_theta_deg": 39.91150188990754,
+        "ratio_z_over_theta": 1.0024562215389825,
+        "n_z": 2,
+        "n_theta": 2
+      },
+      {
+        "sep_center": 0.38576692257807044,
+        "median_top_z_deg": 10.927363833519987,
+        "median_top_theta_deg": 10.803298012574238,
+        "ratio_z_over_theta": 1.0114840691056883,
+        "n_z": 6,
+        "n_theta": 6
+      },
+      {
+        "sep_center": 0.698440835509485,
+        "median_top_z_deg": 69.57479939837512,
+        "median_top_theta_deg": 69.56177373413222,
+        "ratio_z_over_theta": 1.0001872531930063,
+        "n_z": 1,
+        "n_theta": 1
+      },
+      {
+        "sep_center": 1.2645449160003184,
+        "median_top_z_deg": 35.587796003905396,
+        "median_top_theta_deg": 35.57535413093135,
+        "ratio_z_over_theta": 1.0003497329338804,
+        "n_z": 4,
+        "n_theta": 4
+      },
+      {
+        "sep_center": 2.2894907675548364,
+        "median_top_z_deg": 48.50792184143008,
+        "median_top_theta_deg": 48.5957742051292,
+        "ratio_z_over_theta": 0.9981921810047045,
+        "n_z": 4,
+        "n_theta": 4
+      },
+      {
+        "sep_center": 4.145181328393015,
+        "median_top_z_deg": 20.55240461328077,
+        "median_top_theta_deg": 20.449362389532382,
+        "ratio_z_over_theta": 1.005038896655337,
+        "n_z": 9,
+        "n_theta": 9
+      },
+      {
+        "sep_center": 7.5049563373469885,
+        "median_top_z_deg": 30.19869460639893,
+        "median_top_theta_deg": 29.912348132863595,
+        "ratio_z_over_theta": 1.0095728517287728,
+        "n_z": 23,
+        "n_theta": 23
+      }
+    ],
+    "median_ratio_z_over_theta": 1.0014029772364315
+  },
+  "verdict_fields": {
+    "T6_rotation": "proposed (UNCERTIFIED): compare median_top_vector_rotation_z_at_hstar_deg to the T6 prediction/falsifier; read the rotation-vs-sep plot.",
+    "T7_bijector_contribution": "proposed (UNCERTIFIED): compare median_ratio_z_over_theta to the T7 branches.",
+    "note": "this script does NOT adjudicate; a grader inspects plots + numbers."
+  },
+  "plots": {
+    "rotation_vs_sep": "e1_rotation_vs_sep.png",
+    "loading_heatmap": "e1_loading_heatmap.png",
+    "spectra": "e1_spectra.png"
+  }
+}

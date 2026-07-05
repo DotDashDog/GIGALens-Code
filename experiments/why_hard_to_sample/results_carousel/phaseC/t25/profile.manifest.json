@@ -1,0 +1,35 @@
+{
+  "experiment": "T25a Rs conditional-width profile (carousel NEW arm)",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T07:04:26.204677+00:00",
+  "arm": "new",
+  "smoke_limit": null,
+  "rs_index": 0,
+  "rs_key": "planes/0/mass/0/Rs",
+  "theta_E_key": "planes/0/mass/0/theta_E",
+  "theta_E_star": 13.8126953867242,
+  "theta_E_CV": 0.0005385937686484382,
+  "n_onfloor": 96,
+  "n_belowfloor": 128,
+  "n_bins": 12,
+  "draws_per_bin": 8,
+  "select_seed": 20260703,
+  "visited_zrs": [
+    1.576360527395565,
+    9.727779223102798
+  ],
+  "Rs_floor_target": 22.0,
+  "z_init": {
+    "chain": 6,
+    "t": 6147,
+    "logp": -119526.5363246717,
+    "logp_expected": -119526.5363246717,
+    "logp_gap": 0.0,
+    "zrs": 3.63617747915683,
+    "Rs": 97.94589957839202,
+    "lambda": 142.95689379444315
+  },
+  "hvp_chunk": 8,
+  "conv_precision": "float64",
+  "note": "below-floor transects freeze all non-Rs coords -> SLICE curvature, treated as an UPPER ENVELOPE of the conditional (pre-reg blind spot)."
+}

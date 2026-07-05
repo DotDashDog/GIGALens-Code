@@ -1,0 +1,70 @@
+[t5] diagnostics.npz samples_z shape=(8, 5000, 20) vs arrays.npz samples_z shape=(8, 5000, 20): identical
+[t5] loaded pipeline stage dir /global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc
+[t5]   manifest num_burnin_steps=5000 num_results=5000
+[t5]   arrays.npz samples_z shape=(8, 5000, 20) -> variant=post_burnin_only
+[t5]   diagnostics.npz inverse_mass_matrix raw shape=(1, 10000, 20, 20) -> final-adapted-step resolved shape=(20, 20)
+[t5] run=/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc
+[t5] position shape=(8, 5000, 20)  post-burn-in slice: nr=5000 -> post shape=(8, 5000, 20)  flat n=40000
+[t5] inverse_mass_matrix resolved shape=(20, 20)
+==============================================================================
+[t5] WARNING: parameter names are NOT independently verified this session.
+[t5]   name_source = z_index_no_data_dir
+[t5]   --data-dir not given; falling back to raw z[i] indices.
+==============================================================================
+
+[t5] raw covariance eigenspectrum: lambda_min=7.1511e-08  lambda_max=1.3923e+00  condition_number=1.9470e+07  (log10=7.29)
+
+[t5] STIFFEST direction (lambda=7.1511e-08); top-8 participating params (by |component|):
+    idx=  1 z[1]                             component=+0.7440 component^2=0.5535
+    idx= 13 z[13]                            component=-0.5994 component^2=0.3593
+    idx= 11 z[11]                            component=-0.2551 component^2=0.0651
+    idx=  6 z[6]                             component=+0.1008 component^2=0.0102
+    idx=  9 z[9]                             component=+0.0687 component^2=0.0047
+    idx=  2 z[2]                             component=-0.0602 component^2=0.0036
+    idx= 10 z[10]                            component=+0.0399 component^2=0.0016
+    idx=  7 z[7]                             component=+0.0392 component^2=0.0015
+    top component^2 fraction = 0.5535 (uniform-spread reference = 0.0500; closer to 1 => axis-aligned, closer to uniform => rotated combination)
+
+[t5] SOFTEST direction (lambda=1.3923e+00); top-8 participating params (by |component|):
+    idx= 17 z[17]                            component=+1.0000 component^2=1.0000
+    idx= 18 z[18]                            component=-0.0021 component^2=0.0000
+    idx=  8 z[8]                             component=-0.0020 component^2=0.0000
+    idx= 12 z[12]                            component=-0.0013 component^2=0.0000
+    idx= 19 z[19]                            component=-0.0010 component^2=0.0000
+    idx= 14 z[14]                            component=-0.0010 component^2=0.0000
+    idx= 10 z[10]                            component=-0.0008 component^2=0.0000
+    idx=  3 z[3]                             component=-0.0006 component^2=0.0000
+    top component^2 fraction = 1.0000 (uniform-spread reference = 0.0500)
+
+[t5] inverse_mass_matrix diagonality: max|offdiag|/max|diag|=2.4386e-03  ||offdiag||_F/||diag||_F=6.6201e-03
+[t5] whitened (cov vs inverse_mass_matrix) generalized eigenspectrum: lambda_min=1.1560e-01  lambda_max=1.6489e+00  whitened_condition_number=1.4264e+01 (log10=1.15)
+[t5] RAW vs WHITENED condition number: 1.9470e+07  ->  1.4264e+01  (improvement factor = 1.37e+06x)
+
+[t5] saved eigenspectrum plot -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/vela01/t5_eigenspectrum_mclmc.png
+
+[t5] full raw eigenvalue table (ascending; idx 0 = stiffest):
+    rank=  0  lambda_raw=7.1511e-08  lambda_whitened=1.1560e-01
+    rank=  1  lambda_raw=7.9053e-08  lambda_whitened=1.2682e-01
+    rank=  2  lambda_raw=1.1657e-07  lambda_whitened=1.7698e-01
+    rank=  3  lambda_raw=5.1748e-07  lambda_whitened=4.8532e-01
+    rank=  4  lambda_raw=6.2988e-07  lambda_whitened=5.2940e-01
+    rank=  5  lambda_raw=2.5519e-06  lambda_whitened=7.8926e-01
+    rank=  6  lambda_raw=4.4431e-06  lambda_whitened=8.3179e-01
+    rank=  7  lambda_raw=4.9007e-06  lambda_whitened=8.8219e-01
+    rank=  8  lambda_raw=7.1084e-06  lambda_whitened=8.9551e-01
+    rank=  9  lambda_raw=1.1447e-05  lambda_whitened=9.2821e-01
+    rank= 10  lambda_raw=5.5120e-05  lambda_whitened=9.5326e-01
+    rank= 11  lambda_raw=6.9278e-05  lambda_whitened=9.7135e-01
+    rank= 12  lambda_raw=7.9801e-05  lambda_whitened=9.8968e-01
+    rank= 13  lambda_raw=1.0504e-04  lambda_whitened=1.0053e+00
+    rank= 14  lambda_raw=1.3272e-04  lambda_whitened=1.0339e+00
+    rank= 15  lambda_raw=1.5143e-04  lambda_whitened=1.0625e+00
+    rank= 16  lambda_raw=2.0428e-04  lambda_whitened=1.0905e+00
+    rank= 17  lambda_raw=1.0090e-03  lambda_whitened=1.1249e+00
+    rank= 18  lambda_raw=1.8582e-03  lambda_whitened=1.1743e+00
+    rank= 19  lambda_raw=1.3923e+00  lambda_whitened=1.6489e+00
+
+[t5] saved full report -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/vela01/t5_eigenspectrum_mclmc.json
+[t5] prediction: H2 predicts: condition number >~ 1e4 with stiff directions strongly rotated (spread across many parameters), and the preconditioner form unable to capture them (whitened condition number still large).
+[t5] falsifier: Falsifier: modest condition number (<~ 1e2) or axis-aligned stiffness that the existing preconditioner already represents (whitened condition number close to 1 / much smaller than the raw condition number).
+[t5] verdict: proposed (UNCERTIFIED) -- inspect the numbers/plot above; this script does not certify a result.

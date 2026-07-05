@@ -1,0 +1,21 @@
+{
+  "ctx_hash": "5aa111f2659727f0",
+  "seed": 0,
+  "stages": [
+    {
+      "class": "MAPStage",
+      "input_hash": "5f572f67fbb873d1",
+      "stage": "map",
+      "status": "loaded",
+      "wall_time_s": 42.6469564479994
+    },
+    {
+      "class": "SVIStage",
+      "input_hash": "926250e1ccc5ed4d",
+      "stage": "svi",
+      "status": "loaded",
+      "wall_time_s": 174.3907526010007
+    }
+  ],
+  "timestamp": "2026-07-03T00:45:06.332440+00:00"
+}

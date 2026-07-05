@@ -1,0 +1,30 @@
+=== T14b chain-locus curvature census (float64) ===
+[T14b] std_z from /global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc.stale-20260703T111618/arrays.npz pooled samples_z (8, 20000, 22); std_z[:3]=[0.01491271 0.00926588 0.00037679]
+[T14b] OLD run (8, 4000, 22) (nb=2000 nr=2000); NEW run (8, 4000, 22) (nb=2000 nr=2000)
+[T14b] segments (chain,start): [(6, 1200), (4, 519)]
+[T14b] === building OLD target (systems/sys60, ss2 data) ===
+[T14b] === building NEW target (systems/sys60_ss16data, d') ===
+[T14b/OLD] chi2 gate pt0: recomputed=6.2309530733e+03 aux*event_size=6.2309530733e+03 rel=0.000e+00
+[T14b/OLD] chi2 gate pt1: recomputed=6.2334951411e+03 aux*event_size=6.2334951411e+03 rel=1.459e-16
+[T14b/OLD] chi2 gate pt2: recomputed=6.2084476152e+03 aux*event_size=6.2084476152e+03 rel=2.930e-16
+[T14b/OLD] chi^2 gate PASSED (worst rel=2.930e-16)
+[T14b/OLD] seg0 ch6 start1200 done ( 17.6s)
+[T14b/OLD] seg1 ch4 start519 done ( 20.0s)
+[T14b/NEW] chi2 gate pt0: recomputed=6.2768483091e+03 aux*event_size=6.2768483091e+03 rel=0.000e+00
+[T14b/NEW] chi2 gate pt1: recomputed=6.2737335393e+03 aux*event_size=6.2737335393e+03 rel=1.450e-16
+[T14b/NEW] chi2 gate pt2: recomputed=6.2842214121e+03 aux*event_size=6.2842214121e+03 rel=1.447e-16
+[T14b/NEW] chi^2 gate PASSED (worst rel=1.450e-16)
+[T14b/NEW] seg0 ch6 start1200 done ( 16.5s)
+[T14b/NEW] seg1 ch4 start519 done ( 18.8s)
+[T14b] OLD min bulk-ESS = 12.8 (param planes/1/light/0/center_y); NEW min bulk-ESS = 1031.0 (param planes/0/mass/0/gamma)
+
+=== T14b summary (PROPOSED, UNCERTIFIED) ===
+  (1) lambda1 max/med  OLD=25.39 NEW=2.75; spike-rate OLD=0.062 NEW=0.000
+  (2) KEY g_H excursion  OLD=3.06e+06 NEW=7141  suppression(OLD/NEW)=428.44 (predict >= 10; meets=True)
+      falsifier fired=False (NEW>=1/3 OLD teeth=False, xi_calm=False)
+  (3) rho(lambda1,xi)  OLD=-0.085 (predict >= 0.4) NEW=0.231 (predict < 0.2)
+  (4) x_c range  OLD=0.0537px NEW=0.1369px (NEW/OLD=2.55; tooth spacing 0.52px)
+  (5) min bulk-ESS  OLD=13 NEW=1031
+  saved: ./results_t0t1/sys60/t14b/t14b_results.json
+         ./results_t0t1/sys60/t14b/t14b_census.png
+[wall] T14b = 82 s

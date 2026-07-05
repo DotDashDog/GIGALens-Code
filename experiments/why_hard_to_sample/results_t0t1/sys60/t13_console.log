@@ -1,0 +1,223 @@
+=== T13 Step 0-3: re-simulate + GATES A/B (aborts on failure) ===
+[T13] loading systems/sys60 model (ss2) ...
+[T13] observed + err_map from the ORIGINAL Dataset (sha1 npz 2bead5f685ff...); event_size=6400
+[T13] truth (sys60, index 60) source center = (-0.2273, 0.1354) -- the counter-image lever
+[T13] rendered m2 (ss2); truth<->z round-trip err 1.14e-13
+
+=== GATE A (reproduction) -- measured vs pre-registered ===
+  reduced chi^2 (full)   = 0.9729  in [0.956, 1.044]?  True
+  max|smoothed r/err|    = 0.3460  < 1.5?  True  (at [13, 78])
+  reduced chi^2 (window) = 0.9959  in [0.53, 1.47]?  True
+[T13] GATE A PASSED -- proceeding to Step 2.
+[T13] loading model at ss8 ...
+[T13] loading model at ss16 ...
+  ladder: max|m16-m8|/err = 0.6949  (at row,col [40, 39])
+[T13] loading model at ss32 ...
+  ladder: max|m32-m16|/err = 0.1484  (at row,col [36, 60])
+[T13] loading model at ss64 ...
+  ladder: max|m64-m32|/err = 0.0682  (at row,col [40, 39])
+[T13] loading model at ss128 ...
+  ladder: max|m128-m64|/err = 0.0294  (at row,col [40, 39])
+
+=== GATE B (data convergence ladder) -- measured vs pre-registered ===
+  top pair: max|m128-m64|/err = 0.0294  < 0.05?  True
+  REPORT  max|m2-m_hi|/err = 13.8792  (at row,col [57, 12]; expected near the counter-image (57,12))
+[T13] GATE B PASSED at ss128 -- proceeding to Step 3 (d' uses ss128).
+[T13] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/observed_ss16.npz (d' = m128 + recovered noise; SAME realization)
+[T13] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/t13_resim_manifest.json, /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/t13_gate_a_residual.png, /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/t13_gate_b_convergence.png
+[T13] Steps 0-3 done. GATE A + GATE B PASSED; d' saved. Run t13_arms.py next (pipeline/mclmc/summary/comb).
+=== T13 Step 4: arm ss2 pipeline (MAP->SVI on d-prime) ===
+[T13-arms/pipeline] arm=ss2 (model ss=2); dim=22
+[T13-arms/pipeline] running MAP->SVI, out_dir=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2
+========================================================================
+EFFECTIVE FORWARD MODEL (model card)
+========================================================================
+  PSF        : present  shape=[13, 13] sum=1.0000 sha1=7e6f6afb14ef
+  Noise      : fixed error_map (scene)  (ProbModel)
+  Grid       : num_pix=80 delta_pix=0.065 supersample=2
+  Precision  : None
+  Amplitudes : lstsq=False n_basis=2 physical_reg=None
+  Source     : SersicEllipse
+  Lens mass  : EPL, Shear
+  Lens light : SersicEllipse
+  Trace      : deflection_ratio  (amplitude mode forward)
+  Sees       : [SersicEllipse, SersicEllipse]
+========================================================================
+[pipeline] map: loaded (42.6s)
+[pipeline] svi: loaded (174.4s)
+[T13-arms/pipeline] SVI qz at /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/svi/arrays.npz
+[T13-arms/pipeline] model-side misfit max|m2(truth)-m16|/err = 13.8792 (at row,col [57, 12]; truth round-trip 1.14e-13)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[T13-arms/pipeline] NOTE: model-side misfit 13.879 sigma >= 0.3 at row,col [57, 12]. The ss=2 MODEL cannot reproduce the ss16 truth to within the noise -- an ss=8 model arm is RECOMMENDED (per the checkpoint) so the 2x2 is not confounded by model-vs-data fidelity mismatch.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[T13-arms/pipeline] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t13_pipeline_misfit.json
+=== T13 Step 5: arm ss2 mclmc seed 1 ===
+[T13-arms/mclmc] arm=ss2 ss=2 seed=1; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 70.3071365619835 s
+[run_standard_mclmc] seed=1 sampling wall 82.1s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed1.manifest.json
+
+=== diagnostics: T13' arm ss2 seed 1 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.03e+03  (param planes/0/mass/0/gamma)
+  max rank-Rhat = 1.0112  (param planes/0/mass/0/e1)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed1_diag.json
+=== T13 Step 5: arm ss2 mclmc seed 2 ===
+[T13-arms/mclmc] arm=ss2 ss=2 seed=2; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 69.45883716299431 s
+[run_standard_mclmc] seed=2 sampling wall 81.2s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed2.manifest.json
+
+=== diagnostics: T13' arm ss2 seed 2 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.07e+03  (param planes/0/mass/0/gamma)
+  max rank-Rhat = 1.0094  (param planes/0/mass/0/theta_E)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed2_diag.json
+=== T13 Step 5: arm ss2 mclmc seed 3 ===
+[T13-arms/mclmc] arm=ss2 ss=2 seed=3; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 68.97927801197511 s
+[run_standard_mclmc] seed=3 sampling wall 80.7s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed3.manifest.json
+
+=== diagnostics: T13' arm ss2 seed 3 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.25e+03  (param planes/0/mass/0/e1)
+  max rank-Rhat = 1.0088  (param planes/0/light/0/R_sersic)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed3_diag.json
+=== T13 Step 5: arm ss2 mclmc seed 4 ===
+[T13-arms/mclmc] arm=ss2 ss=2 seed=4; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 69.56839619699167 s
+[run_standard_mclmc] seed=4 sampling wall 81.4s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed4.manifest.json
+
+=== diagnostics: T13' arm ss2 seed 4 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.11e+03  (param planes/0/mass/0/gamma)
+  max rank-Rhat = 1.0077  (param planes/0/light/0/Ie)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t0/t0_seed4_diag.json
+=== T13 Step 4: arm ss4 pipeline (MAP->SVI on d-prime) ===
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/t13_arms.py:116: UserWarning: [pipeline] map: input hash changed; moved old run to /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/map.stale-20260702T175217
+  pipeline.run(out_dir=arm_dir, resume=True)
+[T13-arms/pipeline] arm=ss4 (model ss=4); dim=22
+[T13-arms/pipeline] running MAP->SVI, out_dir=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4
+========================================================================
+EFFECTIVE FORWARD MODEL (model card)
+========================================================================
+  PSF        : present  shape=[13, 13] sum=1.0000 sha1=7e6f6afb14ef
+  Noise      : fixed error_map (scene)  (ProbModel)
+  Grid       : num_pix=80 delta_pix=0.065 supersample=4
+  Precision  : None
+  Amplitudes : lstsq=False n_basis=2 physical_reg=None
+  Source     : SersicEllipse
+  Lens mass  : EPL, Shear
+  Lens light : SersicEllipse
+  Trace      : deflection_ratio  (amplitude mode forward)
+  Sees       : [SersicEllipse, SersicEllipse]
+========================================================================
+Final Chi-squared: 0.98684
+[pipeline] map: ran (40.2s)
+[pipeline] svi: ran (187.5s)
+[T13-arms/pipeline] SVI qz at /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/svi/arrays.npz
+[T13-arms/pipeline] model-side misfit max|m4(truth)-m16|/err = 1.9293 (at row,col [40, 39]; truth round-trip 1.14e-13)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[T13-arms/pipeline] NOTE: model-side misfit 1.929 sigma >= 0.3 at row,col [40, 39]. The ss=4 MODEL cannot reproduce the ss16 truth to within the noise -- an ss=8 model arm is RECOMMENDED (per the checkpoint) so the 2x2 is not confounded by model-vs-data fidelity mismatch.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[T13-arms/pipeline] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t13_pipeline_misfit.json
+=== T13 Step 5: arm ss4 mclmc seed 1 ===
+[T13-arms/mclmc] arm=ss4 ss=4 seed=1; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 141.64354740199633 s
+[run_standard_mclmc] seed=1 sampling wall 154.3s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed1.manifest.json
+
+=== diagnostics: T13' arm ss4 seed 1 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 889  (param planes/0/mass/0/gamma)
+  max rank-Rhat = 1.0106  (param planes/1/light/0/e2)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed1_diag.json
+=== T13 Step 5: arm ss4 mclmc seed 2 ===
+[T13-arms/mclmc] arm=ss4 ss=4 seed=2; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 141.5480130770011 s
+[run_standard_mclmc] seed=2 sampling wall 154.2s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed2.manifest.json
+
+=== diagnostics: T13' arm ss4 seed 2 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.12e+03  (param planes/1/light/0/center_y)
+  max rank-Rhat = 1.0096  (param planes/1/light/0/n_sersic)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed2_diag.json
+=== T13 Step 5: arm ss4 mclmc seed 3 ===
+[T13-arms/mclmc] arm=ss4 ss=4 seed=3; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 141.49775973299984 s
+[run_standard_mclmc] seed=3 sampling wall 154.0s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed3.manifest.json
+
+=== diagnostics: T13' arm ss4 seed 3 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.16e+03  (param planes/0/mass/0/e1)
+  max rank-Rhat = 1.0123  (param planes/0/mass/0/e1)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed3_diag.json
+=== T13 Step 5: arm ss4 mclmc seed 4 ===
+[T13-arms/mclmc] arm=ss4 ss=4 seed=4; qz=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/svi/arrays.npz
+[T13-arms/mclmc] config = {'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 141.19965550402412 s
+[run_standard_mclmc] seed=4 sampling wall 153.9s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed4.manifest.json
+
+=== diagnostics: T13' arm ss4 seed 4 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 934  (param planes/0/mass/0/center_x)
+  max rank-Rhat = 1.0073  (param planes/0/mass/0/center_y)
+[T13-arms/mclmc] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed4_diag.json
+=== T13 Step 5: summaries ===
+
+===== T13' arm ss2 (model ss=2) -- FULL SET (report this) =====
+  seed   1: min-ESS=1031 (planes/0/mass/0/gamma)  max-Rhat=1.0112 (planes/0/mass/0/e1)
+  seed   2: min-ESS=1070 (planes/0/mass/0/gamma)  max-Rhat=1.0094 (planes/0/mass/0/theta_E)
+  seed   3: min-ESS=1253 (planes/0/mass/0/e1)  max-Rhat=1.0088 (planes/0/light/0/R_sersic)
+  seed   4: min-ESS=1109 (planes/0/mass/0/gamma)  max-Rhat=1.0077 (planes/0/light/0/Ie)
+  band: min-ESS 1031 .. 1253 (ratio 1.22); max-Rhat 1.0077 .. 1.0112
+  PREDICTION: {d', model ss2}: min-ESS within ~the old T0 band (11.2, 15.3) (the comb is model-side and survives the data fix)
+  FALSIFIER : {d', ss2} fast (min-ESS >> old band) => the comb was data-side after all; C-4 mechanism misassigned
+  MEASURED  : measured band [1031.0, 1253.1] vs old T0 band (11.2, 15.3) -> OUTSIDE old band
+[T13-arms/summary] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_2/t13_summary_ss2.json (proposed, UNCERTIFIED)
+
+===== T13' arm ss4 (model ss=4) -- FULL SET (report this) =====
+  seed   1: min-ESS=889.3 (planes/0/mass/0/gamma)  max-Rhat=1.0106 (planes/1/light/0/e2)
+  seed   2: min-ESS=1118 (planes/1/light/0/center_y)  max-Rhat=1.0096 (planes/1/light/0/n_sersic)
+  seed   3: min-ESS=1164 (planes/0/mass/0/e1)  max-Rhat=1.0123 (planes/0/mass/0/e1)
+  seed   4: min-ESS=933.8 (planes/0/mass/0/center_x)  max-Rhat=1.0073 (planes/0/mass/0/center_y)
+  band: min-ESS 889.3 .. 1164 (ratio 1.31); max-Rhat 1.0073 .. 1.0123
+  PREDICTION: {d', model ss4}: min-ESS >= 10x the old band (>= 130, plausibly approaching the clone's ~1700)
+  FALSIFIER : {d', ss4} unchanged (min-ESS still ~old band) => the comb was NOT the ESS bottleneck; C-4's sampling relevance dies
+  MEASURED  : measured min-ESS band [889.3, 1163.9] vs predicted >= 130 -> MET (>=10x)
+[T13-arms/summary] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t13_summary_ss4.json (proposed, UNCERTIFIED)
+=== T13 Step 6: comb identity check (ss2 model on d-prime) ===
+[T13-arms/comb] top spike: seg6 ch6 step16302 old-lambda1=5.988e+07
+[T13comb/ss2] chi2 gate pt0: recomputed=7.2002668097e+03 aux*event_size=7.2002668097e+03 rel=0.000e+00
+[T13comb/ss2] chi^2 gate PASSED (worst rel=0.000e+00)
+[T12] top spike (d' ss2): calibration R=
+[[22.51795536  6.42579038]
+ [ 6.61482831 23.85340298]]
+  d_dir(px->theta)=[ 0.04822529 -0.01337344]  x_c0=12.1994 y_c0=57.1316  round-trip err=0.00e+00
+[T12] top spike (d' ss2) scan chunk   0- 32/97 (  3.9s)
+[T12] top spike (d' ss2) scan chunk  32- 64/97 (  4.0s)
+[T12] top spike (d' ss2) scan chunk  64- 96/97 (  4.1s)
+[T12] top spike (d' ss2) scan chunk  96- 97/97 (  7.1s)
+[T12] top spike (d' ss2): measured x_c range [10.206,14.390] px (disp [-1.993,2.191]); lambda1 range [1.479e+03,7.977e+07]; peak-to-trough=37045.63 fourier_peak_ratio=0.57
+
+=== T13' Step 6 comb (PROPOSED/UNCERTIFIED) ===
+  recovered peak freq = 1.908/px   (T12 ss2 data: 1.9)
+  peak-to-trough      = 37045.6          (T12 ss2 data: 30645)
+[T13-arms/comb] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/t13_comb.json
+=== T13 sequence complete ===

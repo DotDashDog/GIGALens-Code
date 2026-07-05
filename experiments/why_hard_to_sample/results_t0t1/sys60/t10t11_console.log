@@ -1,0 +1,124 @@
+=== T10 on-ridge spike census (float64) ===
+[T10] positions (8, 20000, 22) (results-only); xi (8, 40000) (burnin=20000+results=20000); using last 20000 xi columns
+[T10] xi results: min=1.000e-08 max=2.017e+08 median=2.472e-04; floor excluded=1, non-finite excluded=0, valid frac=1.0000
+[T10] 8 segments x 256 steps (~2048 jacobians); chunk=48; starts=[(0, 9343), (1, 10105), (2, 14910), (3, 18766), (4, 688), (5, 2846), (6, 16249), (7, 18731)]
+[T10] chi2 gate pt0: recomputed=6.2002576082e+03 aux*event_size=6.2002576082e+03 rel=0.000e+00
+[T10] chi2 gate pt1: recomputed=6.1950666896e+03 aux*event_size=6.1950666896e+03 rel=0.000e+00
+[T10] chi2 gate pt2: recomputed=6.2113034715e+03 aux*event_size=6.2113034715e+03 rel=1.464e-16
+[T10] chi^2 gate PASSED (worst rel=1.464e-16)
+[T10] seg0(ch0) chunk    0-  48/256: 48/256 jacobians,    3.0s elapsed,  16.1/s, ETA  12.9s
+[T10] seg0(ch0) chunk   48-  96/256: 96/256 jacobians,    3.1s elapsed,  30.5/s, ETA   5.2s
+[T10] seg0(ch0) chunk   96- 144/256: 144/256 jacobians,    3.3s elapsed,  43.4/s, ETA   2.6s
+[T10] seg0(ch0) chunk  144- 192/256: 192/256 jacobians,    3.5s elapsed,  55.1/s, ETA   1.2s
+[T10] seg0(ch0) chunk  192- 240/256: 240/256 jacobians,    3.7s elapsed,  65.7/s, ETA   0.2s
+[T10] seg0(ch0) chunk  240- 256/256: 256/256 jacobians,    6.2s elapsed,  41.3/s, ETA   0.0s
+[T10] seg0 ch0 start9343: median=1.703e+05 max=1.681e+06 max/med=9.87 rate=0.094 n_spikes=10 widths=[3, 3, 2, 2, 2, 2, 1, 3] rho=0.448
+[T10] seg1(ch1) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 291.6/s, ETA   0.7s
+[T10] seg1(ch1) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 290.6/s, ETA   0.6s
+[T10] seg1(ch1) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 289.3/s, ETA   0.4s
+[T10] seg1(ch1) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 289.2/s, ETA   0.2s
+[T10] seg1(ch1) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 287.5/s, ETA   0.1s
+[T10] seg1(ch1) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 288.7/s, ETA   0.0s
+[T10] seg1 ch1 start10105: median=2.861e+05 max=4.174e+06 max/med=14.59 rate=0.238 n_spikes=12 widths=[1, 6, 5, 1, 3, 4, 4, 8] rho=0.350
+[T10] seg2(ch2) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 284.0/s, ETA   0.7s
+[T10] seg2(ch2) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 283.4/s, ETA   0.6s
+[T10] seg2(ch2) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 283.5/s, ETA   0.4s
+[T10] seg2(ch2) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 283.6/s, ETA   0.2s
+[T10] seg2(ch2) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 283.4/s, ETA   0.1s
+[T10] seg2(ch2) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 285.1/s, ETA   0.0s
+[T10] seg2 ch2 start14910: median=2.807e+05 max=1.864e+06 max/med=6.64 rate=0.031 n_spikes=4 widths=[2, 3, 2, 1] rho=0.270
+[T10] seg3(ch3) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 281.5/s, ETA   0.7s
+[T10] seg3(ch3) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 284.1/s, ETA   0.6s
+[T10] seg3(ch3) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 284.7/s, ETA   0.4s
+[T10] seg3(ch3) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 285.5/s, ETA   0.2s
+[T10] seg3(ch3) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 285.7/s, ETA   0.1s
+[T10] seg3(ch3) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 287.5/s, ETA   0.0s
+[T10] seg3 ch3 start18766: median=2.387e+05 max=1.205e+06 max/med=5.05 rate=0.066 n_spikes=12 widths=[1, 1, 2, 2, 2, 1, 1, 2] rho=-0.120
+[T10] seg4(ch4) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 287.0/s, ETA   0.7s
+[T10] seg4(ch4) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 287.1/s, ETA   0.6s
+[T10] seg4(ch4) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 286.9/s, ETA   0.4s
+[T10] seg4(ch4) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 287.3/s, ETA   0.2s
+[T10] seg4(ch4) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 287.3/s, ETA   0.1s
+[T10] seg4(ch4) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 289.1/s, ETA   0.0s
+[T10] seg4 ch4 start688: median=2.619e+05 max=1.943e+06 max/med=7.42 rate=0.090 n_spikes=9 widths=[1, 1, 1, 11, 2, 3, 2, 1] rho=0.181
+[T10] seg5(ch5) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 285.9/s, ETA   0.7s
+[T10] seg5(ch5) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 287.7/s, ETA   0.6s
+[T10] seg5(ch5) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 287.9/s, ETA   0.4s
+[T10] seg5(ch5) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 287.7/s, ETA   0.2s
+[T10] seg5(ch5) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 287.8/s, ETA   0.1s
+[T10] seg5(ch5) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 289.6/s, ETA   0.0s
+[T10] seg5 ch5 start2846: median=3.237e+05 max=1.072e+06 max/med=3.31 rate=0.004 n_spikes=1 widths=[1] rho=0.117
+[T10] seg6(ch6) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 288.4/s, ETA   0.7s
+[T10] seg6(ch6) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 287.5/s, ETA   0.6s
+[T10] seg6(ch6) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 287.1/s, ETA   0.4s
+[T10] seg6(ch6) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 287.1/s, ETA   0.2s
+[T10] seg6(ch6) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 287.1/s, ETA   0.1s
+[T10] seg6(ch6) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 289.1/s, ETA   0.0s
+[T10] seg6 ch6 start16249: median=1.065e+05 max=5.988e+07 max/med=562.31 rate=0.242 n_spikes=9 widths=[4, 18, 26, 1, 2, 2, 2, 4] rho=0.563
+[T10] seg7(ch7) chunk    0-  48/256: 48/256 jacobians,    0.2s elapsed, 288.3/s, ETA   0.7s
+[T10] seg7(ch7) chunk   48-  96/256: 96/256 jacobians,    0.3s elapsed, 287.9/s, ETA   0.6s
+[T10] seg7(ch7) chunk   96- 144/256: 144/256 jacobians,    0.5s elapsed, 288.0/s, ETA   0.4s
+[T10] seg7(ch7) chunk  144- 192/256: 192/256 jacobians,    0.7s elapsed, 287.8/s, ETA   0.2s
+[T10] seg7(ch7) chunk  192- 240/256: 240/256 jacobians,    0.8s elapsed, 287.8/s, ETA   0.1s
+[T10] seg7(ch7) chunk  240- 256/256: 256/256 jacobians,    0.9s elapsed, 289.5/s, ETA   0.0s
+[T10] seg7 ch7 start18731: median=1.852e+05 max=3.591e+06 max/med=19.39 rate=0.145 n_spikes=10 widths=[18, 1, 2, 2, 2, 2, 3, 3] rho=0.471
+[T10] all-segment metric wall 12.4s (2048 jacobians, 165.0/s)
+[T10] POOLED: median=2.279e+05 max=5.988e+07 max/median=262.78 spike-rate(total)=0.114 median-width=2.0 rho=0.411
+[T10] per-segment max/median = [9.87, 14.59, 6.64, 5.05, 7.42, 3.31, 562.31, 19.39]
+[T10] wrote ./results_t0t1/sys60/t10/spike_list.json (12 spikes + 12 baselines)
+[T10] wrote ./results_t0t1/sys60/t10/t10_arrays.npz (per-step v1 + displacement for encounter model)
+[T10] wrote ./results_t0t1/sys60/t10/t10_results.json
+
+=== T10 summary (PROPOSED / UNCERTIFIED) ===
+  chi^2 render gate: PASSED, worst rel 1.464e-16
+  segments: 8 x 256 steps (2048 jacobians in 12.4s)
+  [rate]     pooled spike-rate(total) = 0.114 (predict >= 5%)
+  [max/med]  pooled = 262.78 (predict >= 10; falsifier: ALL seg < 2 => not fired)
+  [width]    pooled median = 2.0 steps (predict 1-3)
+  [rho]      pooled = 0.411; max within-segment = 0.563 (predict within-segment >= 0.4)
+[T10] done.
+[wall] T10 = 57 s
+=== T11 render-space spike localization (float64) ===
+[T11] spike_list: 12 spikes + 12 baselines (spike_factor=3.0)
+[T11] image 80x80=6400 px; top 1% = 64 px; names[0..3]=['planes/0/light/0/Ie', 'planes/0/light/0/R_sersic', 'planes/0/light/0/center_x', 'planes/0/light/0/center_y']
+[T11] E1 family reference loaded from /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/e1/e1_results.json (top-8-support mean |loading|; family cosine reported)
+[T11] chi2 gate pt0: recomputed=6.2503491898e+03 aux*event_size=6.2503491898e+03 rel=0.000e+00
+[T11] chi2 gate pt1: recomputed=6.2034527598e+03 aux*event_size=6.2034527598e+03 rel=0.000e+00
+[T11] chi2 gate pt2: recomputed=6.2048711481e+03 aux*event_size=6.2048711481e+03 rel=0.000e+00
+[T11] chi^2 gate PASSED (worst rel=0.000e+00)
+[T11] spike[0] seg6 ch6 s16302: lambda1=5.988e+07 L=1.000 PR=0.0005 selfcheck_rel=0.00e+00
+[T11] spike[1] seg1 ch1 s10311: lambda1=4.174e+06 L=0.999 PR=0.0005 selfcheck_rel=1.12e-16
+[T11] spike[2] seg7 ch7 s18867: lambda1=3.591e+06 L=0.999 PR=0.0005 selfcheck_rel=2.59e-16
+[T11] spike[3] seg1 ch1 s10296: lambda1=3.153e+06 L=0.999 PR=0.0005 selfcheck_rel=5.91e-16
+[T11] spike[4] seg6 ch6 s16310: lambda1=2.695e+06 L=1.000 PR=0.0005 selfcheck_rel=5.18e-16
+[T11] spike[5] seg7 ch7 s18849: lambda1=2.695e+06 L=0.999 PR=0.0005 selfcheck_rel=1.73e-16
+[T11] spike[6] seg1 ch1 s10289: lambda1=2.608e+06 L=0.999 PR=0.0005 selfcheck_rel=1.79e-16
+[T11] spike[7] seg1 ch1 s10297: lambda1=2.593e+06 L=0.999 PR=0.0005 selfcheck_rel=5.39e-16
+[T11] spike[8] seg1 ch1 s10274: lambda1=2.587e+06 L=0.999 PR=0.0005 selfcheck_rel=0.00e+00
+[T11] spike[9] seg1 ch1 s10290: lambda1=2.464e+06 L=0.999 PR=0.0005 selfcheck_rel=1.89e-16
+[T11] spike[10] seg1 ch1 s10263: lambda1=2.328e+06 L=0.999 PR=0.0005 selfcheck_rel=0.00e+00
+[T11] spike[11] seg1 ch1 s10288: lambda1=2.274e+06 L=0.999 PR=0.0005 selfcheck_rel=4.10e-16
+[T11] baseline[0] seg6 ch6 s16471: lambda1=1.076e+05 L=0.998 PR=0.0005 selfcheck_rel=5.41e-16
+[T11] baseline[1] seg1 ch1 s10145: lambda1=2.849e+05 L=0.999 PR=0.0005 selfcheck_rel=2.04e-16
+[T11] baseline[2] seg7 ch7 s18778: lambda1=1.852e+05 L=0.999 PR=0.0005 selfcheck_rel=1.57e-16
+[T11] baseline[3] seg1 ch1 s10139: lambda1=2.785e+05 L=0.999 PR=0.0005 selfcheck_rel=6.27e-16
+[T11] baseline[4] seg6 ch6 s16412: lambda1=1.054e+05 L=0.999 PR=0.0005 selfcheck_rel=8.28e-16
+[T11] baseline[5] seg7 ch7 s18805: lambda1=1.866e+05 L=0.999 PR=0.0005 selfcheck_rel=1.56e-16
+[T11] baseline[6] seg1 ch1 s10153: lambda1=2.763e+05 L=0.999 PR=0.0005 selfcheck_rel=6.32e-16
+[T11] baseline[7] seg1 ch1 s10176: lambda1=2.737e+05 L=0.999 PR=0.0005 selfcheck_rel=4.25e-16
+[T11] baseline[8] seg1 ch1 s10207: lambda1=2.723e+05 L=0.999 PR=0.0005 selfcheck_rel=2.14e-16
+[T11] baseline[9] seg1 ch1 s10154: lambda1=2.669e+05 L=0.999 PR=0.0005 selfcheck_rel=4.36e-16
+[T11] baseline[10] seg1 ch1 s10239: lambda1=2.668e+05 L=0.999 PR=0.0005 selfcheck_rel=0.00e+00
+[T11] baseline[11] seg1 ch1 s10142: lambda1=3.103e+05 L=0.999 PR=0.0005 selfcheck_rel=1.88e-16
+[T11] median L: spike=0.999 baseline=0.999 ratio(medians)=1.00 median(pair-ratio)=1.00
+[T11] median PR: spike=0.0005 baseline=0.0005; worst selfcheck rel=8.28e-16
+[T11] wrote ./results_t0t1/sys60/t11/t11_results.json, ./results_t0t1/sys60/t11/t11_c2_spikes.png, ./results_t0t1/sys60/t11/t11_c2_baselines.png, ./results_t0t1/sys60/t11/t11_L_PR_paired.png
+
+=== T11 summary (PROPOSED / UNCERTIFIED) ===
+  chi^2 render gate: PASSED, worst rel 0.000e+00
+  self-check (sum c^2 == lambda1): worst rel 8.28e-16 (<= 1e-08)
+  n pairs = 12
+  [L]     median spike = 0.999 (predict >= 50%); baseline = 0.999
+  [ratio] L_spike/L_baseline (medians) = 1.00; median pair-ratio = 1.00 (predict >= 3; falsifier <~ 1.5)
+[T11] done.
+[wall] T11 = 36 s ; total = 93 s

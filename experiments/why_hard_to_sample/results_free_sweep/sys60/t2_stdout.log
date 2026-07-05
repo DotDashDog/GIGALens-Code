@@ -1,0 +1,58 @@
+[t2] diagnostics.npz samples_z shape=(8, 20000, 22) vs arrays.npz samples_z shape=(8, 20000, 22): identical
+[t2] loaded pipeline stage dir /global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc
+[t2]   manifest num_burnin_steps=20000 num_results=20000
+[t2]   arrays.npz samples_z shape=(8, 20000, 22) -> variant=post_burnin_only
+[t2] run=/global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc
+[t2] position shape=(8, 20000, 22)  post-burn-in slice: nr=20000 -> post shape=(8, 20000, 22)  flat n=160000
+==============================================================================
+[t2] WARNING: parameter names are NOT independently verified this session.
+[t2]   name_source = z_index_no_data_dir
+[t2]   --data-dir not given; falling back to raw z[i] indices.
+==============================================================================
+[t2] min bulk-ESS = 1.24e+03  (param 'z[7]', idx 7)
+[t2] max rank-Rhat = 1.0088  (param 'z[7]', idx 7)
+[t2] worst-8-ESS z-directions (feed T3 transects):
+    idx=  7  z[7]                              ESS= 1238.90  Rhat=1.0088
+    idx=  9  z[9]                              ESS= 1432.31  Rhat=1.0046
+    idx= 13  z[13]                             ESS= 1434.77  Rhat=1.0042
+    idx= 18  z[18]                             ESS= 1477.44  Rhat=1.0040
+    idx= 14  z[14]                             ESS= 1520.51  Rhat=1.0031
+    idx= 11  z[11]                             ESS= 1523.03  Rhat=1.0049
+    idx=  8  z[8]                              ESS= 1544.48  Rhat=1.0081
+    idx= 17  z[17]                             ESS= 1563.14  Rhat=1.0051
+[t2] saved worst-ESS directions -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/sys60/t2_worst_ess_directions_mclmc.json
+[t2] saved 6 cornerplot chunk(s), 2 z-marginal histogram chunk(s) -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/sys60
+==============================================================================
+[t2] PART 3 SKIPPED (bound-crowding, theta-space): status=skipped_no_data_dir
+[t2]   reason: no --data-dir given
+[t2]   No theta-space bound-crowding fraction is reported; NOT fabricated.
+==============================================================================
+
+[t2] per-parameter table (worst-ESS first):
+ idx param                                 zESS   zRhat   zSkew   zKurt  MADtail  crowdFrac  thSkew  thKurt
+   7 z[7]                               1238.90  1.0088    0.10    0.05   0.0067        N/A     N/A     N/A
+   9 z[9]                               1432.31  1.0046   -0.11    0.10   0.0080        N/A     N/A     N/A
+  13 z[13]                              1434.77  1.0042    0.01    0.04   0.0069        N/A     N/A     N/A
+  18 z[18]                              1477.44  1.0040    0.11   -0.01   0.0078        N/A     N/A     N/A
+  14 z[14]                              1520.51  1.0031   -0.01   -0.10   0.0059        N/A     N/A     N/A
+  11 z[11]                              1523.03  1.0049    0.07   -0.17   0.0047        N/A     N/A     N/A
+   8 z[8]                               1544.48  1.0081    0.06   -0.01   0.0074        N/A     N/A     N/A
+  17 z[17]                              1563.14  1.0051   -0.07   -0.22   0.0032        N/A     N/A     N/A
+  20 z[20]                              1566.24  1.0038    0.09   -0.07   0.0054        N/A     N/A     N/A
+  12 z[12]                              1640.01  1.0026   -0.01   -0.09   0.0056        N/A     N/A     N/A
+  19 z[19]                              1641.01  1.0035   -0.07    0.08   0.0097        N/A     N/A     N/A
+  10 z[10]                              1657.59  1.0068    0.01   -0.07   0.0069        N/A     N/A     N/A
+  16 z[16]                              1686.11  1.0026    0.31    0.21   0.0070        N/A     N/A     N/A
+  15 z[15]                              1710.33  1.0019   -0.41    0.62   0.0124        N/A     N/A     N/A
+  21 z[21]                              1737.04  1.0027    0.37    0.21   0.0089        N/A     N/A     N/A
+   1 z[1]                               1871.14  1.0021   -0.03    0.09   0.0093        N/A     N/A     N/A
+   0 z[0]                               1898.05  1.0021    0.02    0.12   0.0103        N/A     N/A     N/A
+   4 z[4]                               1935.42  1.0056    0.03    0.08   0.0090        N/A     N/A     N/A
+   6 z[6]                               1995.19  1.0024   -0.01    0.16   0.0106        N/A     N/A     N/A
+   5 z[5]                               2350.91  1.0031    0.01    0.08   0.0077        N/A     N/A     N/A
+   2 z[2]                               2535.19  1.0030   -0.04    0.10   0.0092        N/A     N/A     N/A
+   3 z[3]                               2571.15  1.0041    0.01    0.25   0.0127        N/A     N/A     N/A
+
+[t2] saved full report -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/sys60/t2_zspace_diagnostics_mclmc.json
+[t2] falsifier check: z-marginals as Gaussian as theta-marginals and bound-crowding ~ 0 for the worst-ESS parameters (threshold: a posterior comfortably inside the box puts ~0 mass in the outer 1%; anything >~ a few % is crowding -- derive the exact number from the actual histograms before judging, and record it).
+[t2] verdict: proposed (UNCERTIFIED) -- inspect the table/plots above; this script does not certify a result.

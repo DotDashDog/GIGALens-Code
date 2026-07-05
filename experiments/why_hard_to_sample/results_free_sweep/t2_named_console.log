@@ -1,0 +1,116 @@
+Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda13.initialize()
+Traceback (most recent call last):
+  File "/opt/jax/jax/_src/xla_bridge.py", line 487, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/opt/jaxlibs/jax_cuda13_pjrt/jax_plugins/xla_cuda13/__init__.py", line 370, in initialize
+    _check_cuda_versions(raise_on_first_error = True)
+  File "/opt/jaxlibs/jax_cuda13_pjrt/jax_plugins/xla_cuda13/__init__.py", line 274, in _check_cuda_versions
+    for d in range(cuda_versions.cuda_device_count())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:135: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+[t2] diagnostics.npz samples_z shape=(8, 20000, 22) vs arrays.npz samples_z shape=(8, 20000, 22): identical
+[t2] loaded pipeline stage dir /global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc
+[t2]   manifest num_burnin_steps=20000 num_results=20000
+[t2]   arrays.npz samples_z shape=(8, 20000, 22) -> variant=post_burnin_only
+[t2] run=/global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc
+[t2] position shape=(8, 20000, 22)  post-burn-in slice: nr=20000 -> post shape=(8, 20000, 22)  flat n=160000
+[t2] min bulk-ESS = 1.24e+03  (param 'planes/0/mass/0/center_x', idx 7)
+[t2] max rank-Rhat = 1.0088  (param 'planes/0/mass/0/center_x', idx 7)
+[t2] worst-8-ESS z-directions (feed T3 transects):
+    idx=  7  planes/0/mass/0/center_x          ESS= 1238.90  Rhat=1.0088
+    idx=  9  planes/0/mass/0/e1                ESS= 1432.31  Rhat=1.0046
+    idx= 13  planes/0/mass/1/gamma1            ESS= 1434.77  Rhat=1.0042
+    idx= 18  planes/1/light/0/center_y         ESS= 1477.44  Rhat=1.0040
+    idx= 14  planes/0/mass/1/gamma2            ESS= 1520.51  Rhat=1.0031
+    idx= 11  planes/0/mass/0/gamma             ESS= 1523.03  Rhat=1.0049
+    idx=  8  planes/0/mass/0/center_y          ESS= 1544.48  Rhat=1.0081
+    idx= 17  planes/1/light/0/center_x         ESS= 1563.14  Rhat=1.0051
+[t2] saved worst-ESS directions -> results_free_sweep/sys60_named/t2_worst_ess_directions_mclmc.json
+[t2] saved 6 cornerplot chunk(s), 2 z-marginal histogram chunk(s) -> results_free_sweep/sys60_named
+
+[t2] per-parameter table (worst-ESS first):
+ idx param                                 zESS   zRhat   zSkew   zKurt  MADtail  crowdFrac  thSkew  thKurt
+   7 planes/0/mass/0/center_x           1238.90  1.0088    0.10    0.05   0.0067        N/A    0.10    0.05
+   9 planes/0/mass/0/e1                 1432.31  1.0046   -0.11    0.10   0.0080        N/A   -0.11    0.10
+  13 planes/0/mass/1/gamma1             1434.77  1.0042    0.01    0.04   0.0069        N/A    0.01    0.04
+  18 planes/1/light/0/center_y          1477.44  1.0040    0.11   -0.01   0.0078        N/A    0.11   -0.01
+  14 planes/0/mass/1/gamma2             1520.51  1.0031   -0.01   -0.10   0.0059        N/A   -0.01   -0.10
+  11 planes/0/mass/0/gamma              1523.03  1.0049    0.07   -0.17   0.0047     0.0000    0.10   -0.17
+   8 planes/0/mass/0/center_y           1544.48  1.0081    0.06   -0.01   0.0074        N/A    0.06   -0.01
+  17 planes/1/light/0/center_x          1563.14  1.0051   -0.07   -0.22   0.0032        N/A   -0.07   -0.22
+  20 planes/1/light/0/e2                1566.24  1.0038    0.09   -0.07   0.0054     0.0000    0.03   -0.09
+  12 planes/0/mass/0/theta_E            1640.01  1.0026   -0.01   -0.09   0.0056        N/A    0.00   -0.09
+  19 planes/1/light/0/e1                1641.01  1.0035   -0.07    0.08   0.0097     0.0000    0.08    0.10
+  10 planes/0/mass/0/e2                 1657.59  1.0068    0.01   -0.07   0.0069        N/A    0.01   -0.07
+  16 planes/1/light/0/R_sersic          1686.11  1.0026    0.31    0.21   0.0070        N/A    0.70    1.10
+  15 planes/1/light/0/Ie                1710.33  1.0019   -0.41    0.62   0.0124        N/A    0.14    0.10
+  21 planes/1/light/0/n_sersic          1737.04  1.0027    0.37    0.21   0.0089     0.0000    0.45    0.31
+   1 planes/0/light/0/R_sersic          1871.14  1.0021   -0.03    0.09   0.0093        N/A    0.00    0.09
+   0 planes/0/light/0/Ie                1898.05  1.0021    0.02    0.12   0.0103        N/A    0.07    0.12
+   4 planes/0/light/0/e1                1935.42  1.0056    0.03    0.08   0.0090     0.0000    0.02    0.08
+   6 planes/0/light/0/n_sersic          1995.19  1.0024   -0.01    0.16   0.0106     0.0000   -0.00    0.16
+   5 planes/0/light/0/e2                2350.91  1.0031    0.01    0.08   0.0077     0.0000   -0.01    0.08
+   2 planes/0/light/0/center_x          2535.19  1.0030   -0.04    0.10   0.0092        N/A   -0.04    0.10
+   3 planes/0/light/0/center_y          2571.15  1.0041    0.01    0.25   0.0127        N/A    0.01    0.25
+
+[t2] saved full report -> results_free_sweep/sys60_named/t2_zspace_diagnostics_mclmc.json
+[t2] falsifier check: z-marginals as Gaussian as theta-marginals and bound-crowding ~ 0 for the worst-ESS parameters (threshold: a posterior comfortably inside the box puts ~0 mass in the outer 1%; anything >~ a few % is crowding -- derive the exact number from the actual histograms before judging, and record it).
+[t2] verdict: proposed (UNCERTIFIED) -- inspect the table/plots above; this script does not certify a result.
+Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda13.initialize()
+Traceback (most recent call last):
+  File "/opt/jax/jax/_src/xla_bridge.py", line 487, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/opt/jaxlibs/jax_cuda13_pjrt/jax_plugins/xla_cuda13/__init__.py", line 370, in initialize
+    _check_cuda_versions(raise_on_first_error = True)
+  File "/opt/jaxlibs/jax_cuda13_pjrt/jax_plugins/xla_cuda13/__init__.py", line 274, in _check_cuda_versions
+    for d in range(cuda_versions.cuda_device_count())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:135: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+[t2] diagnostics.npz samples_z shape=(8, 5000, 20) vs arrays.npz samples_z shape=(8, 5000, 20): identical
+[t2] loaded pipeline stage dir /global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc
+[t2]   manifest num_burnin_steps=5000 num_results=5000
+[t2]   arrays.npz samples_z shape=(8, 5000, 20) -> variant=post_burnin_only
+[t2] run=/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc
+[t2] position shape=(8, 5000, 20)  post-burn-in slice: nr=5000 -> post shape=(8, 5000, 20)  flat n=40000
+[t2] min bulk-ESS = 9.2e+03  (param 'planes/1/light/0/e1', idx 17)
+[t2] max rank-Rhat = 1.0011  (param 'planes/0/mass/1/gamma2', idx 13)
+[t2] worst-8-ESS z-directions (feed T3 transects):
+    idx= 17  planes/1/light/0/e1               ESS= 9196.43  Rhat=1.0007
+    idx=  3  planes/0/light/0/e1               ESS= 9788.18  Rhat=1.0003
+    idx= 16  planes/1/light/0/center_y         ESS=10074.85  Rhat=1.0005
+    idx= 10  planes/0/mass/0/gamma             ESS=10078.18  Rhat=1.0006
+    idx= 14  planes/1/light/0/beta             ESS=10081.35  Rhat=1.0005
+    idx=  0  planes/0/light/0/R_sersic         ESS=10084.56  Rhat=1.0007
+    idx=  5  planes/0/light/0/n_sersic         ESS=10095.15  Rhat=1.0004
+    idx=  4  planes/0/light/0/e2               ESS=10118.79  Rhat=1.0008
+[t2] saved worst-ESS directions -> results_free_sweep/vela01_named/t2_worst_ess_directions_mclmc.json
+[t2] saved 5 cornerplot chunk(s), 2 z-marginal histogram chunk(s) -> results_free_sweep/vela01_named
+
+[t2] per-parameter table (worst-ESS first):
+ idx param                                 zESS   zRhat   zSkew   zKurt  MADtail  crowdFrac  thSkew  thKurt
+  17 planes/1/light/0/e1                9196.43  1.0007   -1.32    2.71   0.0400     0.9839    1.24    1.67
+   3 planes/0/light/0/e1                9788.18  1.0003    0.01   -0.03   0.0065     0.0000    0.03   -0.03
+  16 planes/1/light/0/center_y         10074.85  1.0005   -0.01    0.07   0.0081        N/A   -0.01    0.07
+  10 planes/0/mass/0/gamma             10078.18  1.0006   -0.02    0.09   0.0086     0.0000   -0.00    0.08
+  14 planes/1/light/0/beta             10081.35  1.0005   -0.07    0.10   0.0083        N/A   -0.01    0.08
+   0 planes/0/light/0/R_sersic         10084.56  1.0007    0.02    0.03   0.0067        N/A    0.04    0.03
+   5 planes/0/light/0/n_sersic         10095.15  1.0004    0.03    0.01   0.0066     0.0000    0.03    0.01
+   4 planes/0/light/0/e2               10118.79  1.0008    0.02   -0.02   0.0065     0.0000    0.01   -0.02
+  12 planes/0/mass/1/gamma1            10128.68  1.0004   -0.04    0.01   0.0076     0.0000   -0.04    0.01
+   9 planes/0/mass/0/e2                10163.62  1.0005   -0.06   -0.06   0.0054     0.0000   -0.04   -0.06
+  18 planes/1/light/0/e2               10188.66  1.0007   -0.02   -0.05   0.0065     0.0000    0.04   -0.06
+  19 planes/1/light/0/n_sersic         10245.42  1.0008   -0.05    0.02   0.0072     0.0000   -0.03    0.02
+   8 planes/0/mass/0/e1                10262.23  1.0001    0.01    0.02   0.0074     0.0000    0.00    0.02
+   7 planes/0/mass/0/center_y          10320.37  1.0006    0.03    0.05   0.0072        N/A    0.03    0.05
+  13 planes/0/mass/1/gamma2            10491.97  1.0011    0.01   -0.07   0.0061        N/A    0.01   -0.07
+   6 planes/0/mass/0/center_x          10492.86  1.0006   -0.00   -0.04   0.0063        N/A   -0.00   -0.04
+  15 planes/1/light/0/center_x         10622.50  1.0008   -0.01    0.03   0.0077        N/A   -0.01    0.03
+  11 planes/0/mass/0/theta_E           11952.03  1.0007   -0.01   -0.02   0.0066        N/A   -0.00   -0.02
+   2 planes/0/light/0/center_y         22884.94  1.0000    0.00    0.04   0.0076        N/A    0.00    0.04
+   1 planes/0/light/0/center_x         36572.01  1.0006   -0.00   -0.03   0.0064        N/A   -0.00   -0.03
+
+[t2] saved full report -> results_free_sweep/vela01_named/t2_zspace_diagnostics_mclmc.json
+[t2] falsifier check: z-marginals as Gaussian as theta-marginals and bound-crowding ~ 0 for the worst-ESS parameters (threshold: a posterior comfortably inside the box puts ~0 mass in the outer 1%; anything >~ a few % is crowding -- derive the exact number from the actual histograms before judging, and record it).
+[t2] verdict: proposed (UNCERTIFIED) -- inspect the table/plots above; this script does not certify a result.

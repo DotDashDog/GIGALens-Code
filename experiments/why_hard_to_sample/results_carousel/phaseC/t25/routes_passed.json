@@ -1,0 +1,82 @@
+{
+  "experiment": "T25b transforms + family gates",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T07:05:07.189535+00:00",
+  "gates_run": true,
+  "A": true,
+  "B": true,
+  "F_T25a": {
+    "fires": false,
+    "variation": 1422.0286110924665,
+    "scope": "all visited on-floor bins with lambda > 1.0",
+    "original_window_variation_3p1x_fired": true
+  },
+  "P_T25c": {
+    "ratio_min": 0.021028293681051087,
+    "ratio_max": 1.1622291001693776,
+    "variation": 55.26977689191586
+  },
+  "derive_info": {
+    "A": {
+      "g0": 12.44282535566933,
+      "n_env_knots": 3
+    },
+    "B": {
+      "theta_E_star": 13.8126953867242,
+      "s_monotone": true,
+      "s_sign": 1.0,
+      "core_z_range": [
+        -6.0,
+        9.534246575342465
+      ],
+      "n_core": 442
+    }
+  },
+  "gate_results": {
+    "A": {
+      "route": "A",
+      "g_crosscheck_max": 8.881784197001252e-16,
+      "gate1_roundtrip_Rs_maxabs": 1.4210854715202004e-14,
+      "gate1_pass": true,
+      "gate2_loglike_maxabs": 2.9103830456733704e-11,
+      "gate2_prior_maxabs": 0.0,
+      "gate2_pass": true,
+      "gate3_zinit_theta_maxabs": 0.0,
+      "gate3_pass": true,
+      "all_pass": true
+    },
+    "B": {
+      "route": "B",
+      "g_crosscheck_max": 8.881784197001252e-16,
+      "gate1_roundtrip_Rs_maxabs": 1.4210854715202004e-14,
+      "gate1_pass": true,
+      "gate2_loglike_maxabs": 8.731149137020111e-11,
+      "gate2_prior_maxabs": 0.0,
+      "gate2_pass": true,
+      "gate3_zinit_theta_maxabs": 0.0,
+      "gate3_pass": true,
+      "all_pass": true
+    }
+  },
+  "artifacts": {
+    "A": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t25/transform_A.npz",
+    "B": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t25/transform_B.npz",
+    "comparison": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t25/ab_comparison.npz"
+  },
+  "constants": {
+    "DENSE_GRID": [
+      -6.0,
+      12.0,
+      512
+    ],
+    "FD_REL": 0.0001,
+    "N_GATE_RT": 64,
+    "N_GATE_THETA": 8,
+    "tols": {
+      "roundtrip": 1e-08,
+      "loglike": 1e-08,
+      "prior": 1e-10,
+      "zinit": 1e-10
+    }
+  }
+}

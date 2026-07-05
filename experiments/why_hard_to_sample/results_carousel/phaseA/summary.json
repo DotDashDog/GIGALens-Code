@@ -1,0 +1,436 @@
+{
+  "experiment": "T15_carousel_decompose_phaseA",
+  "status": "proposed (UNCERTIFIED)",
+  "old_data_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/carousel_min_old",
+  "new_data_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/carousel_min_new",
+  "old_run": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_oldbij/mclmc",
+  "new_run": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_newbij/mclmc",
+  "dim": 14,
+  "old_names": [
+    "planes/0/mass/0/Rs",
+    "planes/0/mass/0/alpha_Rs",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/beta",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/1/beta",
+    "planes/1/light/1/center_x",
+    "planes/1/light/1/center_y"
+  ],
+  "new_names": [
+    "planes/0/mass/0/Rs",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/0/theta_E",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/beta",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/1/beta",
+    "planes/1/light/1/center_x",
+    "planes/1/light/1/center_y"
+  ],
+  "cross_map": {
+    "alpha_Rs_key": "planes/0/mass/0/alpha_Rs",
+    "theta_E_key": "planes/0/mass/0/theta_E",
+    "Rs_key": "planes/0/mass/0/Rs",
+    "shared_params": 13
+  },
+  "newbij_z0_physical_name": "planes/0/mass/0/Rs",
+  "basin_point_z_mean_draws": [
+    0,
+    2500
+  ],
+  "b_physical": {
+    "planes/0/mass/0/Rs": 88.616908683638,
+    "planes/0/mass/0/alpha_Rs": 26.022626352706567,
+    "planes/0/mass/0/center_x": 5.054568854518978,
+    "planes/0/mass/0/center_y": 3.89648576231837,
+    "planes/0/mass/0/e1": -0.04536132190873851,
+    "planes/0/mass/0/e2": 0.034847894003600194,
+    "planes/0/mass/1/gamma1": -0.0004492846304481879,
+    "planes/0/mass/1/gamma2": -0.0007709042357624263,
+    "planes/1/light/0/beta": 0.2001992746171772,
+    "planes/1/light/0/center_x": 4.335885179315742,
+    "planes/1/light/0/center_y": 3.905443780232071,
+    "planes/1/light/1/beta": 0.09690316220954805,
+    "planes/1/light/1/center_x": 4.70707769936192,
+    "planes/1/light/1/center_y": 1.4652526427275299
+  },
+  "m_physical": {
+    "planes/0/mass/0/Rs": 87.09555145405807,
+    "planes/0/mass/0/alpha_Rs": 25.702003340737747,
+    "planes/0/mass/0/center_x": 5.044386915468384,
+    "planes/0/mass/0/center_y": 3.8860510678706035,
+    "planes/0/mass/0/e1": -0.04462935798459147,
+    "planes/0/mass/0/e2": 0.03382598186458943,
+    "planes/0/mass/1/gamma1": 0.0014747036178430761,
+    "planes/0/mass/1/gamma2": -0.0030997054361734944,
+    "planes/1/light/0/beta": 0.19905772195262264,
+    "planes/1/light/0/center_x": 4.446703247716325,
+    "planes/1/light/0/center_y": 3.9036989262789348,
+    "planes/1/light/1/beta": 0.09670530220829926,
+    "planes/1/light/1/center_x": 4.691676232703654,
+    "planes/1/light/1/center_y": 1.4625513539631665
+  },
+  "theta_E_b": 13.791942097698374,
+  "theta_E_m": 13.703297799955045,
+  "logp_split": {
+    "old_arm": {
+      "loglike_b": -119691.90911992054,
+      "loglike_m": -120976.1228316541,
+      "logprior_b": -35.34884032346633,
+      "logprior_m": -36.277559622891644,
+      "delta_loglike_b_minus_m": 1284.2137117335515,
+      "delta_logprior_b_minus_m": 0.9287192994253175
+    },
+    "new_arm": {
+      "loglike_b": -119691.90911880428,
+      "loglike_m": -120976.12283251085,
+      "logprior_b": -35.19041199705153,
+      "logprior_m": -36.055325065886876,
+      "delta_loglike_b_minus_m": 1284.213713706573,
+      "delta_logprior_b_minus_m": 0.8649130688353495
+    }
+  },
+  "new_arm_roundtrip_err": {
+    "b": 5.551115123125783e-17,
+    "m": 0.0
+  },
+  "P1_predicts_abs_thetaE_b_minus_13_ge_2": {
+    "value_abs_diff": 0.7919420976983744,
+    "threshold": 2.0,
+    "meets_P1": false
+  },
+  "F1": {
+    "abs_diff": 0.7919420976983744,
+    "margin": 1.0,
+    "delta_loglike_b_minus_m_old_arm": 1284.2137117335515,
+    "nats_threshold": 10.0,
+    "fires_F1": true
+  },
+  "P2_F2_ridge": {
+    "old_arm": {
+      "sagitta": 0.010592380109307624,
+      "transverse_sigma": 0.006206409087623259,
+      "ratio": 1.7066841646695208,
+      "quad_c": -0.0013240779601981386,
+      "quad_b": 1.7453343376191024e-05,
+      "quad_a": 0.00264809502727777,
+      "sigma_x_pc1": 1.4141973026999108,
+      "n": 75000,
+      "meets_P2": true,
+      "fires_F2": false
+    },
+    "new_arm": {
+      "sagitta": 0.010429036180208321,
+      "transverse_sigma": 0.006328566867274476,
+      "ratio": 1.64793015526749,
+      "quad_c": -0.0013036612320036845,
+      "quad_b": -0.0009188351405883787,
+      "quad_a": 0.0026072590454197966,
+      "sigma_x_pc1": 1.4141963630252383,
+      "n": 80000,
+      "meets_P2": true,
+      "fires_F2": false
+    },
+    "P2_threshold": 0.5,
+    "F2_threshold": 0.15,
+    "old_excludes_chain0_draws": [
+      0,
+      5000
+    ]
+  },
+  "P3_max_nonNFW_1d_shift_pooled_sigma": {
+    "value": 6.323472320753458,
+    "param": "planes/1/light/1/beta",
+    "threshold": 1.0,
+    "leak_flagged_params": [
+      "planes/0/mass/0/center_x",
+      "planes/0/mass/0/e1",
+      "planes/0/mass/0/e2",
+      "planes/1/light/0/beta",
+      "planes/1/light/1/beta",
+      "planes/1/light/1/center_y"
+    ],
+    "all_shifts": {
+      "planes/0/mass/0/Rs": 1.6091712769057849,
+      "planes/0/mass/0/alpha_Rs": 1.5890476617974238,
+      "planes/0/mass/0/center_x": 1.991701781184714,
+      "planes/0/mass/0/center_y": 0.005015750374854201,
+      "planes/0/mass/0/e1": 2.7195602371409384,
+      "planes/0/mass/0/e2": 1.8257531993026654,
+      "planes/0/mass/1/gamma1": 0.2632023002040291,
+      "planes/0/mass/1/gamma2": 0.12831558806712332,
+      "planes/1/light/0/beta": 1.5609089305779529,
+      "planes/1/light/0/center_x": 0.4462722739890349,
+      "planes/1/light/0/center_y": 0.027977054166225986,
+      "planes/1/light/1/beta": 6.323472320753458,
+      "planes/1/light/1/center_x": 0.12476426940239768,
+      "planes/1/light/1/center_y": 4.784436255275993
+    }
+  },
+  "P4_crowding_flag_threshold": 0.3,
+  "P4_flags": {
+    "old": [],
+    "new": []
+  },
+  "crowding_old": [
+    {
+      "index": 0,
+      "param": "planes/0/mass/0/Rs",
+      "status": "ok",
+      "bounds": [
+        20.0,
+        100.0
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 1,
+      "param": "planes/0/mass/0/alpha_Rs",
+      "status": "ok",
+      "bounds": [
+        10.0,
+        40.0
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 2,
+      "param": "planes/0/mass/0/center_x",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 3,
+      "param": "planes/0/mass/0/center_y",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 4,
+      "param": "planes/0/mass/0/e1",
+      "status": "ok",
+      "bounds": [
+        -0.20000000298023224,
+        0.20000000298023224
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 5,
+      "param": "planes/0/mass/0/e2",
+      "status": "ok",
+      "bounds": [
+        -0.20000000298023224,
+        0.20000000298023224
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 6,
+      "param": "planes/0/mass/1/gamma1",
+      "status": "ok",
+      "bounds": [
+        -0.30000001192092896,
+        0.30000001192092896
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 7,
+      "param": "planes/0/mass/1/gamma2",
+      "status": "ok",
+      "bounds": [
+        -0.30000001192092896,
+        0.30000001192092896
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 8,
+      "param": "planes/1/light/0/beta",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 9,
+      "param": "planes/1/light/0/center_x",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 10,
+      "param": "planes/1/light/0/center_y",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 11,
+      "param": "planes/1/light/1/beta",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 12,
+      "param": "planes/1/light/1/center_x",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 13,
+      "param": "planes/1/light/1/center_y",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    }
+  ],
+  "crowding_new": [
+    {
+      "index": 0,
+      "param": "planes/0/mass/0/Rs",
+      "status": "ok",
+      "bounds": [
+        20.0,
+        100.0
+      ],
+      "crowding_frac": 0.070975,
+      "flagged": false
+    },
+    {
+      "index": 1,
+      "param": "planes/0/mass/0/center_x",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 2,
+      "param": "planes/0/mass/0/center_y",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 3,
+      "param": "planes/0/mass/0/e1",
+      "status": "ok",
+      "bounds": [
+        -0.20000000298023224,
+        0.20000000298023224
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 4,
+      "param": "planes/0/mass/0/e2",
+      "status": "ok",
+      "bounds": [
+        -0.20000000298023224,
+        0.20000000298023224
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 5,
+      "param": "planes/0/mass/0/theta_E",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 6,
+      "param": "planes/0/mass/1/gamma1",
+      "status": "ok",
+      "bounds": [
+        -0.30000001192092896,
+        0.30000001192092896
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 7,
+      "param": "planes/0/mass/1/gamma2",
+      "status": "ok",
+      "bounds": [
+        -0.30000001192092896,
+        0.30000001192092896
+      ],
+      "crowding_frac": 0.0,
+      "flagged": false
+    },
+    {
+      "index": 8,
+      "param": "planes/1/light/0/beta",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 9,
+      "param": "planes/1/light/0/center_x",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 10,
+      "param": "planes/1/light/0/center_y",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 11,
+      "param": "planes/1/light/1/beta",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 12,
+      "param": "planes/1/light/1/center_x",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    },
+    {
+      "index": 13,
+      "param": "planes/1/light/1/center_y",
+      "status": "unbounded_prior_no_box",
+      "crowding_frac": null,
+      "bounds": null
+    }
+  ],
+  "plot_paths": [
+    "./results_carousel/phaseA/t15a_ridge_overlay.png",
+    "./results_carousel/phaseA/t15b_marginals_oldcoords.png",
+    "./results_carousel/phaseA/t15c_crowding.png"
+  ],
+  "verdict": "proposed (UNCERTIFIED) -- registered quantities computed; a grader must inspect the plots/numbers. Movement toward a prediction is NOT success."
+}

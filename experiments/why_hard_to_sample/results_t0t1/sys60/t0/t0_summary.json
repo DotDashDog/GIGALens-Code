@@ -1,0 +1,510 @@
+{
+  "experiment": "T0_seed_variance",
+  "status": "proposed (UNCERTIFIED)",
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 1,
+      "min_ess": 12.827987493398986,
+      "min_ess_param": "planes/1/light/0/center_y",
+      "max_rhat": 1.6559622849642028,
+      "max_rhat_param": "planes/1/light/0/center_y",
+      "table": [
+        {
+          "param": "planes/0/light/0/Ie",
+          "ess": 30.29959378826913,
+          "rhat": 1.1981196066586068
+        },
+        {
+          "param": "planes/0/light/0/R_sersic",
+          "ess": 27.086958311525088,
+          "rhat": 1.2200757572716836
+        },
+        {
+          "param": "planes/0/light/0/center_x",
+          "ess": 480.92721079108,
+          "rhat": 1.018965728859817
+        },
+        {
+          "param": "planes/0/light/0/center_y",
+          "ess": 476.97674391526994,
+          "rhat": 1.0150550043920405
+        },
+        {
+          "param": "planes/0/light/0/e1",
+          "ess": 76.84192578640166,
+          "rhat": 1.0941478620743534
+        },
+        {
+          "param": "planes/0/light/0/e2",
+          "ess": 68.62225269814763,
+          "rhat": 1.164305565598617
+        },
+        {
+          "param": "planes/0/light/0/n_sersic",
+          "ess": 41.49519917815903,
+          "rhat": 1.159911747600493
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "ess": 23.007047756654053,
+          "rhat": 1.284376910184874
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "ess": 16.095114754358278,
+          "rhat": 1.454987802234406
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "ess": 25.85460302104145,
+          "rhat": 1.2499957140960618
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "ess": 18.307292357694948,
+          "rhat": 1.409860472151462
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "ess": 13.726120131554035,
+          "rhat": 1.5684429306911565
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "ess": 27.75383822701039,
+          "rhat": 1.2249353385856756
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "ess": 35.603636741618594,
+          "rhat": 1.1603852198250746
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "ess": 14.70827710663023,
+          "rhat": 1.5383367023463168
+        },
+        {
+          "param": "planes/1/light/0/Ie",
+          "ess": 16.809805968803126,
+          "rhat": 1.4096515227447688
+        },
+        {
+          "param": "planes/1/light/0/R_sersic",
+          "ess": 16.82283552203212,
+          "rhat": 1.4064373196152562
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "ess": 15.070134531029037,
+          "rhat": 1.4768949536474427
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "ess": 12.827987493398986,
+          "rhat": 1.6559622849642028
+        },
+        {
+          "param": "planes/1/light/0/e1",
+          "ess": 20.08607788725601,
+          "rhat": 1.338387211610778
+        },
+        {
+          "param": "planes/1/light/0/e2",
+          "ess": 34.83639648213312,
+          "rhat": 1.1681301630087118
+        },
+        {
+          "param": "planes/1/light/0/n_sersic",
+          "ess": 20.39563723600788,
+          "rhat": 1.3048126416334969
+        }
+      ],
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed1.npz"
+    },
+    {
+      "seed": 2,
+      "min_ess": 11.653988123805535,
+      "min_ess_param": "planes/0/mass/0/gamma",
+      "max_rhat": 1.8413240051882447,
+      "max_rhat_param": "planes/0/mass/0/gamma",
+      "table": [
+        {
+          "param": "planes/0/light/0/Ie",
+          "ess": 73.0970658007831,
+          "rhat": 1.0816776351110646
+        },
+        {
+          "param": "planes/0/light/0/R_sersic",
+          "ess": 70.89143036393256,
+          "rhat": 1.0846752555196721
+        },
+        {
+          "param": "planes/0/light/0/center_x",
+          "ess": 767.2835299286286,
+          "rhat": 1.0281533453229086
+        },
+        {
+          "param": "planes/0/light/0/center_y",
+          "ess": 784.3697027214,
+          "rhat": 1.019493201381921
+        },
+        {
+          "param": "planes/0/light/0/e1",
+          "ess": 143.7131387234459,
+          "rhat": 1.0464883791580917
+        },
+        {
+          "param": "planes/0/light/0/e2",
+          "ess": 145.66603474029793,
+          "rhat": 1.0540471214733553
+        },
+        {
+          "param": "planes/0/light/0/n_sersic",
+          "ess": 80.34962197340631,
+          "rhat": 1.0730038871880092
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "ess": 25.583974850786696,
+          "rhat": 1.2353931903429303
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "ess": 42.596548331895164,
+          "rhat": 1.131726573467278
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "ess": 23.761328531501707,
+          "rhat": 1.260533937400318
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "ess": 40.67018332981915,
+          "rhat": 1.1334585912480466
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "ess": 11.653988123805535,
+          "rhat": 1.8413240051882447
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "ess": 17.88731166805147,
+          "rhat": 1.3706569533250863
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "ess": 20.48982174596369,
+          "rhat": 1.3144294582055778
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "ess": 14.22464429837227,
+          "rhat": 1.5519371748416493
+        },
+        {
+          "param": "planes/1/light/0/Ie",
+          "ess": 64.50537325317728,
+          "rhat": 1.104960194728679
+        },
+        {
+          "param": "planes/1/light/0/R_sersic",
+          "ess": 136.24182393255902,
+          "rhat": 1.0573760937775276
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "ess": 13.071556286080119,
+          "rhat": 1.640639519839822
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "ess": 13.794077257134862,
+          "rhat": 1.5900217130684475
+        },
+        {
+          "param": "planes/1/light/0/e1",
+          "ess": 29.901935042729303,
+          "rhat": 1.2011328514701436
+        },
+        {
+          "param": "planes/1/light/0/e2",
+          "ess": 60.2223210056832,
+          "rhat": 1.0948483468321095
+        },
+        {
+          "param": "planes/1/light/0/n_sersic",
+          "ess": 79.1429806539094,
+          "rhat": 1.1030297692847966
+        }
+      ],
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed2.npz"
+    },
+    {
+      "seed": 3,
+      "min_ess": 11.224040411232577,
+      "min_ess_param": "planes/1/light/0/center_y",
+      "max_rhat": 1.8943600263287503,
+      "max_rhat_param": "planes/1/light/0/center_y",
+      "table": [
+        {
+          "param": "planes/0/light/0/Ie",
+          "ess": 32.3580907174768,
+          "rhat": 1.1878255499239836
+        },
+        {
+          "param": "planes/0/light/0/R_sersic",
+          "ess": 30.577684068058026,
+          "rhat": 1.2002631877012302
+        },
+        {
+          "param": "planes/0/light/0/center_x",
+          "ess": 369.7478179956123,
+          "rhat": 1.0245341111652493
+        },
+        {
+          "param": "planes/0/light/0/center_y",
+          "ess": 345.84015548110244,
+          "rhat": 1.04040994220555
+        },
+        {
+          "param": "planes/0/light/0/e1",
+          "ess": 43.38776305464477,
+          "rhat": 1.167058263714895
+        },
+        {
+          "param": "planes/0/light/0/e2",
+          "ess": 30.07075377514346,
+          "rhat": 1.2097402827664028
+        },
+        {
+          "param": "planes/0/light/0/n_sersic",
+          "ess": 35.091003248935934,
+          "rhat": 1.1752357177866344
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "ess": 13.49154455643997,
+          "rhat": 1.6102335722771748
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "ess": 17.3896409102077,
+          "rhat": 1.3939108560116649
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "ess": 13.10910681288262,
+          "rhat": 1.6439367974171797
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "ess": 15.755283493783333,
+          "rhat": 1.4576477273134008
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "ess": 12.680027269835517,
+          "rhat": 1.673828704134931
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "ess": 18.426225441020033,
+          "rhat": 1.3705780005648338
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "ess": 16.933375392961356,
+          "rhat": 1.4078775947811937
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "ess": 15.122084552958276,
+          "rhat": 1.4908991342661675
+        },
+        {
+          "param": "planes/1/light/0/Ie",
+          "ess": 16.659393332728502,
+          "rhat": 1.4256225188949223
+        },
+        {
+          "param": "planes/1/light/0/R_sersic",
+          "ess": 20.18007040629985,
+          "rhat": 1.3090162667324636
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "ess": 12.702118600159084,
+          "rhat": 1.6725544893597166
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "ess": 11.224040411232577,
+          "rhat": 1.8943600263287503
+        },
+        {
+          "param": "planes/1/light/0/e1",
+          "ess": 24.199804913004144,
+          "rhat": 1.2505575644138796
+        },
+        {
+          "param": "planes/1/light/0/e2",
+          "ess": 24.07918196424868,
+          "rhat": 1.269844615676123
+        },
+        {
+          "param": "planes/1/light/0/n_sersic",
+          "ess": 17.979816784594647,
+          "rhat": 1.3704847224161336
+        }
+      ],
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed3.npz"
+    },
+    {
+      "seed": 4,
+      "min_ess": 15.340149447076433,
+      "min_ess_param": "planes/0/mass/0/gamma",
+      "max_rhat": 1.4775037445105397,
+      "max_rhat_param": "planes/0/mass/0/gamma",
+      "table": [
+        {
+          "param": "planes/0/light/0/Ie",
+          "ess": 165.6798811367728,
+          "rhat": 1.0467597021304993
+        },
+        {
+          "param": "planes/0/light/0/R_sersic",
+          "ess": 163.6813212907242,
+          "rhat": 1.0462534228520677
+        },
+        {
+          "param": "planes/0/light/0/center_x",
+          "ess": 741.3642612304774,
+          "rhat": 1.023657993348184
+        },
+        {
+          "param": "planes/0/light/0/center_y",
+          "ess": 741.2641658095929,
+          "rhat": 1.00563468363502
+        },
+        {
+          "param": "planes/0/light/0/e1",
+          "ess": 181.2210586284977,
+          "rhat": 1.055733488154324
+        },
+        {
+          "param": "planes/0/light/0/e2",
+          "ess": 192.62746989739452,
+          "rhat": 1.060561321379298
+        },
+        {
+          "param": "planes/0/light/0/n_sersic",
+          "ess": 176.86128743985853,
+          "rhat": 1.047735885641558
+        },
+        {
+          "param": "planes/0/mass/0/center_x",
+          "ess": 22.245126827108038,
+          "rhat": 1.2773994713712495
+        },
+        {
+          "param": "planes/0/mass/0/center_y",
+          "ess": 41.305659384271735,
+          "rhat": 1.1537682168964631
+        },
+        {
+          "param": "planes/0/mass/0/e1",
+          "ess": 28.879393705957927,
+          "rhat": 1.21638377119055
+        },
+        {
+          "param": "planes/0/mass/0/e2",
+          "ess": 28.413541383456185,
+          "rhat": 1.2175476820319897
+        },
+        {
+          "param": "planes/0/mass/0/gamma",
+          "ess": 15.340149447076433,
+          "rhat": 1.4775037445105397
+        },
+        {
+          "param": "planes/0/mass/0/theta_E",
+          "ess": 27.60361485692747,
+          "rhat": 1.2170891956956869
+        },
+        {
+          "param": "planes/0/mass/1/gamma1",
+          "ess": 33.81985004513383,
+          "rhat": 1.2002228577564265
+        },
+        {
+          "param": "planes/0/mass/1/gamma2",
+          "ess": 23.88822499637143,
+          "rhat": 1.274561099795225
+        },
+        {
+          "param": "planes/1/light/0/Ie",
+          "ess": 134.24133867393175,
+          "rhat": 1.0597483196523345
+        },
+        {
+          "param": "planes/1/light/0/R_sersic",
+          "ess": 103.28762198551583,
+          "rhat": 1.067219963500326
+        },
+        {
+          "param": "planes/1/light/0/center_x",
+          "ess": 16.669134891022402,
+          "rhat": 1.411919713768974
+        },
+        {
+          "param": "planes/1/light/0/center_y",
+          "ess": 17.854816007405805,
+          "rhat": 1.362165106129617
+        },
+        {
+          "param": "planes/1/light/0/e1",
+          "ess": 77.64589586505879,
+          "rhat": 1.1007285097106687
+        },
+        {
+          "param": "planes/1/light/0/e2",
+          "ess": 109.72530633452921,
+          "rhat": 1.0629592155546326
+        },
+        {
+          "param": "planes/1/light/0/n_sersic",
+          "ess": 142.57942770417012,
+          "rhat": 1.0628078198041144
+        }
+      ],
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed4.npz"
+    }
+  ],
+  "T0_derived_band": {
+    "min_ess_across_seeds_min": 11.224040411232577,
+    "min_ess_across_seeds_max": 15.340149447076433,
+    "min_ess_ratio": 1.3667225780588437,
+    "max_rhat_across_seeds_min": 1.4775037445105397,
+    "max_rhat_across_seeds_max": 1.8943600263287503
+  },
+  "band_spans_order_of_magnitude": false,
+  "note": "T0-DERIVED THRESHOLD INPUT FOR T1: the min-ESS band (min..max, ratio 1.37) is the seed-variance envelope T1 uses. Band is within a modest factor; usable as T1 threshold.",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908"
+}

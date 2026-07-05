@@ -1,0 +1,6 @@
+# Raw chain / sample data: regenerable from the scripts + seeds + configs
+# recorded in docs/logs/why-hard-to-sample.md (sha256 of derived transform
+# artifacts are logged there too). Summary jsons and plots ARE committed.
+results_carousel/**/*.npz
+__pycache__/
+*.pyc
