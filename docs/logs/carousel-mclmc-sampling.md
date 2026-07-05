@@ -384,6 +384,22 @@ multimodality, conditioning, or the NFW profile.
 
 ## Log (newest first)
 
+- **2026-07-02** — **C-8 open item (2) partially resolved: the full 32-param case's cached
+  `names.npy` IS reversed.** `proposed (UNCERTIFIED)`. Evidence: (a)
+  `experiments/sim_carousel/_h1h2_diag/names.npy` is stored in *exactly* reversed-alphabetical
+  key order (checked empirically, 2026-07-02; `sorted(names, reverse=True) == names` is True),
+  i.e. it was written via the unsorted `flatten_param_names(bij.forward(...))` path; (b) the
+  validated column rule (`plotting/diagnostics.py::_z_space_labels` COLUMN ORDER NOTE) says
+  sampler column *i* = alphabetically-*i*-th key. Together: `names.npy[i]` labels column
+  `dim−1−i`, so any full-case analysis that read `names.npy` positionally inherits the C-8
+  reversal — per C-8, full-case *parameter-identity* claims (e.g. which named directions are
+  slow) need re-derivation via sorted keys; geometry/curvature evidence is unaffected. The new
+  `experiments/why_hard_to_sample/` harness (see `why-hard-to-sample.md` log) therefore never
+  uses `names.npy` positionally: it sorts the key set (T0/T1 `common.py::load_param_names`) or
+  zero-probes the bijector with sorted output keys (T2/T5 scripts). NOT yet done: an AD/FD
+  cross-check on the 32-param bijector itself (the minimal-case-style direct test); the sorted
+  labels are validated only by the C-8 mechanism, not independently.
+
 - **2026-06-29** — **APS-on-MCLMC ran on the GPU carousel (C-20).** Built `tempering/apt_carousel.py` + `carousel_aps_run.py` (Option-A augmented sampler, frozen `upper_cov` metric, per-step EEVPD adapt, matched-cov Laplace base). First run COLLAPSED (Appendix-C); diagnosed the structural cause = unnormalized-posterior evidence offset ~1e5 (matched cov ≠ matched normalization); fixed by subtracting the Laplace log-evidence C=−119562.66. Post-fix: NO collapse (k̂≤0.46, log z'≈−5 stable, frac_cold>0, EEVPD faithful), cold draws recovered. Independent grader found the cold draws BIMODAL/filamentary; GPU `cluster_check.py` disambiguated → REAL curved-ridge mass (both clusters same density; 791-nat straight-chord dip = curvature), cold-ESS-limited — the C-5/C-7 degeneracy, inherited not cured. Independent 32-start MAP (global −119502.93, only 3/32 within 5 logp) corroborates the curved-ridge geometry. Single-seed diagnostic; weights unreliable; λ→1 EEVPD + vanilla same-harness baseline still open. Process: orchestrator ran all GPU harnesses directly (srun --overlap, per-GPU flock) and delegated only non-GPU code-audit + grading to subagents.
 
 - **2026-06-28** — **Two parallel mode-hop variants tested + orchestrator-audited (C-14/C-15/C-16).** Human
