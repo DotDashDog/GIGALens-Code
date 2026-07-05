@@ -1,0 +1,28 @@
+PT: R=10 NSYS=16 K=10 ROUNDS=90; BALANCED init occ(global)=0.500 (test DRAINING; truth ~1.0 since secondary ~1e-5)
+betas=[0.02, 0.031, 0.048, 0.074, 0.114, 0.176, 0.271, 0.419, 0.647, 1.0]
+  round   0  occ(global) hot/mid/cold=0.500/0.500/0.500  EEVPD[h/m/c]=1.4e+00/2.7e+01/3.5e+00
+  round   5  occ(global) hot/mid/cold=0.500/0.500/0.500  EEVPD[h/m/c]=1.3e-03/7.1e-04/2.4e-02
+  round  10  occ(global) hot/mid/cold=0.500/0.500/0.500  EEVPD[h/m/c]=7.6e-05/3.8e-04/6.1e-04
+  round  15  occ(global) hot/mid/cold=0.500/0.500/0.500  EEVPD[h/m/c]=4.9e-04/7.6e-05/2.2e-04
+  round  20  occ(global) hot/mid/cold=0.500/0.500/0.500  EEVPD[h/m/c]=2.0e-04/4.8e-04/1.5e-04
+  round  25  occ(global) hot/mid/cold=0.375/0.500/0.500  EEVPD[h/m/c]=1.1e-03/1.2e-04/6.5e-04
+  round  30  occ(global) hot/mid/cold=0.500/0.438/0.500  EEVPD[h/m/c]=2.6e-04/3.6e-04/9.3e-04
+  round  35  occ(global) hot/mid/cold=0.438/0.500/0.500  EEVPD[h/m/c]=7.6e-04/6.0e-04/2.1e-04
+  round  40  occ(global) hot/mid/cold=0.438/0.500/0.500  EEVPD[h/m/c]=6.6e-04/4.0e-04/2.3e-04
+  round  45  occ(global) hot/mid/cold=0.438/0.500/0.500  EEVPD[h/m/c]=6.9e-04/4.2e-04/4.2e-04
+  round  50  occ(global) hot/mid/cold=0.375/0.438/0.500  EEVPD[h/m/c]=3.3e-04/4.7e-04/2.9e-04
+  round  55  occ(global) hot/mid/cold=0.438/0.438/0.500  EEVPD[h/m/c]=3.9e-04/5.0e-04/5.9e-04
+  round  60  occ(global) hot/mid/cold=0.312/0.438/0.500  EEVPD[h/m/c]=1.8e-04/1.7e-04/2.4e-04
+  round  65  occ(global) hot/mid/cold=0.312/0.438/0.500  EEVPD[h/m/c]=3.1e-03/5.8e-04/1.1e-03
+  round  70  occ(global) hot/mid/cold=0.375/0.500/0.500  EEVPD[h/m/c]=6.1e-04/3.1e-04/8.7e-05
+  round  75  occ(global) hot/mid/cold=0.438/0.500/0.500  EEVPD[h/m/c]=1.5e-03/4.5e-04/7.6e-04
+  round  80  occ(global) hot/mid/cold=0.312/0.500/0.500  EEVPD[h/m/c]=3.7e-04/3.1e-04/6.1e-04
+  round  85  occ(global) hot/mid/cold=0.375/0.438/0.500  EEVPD[h/m/c]=1.8e-04/2.8e-03/6.6e-04
+  round  89  occ(global) hot/mid/cold=0.250/0.500/0.500  EEVPD[h/m/c]=2.5e-04/2.6e-03/1.8e-04
+
+========== PT RESULT (PROPOSED/UNCERTIFIED) ==========
+  cold occ(global) time-avg (post-burn) = 0.500  (truth ~1.0; tempered-burnin froze ~0.6)
+  swap acceptance per adjacent pair = [0.675 0.699 0.61  0.538 0.567 0.551 0.564 0.567 0.485]
+  per-level EEVPD (last) = [2.5e-04 4.5e-04 1.2e-04 6.0e-05 7.4e-05 2.6e-03 3.6e-04 1.8e-04 1.0e-03
+ 1.8e-04]  (target 5e-4)
+  wall 2573s -> /global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/de_mclmc_prototype/pt_carousel.npz

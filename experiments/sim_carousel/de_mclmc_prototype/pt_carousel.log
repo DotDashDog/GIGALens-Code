@@ -1,0 +1,27 @@
+PT: R=10 NSYS=16 K=10 ROUNDS=90; all-secondary init occ(global)=0.000
+betas=[0.02, 0.031, 0.048, 0.074, 0.114, 0.176, 0.271, 0.419, 0.647, 1.0]
+  round   0  cold occ(global)=0.000  EEVPD[hot/mid/cold]=2.7e-02/2.8e+00/2.2e-01  step[hot/mid/cold]=0.401 0.162 0.067
+  round   5  cold occ(global)=0.000  EEVPD[hot/mid/cold]=1.7e-03/3.8e-03/3.8e-04  step[hot/mid/cold]=0.330 0.164 0.083
+  round  10  cold occ(global)=0.000  EEVPD[hot/mid/cold]=3.0e-04/1.1e-03/6.2e-04  step[hot/mid/cold]=0.343 0.140 0.081
+  round  15  cold occ(global)=0.000  EEVPD[hot/mid/cold]=5.9e-04/2.0e-04/5.1e-04  step[hot/mid/cold]=0.326 0.138 0.076
+  round  20  cold occ(global)=0.000  EEVPD[hot/mid/cold]=2.0e-04/1.0e-03/6.6e-04  step[hot/mid/cold]=0.302 0.124 0.078
+  round  25  cold occ(global)=0.000  EEVPD[hot/mid/cold]=5.9e-04/5.7e-03/2.1e-04  step[hot/mid/cold]=0.289 0.113 0.072
+  round  30  cold occ(global)=0.000  EEVPD[hot/mid/cold]=4.9e-04/5.4e-04/5.0e-04  step[hot/mid/cold]=0.254 0.122 0.074
+  round  35  cold occ(global)=0.000  EEVPD[hot/mid/cold]=2.6e-04/5.3e-04/6.1e-04  step[hot/mid/cold]=0.262 0.118 0.059
+  round  40  cold occ(global)=0.000  EEVPD[hot/mid/cold]=3.0e-04/1.3e-04/3.9e-04  step[hot/mid/cold]=0.282 0.108 0.058
+  round  45  cold occ(global)=0.000  EEVPD[hot/mid/cold]=1.7e-04/1.3e-03/2.6e-04  step[hot/mid/cold]=0.291 0.105 0.051
+  round  50  cold occ(global)=0.000  EEVPD[hot/mid/cold]=7.3e-04/8.4e-04/7.1e-05  step[hot/mid/cold]=0.268 0.103 0.054
+  round  55  cold occ(global)=0.000  EEVPD[hot/mid/cold]=2.5e-04/1.0e-03/1.5e-03  step[hot/mid/cold]=0.270 0.104 0.058
+  round  60  cold occ(global)=0.000  EEVPD[hot/mid/cold]=6.3e-04/1.0e-03/4.2e-04  step[hot/mid/cold]=0.278 0.100 0.062
+  round  65  cold occ(global)=0.000  EEVPD[hot/mid/cold]=8.2e-04/6.1e-04/6.0e-04  step[hot/mid/cold]=0.246 0.100 0.055
+  round  70  cold occ(global)=0.000  EEVPD[hot/mid/cold]=2.8e-04/4.3e-04/6.2e-04  step[hot/mid/cold]=0.247 0.102 0.056
+  round  75  cold occ(global)=0.000  EEVPD[hot/mid/cold]=1.2e-04/3.6e-04/7.1e-04  step[hot/mid/cold]=0.248 0.100 0.060
+  round  80  cold occ(global)=0.000  EEVPD[hot/mid/cold]=4.2e-04/1.2e-03/1.2e-03  step[hot/mid/cold]=0.248 0.090 0.054
+  round  85  cold occ(global)=0.000  EEVPD[hot/mid/cold]=2.3e-03/2.6e-04/2.8e-03  step[hot/mid/cold]=0.240 0.097 0.051
+  round  89  cold occ(global)=0.000  EEVPD[hot/mid/cold]=1.3e-03/2.0e-04/1.3e-03  step[hot/mid/cold]=0.230 0.094 0.045
+
+========== PT RESULT (PROPOSED/UNCERTIFIED) ==========
+  cold occ(global) time-avg (post-burn) = 0.000  (truth ~1.0; tempered-burnin froze ~0.6)
+  swap acceptance per adjacent pair = [0.697 0.703 0.593 0.553 0.54  0.529 0.464 0.504 0.469]
+  per-level EEVPD (last) = [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]  (target 5e-4)
+  wall 2568s -> /global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/de_mclmc_prototype/pt_carousel.npz

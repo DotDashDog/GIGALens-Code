@@ -1,0 +1,25 @@
+n up(global) samples=62998  n lo(secondary) samples=17002
+
+--- per-point target density (the p in lambda=q/p) ---
+  logp secondary: mean=-119527.92  | global: mean=-119508.54  | gap(glob-sec)=+19.37  (predicted ~+7)
+  col9 sec=4.339  glob=4.449 (THR 4.4)
+
+--- within-mode PACKING (Mahalanobis pairwise in upper_cov metric) ---
+  secondary pairwise: median=4.681  | global: median=5.211  | ratio glob/sec=1.11x
+
+--- lambda = q/p decomposition, BANDWIDTH sweep (the core test) ---
+  bw     logq_sec  logq_glob  dq(sec-glob)   dp(glob-sec)   loglam_sec  loglam_glob  dlam(sec-glob)
+  0.05  -1597.78  -3559.04     +1961.26        +19.37   117930.13  115949.50     +1980.63
+  0.10   -334.93   -825.24      +490.31        +19.37   119192.99  118683.30      +509.69
+  0.20    -26.48   -149.07      +122.59        +19.37   119501.44  119359.47      +141.97
+  0.50     49.92     30.18       +19.74        +19.37   119577.84  119538.72       +39.12
+  1.00     53.12     48.18        +4.94        +19.37   119581.04  119556.72       +24.31
+  [draining needs dlam(sec-glob) >> 0 (secondary preferentially deleted).
+   hypothesis: dq(sec-glob) ~ dp(glob-sec) ~ +7 => they cancel => dlam ~ 0 => NO draining.]
+
+--- proposal LANDING (KDE proposal y = theta + bw*chol(upper_cov)*xi; logp drop) ---
+  bw=0.05: logp drop sec=-3.88  glob=-19.40  | within-mode proposals cross THR: 0/256
+  bw=0.20: logp drop sec=-77.89  glob=-314.74  | within-mode proposals cross THR: 0/256
+  bw=0.50: logp drop sec=-590.64  glob=-2360.49  | within-mode proposals cross THR: 0/256
+
+wall 7s

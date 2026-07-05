@@ -4,12 +4,33 @@ This is a **scientific-research** project: the goal is a *defensible answer to a
 
 ## Read first (required)
 
-1. `docs/method-discipline.md` — general anti-cargo-cult method discipline (how not to fool yourself). High priority.
+0. `docs/agent-operating-card.md` — **auto-injected at session/subagent start**, so you should already have it: the distilled most-violated rules, the diagnostics decision table, and pointers. The items below are the depth behind it.
+1. `docs/method-discipline.md` — general anti-cargo-cult method discipline (how not to fool yourself). High priority. Grounding: Feynman, [*Cargo Cult Science*](https://calteches.library.caltech.edu/51/2/CargoCult.htm).
 2. **This file** — operating modes + the structural rules that make the discipline actually bind.
 3. `docs/project-standards.md` — project-specific standards (controls/baselines, validation, failure-modes-to-watch, domain conventions).
-4. `README.md` - project structure, code conventions.
-5. The lab-notebook log for the area you're working in (see *The record*, below).
-6. `env_setup.md` - python environment standards for the project (the canonical environment)
+4. `docs/anti-patterns.md` — the negative-knowledge playbook: tempting-but-wrong moves, why they fail here, and the correct first move.
+5. `README.md` - project structure, code conventions.
+6. The lab-notebook log for the area you're working in (see *The record*, below).
+7. `env_setup.md` - python environment standards for the project (the canonical environment)
+
+## Mechanisms (structural enforcement — prefer these over prose rules)
+
+The discipline is enforced by artifacts and roles, not only by reading:
+
+- **`/pre-run-checklist` skill** — produces the mandatory pre-registration **design checkpoint**
+  in the lab log *before* a consequential run, then stops for approval (structural rule 3 as an
+  artifact, not a promise).
+- **`/diagnose-sampling` skill** — the ordered diagnostic workflow for misbehaving inference
+  runs (cheap mundane checks first; produces UNCERTIFIED findings, not fixes).
+- **`rigor-grader` agent** — adversarial grading of a proposed claim against this discipline;
+  cheap to run, so run it before asking the human to certify (structural rules 1–2 as a role).
+- **`inference-diagnostician` agent** — sampling diagnosis with the domain workflow baked in.
+- **Lints/tests** — `tools/lint_silent_defaults.py`, `tests/test_no_silent_scientific_defaults.py`,
+  and the `Pipeline.run` model card guard against silent scientific defaults.
+
+When a post-mortem yields a new rule (structural rule 4), first ask whether it can be a
+mechanism instead — a lint, a template field, a grader-checklist item, a skill step. Only if
+not, add prose.
 
 ## Operating modes
 
@@ -44,6 +65,10 @@ The durable record is split into **one lab-notebook log per rough research area*
 Areas → logs (lab-notebook logs live in `docs/logs/`, one per area):
 - Compute / likelihood-gradient profiling → `docs/logs/compute-profiling.md`
 - Carousel-lens MCLMC sampling diagnosis → `docs/logs/carousel-mclmc-sampling.md`
+- Why lensing posteriors are hard to sample (standing question, cross-system) → `docs/logs/why-hard-to-sample.md`
+
+Parked ideas (tabled, not active — do not start without the human re-opening them) live in
+`docs/logs/open-topics.md`.
 
 Update the relevant log after any substantive step. Stale state is worse than none.
 

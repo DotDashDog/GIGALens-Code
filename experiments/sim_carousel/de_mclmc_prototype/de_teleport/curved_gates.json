@@ -1,0 +1,50 @@
+{
+  "b_star": 6.0,
+  "gate1": [
+    {
+      "b": 6.0,
+      "linDE_acc_pct": 0.6770833333333334,
+      "rt": 0
+    },
+    {
+      "b": 9.0,
+      "linDE_acc_pct": 0.5520833333333334,
+      "rt": 0
+    },
+    {
+      "b": 12.0,
+      "linDE_acc_pct": 0.43750000000000006,
+      "rt": 0
+    }
+  ],
+  "gateC": {
+    "linDE": {
+      "move_acc_pct": 0.734375,
+      "round_trips": 0,
+      "crossings": 3,
+      "w_minor": 0.4084375,
+      "rt_ratio_vs_linDE": 0.0
+    },
+    "gamma1": {
+      "move_acc_pct": 0.578125,
+      "round_trips": 0,
+      "crossings": 3,
+      "w_minor": 0.34697916666666667,
+      "rt_ratio_vs_linDE": 0.0
+    },
+    "snooker": {
+      "move_acc_pct": 0.6510416666666667,
+      "round_trips": 0,
+      "crossings": 0,
+      "w_minor": 0.5,
+      "rt_ratio_vs_linDE": 0.0
+    },
+    "near": {
+      "move_acc_pct": 0.19270833333333334,
+      "round_trips": 0,
+      "crossings": 1,
+      "w_minor": 0.4214583333333333,
+      "rt_ratio_vs_linDE": 0.0
+    }
+  }
+}

@@ -16,6 +16,7 @@ import sys
 import math
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from gigalens_research.inference.laps_core import (
     equipartition_diagonal,
@@ -296,6 +297,42 @@ def test_bisection_latch():
 
 
 # --------------------------------------------------------------------------- #
+def test_bisection_freeze_gate():
+    hdr("TEST 7b  Phase-2 freeze GATE: freeze_enable defers the latch (Fix 2)")
+    # PRE-REGISTERED: the freeze must NOT latch while freeze_enable=False, even with
+    # accept exactly in-band (this is how the driver enforces windowed+persistent+
+    # min-step conditions so a transient cannot freeze a too-large eps). FALSIFIER:
+    # any freeze (frozen_out True) while freeze_enable=False on an unfrozen state.
+    tgt = 0.7
+    eps0 = 1.0
+    lo, hi = float("nan"), float("nan")
+    # (a) in-band but gate CLOSED -> no latch, eps keeps adapting.
+    e1, lo1, hi1, fr1 = bisection_step(eps0, 0.71, tgt, lo=lo, hi=hi, tol=0.03,
+                                       frozen=False, freeze_enable=False)
+    print(f"  gate CLOSED, accept=0.71 in-band: frozen_out={bool(fr1)} "
+          f"(expect False), eps {eps0}->{float(e1):.4f} (adapts)")
+    check("freeze_enable=False blocks the latch", not bool(fr1), f"fr={bool(fr1)}")
+    check("eps still adapts when gate closed", abs(float(e1) - eps0) > 1e-9,
+          f"eps {eps0}->{float(e1)}")
+    # (b) gate OPEN + in-band -> latch fires.
+    e2, lo2, hi2, fr2 = bisection_step(eps0, 0.71, tgt, lo=lo, hi=hi, tol=0.03,
+                                       frozen=False, freeze_enable=True)
+    print(f"  gate OPEN, accept=0.71 in-band: frozen_out={bool(fr2)} (expect True), "
+          f"eps held at {float(e2):.4f}")
+    check("freeze_enable=True latches in-band", bool(fr2), f"fr={bool(fr2)}")
+    check("eps held on the latch step", abs(float(e2) - eps0) < 1e-12, f"{float(e2)}")
+    # (c) one-way latch: already frozen stays frozen and held even with gate closed
+    # AND accept out-of-band (sticky regardless of freeze_enable).
+    e3, lo3, hi3, fr3 = bisection_step(e2, 0.40, tgt, lo=lo2, hi=hi2, tol=0.03,
+                                       frozen=True, freeze_enable=False)
+    print(f"  already frozen, accept=0.40 out-of-band, gate CLOSED: "
+          f"frozen_out={bool(fr3)} (expect True), eps {float(e2):.4f}->{float(e3):.4f}")
+    check("latch sticky regardless of gate", bool(fr3), f"fr={bool(fr3)}")
+    check("eps held while frozen", abs(float(e3) - float(e2)) < 1e-12,
+          f"{float(e3)} == {float(e2)}")
+
+
+# --------------------------------------------------------------------------- #
 def test_self_calibrated_switch():
     hdr("TEST 8  Self-calibrated vs absolute switch at small M (D2; Fix 2)")
     # PRE-REGISTERED (switch-resolution doc): on an EXACTLY-equilibrium N(0,I)
@@ -355,6 +392,269 @@ def test_self_calibrated_switch():
 
 
 # --------------------------------------------------------------------------- #
+def _run_staged_controller(eps0, *, tgt=0.70, chunk_size=10, n_chunks=25,
+                           persist_need=2, tol=0.03, growth=1.7, seed=123):
+    """Reproduce the production driver's STAGED per-chunk Phase-2 host loop on a TOY.
+
+    Ensemble accept is a known monotone-DECREASING function of eps,
+    ``accept(eps) = exp(-eps)`` (so eps* = -ln(tgt)). eps is HELD CONSTANT within a
+    chunk; the bracket/freeze update runs ONCE per chunk on the SETTLED accept
+    (mean over the LATTER HALF of the chunk's per-step accepts). The FIRST HALF is
+    deliberately spiked toward ~1.0 to emulate the post-switch transient that fooled
+    the old per-step rolling window -- the staged controller must IGNORE it.
+
+    Mirrors driver: eps0 = handoff (here we pass it directly to test BOTH the
+    too-SMALL/too-LARGE start), NaN/NaN start bracket (expansion brackets in either
+    direction), WIDE rail [eps0*1e-3, eps0*1e3]. Returns the per-chunk rows and the
+    post-freeze eps list.
+    """
+    accept_fn = lambda e: math.exp(-e)
+    rng = jax.random.PRNGKey(seed)
+    eps = float(eps0)
+    eps_min, eps_max = eps0 * 1e-3, eps0 * 1e3      # driver's WIDE safety rail
+    lo = float("nan"); hi = float("nan")
+    frozen = False; persist = 0
+    rows = []
+    eps_after_freeze = []
+    bstep = lambda e, a, lo, hi, fe: bisection_step(
+        e, a, tgt, lo=lo, hi=hi, tol=tol, frozen=False, freeze_enable=fe,
+        eps_min=eps_min, eps_max=eps_max, growth=growth)
+    for c in range(n_chunks):
+        rng, k = jax.random.split(rng)
+        base = accept_fn(eps)
+        noise = 0.005 * jax.random.normal(k, (chunk_size,))
+        steps = jnp.clip(base + noise, 0.0, 1.0)
+        # spike the first half toward ~1.0 (lagging post-switch transient)
+        steps = steps.at[: chunk_size // 2].set(
+            jnp.clip(steps[: chunk_size // 2] + 0.5, 0.0, 1.0))
+        steps = np.asarray(steps)
+        half = chunk_size // 2
+        a_settled = float(np.mean(steps[half:]))    # latter-half settled accept
+        rows.append((c, eps, a_settled, lo, hi, frozen))
+        if frozen:
+            eps_after_freeze.append(eps)
+            continue
+        in_band = abs(a_settled - tgt) <= tol
+        persist = persist + 1 if in_band else 0
+        freeze_now = persist >= persist_need
+        e_next, lo_, hi_, fr = bstep(eps, a_settled, lo, hi, freeze_now)
+        lo, hi = float(lo_), float(hi_)
+        eps = float(e_next)
+        frozen = bool(fr)
+    return rows, eps_after_freeze, (eps_min, eps_max)
+
+
+def _grade_staged(label, eps0, rows, eps_after_freeze, rail, tgt=0.70, tol=0.03):
+    eps_min, eps_max = rail
+    eps_star = -math.log(tgt)
+    accept_fn = lambda e: math.exp(-e)
+    print(f"\n  --- {label}: eps0={eps0:g} (accept0={accept_fn(eps0):.3f}), "
+          f"target={tgt}, eps*={eps_star:.5f}, rail=[{eps_min:.3g},{eps_max:.3g}] ---")
+    print("   chunk  eps         a_settled  lo         hi         frozen")
+    for (c, e, a, l, h, fr) in rows:
+        print(f"   {c:<5d}  {e:.6f}   {a:.4f}     {l:<9.4g}  {h:<9.4g}  {fr}")
+    froze = any(r[5] for r in rows)
+    # eps at which the latch was armed: first chunk that was unfrozen-in but whose
+    # update froze it -> the held eps is the last unfrozen row's eps.
+    frozen_eps = next((e for (_, e, _, _, _, fr) in rows if fr), rows[-1][1])
+    final_a = accept_fn(frozen_eps)
+    in_band_chunks = [a for (_, _, a, _, _, fr) in rows if not fr and abs(a - tgt) <= tol]
+    eps_latched = len(set(round(x, 12) for x in eps_after_freeze)) <= 1
+    print(f"  froze={froze}; frozen eps={frozen_eps:.5f}; accept(frozen eps)="
+          f"{final_a:.4f} (|.-tgt|={abs(final_a-tgt):.4f}); "
+          f"in-band settled chunks={len(in_band_chunks)}; latched={eps_latched}")
+    check(f"[{label}] FREEZES within {len(rows)} chunks", froze, f"froze={froze}")
+    check(f"[{label}] frozen accept on-target (<=0.05)", abs(final_a - tgt) <= 0.05,
+          f"|{final_a:.4f}-{tgt}|={abs(final_a-tgt):.4f} <= 0.05")
+    check(f"[{label}] eps near eps* (no runaway)", abs(frozen_eps - eps_star) < 2 * eps_star,
+          f"{frozen_eps:.5f} vs eps*={eps_star:.5f}")
+    check(f"[{label}] eps stays inside rail (not pinned)",
+          eps_min * 1.001 < frozen_eps < eps_max * 0.999,
+          f"{frozen_eps:.5f} in ({eps_min:.3g}, {eps_max:.3g})")
+    check(f"[{label}] eps LATCHES (held after freeze)", eps_latched,
+          f"post-freeze eps: {sorted(set(round(x,6) for x in eps_after_freeze))}")
+    return froze, frozen_eps
+
+
+def test_staged_phase2_bisection():
+    hdr("TEST 7c  STAGED per-chunk Phase-2 bracketing-bisection: BOTH directions "
+        "(FIX A eps0=L/N + FIX B bracketing)")
+    # MECHANISM under test: the production driver HOLDS eps constant within a
+    # Phase-2 chunk and updates the bracket ONCE per chunk on the SETTLED accept
+    # (latter-half mean). With the fixes it (FIX A) starts eps0 in the right
+    # ballpark and (FIX B) BRACKETS by geometric expansion in EITHER direction
+    # before bisecting -- so it reaches the target whether eps0 is too SMALL
+    # (accept pinned high, the case that was broken) or too LARGE.
+    #
+    # accept(eps) = exp(-eps), target 0.70, eps* = -ln(0.70) = 0.35667.
+    #
+    # PRE-REGISTERED (both cases):
+    #   * the controller brackets, refines, and the latch FIRES within the budget;
+    #   * accept at the frozen eps is on target (|a - 0.70| <= 0.05);
+    #   * eps LATCHES one-way and stays inside the WIDE rail (no runaway, not pinned).
+    # FALSIFIER: no freeze, OR frozen accept off target, OR eps changes post-freeze,
+    # OR eps pinned at a rail edge.
+    tgt = 0.70
+
+    # CASE 1 -- START ABOVE TARGET: tiny eps0=0.01 (accept ~0.99). eps* = 0.357 is
+    # ~36x ABOVE eps0 (deliberately OUTSIDE any eps0*30 box), so this REQUIRES the
+    # upward geometric expansion to walk eps UP past 30x. THIS is the case the old
+    # one-sided/narrow controller could not solve (acceptance pinned ~1.0).
+    rows1, eaf1, rail1 = _run_staged_controller(0.01, tgt=tgt)
+    froze1, _ = _grade_staged("CASE1 start-ABOVE (eps0=0.01)", 0.01, rows1, eaf1, rail1, tgt)
+    # explicit evidence the controller EXPANDED eps UPWARD before bracketing:
+    eps_seq1 = [r[1] for r in rows1]
+    expanded_up = max(eps_seq1) > 5 * 0.01 and eps_seq1[1] > eps_seq1[0]
+    check("[CASE1] controller EXPANDS eps upward (a>target => grow)", expanded_up,
+          f"eps went 0.01 -> max {max(eps_seq1):.4f} (>5x), step1>{eps_seq1[0]:.4f}")
+
+    # CASE 2 -- START BELOW TARGET: large eps0=3 (accept ~0.05). eps* = 0.357 is
+    # ~8x BELOW eps0, so the controller must SHRINK eps to bracket downward.
+    rows2, eaf2, rail2 = _run_staged_controller(3.0, tgt=tgt)
+    froze2, _ = _grade_staged("CASE2 start-BELOW (eps0=3)", 3.0, rows2, eaf2, rail2, tgt)
+    eps_seq2 = [r[1] for r in rows2]
+    shrank_down = min(eps_seq2) < 0.5 * 3.0 and eps_seq2[1] < eps_seq2[0]
+    check("[CASE2] controller SHRINKS eps downward (a<target => shrink)", shrank_down,
+          f"eps went 3 -> min {min(eps_seq2):.4f} (<0.5x), step1<{eps_seq2[0]:.4f}")
+
+
+# --------------------------------------------------------------------------- #
+def test_changeA_reaches_target_within_budget():
+    hdr("TEST 7e  CHANGE A: cross flat accept~1 plateau + REACH/LATCH 0.70 within "
+        "the chunk budget")
+    # MECHANISM under test (CHANGE A, the production DIAGNOSIS): the real lens gave
+    # Phase 2 only ~8 chunks; starting from eps0=L/N the acceptance was PINNED ~1.0
+    # and the upward expansion (the flat plateau) ate ~7 chunks, then OVERSHOT 0.70
+    # straight to ~0.05 with no chunks left to refine -> never latched. The fix is
+    # (i) a smaller Phase-2 chunk -> MANY more chunks for a fixed budget (~25), and
+    # (ii) a faster expansion factor p2_growth=2.5 so the plateau is crossed in a
+    # FEW chunks, leaving budget to refine + freeze.
+    #
+    # SYNTHETIC ACCEPT (as pre-registered): a logistic accept(eps) that is ~1.0
+    # until eps crosses ~10x eps0, then drops STEEPLY through 0.70 to ~0.05:
+    #     accept(eps) = 1 / (1 + (eps/eps_half)^s),  eps_half = 12*eps0, s = 6.
+    # At eps0: (1/12)^6 ~ 3e-7 -> accept ~1.0 (the flat plateau the old controller
+    # could not cross in budget). accept = 0.70 at eps ~ 10.4x eps0 (steep region).
+    #
+    # PRE-REGISTERED: with p2_chunk_size=8 (-> 25 chunks at num_adjusted_steps=200)
+    # and p2_growth=2.5, the controller BRACKETS, REFINES, and LATCHES at
+    # accept 0.70 +/- 0.05 WITHIN the 25-chunk budget. FALSIFIER: no freeze within
+    # 25 chunks, OR frozen accept off target by > 0.05, OR eps changes post-freeze.
+    tgt = 0.70
+    eps0 = 0.01
+    eps_half, s = 12.0 * eps0, 6.0
+    accept_fn = lambda e: 1.0 / (1.0 + (e / eps_half) ** s)
+    n_chunks, chunk_size, growth, persist_need, tol = 25, 8, 2.5, 2, 0.03
+    eps_min, eps_max = eps0 * 1e-3, eps0 * 1e3
+    print(f"  eps0={eps0} (accept0={accept_fn(eps0):.4f}, plateau ~1.0), "
+          f"eps(accept=0.70)~{eps_half*(1/tgt-1)**(1/s):.4f} (~{eps_half*(1/tgt-1)**(1/s)/eps0:.1f}x eps0)")
+    print(f"  budget: {n_chunks} chunks x {chunk_size} steps, growth={growth}, "
+          f"persist_need={persist_need}")
+
+    rng = jax.random.PRNGKey(7)
+    eps = eps0
+    lo = float("nan"); hi = float("nan")
+    frozen = False; persist = 0; froze_at = None
+    rows = []
+    for c in range(n_chunks):
+        rng, k = jax.random.split(rng)
+        base = accept_fn(eps)
+        steps = np.array(jnp.clip(base + 0.005 * jax.random.normal(k, (chunk_size,)),
+                                  0.0, 1.0))
+        # spike the FIRST HALF toward ~1.0 (the post-switch transient the staged
+        # controller must IGNORE by using the latter-half settled accept).
+        steps[: chunk_size // 2] = np.clip(steps[: chunk_size // 2] + 0.5, 0.0, 1.0)
+        a_settled = float(np.mean(steps[chunk_size // 2:]))
+        rows.append((c, eps, a_settled, lo, hi, frozen))
+        if frozen:
+            continue
+        in_band = abs(a_settled - tgt) <= tol
+        persist = persist + 1 if in_band else 0
+        freeze_now = persist >= persist_need
+        e_next, lo_, hi_, fr = bisection_step(
+            eps, a_settled, tgt, lo=lo, hi=hi, tol=tol, frozen=False,
+            freeze_enable=freeze_now, eps_min=eps_min, eps_max=eps_max, growth=growth)
+        lo, hi = float(lo_), float(hi_)
+        if bool(fr) and froze_at is None:
+            froze_at = c
+        eps = float(e_next)
+        frozen = bool(fr)
+
+    print("   chunk  eps         a_settled  lo         hi         frozen")
+    for (c, e, a, l, h, fr) in rows:
+        print(f"   {c:<5d}  {e:.6f}   {a:.4f}     {l:<9.4g}  {h:<9.4g}  {fr}")
+    frozen_eps = eps                              # held constant once frozen
+    final_a = accept_fn(frozen_eps)
+    eps_seq = [r[1] for r in rows]
+    expanded_up = max(eps_seq) > 5 * eps0         # crossed the plateau upward
+    post = [r[1] for r in rows if froze_at is not None and r[0] > froze_at]
+    latched = (len({round(x, 12) for x in post}) <= 1) if post else True
+    print(f"  froze_at chunk={froze_at} (< {n_chunks}); frozen eps={frozen_eps:.6f}; "
+          f"accept(frozen)={final_a:.4f} (|.-0.70|={abs(final_a-tgt):.4f}); "
+          f"crossed plateau (max eps {max(eps_seq):.4f} > 5x eps0)={expanded_up}; "
+          f"latched={latched}")
+    check("[CHANGE A] LATCHES within the 25-chunk budget",
+          frozen and froze_at is not None and froze_at < n_chunks,
+          f"froze_at={froze_at} < {n_chunks}, frozen={frozen}")
+    check("[CHANGE A] frozen accept on target (|a-0.70|<=0.05)",
+          abs(final_a - tgt) <= 0.05, f"{final_a:.4f} vs {tgt}")
+    check("[CHANGE A] expansion CROSSED the accept~1 plateau", expanded_up,
+          f"max eps {max(eps_seq):.4f} > {5*eps0}")
+    check("[CHANGE A] eps LATCHES (held after freeze)", latched,
+          f"post-freeze eps {sorted({round(x,6) for x in post})}")
+
+
+# --------------------------------------------------------------------------- #
+def test_changeB_core_shape():
+    hdr("TEST 7f  CHANGE B: core run returns (M, keep, dim) + flattens correctly")
+    # Small synthetic core smoke (CPU): a standard-normal target. PRE-REGISTERED:
+    # with p2_keep_per_chain=4, res.samples is (M, 4, dim), res.n_samples_total =
+    # M*4, and res.samples.reshape((-1, dim)) flattens to (M*4, dim). keep=1 stays
+    # (M, 1, dim). FALSIFIER: wrong shape, wrong n_samples_total, or a flatten that
+    # does not give (M*keep, dim). Pure shape/contract test (NOT a recovery claim).
+    try:
+        from gigalens_research.inference.laps_late_adjusted import LAPS_late_adjusted
+    except Exception as e:                          # pragma: no cover
+        check("[CHANGE B] core import", False, f"import failed: {e}")
+        return
+    dim = 4
+    logdensity_fn = lambda z: -0.5 * jnp.sum(z ** 2)
+    M = 16
+    res = LAPS_late_adjusted(
+        logdensity_fn, qz=None, dim=dim, init_mode="cold", num_chains=M,
+        num_unadjusted_steps=40, num_adjusted_steps=40, chunk_size=20,
+        p2_chunk_size=8, p2_keep_per_chain=4, p2_thin=3, seed=0)
+    smp = np.asarray(res.samples)
+    flat = smp.reshape((-1, dim))
+    Mr = smp.shape[0]
+    print(f"  samples shape={smp.shape} (expect (M,4,{dim})); n_samples_total="
+          f"{res.n_samples_total} (expect {Mr*4}); flat={flat.shape} "
+          f"(expect ({Mr*4},{dim})); finite={bool(np.all(np.isfinite(smp)))}")
+    check("[CHANGE B] samples shape (M,keep,dim)",
+          smp.ndim == 3 and smp.shape[1] == 4 and smp.shape[2] == dim,
+          f"{smp.shape}")
+    check("[CHANGE B] n_samples_total == M*keep", res.n_samples_total == Mr * 4,
+          f"{res.n_samples_total} == {Mr*4}")
+    check("[CHANGE B] reshape((-1,dim)) -> (M*keep, dim)",
+          flat.shape == (Mr * 4, dim), f"{flat.shape}")
+    check("[CHANGE B] samples finite", bool(np.all(np.isfinite(smp))),
+          "all finite")
+
+    # keep=1 backward-compat: (M, 1, dim), n_samples_total == M, flatten -> (M, dim).
+    res1 = LAPS_late_adjusted(
+        logdensity_fn, qz=None, dim=dim, init_mode="cold", num_chains=M,
+        num_unadjusted_steps=40, num_adjusted_steps=40, chunk_size=20,
+        p2_chunk_size=8, p2_keep_per_chain=1, seed=0)
+    smp1 = np.asarray(res1.samples)
+    print(f"  keep=1: shape={smp1.shape} (expect (M,1,{dim})); n_total="
+          f"{res1.n_samples_total}; flat={smp1.reshape((-1,dim)).shape}")
+    check("[CHANGE B] keep=1 -> (M,1,dim), flatten (M,dim)",
+          smp1.ndim == 3 and smp1.shape[1] == 1
+          and smp1.reshape((-1, dim)).shape == (smp1.shape[0], dim),
+          f"{smp1.shape}")
+
+
+# --------------------------------------------------------------------------- #
 def test_chunk_sizes():
     hdr("TEST 9  Chunk-divisibility robustness (grader #5; Fix 3)")
     # PRE-REGISTERED: _chunk_sizes never drops a remainder and never returns [].
@@ -388,6 +688,10 @@ def main():
     test_switch_and_D1_falsifier()
     test_bisection()
     test_bisection_latch()
+    test_bisection_freeze_gate()
+    test_staged_phase2_bisection()
+    test_changeA_reaches_target_within_budget()
+    test_changeB_core_shape()
     test_self_calibrated_switch()
     test_chunk_sizes()
     hdr("SUMMARY")

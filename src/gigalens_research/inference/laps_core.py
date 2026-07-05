@@ -370,14 +370,30 @@ def target_accept(integrator_order):
 
 
 def bisection_step(step_size, accept, target, lo=jnp.nan, hi=jnp.nan, tol=0.03,
-                   frozen=False):
-    r"""One Phase-2 bisection step toward target acceptance (spec §5, p.6).
+                   frozen=False, freeze_enable=True, eps_min=None, eps_max=None,
+                   growth=2.5):
+    r"""One Phase-2 bracketing-bisection step toward target acceptance (spec §5, p.6).
 
-    MECHANISM. Phase 2 tunes eps to a target average acceptance by **bisection**
-    on ``a(eps) - a_target`` (no dual averaging -- low noise at large M). Acceptance
-    is monotonically DECREASING in eps (bigger step -> larger energy error ->
-    lower accept). Algorithm (p.6): double/halve to bracket, then bisect; **freeze
-    when |a - a_target| <= tol** (3% default) -- freezing removes ECA bias.
+    MECHANISM. Phase 2 tunes eps to a target average acceptance by a two-phase
+    **bracket-then-bisect** on ``a(eps) - a_target`` (no dual averaging -- low noise
+    at large M). Acceptance is monotonically DECREASING in eps (bigger step ->
+    larger energy error -> lower accept), so the search direction is fixed by sign:
+
+      * a > target  (accept too HIGH)  => eps too SMALL  => INCREASE eps.
+      * a < target  (accept too LOW)   => eps too BIG    => DECREASE eps.
+
+    PHASE i -- BRACKETING (target not yet straddled, i.e. we lack EITHER a known
+        a>target eps or a known a<target eps): EXPAND geometrically by ``growth``
+        in the correct direction -- ``eps*growth`` when a>target (grow toward the
+        larger step the phase needs), ``eps/growth`` when a<target. This is the fix
+        for the warm-start failure where eps started far BELOW the needed step and
+        a one-sided search never reached it: the expansion walks eps UP (or down)
+        by a constant geometric factor until the target acceptance is bracketed.
+    PHASE ii -- REFINE (target bracketed: we hold one eps with a>target = ``lo``
+        and one with a<target = ``hi``): bisect at the GEOMETRIC midpoint
+        ``sqrt(lo*hi)`` (scale-invariant; appropriate for a multiplicative step).
+
+    **Freeze when |a - a_target| <= tol** (3% default) -- freezing removes ECA bias.
 
     ONE-WAY LATCH (spec Algorithm 1: ``ADAPT <- ADAPT and |a - a_target| > tol``).
     The freeze is STICKY: once within tol it stays frozen FOREVER, even if the
@@ -402,6 +418,29 @@ def bisection_step(step_size, accept, target, lo=jnp.nan, hi=jnp.nan, tol=0.03,
     lo, hi    : current bracket (NaN if unset).
     tol       : freeze band (0.03).
     frozen    : incoming latch (bool); once True, eps/bracket are held.
+    freeze_enable : external gate on a NEWLY firing freeze (bool, default True).
+        The latch may fire on this step only if ``freeze_enable`` is True. This is
+        how the driver imposes the windowed + persistent + min-step freeze
+        conditions (Fix 2): the in-band test is still computed here, but committing
+        the freeze is deferred until the caller's gate opens. ``freeze_enable=True``
+        (the default) reproduces the original "freeze on first in-band" behaviour,
+        so every existing caller is unchanged. An ALREADY-set ``frozen`` latch is
+        sticky regardless of ``freeze_enable`` (one-way latch preserved).
+    eps_min, eps_max : OPTIONAL safety rail on the ADAPTING step (default None =
+        no clamp, so every existing caller is unchanged). When supplied, the next
+        step is clamped into ``[eps_min, eps_max]`` BEFORE the freeze-hold, so a
+        transient or over-confident bracket cannot run eps away to 0 or infinity
+        during the geometric bracketing search. A frozen eps is still held EXACTLY
+        (the clamp applies only to the adapting branch), preserving the one-way
+        latch / hold-eps guarantee. The rail must be WIDE enough not to block a
+        legitimate bracketing walk (the driver sets ~3 decades each side of eps0).
+    growth : geometric expansion factor for the bracketing phase (default 2.5).
+        Each unbracketed step multiplies/divides eps by this factor toward the
+        target; must be > 1. The default was raised from 1.7 to 2.5 (CHANGE A) so
+        the bracketing walk CROSSES a flat ``accept~1.0`` plateau -- which can
+        span ~10x in eps when Phase 2 starts from a too-small handoff -- in a few
+        chunks (log_2.5(10) ~ 2.5) instead of the ~7 doublings 1.7 needed, leaving
+        the remaining Phase-2 chunk budget for the bisection refine + freeze.
 
     Returns
     -------
@@ -410,19 +449,39 @@ def bisection_step(step_size, accept, target, lo=jnp.nan, hi=jnp.nan, tol=0.03,
     canon, step_size, accept, target, lo, hi = _canon_cast(
         step_size, step_size, accept, target, lo, hi)
     frozen_in = jnp.asarray(frozen, jnp.bool_)
+    freeze_enable = jnp.asarray(freeze_enable, jnp.bool_)
     a_high = accept > target                     # accept too high => eps too small
-    # Update bracket: if a_high, eps is a lower bound (lo); else an upper bound (hi).
+    # Update bracket: if a_high, eps is a lower bound (lo, the largest eps known to
+    # give a>=target); else an upper bound (hi, the smallest eps known to give
+    # a<target). DIRECTION (monotone-decreasing a): a_high => eps too small => the
+    # solution lies ABOVE step_size, so step_size is a lower bound; confirmed below.
     lo_upd = jnp.where(a_high, step_size, lo)
     hi_upd = jnp.where(a_high, hi, step_size)
     have_lo = ~jnp.isnan(lo_upd)
     have_hi = ~jnp.isnan(hi_upd)
     both = have_lo & have_hi
-    eps_bisect = 0.5 * (lo_upd + hi_upd)
-    eps_unbracketed = jnp.where(a_high, step_size * 2.0, step_size * 0.5)
-    eps_step = jnp.where(both, eps_bisect, eps_unbracketed)
-    # Sticky one-way latch: freeze once in band, stay frozen forever.
+    # PHASE ii (refine): geometric midpoint of the VERIFIED bracket [lo, hi].
+    eps_bisect = jnp.sqrt(lo_upd * hi_upd)
+    # PHASE i (bracketing): target not yet straddled -> EXPAND geometrically by
+    # ``growth`` in the correct direction. a_high (eps too small) GROWS eps toward
+    # the larger step the adjusted phase needs; a<target SHRINKS it. This walks eps
+    # UP from a too-small handoff until a<target is finally observed (the fix), and
+    # symmetrically DOWN from a too-large start.
+    g = jnp.asarray(growth, canon)
+    eps_expand = jnp.where(a_high, step_size * g, step_size / g)
+    eps_step = jnp.where(both, eps_bisect, eps_expand)
+    # OPTIONAL safety rail: clamp the ADAPTING step into [eps_min, eps_max] so a
+    # transient / over-confident bracket cannot run eps away during the geometric
+    # bracketing walk. Applied to eps_step only; a frozen eps is held below.
+    if eps_min is not None:
+        eps_step = jnp.maximum(eps_step, jnp.asarray(eps_min, canon))
+    if eps_max is not None:
+        eps_step = jnp.minimum(eps_step, jnp.asarray(eps_max, canon))
+    # Sticky one-way latch: freeze once in band, stay frozen forever. A NEW freeze
+    # is gated by ``freeze_enable`` (driver's windowed+persistent+min-step test);
+    # an already-set latch (frozen_in) stays sticky regardless of the gate.
     in_band = jnp.abs(accept - target) <= jnp.asarray(tol, canon)
-    frozen_out = frozen_in | in_band
+    frozen_out = frozen_in | (in_band & freeze_enable)
     # Hold eps when (already or newly) frozen; hold the bracket once already frozen.
     eps_next = jnp.where(frozen_out, step_size, eps_step)
     lo_next = jnp.where(frozen_in, lo, lo_upd)

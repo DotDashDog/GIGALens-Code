@@ -1,0 +1,36 @@
+E0626 15:44:58.982206 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:44:58.986682 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:44:58.988423 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 6.48GiB (6957846528 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:44:58.989796 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:44:58.991272 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:44:58.992229 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 6.48GiB (6957846528 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:45:08.993613 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:45:08.994789 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:45:08.995956 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 6.48GiB (6957846528 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:45:08.997117 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.00GiB (8589934592 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:45:08.998299 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 7.20GiB (7730940928 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0626 15:45:08.999453 1626489 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 6.48GiB (6957846528 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+W0626 15:45:08.999458 1626489 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 6.05GiB (rounded to 6492117504)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0626 15:45:08.999599 1626489 bfc_allocator.cc:513] ___________________________________________________________________________________________________*
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/_h1h2_diag/test_banana2.py", line 29, in <module>
+    z=path_z(w); val,g=vg(z)
+                       ^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/_h1h2_diag/test_banana2.py", line 22, in vg
+    v,g=_vg(jnp.asarray(Z[i:i+bs])); vs.append(np.asarray(v)); gs.append(np.asarray(g))
+                                               ^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/array.py", line 413, in __array__
+    return np.asarray(self._value, dtype=dtype, **kwds)  # pyrefly: ignore[no-matching-overload]
+                      ^^^^^^^^^^^
+  File "/opt/jax/jax/_src/profiler.py", line 384, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/array.py", line 613, in _value
+    npy_value, did_copy = self._single_device_array_to_np_array_did_copy()
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 6.05GiB.
+srun: error: nid001180: task 0: Exited with exit code 1
+srun: Terminating StepId=55099115.9

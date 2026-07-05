@@ -123,6 +123,90 @@ def _split_rhat_ess(samples, n_groups=8):
     }
 
 
+def _ess_dim(chains, var_plus, eps=1e-30):
+    r"""Multi-chain bulk-ESS for one dim from rank-normalized (C, n) draws.
+
+    Geyer initial-positive-sequence on the cross-chain-averaged autocorrelation
+    ``rho_t`` (normalized by the pooled ``var_plus``). With short within-chain
+    series (small ``n``) this is a coarse but honest ESS; capped at the raw draw
+    count ``C*n`` and floored at the chain count.
+    """
+    C, n = chains.shape
+    if n < 2 or var_plus <= eps:
+        return float(C)
+    dev = chains - chains.mean(axis=1, keepdims=True)
+    tau = 1.0
+    t = 1
+    while t + 1 < n:
+        r1 = float(np.mean(dev[:, : n - t] * dev[:, t:])) / var_plus
+        r2 = float(np.mean(dev[:, : n - t - 1] * dev[:, t + 1:])) / var_plus
+        if r1 + r2 < 0.0:                  # Geyer: stop at first negative pair sum
+            break
+        tau += 2.0 * (r1 + r2)
+        t += 2
+    return float(min(C * n / max(tau, eps), C * n))
+
+
+def _rhat_ess_chains(samples3d):
+    r"""Rank-normalized split-Rhat + ESS using the (chain, draw) structure.
+
+    ``samples3d`` is ``(M chains, K draws, d)`` with ``K >= 2`` (CHANGE B: the
+    post-freeze thinned within-chain series). This is the PROPER Gelman-Rubin: the
+    M chains are the groups and the K thinned draws are the within-chain time
+    series, so R-hat/ESS are now meaningful (a single sample per chain, K=1, has
+    no within-chain series -- the caller routes that to the between-subensemble
+    fallback). Each chain is split in half when ``K >= 4`` (more, shorter chains,
+    the standard split-Rhat). Returns the same dict keys as ``_split_rhat_ess``.
+    """
+    x = np.asarray(samples3d, np.float64)
+    M, K, d = x.shape
+    if K >= 4:
+        h = K // 2
+        x = np.concatenate([x[:, :h, :], x[:, h:2 * h, :]], axis=0)  # (2M, h, d)
+    C, n, _ = x.shape
+    try:
+        from scipy.stats import rankdata, norm
+        z = np.empty_like(x)
+        for j in range(d):
+            r = rankdata(x[:, :, j].reshape(-1)).reshape(C, n)
+            z[:, :, j] = norm.ppf((r - 0.5) / (C * n))
+    except Exception:
+        z = (x - x.mean(axis=(0, 1), keepdims=True)) / (
+            x.std(axis=(0, 1), keepdims=True) + 1e-30)
+    chain_means = z.mean(axis=1)               # (C, d)
+    chain_vars = z.var(axis=1, ddof=1)         # (C, d)
+    W = chain_vars.mean(axis=0)                # (d,)
+    B = n * chain_means.var(axis=0, ddof=1)    # (d,)
+    var_plus = (n - 1) / n * W + B / n
+    with np.errstate(invalid="ignore", divide="ignore"):
+        rhat = np.sqrt(np.where(W > 0, var_plus / W, np.nan))
+    ess = np.array([_ess_dim(z[:, :, j], float(var_plus[j])) for j in range(d)])
+    return {
+        "rhat_per_dim": rhat,
+        "rhat_max": float(np.nanmax(rhat)),
+        "ess_per_dim": ess,
+        "ess_min": float(np.nanmin(ess)),
+        "n_groups": C,
+        "group_size": n,
+        "M": M * K,
+    }
+
+
+def _rhat_ess(samples, n_groups=8):
+    r"""Route to the proper (chain, draw) Rhat/ESS when a within-chain series exists.
+
+    ``samples`` may be ``(M, d)`` (legacy, one sample/chain) or ``(M, K, d)``
+    (CHANGE B). ``K >= 2`` -> within-chain Gelman-Rubin; ``K == 1`` (or 2-D) ->
+    the between-subensemble fallback ``_split_rhat_ess`` (no within-chain series).
+    """
+    x = np.asarray(samples, np.float64)
+    if x.ndim == 2:
+        x = x[:, None, :]
+    if x.shape[1] >= 2:
+        return _rhat_ess_chains(x)
+    return _split_rhat_ess(x[:, 0, :], n_groups=n_groups)
+
+
 def _steps_to_floor(D_tilde, tol=2.0):
     r"""Host estimate: first Phase-1 step where D-tilde reaches its late-time floor.
 
@@ -162,8 +246,14 @@ def diagnose(results, param_names=None, out_png="laps_diagnose.png", verbose=Tru
     ew = np.asarray(res.p1_eevpd_wanted, np.float64)
     acc = np.asarray(res.p2_accept, np.float64)
     frozen = np.asarray(res.p2_frozen, dtype=bool)
-    samples = np.asarray(res.samples, np.float64)
-    M, d = samples.shape
+    # CHANGE B: res.samples is (M, K, d) (K = p2_keep_per_chain). Keep the (chain,
+    # draw) structure for R-hat/ESS; flatten where a (N, d) view is needed.
+    samples3d = np.asarray(res.samples, np.float64)
+    if samples3d.ndim == 2:
+        samples3d = samples3d[:, None, :]
+    M, K, d = samples3d.shape
+    samples = samples3d.reshape(-1, d)               # (M*K, d) flat view
+    n_total = int(getattr(res, "n_samples_total", M * K))
     a_target = float(res.target_accept)
     phase1_len = int(res.phase1_len)
     switch_idx = int(res.switch_index)
@@ -176,7 +266,7 @@ def diagnose(results, param_names=None, out_png="laps_diagnose.png", verbose=Tru
     p2_ran = bool(np.all(np.isfinite(acc))) and acc.size > 1
     acc_final = float(acc[-1]) if p2_ran else float("nan")
     frozen_latched = bool(frozen[-1]) if p2_ran else False
-    conv = _split_rhat_ess(samples)
+    conv = _rhat_ess(samples3d)
 
     # ---- flags ----
     flags = {
@@ -189,7 +279,8 @@ def diagnose(results, param_names=None, out_png="laps_diagnose.png", verbose=Tru
         "rhat_ok": bool(conv["rhat_max"] < 1.01),
     }
     health = {
-        "M": M, "dim": d, "phase1_len": phase1_len, "switch_index": switch_idx,
+        "M": M, "dim": d, "keep_per_chain": K, "n_samples_total": n_total,
+        "phase1_len": phase1_len, "switch_index": switch_idx,
         "switched": bool(res.switched), "steps_to_floor_est": s2f,
         "switch_margin": int(switch_margin), "D_tilde_late": D_late,
         "D_tilde_final": float(D[-1]) if len(D) else float("nan"),
@@ -203,7 +294,7 @@ def diagnose(results, param_names=None, out_png="laps_diagnose.png", verbose=Tru
     # ---- plots ----
     names = param_names or [f"z{j}" for j in range(d)]
     fig, ax = plt.subplots(2, 3, figsize=(16, 9))
-    fig.suptitle(f"LAPS diagnose (ground-truth-free)  M={M} d={d}  "
+    fig.suptitle(f"LAPS diagnose (ground-truth-free)  M={M} K={K} N={n_total} d={d}  "
                  f"order={res.integrator_order}", fontsize=12)
     t1 = np.arange(len(D))
 
@@ -247,7 +338,7 @@ def diagnose(results, param_names=None, out_png="laps_diagnose.png", verbose=Tru
 
     a = ax[1, 1]
     a.bar(np.arange(d), conv["ess_per_dim"], color="C2")
-    a.axhline(M, color="k", ls=":", lw=1, label=f"M={M}")
+    a.axhline(n_total, color="k", ls=":", lw=1, label=f"N={n_total}")
     a.set_title(f"(e) cross-chain ESS (min={conv['ess_min']:.0f})")
     a.set_xlabel("dim"); a.legend(fontsize=8)
     a.set_xticks(np.arange(d)); a.set_xticklabels(names, rotation=90, fontsize=6)
@@ -261,7 +352,7 @@ def diagnose(results, param_names=None, out_png="laps_diagnose.png", verbose=Tru
         f"EEVPD ratio late : {eevpd_ratio_late:.2f}  (-> 1)",
         f"P2 accept final  : {acc_final:.3f}  (target {a_target})",
         f"P2 freeze latched: {frozen_latched}",
-        f"Rhat_max         : {conv['rhat_max']:.4f}   ESS_min: {conv['ess_min']:.0f} / M={M}",
+        f"Rhat_max         : {conv['rhat_max']:.4f}   ESS_min: {conv['ess_min']:.0f} / N={n_total} (M={M} x K={K})",
         "",
         "FLAGS (True = pass):",
     ] + [f"  {k:<20}: {v}" for k, v in flags.items()]
@@ -311,9 +402,13 @@ def compare_warm_cold(model_seq, qz, param_names=None, out_png="laps_warm_cold.p
     """
     res_cold = run_laps(model_seq, qz, init_mode="cold", **kw)
     res_warm = run_laps(model_seq, qz, init_mode="warm", **kw)
+    # CHANGE B: samples are (M, K, d); flatten the (chain, sample) axes to (M*K, d)
+    # for the marginal/cross-moment comparisons (legacy (M, d) passes through).
     s_cold = np.asarray(res_cold.samples, np.float64)
     s_warm = np.asarray(res_warm.samples, np.float64)
-    d = s_cold.shape[1]
+    d = s_cold.shape[-1]
+    s_cold = s_cold.reshape(-1, d)
+    s_warm = s_warm.reshape(-1, d)
     names = param_names or [f"z{j}" for j in range(d)]
 
     mean_c, mean_w = s_cold.mean(0), s_warm.mean(0)

@@ -76,6 +76,7 @@ def main():
     print("=== 1) run_laps (cold, validated defaults) ===")
     res = run_laps(model_seq, qz, init_mode="cold", num_chains=512, seed=0)
     s = np.asarray(res.samples)
+    s = s.reshape(-1, s.shape[-1])      # (M,K,d)->(M*K,d) for mean/cov; legacy (M,d) noop
     print(f"  samples shape={s.shape} finite={np.all(np.isfinite(s))} "
           f"switch@{res.switch_index}/{res.phase1_len} order={res.integrator_order}")
 

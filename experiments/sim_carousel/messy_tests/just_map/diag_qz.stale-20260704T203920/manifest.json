@@ -1,0 +1,21 @@
+{
+  "arrays": [],
+  "class": "BridgeStage",
+  "config": {
+    "version": "v1"
+  },
+  "diagnostics": [],
+  "diagnostics_config": {},
+  "input_hash": "45442ab2e5c0211f",
+  "metadata": {
+    "version": "v1",
+    "wall_time_s": 0.05052505899220705
+  },
+  "schema_version": 1,
+  "seed": 42,
+  "stage": "diag_qz",
+  "timestamp": "2026-06-29T23:05:45.879763+00:00",
+  "upstream_hashes": {
+    "z_best": "b90dc41668cdc0aa"
+  }
+}

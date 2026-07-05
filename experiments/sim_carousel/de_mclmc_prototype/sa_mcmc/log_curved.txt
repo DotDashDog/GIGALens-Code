@@ -1,0 +1,10 @@
+GATE-1 static within-mode linear-DE acceptance = 1.33% (target 0.5-1.5%; Gaussian testbeds ~8.7%)
+
+[C1] SA-mixture invariance from truth init (w_A=0.60) ...
+   w_A=0.6006 +/- 0.0055  |est-0.60|=0.0006 (3SE=0.0166)
+   drift 1st=0.6075 2nd=0.5938 |diff|=0.0137 (3SE_diff=0.0326)
+   mode A: base dim1 mean=3.993(tgt +4.0) std=0.272(tgt 0.3) ridge dim0 std=0.648(tgt 3.0)
+   mode B: base dim1 mean=-4.004(tgt -4.0) std=0.277(tgt 0.3) ridge dim0 std=0.643(tgt 3.0)
+   SA sub-rate=0.640 flips/round=7.6 min_eig=7.216e-02
+
+[C2] re-equilibration from WRONG populated init w_A=0.30 (truth 0.60) ...

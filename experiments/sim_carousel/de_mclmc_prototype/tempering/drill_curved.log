@@ -1,0 +1,7 @@
+   steps/stage=  300: occ_A=0.1875  anneal_max_EEVPD=1.40e-08 (faithful)
+   steps/stage=  900: occ_A=0.4062  anneal_max_EEVPD=6.05e-08 (faithful)
+   steps/stage= 2700: occ_A=0.5781  anneal_max_EEVPD=1.45e-07 (faithful)
+   steps/stage= 6000: occ_A=0.5312  anneal_max_EEVPD=6.97e-07 (faithful)
+
+   true w_A=0.6; vanilla=0 (trapped). occ_A trend: [0.188 0.406 0.578 0.531]
+   wall 113.1s

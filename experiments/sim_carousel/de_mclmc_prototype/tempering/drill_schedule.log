@@ -1,0 +1,14 @@
+   geom15     eff=  200: occ_+ = 0.5312 +/- 0.0355
+   geom15     eff=  800: occ_+ = 0.5703 +/- 0.0289
+   geom15     eff= 2400: occ_+ = 0.5625 +/- 0.0221
+   geom30     eff=  200: occ_+ = 0.5859 +/- 0.0135
+   geom30     eff=  800: occ_+ = 0.5703 +/- 0.0186
+   geom30     eff= 2400: occ_+ = 0.5898 +/- 0.0224
+   densehot1  eff=  200: occ_+ = 0.5000 +/- 0.0285
+   densehot1  eff=  800: occ_+ = 0.5703 +/- 0.0101
+   densehot1  eff= 2400: occ_+ = 0.6719 +/- 0.0064
+
+   predicted freeze-out floor (barrier~8, beta_f=0.640): 0.6323
+   true weight: 0.70
+
+   wall 342.3s

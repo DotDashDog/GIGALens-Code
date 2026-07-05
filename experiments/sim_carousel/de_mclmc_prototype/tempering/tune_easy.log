@@ -1,0 +1,37 @@
+=== EEVPD step tuning at beta=1 (easy mixture) ===
+   [tune beta=1] step=0.01000  EEVPD=1.453e-19  (target 5.0e-04)
+   [tune beta=1] step=0.01468  EEVPD=1.417e-18  (target 5.0e-04)
+   [tune beta=1] step=0.02154  EEVPD=1.361e-17  (target 5.0e-04)
+   [tune beta=1] step=0.03162  EEVPD=1.313e-16  (target 5.0e-04)
+   [tune beta=1] step=0.04642  EEVPD=1.368e-15  (target 5.0e-04)
+   [tune beta=1] step=0.06813  EEVPD=1.543e-14  (target 5.0e-04)
+   [tune beta=1] step=0.10000  EEVPD=1.616e-13  (target 5.0e-04)
+   [tune beta=1] step=0.14678  EEVPD=1.557e-12  (target 5.0e-04)
+   [tune beta=1] step=0.21544  EEVPD=1.433e-11  (target 5.0e-04)
+   [tune beta=1] step=0.31623  EEVPD=1.431e-10  (target 5.0e-04)
+   [tune beta=1] step=0.46416  EEVPD=1.457e-09  (target 5.0e-04)
+   [tune beta=1] step=0.68129  EEVPD=1.575e-08  (target 5.0e-04)
+   [tune beta=1] step=1.00000  EEVPD=1.764e-07  (target 5.0e-04)
+   [tune beta=1] EEVPD-tuned step ~= 1.00000
+
+beta=1 EEVPD-tuned step = 1.00000
+
+=== realized EEVPD across ladder at fixed beta=1 step ===
+   beta=0.0400  EEVPD=5.588e-09  (OK)
+   beta=0.0503  EEVPD=5.187e-09  (OK)
+   beta=0.0634  EEVPD=6.616e-09  (OK)
+   beta=0.0797  EEVPD=7.938e-09  (OK)
+   beta=0.1003  EEVPD=7.903e-09  (OK)
+   beta=0.1263  EEVPD=7.442e-09  (OK)
+   beta=0.1589  EEVPD=1.136e-08  (OK)
+   beta=0.2000  EEVPD=6.778e-09  (OK)
+   beta=0.2517  EEVPD=2.925e-09  (OK)
+   beta=0.3168  EEVPD=3.511e-09  (OK)
+   beta=0.3986  EEVPD=7.933e-09  (OK)
+   beta=0.5017  EEVPD=1.751e-08  (OK)
+   beta=0.6314  EEVPD=3.806e-08  (OK)
+   beta=0.7946  EEVPD=8.221e-08  (OK)
+   beta=1.0000  EEVPD=1.764e-07  (OK)
+
+max EEVPD across ladder = 1.764e-07 (target 5.0e-04); conservative-step holds = True
+wall 29.9s

@@ -1,0 +1,16 @@
+
+=== b=1.5 (D=10, DESIRED_EVAR=0.0005, target mean(ec^2)/D) ===
+  step=0.2000 | EEVPD=mean(ec^2)/D=1.39e+05  xi=EEVPD/target=277239584.81 (TOO BIG) | w_A=0.704
+  step=0.1000 | EEVPD=mean(ec^2)/D=5.43e+02  xi=EEVPD/target=1085155.00 (TOO BIG) | w_A=0.622
+  step=0.0500 | EEVPD=mean(ec^2)/D=2.72e+00  xi=EEVPD/target=5443.53 (TOO BIG) | w_A=0.589
+  step=0.0250 | EEVPD=mean(ec^2)/D=1.12e-01  xi=EEVPD/target=223.03 (TOO BIG) | w_A=0.552
+  step=0.0125 | EEVPD=mean(ec^2)/D=2.57e-04  xi=EEVPD/target=  0.51 (tuned~here) | w_A=0.548
+
+=== b=3.0 (D=10, DESIRED_EVAR=0.0005, target mean(ec^2)/D) ===
+  step=0.2000 | EEVPD=mean(ec^2)/D=3.81e+05  xi=EEVPD/target=762530025.22 (TOO BIG) | w_A=0.723
+  step=0.1000 | EEVPD=mean(ec^2)/D=8.60e+05  xi=EEVPD/target=1719982989.06 (TOO BIG) | w_A=0.982
+  step=0.0500 | EEVPD=mean(ec^2)/D=7.83e+02  xi=EEVPD/target=1565359.12 (TOO BIG) | w_A=0.643
+  step=0.0250 | EEVPD=mean(ec^2)/D=6.87e-01  xi=EEVPD/target=1374.97 (TOO BIG) | w_A=0.606
+  step=0.0125 | EEVPD=mean(ec^2)/D=5.03e-01  xi=EEVPD/target=1005.08 (TOO BIG) | w_A=0.609
+
+total wall 379s

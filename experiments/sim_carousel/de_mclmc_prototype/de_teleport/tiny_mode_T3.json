@@ -1,0 +1,38 @@
+{
+  "gamma1_0.03": {
+    "occ": 0.08984375,
+    "se": 0.01106432765374577,
+    "truth": 0.03,
+    "pinned": true,
+    "drained": false,
+    "within": false,
+    "verdict": "PIN"
+  },
+  "near_0.03": {
+    "occ": 0.082625,
+    "se": 0.003064375289642488,
+    "truth": 0.03,
+    "pinned": true,
+    "drained": false,
+    "within": false,
+    "verdict": "PIN"
+  },
+  "gamma1_0.001": {
+    "occ": 0.056,
+    "se": 0.001964444406733985,
+    "truth": 0.001,
+    "pinned": true,
+    "drained": false,
+    "within": false,
+    "verdict": "PIN"
+  },
+  "near_0.001": {
+    "occ": 0.06390625,
+    "se": 0.0006981362603654894,
+    "truth": 0.001,
+    "pinned": true,
+    "drained": false,
+    "within": false,
+    "verdict": "PIN"
+  }
+}

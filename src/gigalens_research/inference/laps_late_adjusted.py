@@ -41,10 +41,49 @@ from the SECOND HALF of Phase-1 positions (pooled over chains and the
 second-half steps); integrator switches to MN2 (mclachlan) if d<=200 else MN4
 (omelyan); kernel switches to the adjusted MAMS kernel with N=15 steps/traj.
 
-Phase 2 (MAMS adjusted): bisection-tune the step size to the target acceptance
-(0.7 for MN2, 0.9 for MN4) via ``laps_core.bisection_step``, freezing once
-``|a - a_target| <= 0.03``, then sample to the ``num_adjusted_steps`` budget.
-One sample per chain is collected (the final ensemble locations, Eq. 3).
+Phase 2 (MAMS adjusted): STAGED per-chunk bracketing-bisection tune of the step
+size to the target acceptance (0.7 for MN2, 0.9 for MN4). The Phase-2 step is
+INITIALIZED from the trajectory scale (FIX A): ``eps0 = L / N`` (the latest
+Phase-1 decoherence length ``L``, Eq. 9, over ``N = steps_per_trajectory``), so
+the adjusted phase starts in the right ballpark instead of the tiny sub-EEVPD
+Phase-1 handoff step (which pinned acceptance ~1.0); overridable via
+``p2_eps_init``. The step is HELD CONSTANT within each Phase-2 chunk (the device
+scan never mutates eps); between chunks the host computes the chunk's SETTLED
+acceptance (the mean over the LATTER HALF of the chunk's per-step ensemble
+accepts, dropping the within-chunk/post-switch transient) and calls
+``laps_core.bisection_step`` ONCE to update ``(eps, lo, hi)`` for the NEXT chunk
+-- exactly mirroring how Phase 1 makes host-side decisions between fixed-length
+scan chunks. The update is a true two-phase BRACKET-then-bisect (FIX B): while the
+target acceptance is not yet straddled it EXPANDS eps geometrically by ``p2_growth``
+in the correct direction (a>target => step too small => grow eps UP; a<target =>
+shrink), then once bracketed it bisects at the geometric midpoint. eps freezes
+(one-way latch, bracket frozen) once the settled acceptance is in-band
+(``|a_settled - a_target| <= tol``) for ``p2_freeze_persist`` CONSECUTIVE chunks;
+remaining chunks sample at the frozen eps. A WIDE safety-rail clamp
+(``eps_min``/``eps_max``, 3 decades around ``eps0 = L/N``) bounds the step so the
+bracketing walk cannot run away while leaving it ample room.
+
+CHANGE A (reach the target within budget): Phase 2 has its OWN chunk size
+``p2_chunk_size`` (default 8, smaller than Phase-1's ``chunk_size``) so the fixed
+``num_adjusted_steps`` adaptation budget yields MANY bisection updates (~25 chunks
+at the defaults), and the bracketing expansion factor ``p2_growth`` is raised to
+2.5 so the flat ``accept~1.0`` plateau (which can span ~10x in eps from a
+too-small handoff) is crossed in a few chunks, leaving budget to refine + latch.
+
+CHANGE B (post-freeze multi-sample collection): after the freeze, a COLLECTION
+sub-phase runs at the FROZEN hyperparameters and keeps a thinned time series per
+chain -- ``p2_keep_per_chain`` samples, one every ``p2_thin`` frozen steps (valid
+MCMC at fixed hyperparameters). ``res.samples`` is ``(M, p2_keep_per_chain, dim)``
+so ``.reshape((-1, dim))`` flattens to ``(M*keep, dim)``; ``keep=1`` reproduces the
+old one-sample-per-chain final ensemble (Eq. 3) with 0 extra steps.
+``res.n_samples_total = M*p2_keep_per_chain``.
+
+WHY STAGED (regression fix): a prior design drove the bracket from a per-step
+ROLLING-WINDOW ensemble acceptance. On the 22-D lens the post-switch transient
+made that window lag near 1.0, so the bracket kept doubling eps, the step ran
+away, and acceptance collapsed to 0 for the rest of Phase 2 (never froze). The
+bracket MUST be updated from a SETTLED (equilibrium) acceptance at a HELD step,
+not an instantaneous or lagging-rolling signal -- hence the per-chunk staging.
 
 Control-flow choice (REQUIRED documentation, spec/design open-Q1)
 ----------------------------------------------------------------
@@ -59,9 +98,12 @@ region a fixed-length scan (compiled once, reused across chunks), lets us stop
 Phase 1 early (closer to the paper's ``while``), and keeps the data-dependent
 decision off the device. The cost is switch-detection granularity of one chunk
 (``chunk_size`` steps); ``switch_index`` records the step at which the trailing
-window first satisfied the threshold. Bisection runs inside the scan as a pure
-``jnp.where`` update (``laps_core.bisection_step``), with no early exit — it
-simply freezes and the remaining budget samples at the frozen step size.
+window first satisfied the threshold. The Phase-2 bisection is likewise a
+host-side between-chunks decision (``laps_core.bisection_step`` called ONCE per
+chunk on the chunk's settled acceptance): the device scan runs at a FIXED eps and
+only records the per-step ensemble acceptance, so no data-dependent control lives
+inside the traced region. eps simply freezes (one-way latch) and the remaining
+chunks sample at the frozen step size.
 
 Spec deviations (honest reporting)
 ----------------------------------
@@ -109,7 +151,11 @@ from . import laps_core
 LAPSResults = namedtuple(
     "LAPSResults",
     [
-        "samples",            # (num_chains, dim) final ensemble (one sample/chain)
+        "samples",            # (num_chains, p2_keep_per_chain, dim) post-freeze
+                              #   thinned samples per chain (.reshape((-1, dim))
+                              #   flattens to (M*keep, dim); keep=1 -> the final
+                              #   ensemble, one sample/chain, as before)
+        "n_samples_total",    # int: M * p2_keep_per_chain (total posterior draws)
         # ---- Phase 1 histories (length = phase1_len) ----
         "p1_D_tilde",         # (T1,) equipartition divergence per step
         "p1_eevpd_wanted",    # (T1,) target EEVPD = F(C*D-tilde) (or emaus law)
@@ -130,8 +176,9 @@ LAPSResults = namedtuple(
         "target_accept",      # 0.7 or 0.9
         # ---- Phase 2 histories (length = num_adjusted_steps) ----
         "p2_accept",          # (T2,) ensemble-mean acceptance per step
-        "p2_step_size",       # (T2,) step size per step
+        "p2_step_size",       # (T2,) step size per step (held within each chunk)
         "p2_frozen",          # (T2,) bool frozen flag per step
+        "p2_settled_accept",  # (n_chunks,) per-chunk settled accept (latter-half mean)
         "p2_final_step_size", # float: final (frozen) step size
         "p2_L_full",          # float: N*eps_final (recorded; see deviations)
         "p2_L_proposal",      # float: 1.25*L_full (recorded; NOT applied)
@@ -196,6 +243,7 @@ def LAPS_late_adjusted(
     num_adjusted_steps=200,
     chunk_size=25,
     init_mode="warm",          # "warm" (qz surrogate) | "cold" (N(0,I))
+    init_positions=None,       # (num_chains, dim) unconstrained: overrides warm/cold
     schedule="paper",          # step law: "paper" F(C*D) | "emaus" C*D^{3/8}
     switch="paper",            # switch obs: "paper" x_i^2 | "emaus" x_i
     switch_mode="self_calibrated",  # fire rule: self_calibrated | absolute | m_scaled
@@ -211,6 +259,13 @@ def LAPS_late_adjusted(
     steps_per_trajectory=15,    # N
     L_proposal_factor=1.25,
     bisection_tol=0.03,
+    p2_eps_init=None,           # FIX A: Phase-2 eps0 (None -> L/N from trajectory L)
+    p2_chunk_size=8,            # CHANGE A: Phase-2 chunk size (own, < Phase-1 chunk)
+    p2_growth=2.5,              # FIX B/CHANGE A: geometric bracketing factor (>1)
+    p2_freeze_persist=2,        # STAGED: freeze after N consecutive in-band CHUNKS
+    p2_min_adapt_chunks=0,      # STAGED: no freeze before this many Phase-2 chunks
+    p2_keep_per_chain=1,        # CHANGE B: post-freeze samples kept per chain
+    p2_thin=5,                  # CHANGE B: frozen steps between kept samples
     cold_scale=1.0,
     seed=0,
 ):
@@ -218,10 +273,24 @@ def LAPS_late_adjusted(
 
     Returns a ``LAPSResults`` namedtuple of samples + per-phase diagnostics.
     """
-    if init_mode not in ("warm", "cold"):
+    if init_positions is None and init_mode not in ("warm", "cold"):
         raise ValueError(f"init_mode must be 'warm' or 'cold', got {init_mode!r}")
-    if qz is None and dim is None:
-        raise ValueError("Provide qz (warm/cold dim) or an explicit dim.")
+    if init_positions is None and qz is None and dim is None:
+        raise ValueError(
+            "Provide qz (warm/cold dim), an explicit dim, or init_positions.")
+    if int(p2_freeze_persist) < 1:
+        raise ValueError(f"p2_freeze_persist must be >= 1, got {p2_freeze_persist}.")
+    if int(p2_min_adapt_chunks) < 0:
+        raise ValueError(
+            f"p2_min_adapt_chunks must be >= 0, got {p2_min_adapt_chunks}.")
+    if int(p2_chunk_size) < 1:
+        raise ValueError(f"p2_chunk_size must be >= 1, got {p2_chunk_size}.")
+    if int(p2_keep_per_chain) < 1:
+        raise ValueError(f"p2_keep_per_chain must be >= 1, got {p2_keep_per_chain}.")
+    if int(p2_thin) < 1:
+        raise ValueError(f"p2_thin must be >= 1, got {p2_thin}.")
+    if float(p2_growth) <= 1.0:
+        raise ValueError(f"p2_growth must be > 1, got {p2_growth}.")
     if switch_mode not in ("self_calibrated", "absolute", "m_scaled"):
         raise ValueError(
             "switch_mode must be 'self_calibrated'|'absolute'|'m_scaled', "
@@ -256,16 +325,35 @@ def LAPS_late_adjusted(
     rng = jax.random.key(seed)
     k_init, k_p1, k_p2 = jax.random.split(rng, 3)
 
-    # ---- chain initialization (warm = qz surrogate; cold = N(0,I)) ----
-    if dim is None:
-        dim = int(np.asarray(qz.mean()).shape[-1])
-    if init_mode == "warm":
-        if qz is None:
-            raise ValueError("init_mode='warm' requires qz.")
-        positions = qz.sample((num_chains,), seed=k_init)
-    else:  # cold: unconstrained N(0, I) * cold_scale (no silent target default)
-        positions = cold_scale * jax.random.normal(k_init, (num_chains, dim))
-    positions = jnp.asarray(positions)
+    # ---- chain initialization ----
+    # init_positions (if provided) OVERRIDES warm/cold generation entirely: it is the
+    # explicit unconstrained initial ensemble (shape (>=num_chains, dim)). This is the
+    # plumbing for the wrapper's robust prior cold-start (Fix 1). "warm" (qz surrogate)
+    # and "cold" (N(0,I)*cold_scale) remain available when init_positions is None.
+    if init_positions is not None:
+        positions = jnp.asarray(init_positions)
+        if positions.ndim != 2:
+            raise ValueError(
+                f"init_positions must be 2-D (num_chains, dim); got {positions.shape}.")
+        if positions.shape[0] < num_chains:
+            raise ValueError(
+                f"init_positions has {positions.shape[0]} rows but num_chains rounded "
+                f"to {num_chains} (multiple of {num_devices} devices); provide at least "
+                f"that many initial positions.")
+        if dim is not None and positions.shape[1] != dim:
+            raise ValueError(
+                f"init_positions has dim {positions.shape[1]} != requested dim {dim}.")
+        positions = positions[:num_chains]      # device-multiple slice (extras dropped)
+    else:
+        if dim is None:
+            dim = int(np.asarray(qz.mean()).shape[-1])
+        if init_mode == "warm":
+            if qz is None:
+                raise ValueError("init_mode='warm' requires qz.")
+            positions = qz.sample((num_chains,), seed=k_init)
+        else:  # cold: unconstrained N(0, I) * cold_scale (no silent target default)
+            positions = cold_scale * jax.random.normal(k_init, (num_chains, dim))
+        positions = jnp.asarray(positions)
 
     state = init_multi(positions, k_init, logdensity_fn)
     canon = _canon_dtype(state)
@@ -454,11 +542,14 @@ def LAPS_late_adjusted(
     # asymptotic (discretization) bias. Phase-2 diagnostics become single-element
     # placeholders (no adjusted steps were run).
     if not phase2_enabled:
-        samples = np.asarray(_resh(state.position, sh_repl))
+        # (M, 1, dim): the unadjusted Phase-1 ensemble as one sample/chain, in the
+        # same 3-D layout as the adjusted path (.reshape((-1, dim)) -> (M, dim)).
+        samples = np.asarray(_resh(state.position, sh_repl))[:, None, :]
         eps_final = float(eps)
         L_full = N * eps_final
         return LAPSResults(
             samples=samples,
+            n_samples_total=int(samples.shape[0]),
             p1_D_tilde=p1_D, p1_eevpd_wanted=p1_ew, p1_eevpd_obs=p1_eo,
             p1_step_size=p1_ss, p1_L=p1_L, p1_obs_sq=p1_sq, p1_obs_mean=p1_mn,
             p1_delta_max=p1_dmax, phase1_len=phase1_len, switch_index=switch_index,
@@ -466,7 +557,7 @@ def LAPS_late_adjusted(
             switched=switched, precond_var=precond_var, integrator_order=order,
             target_accept=a_target,
             p2_accept=np.array([np.nan]), p2_step_size=np.array([eps_final]),
-            p2_frozen=np.array([False]),
+            p2_frozen=np.array([False]), p2_settled_accept=np.array([np.nan]),
             p2_final_step_size=eps_final, p2_L_full=L_full,
             p2_L_proposal=L_proposal_factor * L_full,
         )
@@ -477,64 +568,172 @@ def LAPS_late_adjusted(
         integrator=p2_integrator,
     )
 
+    # STAGED per-chunk bisection (regression fix): the bisection lives ENTIRELY on
+    # the host between chunks. The device scan below runs at a FIXED ``step_size``
+    # (never mutates eps) and only records the per-step ensemble acceptance; the
+    # bracket/freeze are updated ONCE per chunk on the SETTLED acceptance (see the
+    # host loop). ``persist_need`` counts CONSECUTIVE in-band CHUNKS;
+    # ``min_chunks`` defers any freeze until that many chunks have elapsed.
+    persist_need = int(p2_freeze_persist)
+    min_chunks = int(p2_min_adapt_chunks)
+
     @jax.jit
     @functools.partial(
         _shard_map,
         mesh=mesh,
-        in_specs=(P(None, "device"), P("device"), P(), P(), P(), P()),
-        out_specs=(
-            (P("device"), P(), P(), P(), P()),
-            (P(), P(), P()),
-        ),
+        in_specs=(P(None, "device"), P("device"), P()),
+        out_specs=(P("device"), P()),
     )
-    def run_p2_chunk(keys, states, step_size, lo, hi, frozen):
-        def body(carry, key_row):
-            states, ss, lo, hi, frozen = carry
-
+    def run_p2_chunk(keys, states, step_size):
+        # eps is HELD CONSTANT across the whole chunk: it is a scan CONSTANT, not a
+        # carry, so the kernel cannot mutate it within the traced region.
+        def body(states, key_row):
             def per_chain(st, k):
-                return p2_kernel(rng_key=k, state=st, step_size=ss,
+                return p2_kernel(rng_key=k, state=st, step_size=step_size,
                                  num_integration_steps=N)
 
             new_states, infos = jax.vmap(per_chain)(states, key_row)
             n_total = cpd * jax.lax.axis_size("device")
             accept = jax.lax.psum(jnp.sum(infos.acceptance_rate), "device") / n_total
+            return new_states, accept                 # per-step ensemble accept
 
-            # Thread the incoming frozen flag so the freeze LATCHES across steps
-            # and chunks (sticky one-way; spec Alg.1 ADAPT <- ADAPT and |a-t|>tol).
-            ss_new, lo_new, hi_new, fr = laps_core.bisection_step(
-                ss, accept, a_target, lo=lo, hi=hi, tol=bisection_tol, frozen=frozen)
-            return (new_states, ss_new, lo_new, hi_new, fr), (accept, ss_new, fr)
+        states, accepts = jax.lax.scan(body, states, keys)
+        return states, accepts
 
-        carry, ys = jax.lax.scan(body, (states, step_size, lo, hi, frozen), keys)
-        return carry, ys
-
-    eps2 = jnp.asarray(eps, canon)
+    # FIX A: initialize the Phase-2 step from the TRAJECTORY SCALE, not the tiny
+    # Phase-1 EEVPD handoff eps (which pins acceptance ~1.0 and leaves the bracket
+    # nowhere to start). The adjusted MAMS kernel integrates N steps per trajectory
+    # with total length L_full = N*eps (see module "Spec deviations"); matching that
+    # to the decoherence/trajectory length L (Eq. 9, the latest Phase-1 estimate)
+    # gives eps0 = L / N -- the right BALLPARK for the adjusted phase. This replaces
+    # the regression where Phase 2 began at the sub-EEVPD Phase-1 step, acceptance
+    # stayed pinned near 1.0, and the (then arithmetic, narrowly clamped) bisection
+    # could not bracket UPWARD to the much larger step the phase needs. Overridable
+    # via ``p2_eps_init``.
+    L_traj = float(eps)            # fallback if L degenerate (see guard below)
+    try:
+        L_traj = float(L)          # latest Phase-1 decoherence length (Eq. 9)
+    except Exception:
+        L_traj = float(eps)
+    if p2_eps_init is not None:
+        eps0_p2 = float(p2_eps_init)
+    else:
+        eps0_p2 = L_traj / max(N, 1)
+    if not np.isfinite(eps0_p2) or eps0_p2 <= 0.0:
+        eps0_p2 = float(eps)       # degenerate L -> fall back to the handoff eps
+    eps2 = jnp.asarray(eps0_p2, canon)
+    # Start the bracket UNSET (NaN/NaN): the controller then BRACKETS by geometric
+    # expansion (FIX B) from eps0 in whichever direction the settled acceptance
+    # indicates, in EITHER direction. (We deliberately do NOT pre-seed a fixed
+    # [eps0/30, eps0*30] bracket: a pre-seeded bracket is a HARD box the geometric
+    # bisection can only narrow inward, so if the true step lies outside it -- e.g.
+    # the start-far-below case, eps* > 30*eps0 -- the search converges to the box
+    # edge with acceptance still off target and NEVER reaches it. NaN-start
+    # expansion has no such trap and reaches the target from any starting offset
+    # within the clamp.)
     lo = jnp.asarray(jnp.nan, canon)
     hi = jnp.asarray(jnp.nan, canon)
-    frozen = jnp.asarray(False)
+    frozen = False
+    persist = 0                                       # consecutive in-band CHUNKS
+    # Safety rail bounding the step so the bracketing walk cannot run away: WIDE
+    # (3 decades each side of eps0 = L/N) so a legitimate upward/downward bracketing
+    # search has ample room and is never blocked by the clamp.
+    eps_min = eps0_p2 * 1e-3
+    eps_max = eps0_p2 * 1e3
     P2 = {"accept": [], "ss": [], "frozen": []}
-    p2_sizes = _chunk_sizes(num_adjusted_steps, chunk_size)  # final short chunk ok
+    settled_hist = []
+    # CHANGE A: Phase 2 gets its OWN (smaller) chunk size so a FIXED
+    # ``num_adjusted_steps`` adaptation budget yields MANY more bisection updates
+    # (one per chunk). At the defaults (num_adjusted_steps=200, p2_chunk_size=8)
+    # that is ~25 chunks -- ample room to BRACKET (a handful of geometric-expansion
+    # chunks, sped up by p2_growth=2.5) AND REFINE (>= ~6 bisection chunks) AND hold
+    # ``p2_freeze_persist`` consecutive in-band chunks before the latch. The old
+    # design reused the Phase-1 chunk_size (25) -> only ~8 Phase-2 chunks, of which
+    # ~7 were eaten just crossing the flat accept~1.0 plateau, so it overshot 0.70
+    # with no chunks left to refine and never latched.
+    p2_sizes = _chunk_sizes(num_adjusted_steps, p2_chunk_size)  # final short chunk ok
     for c, sz in enumerate(p2_sizes):
         ck = jax.random.fold_in(k_p2, c)
         keys = jax.random.split(ck, (sz, num_chains))
-        (state, eps2, lo, hi, frozen), ys = run_p2_chunk(
-            _resh(keys, sh_keys), state,
-            _resh(eps2, sh_repl), _resh(lo, sh_repl),
-            _resh(hi, sh_repl), _resh(frozen, sh_repl),
-        )
-        acc, ss, fr = (np.asarray(_resh(a, sh_repl)) for a in ys)
-        P2["accept"].append(acc); P2["ss"].append(ss); P2["frozen"].append(fr)
+        state, accepts = run_p2_chunk(
+            _resh(keys, sh_keys), state, _resh(eps2, sh_repl))
+        accepts = np.asarray(_resh(accepts, sh_repl))          # (sz,) per-step accept
+        # Record the per-step ensemble accept (real trajectory for the diagnose
+        # plot), the eps HELD during this chunk, and the (pre-update) frozen flag.
+        P2["accept"].append(accepts)
+        P2["ss"].append(np.full(sz, float(eps2)))
+        P2["frozen"].append(np.full(sz, bool(frozen)))
+
+        # SETTLED acceptance = mean over the LATTER HALF of the chunk's per-step
+        # accepts (drop the first half: the within-chunk / post-switch transient
+        # that lagged near 1.0 and ran the old per-step bracket away).
+        half = sz // 2
+        a_settled = float(np.mean(accepts[half:]))
+        settled_hist.append(a_settled)
+
+        # Host-side bracket/freeze update: ONCE per chunk, on the settled accept.
+        # Skip once frozen (one-way latch: eps + bracket held, remaining chunks
+        # sample at the frozen eps).
+        if not frozen:
+            in_band = abs(a_settled - a_target) <= bisection_tol
+            persist = persist + 1 if in_band else 0
+            freeze_now = (persist >= persist_need) and ((c + 1) >= min_chunks)
+            eps2_new, lo, hi, fr = laps_core.bisection_step(
+                eps2, jnp.asarray(a_settled, canon), a_target, lo=lo, hi=hi,
+                tol=bisection_tol, frozen=False, freeze_enable=freeze_now,
+                eps_min=eps_min, eps_max=eps_max, growth=p2_growth)
+            eps2 = jnp.asarray(eps2_new, canon)
+            frozen = bool(fr)
 
     p2_accept = np.concatenate(P2["accept"])
     p2_ss = np.concatenate(P2["ss"])
     p2_frozen = np.concatenate(P2["frozen"])
+    p2_settled = np.asarray(settled_hist)
 
-    samples = np.asarray(_resh(state.position, sh_repl))
-    eps_final = float(p2_ss[-1])
+    # =====================================================================
+    # CHANGE B — post-freeze COLLECTION sub-phase (multi-sample per chain)
+    # =====================================================================
+    # The adaptation loop above (the ``num_adjusted_steps`` budget) tunes + freezes
+    # eps. Now, at the FROZEN hyperparameters (eps2 held, diagonal precond, N
+    # steps/traj), we keep a THINNED time series per chain: ``p2_keep_per_chain``
+    # samples, one every ``p2_thin`` frozen Phase-2 steps. These are valid MCMC at
+    # FIXED hyperparameters, so the within-chain (chain, sample) structure makes
+    # R-hat/ESS meaningful while low chain counts still yield a dense posterior.
+    #
+    # BUDGET SPLIT (documented): ``num_adjusted_steps`` is the ADAPTATION budget;
+    # the collection adds ``p2_keep_per_chain * p2_thin`` further Phase-2 steps AT
+    # the frozen eps (0 when keep == 1). Total Phase-2 steps = num_adjusted_steps +
+    # (keep*thin if keep > 1 else 0).
+    keep = int(p2_keep_per_chain)
+    thin = max(1, int(p2_thin))
+    if keep <= 1:
+        # Backward-compatible: keep == 1 takes the final adaptation ensemble
+        # directly (Eq. 3), 0 extra steps, numerically identical to the
+        # pre-CHANGE-B behaviour. Shape (M, 1, dim) so .reshape((-1, dim)) ->
+        # (M, dim) exactly as the old (M, dim) ensemble.
+        samples = np.asarray(_resh(state.position, sh_repl))[:, None, :]
+    else:
+        # keep > 1: run ``keep`` collection sub-chunks of ``thin`` frozen steps
+        # each, recording the ensemble position after each (thinning decorrelates
+        # successive kept samples and drops the adaptation-end transient).
+        collected = []
+        for j in range(keep):
+            ck = jax.random.fold_in(k_p2, 10_000 + j)
+            keys = jax.random.split(ck, (thin, num_chains))
+            state, _ = run_p2_chunk(
+                _resh(keys, sh_keys), state, _resh(eps2, sh_repl))
+            collected.append(np.asarray(_resh(state.position, sh_repl)))  # (M, dim)
+        samples = np.stack(collected, axis=1)                              # (M,keep,dim)
+    n_samples_total = int(samples.shape[0] * samples.shape[1])
+
+    # eps_final reflects the step COLLECTION actually sampled at (the held eps2);
+    # for a frozen run eps2 == p2_ss[-1], so this matches the old report.
+    eps_final = float(eps2)
     L_full = N * eps_final
 
     return LAPSResults(
         samples=samples,
+        n_samples_total=n_samples_total,
         p1_D_tilde=p1_D, p1_eevpd_wanted=p1_ew, p1_eevpd_obs=p1_eo,
         p1_step_size=p1_ss, p1_L=p1_L, p1_obs_sq=p1_sq, p1_obs_mean=p1_mn,
         p1_delta_max=p1_dmax, phase1_len=phase1_len, switch_index=switch_index,
@@ -542,19 +741,62 @@ def LAPS_late_adjusted(
         switched=switched, precond_var=precond_var, integrator_order=order,
         target_accept=a_target,
         p2_accept=p2_accept, p2_step_size=p2_ss, p2_frozen=p2_frozen,
+        p2_settled_accept=p2_settled,
         p2_final_step_size=eps_final, p2_L_full=L_full,
         p2_L_proposal=L_proposal_factor * L_full,
     )
 
 
-def LAPS_late_adjusted_JIT(model_seq, qz, **kwargs):
+def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
+                           num_chains=512, seed=0, **kwargs):
     """gigalens wrapper mirroring ``MCLMC_JIT``: builds ``log_prob`` then runs LAPS.
 
     Scene-only: the ProbModel renders ``log_prob(z)`` through its per-dataset
     SceneSimulators directly (no separately-built simulator), exactly as
     ``MCLMC_JIT`` does.
-    """
-    def log_prob(z):
-        return model_seq.prob_model.log_prob(z)[0]
 
-    return LAPS_late_adjusted(log_prob, qz, **kwargs)
+    ``init_mode`` (Fix 1)
+    ---------------------
+    * ``"warm"``  : qz surrogate sample (requires ``qz``).
+    * ``"cold"``  : unconstrained N(0, I) * cold_scale -- empirically OVER-DISPERSED
+                    on the 22-D lens (chains never equilibrate); kept for ablation.
+    * ``"prior"`` : RECOMMENDED robust cold-start. Sample the model's prior
+                    (constrained) and map each draw to UNCONSTRAINED space, then hand
+                    the (num_chains, dim) ensemble to the core via ``init_positions``.
+                    Needs no qz. The constrained->unconstrained map is the bijector
+                    INVERSE (``prob_model.bij.inverse``), exactly the map gigalens
+                    uses to seed its own optimizers; ``bij.forward`` (used inside
+                    ``log_prob``) is its inverse.
+    """
+    prob_model = model_seq.prob_model
+
+    def log_prob(z):
+        return prob_model.log_prob(z)[0]
+
+    if init_mode == "prior":
+        if prob_model.prior is None or prob_model.bij is None:
+            raise ValueError(
+                "init_mode='prior' requires the model to expose a prior + bijector "
+                "(prob_model.prior / prob_model.bij are None for a constants-only "
+                "model).")
+        # Sample num_chains prior draws (constrained), map to UNCONSTRAINED via the
+        # bijector inverse, and stack to (num_chains, dim). Same idiom as gigalens'
+        # gigalens/src/gigalens/jax/inference.py:
+        #     start = prob_model.prior.sample(n, seed=key)        # constrained
+        #     params = jnp.stack(prob_model.bij.inverse(start)).T # unconstrained
+        ndev = len(jax.devices())
+        n_init = (num_chains // ndev) * ndev
+        if n_init < 1:
+            raise ValueError(
+                f"num_chains ({num_chains}) must be >= num_devices ({ndev}).")
+        k_prior = jax.random.fold_in(jax.random.key(seed), 0x9E3779B9)
+        start = prob_model.prior.sample(n_init, seed=k_prior)     # constrained draws
+        init_positions = jnp.stack(prob_model.bij.inverse(start)).T  # (n_init, dim)
+        dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
+        init_positions = init_positions.astype(dtype)             # sampler dtype
+        return LAPS_late_adjusted(
+            log_prob, qz, init_positions=init_positions,
+            num_chains=num_chains, seed=seed, **kwargs)
+
+    return LAPS_late_adjusted(
+        log_prob, qz, init_mode=init_mode, num_chains=num_chains, seed=seed, **kwargs)

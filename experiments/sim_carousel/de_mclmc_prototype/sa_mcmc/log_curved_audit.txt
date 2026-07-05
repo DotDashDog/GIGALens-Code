@@ -1,0 +1,22 @@
+GATE-1 static within-mode linear-DE acceptance = 1.33% (target 0.5-1.5%; Gaussian testbeds ~8.7%)
+
+[C1] SA-mixture invariance from truth init (w_A=0.60) ...
+   w_A=0.6069 +/- 0.0055  |est-0.60|=0.0069 (3SE=0.0165)
+   drift 1st=0.6013 2nd=0.6124 |diff|=0.0111 (3SE_diff=0.0324)
+   mode A: base dim1 mean=4.005(tgt +4.0) std=0.275(tgt 0.3) ridge dim0 std=0.646(tgt 3.0)
+   mode B: base dim1 mean=-3.997(tgt -4.0) std=0.281(tgt 0.3) ridge dim0 std=0.652(tgt 3.0)
+   SA sub-rate=0.639 flips/round=7.5 min_eig=7.167e-02
+
+[C2] re-equilibration from WRONG populated init w_A=0.30 (truth 0.60) ...
+   SA-mixture w_A: start~0.30 -> end 0.605 (truth 0.60) flips/rd=7.6
+   linear-DE  w_A: start~0.30 -> end 0.547 (truth 0.60) flips/rd=0.56 (DE acc=0.085)
+
+========== GATE C CHECKS (PROPOSED / UNCERTIFIED) ==========
+ GATE-1 static linDE acc = 1.33%  (calibration; want 0.5-1.5%)
+ C1  invariance w_A      0.6069+/-0.0055 vs .60 -> PASS
+ C1b no drift            |0.0111|<0.0324        -> PASS
+ C1c per-mode base means within 0.10                  -> PASS
+ C2  SA->0.60 (0.605) & DE stuck (0.547)    -> FAIL
+ C3  flips SA 7.6 >> DE 0.56            -> PASS
+ C4  sub-rate 0.639 & min_eig 7.17e-02    -> PASS
+ total wall 181s

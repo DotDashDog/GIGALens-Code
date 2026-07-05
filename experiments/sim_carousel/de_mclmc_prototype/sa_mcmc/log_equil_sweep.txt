@@ -1,0 +1,6 @@
+b= 0.7 | GATE1stat= 1.25% | SA end=0.576 flips/rd= 7.73 | DE end=0.586 flips/rd= 0.55 acc= 8.45%  (truth 0.60, init 0.30)
+b= 1.5 | GATE1stat= 0.64% | SA end=0.608 flips/rd= 9.65 | DE end=0.497 flips/rd= 0.72 acc=10.62%  (truth 0.60, init 0.30)
+b= 3.0 | GATE1stat= 0.32% | SA end=0.634 flips/rd= 7.53 | DE end=0.481 flips/rd= 0.69 acc= 7.97%  (truth 0.60, init 0.30)
+b= 6.0 | GATE1stat= 0.15% | SA end=0.910 flips/rd= 3.78 | DE end=0.447 flips/rd= 0.78 acc= 7.45%  (truth 0.60, init 0.30)
+
+total wall 352s

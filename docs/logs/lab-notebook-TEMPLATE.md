@@ -18,6 +18,8 @@
 
 Every scientific claim in this area, with a status of `proposed (UNCERTIFIED)` / `certified (scope: …)` / `withdrawn`. The producer logs a claim as **proposed**; the grader (the orchestrator agent + human in Mode A, the human in Mode B) certifies or withdraws it **after inspecting the artifact itself** (the plot / code / numbers), never from the producer's summary. Certified claims carry an explicit **scope** (what they do *and do not* cover).
 
+Every proposed claim must include a **Doubt report** (Feynman's bending-over-backwards, supplied by the *producer*, unprompted): alternative explanations considered and how each was eliminated, plus any detail that could throw doubt on the interpretation. A proposal without one is incomplete and cannot be graded.
+
 > _The three entries below are worked examples showing each status — **delete them** and start your own._
 
 ### C-1 — [example, DELETE] Estimator `X` recovers parameter `θ` on synthetic data
@@ -37,17 +39,20 @@ Every scientific claim in this area, with a status of `proposed (UNCERTIFIED)` /
 - **Status:** `proposed (UNCERTIFIED)` — awaiting grader inspection of trace plots + R̂ across chains
 - **Criterion (pre-registered):** ESS/sec on [benchmark]; falsifier: no improvement beyond run-to-run variance (state the variance).
 - **Evidence / artifact:** `path/to/proposed_run/` (producer's report marked UNCERTIFIED)
+- **Doubt report (mandatory):** [alternative explanations considered and how eliminated — e.g. "could be the shorter burn-in, not the sampler: ruled out by X"; details that could throw doubt — e.g. "baseline was run under float32; not yet rerun under current config"]
 - **Proposed by / on:** [producer] · [date]   ·   **Grader:** _pending_
 
 ---
 
 ## Design checkpoints (criteria awaiting approval)
 
-Before a consequential or expensive run, the producer logs the proposed **metric + derived threshold + pre-committed expected appearance** here and stops; the grader approves or revises *before* the run (structural rule 3). Clears once the run is launched.
+Before a consequential or expensive run, the producer logs a checkpoint here and stops; the grader approves or revises *before* the run (structural rule 3). The `/pre-run-checklist` skill walks through producing one. A run without a prior checkpoint entry is illegitimate regardless of its result. Clears once the run is launched — then log observed vs. predicted (a badly-missed magnitude means the hypothesis failed even if the direction was right).
+
+Each checkpoint carries: **cause hypothesis** (model/algorithm/data terms, not "try X") · **prediction** (direction *and* order of magnitude) · **falsifier** · **metric + derived threshold** (why that number, in those units — "not derivable because [reason]" is a legal and reportable answer) · **metric's blind spot** (one sentence) · **pre-committed expected appearance** of the key plot · **cost estimate**.
 
 > _Example below — **delete it**._
 
-- **[example, DELETE] Run: convergence study of `X` as N→∞.** Proposed metric: [discrepancy vs. reference]; expected scaling [derive it — and note that the mean of many samples scales differently from a single sample]; falsifier: [plateaus / wrong sign]. Cost estimate: [~X]. **Status:** awaiting approval.
+- **[example, DELETE] Run: convergence study of `X` as N→∞.** Hypothesis: [what is structurally true/wrong, in model terms]. Prediction: [direction + order of magnitude]. Falsifier: [plateaus / wrong sign]. Metric + derived threshold: [discrepancy vs. reference; expected scaling — derive it, and note that the mean of many samples scales differently from a single sample]. Blind spot: [what disagreement this metric can't see]. Expected plot: [what it should look like if the hypothesis holds]. Cost estimate: [~X]. **Status:** awaiting approval.
 
 ---
 

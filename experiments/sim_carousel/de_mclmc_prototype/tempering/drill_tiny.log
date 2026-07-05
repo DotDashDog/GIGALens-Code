@@ -1,0 +1,5 @@
+default(18g,300)   (nbeta=18,spb=300): occ_minor per seed = [0.0625 0.1875 0.1875 0.3125 0.1875 0.0625]  mean=0.1667
+dense-decouple     (nbeta=42,spb=600): occ_minor per seed = [0.     0.0625 0.0625 0.     0.0625 0.    ]  mean=0.0312
+
+   truth w_minor=0.001 (16*w=0.016 chains); pin 1/16=0.0625
+   wall 77.9s

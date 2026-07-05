@@ -1,0 +1,8 @@
+b=1.5 step=0.200 | w_A 1st=0.702 2nd=0.579 drift=0.122 (truth .60) | dim0 std=0.20(truth 3.0) | dim1A=+4.11(truth +4.0)
+b=1.5 step=0.100 | w_A 1st=0.611 2nd=0.611 drift=0.001 (truth .60) | dim0 std=0.59(truth 3.0) | dim1A=+4.01(truth +4.0)
+b=1.5 step=0.050 | w_A 1st=0.599 2nd=0.616 drift=0.017 (truth .60) | dim0 std=1.37(truth 3.0) | dim1A=+4.07(truth +4.0)
+b=1.5 step=0.025 | w_A 1st=0.566 2nd=0.552 drift=0.014 (truth .60) | dim0 std=2.59(truth 3.0) | dim1A=+4.09(truth +4.0)
+b=3.0 step=0.050 | w_A 1st=0.610 2nd=0.594 drift=0.016 (truth .60) | dim0 std=1.05(truth 3.0) | dim1A=+3.92(truth +4.0)
+b=3.0 step=0.025 | w_A 1st=0.613 2nd=0.631 drift=0.018 (truth .60) | dim0 std=1.46(truth 3.0) | dim1A=+3.98(truth +4.0)
+
+total wall 858s

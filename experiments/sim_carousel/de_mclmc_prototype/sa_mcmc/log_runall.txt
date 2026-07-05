@@ -1,0 +1,6 @@
+### ATTRIB
+b=0.7: dim0 std init=3.40 -> vanillaMCLMC=0.20  pureSA(K=0)=2.53  (truth 3.0)
+b=0.3: dim0 std init=3.40 -> vanillaMCLMC=1.83  pureSA(K=0)=2.77  (truth 3.0)
+b=0.15: dim0 std init=3.40 -> vanillaMCLMC=2.69  pureSA(K=0)=2.75  (truth 3.0)
+### COMBINED
+gaussian  INVAR w(+)=0.697(.70)  | DISCOVERY single-init last500 w(+)=1.000(.70)

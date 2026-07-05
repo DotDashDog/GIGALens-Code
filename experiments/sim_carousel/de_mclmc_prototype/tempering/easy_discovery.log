@@ -1,0 +1,29 @@
+config: {'D': 10, 'n_chains': 64, 'L': 2.0, 'step_size': 0.5, 'n_betas': 15} n_betas: 15
+
+[A] tempered burn-in from ALL-in-(-mode) init, N_SEEDS anneals ...
+   seed 0: cold occ_+ = 0.4688
+   seed 1: cold occ_+ = 0.5156
+   seed 2: cold occ_+ = 0.4531
+   seed 3: cold occ_+ = 0.5000
+   seed 4: cold occ_+ = 0.6406
+   seed 5: cold occ_+ = 0.4844
+   GATE A: occ_+ = 0.5104 +/- 0.0276 (between-seed SE; binomial SE/anneal 0.0625)
+   |occ_+ - 0.70| = 0.1896  (3*SE_seed = 0.0827)
+
+[A] vanilla MCLMC (beta=1) from SAME wrong init ...
+   vanilla occ_+ tail = 0.0000 (should be < 0.02)
+
+[C] cold sampling from EXACT mixture init (0.70/0.30) ...
+   occ_+ = 0.7344  (init 0.7344); drift |0.0000|
+   +mode mean 5.024 var 1.026; -mode mean -5.017 var 1.052
+   within axis1 var 0.998; KS axis0 p=0.082 axis1 p=0.704
+
+========== PRE-REGISTERED CHECKS (PROPOSED / UNCERTIFIED) ==========
+ A discovered dominant basin   occ_+=0.5104 > 0.5     -> PASS
+ A weight within 3 SE          |-0.1896| < 0.0827 -> FAIL
+ A vanilla trapped             occ_+=0.0000 < 0.02   -> PASS
+ C within-mode moments         +/-5,var1                  -> PASS
+ C no drift                    |0.0000| < 0.05  -> PASS
+ C KS marginals                axis0 0.082 axis1 0.704 -> PASS
+--------------------------------------------------------------------
+ wall 26.1s

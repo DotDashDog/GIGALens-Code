@@ -1,0 +1,73 @@
+{
+  "T1": {
+    "linear_de_acc": 0.08929166666666667,
+    "linear_de_rt": 6,
+    "hop": [
+      {
+        "eps": 0.5,
+        "acc": 0.000375,
+        "rt": 1,
+        "cross": 5,
+        "w": 0.647
+      },
+      {
+        "eps": 1.0,
+        "acc": 0.03766666666666667,
+        "rt": 122,
+        "cross": 253,
+        "w": 0.6926666666666667
+      },
+      {
+        "eps": 2.0,
+        "acc": 0.003375,
+        "rt": 15,
+        "cross": 39,
+        "w": 0.6815833333333333
+      }
+    ],
+    "eps_star": 1.0,
+    "pass_": true
+  },
+  "T2": {
+    "w_rec": 0.0,
+    "se_rec": 0.0,
+    "rec_acc": 0.0376875,
+    "w_inv": 0.4379375,
+    "se_inv": 0.029987631957354054,
+    "w1": 0.46325,
+    "w2": 0.412625,
+    "se_diff": 0.044307965071912314,
+    "pass_": false
+  },
+  "T3": {
+    "0.03": {
+      "f_tiny": 0.066875,
+      "se_f": 0.0025034999406592486,
+      "not_pinned": false,
+      "within_truth": false,
+      "drained": false,
+      "rt": 36,
+      "acc": 0.0545625,
+      "pass_": false
+    },
+    "0.001": {
+      "f_tiny": 0.0625,
+      "se_f": 0.0,
+      "not_pinned": false,
+      "within_truth": false,
+      "drained": false,
+      "rt": 2,
+      "acc": 0.053890625,
+      "pass_": false
+    },
+    "pass_": false
+  },
+  "T4": {
+    "min_p": 0.4046918539460581,
+    "argmin": 8,
+    "tau": 59.642021734989235,
+    "pass_": true
+  },
+  "overall_pass": false,
+  "eps_star": 1.0
+}

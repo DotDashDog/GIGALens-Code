@@ -1,0 +1,51 @@
+{
+  "arrays": [
+    "samples_z"
+  ],
+  "class": "MCLMCStage",
+  "config": {
+    "debug": true,
+    "desired_energy_variance": 0.0005,
+    "frac_tune1": 0.2,
+    "frac_tune2": 0.6,
+    "frac_tune3": 0.2,
+    "init_L": null,
+    "init_step_size": null,
+    "n_chains": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "progress_bar": true,
+    "regularize_mass_matrix": true
+  },
+  "diagnostics": [
+    "L",
+    "inverse_mass_matrix",
+    "nonan",
+    "samples_cov",
+    "samples_z",
+    "step_size",
+    "xi"
+  ],
+  "diagnostics_config": {
+    "frac_tune1": 0.2,
+    "frac_tune2": 0.6,
+    "frac_tune3": 0.2,
+    "num_burnin_steps": 2000,
+    "num_results": 2000
+  },
+  "input_hash": "e345e34fdd5d76a6",
+  "metadata": {
+    "debug": true,
+    "n_params": 32,
+    "num_chains": 8,
+    "num_steps": 2000,
+    "wall_time_s": 248.43795130803483
+  },
+  "schema_version": 1,
+  "seed": 42,
+  "stage": "mclmc",
+  "timestamp": "2026-07-05T03:43:29.599889+00:00",
+  "upstream_hashes": {
+    "qz": "6b23ab8acf72372b"
+  }
+}
