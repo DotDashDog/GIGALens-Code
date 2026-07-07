@@ -1,0 +1,186 @@
+{
+  "experiment": "T23 momentum-space xi accounting -- analysis",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T05:17:44.926536+00:00",
+  "xi_alignment": "xi[t] belongs to the transition INTO position[t] (z_{t-1} -> z_t); the displacement generating xi[t] is Dz_t = position[t]-position[t-1]; Hessian centered at endpoint z_t. Traced from mclmc.py:281,298,448,453,334,204 and blackjax MCLMCInfo.energy_change; NOT fitted.",
+  "metric_note": "saved inverse_mass_matrix is the covariance-like preconditioner Sigma (NOT its inverse): init=qz.covariance() (mclmc.py:67), adapt=sample_cov (mclmc.py:392-394), kernel Cholesky-factors it as the metric (blackjax_updated_utils.py:416,436,448). c_t denominator uses Sigma^{-1}; Sigma frozen over results phase (asserted).",
+  "thresholds": {
+    "WALL_MET": 0.8,
+    "WALL_FALSE": [
+      0.35,
+      0.65
+    ],
+    "STIFF_MET": 10.0,
+    "STIFF_FALSE": 2.0
+  },
+  "arms": {
+    "old": {
+      "registered_wall_coord": {
+        "name": "planes/0/mass/0/alpha_Rs",
+        "quantile": 0.888671875,
+        "clone_quantile": 0.4645669291338583
+      },
+      "wall_stat_real": {
+        "planes/0/mass/0/Rs": {
+          "col": 0,
+          "spike_median_absz": 1.1443645057198046,
+          "quantile_within_calm": 0.080078125
+        },
+        "planes/0/mass/0/alpha_Rs": {
+          "col": 1,
+          "spike_median_absz": 0.10986980630568466,
+          "quantile_within_calm": 0.888671875
+        },
+        "planes/0/mass/0/e1": {
+          "col": 4,
+          "spike_median_absz": 0.453435205066053,
+          "quantile_within_calm": 0.455078125
+        },
+        "planes/0/mass/0/e2": {
+          "col": 5,
+          "spike_median_absz": 0.3413863604149939,
+          "quantile_within_calm": 0.474609375
+        },
+        "planes/0/mass/1/gamma1": {
+          "col": 6,
+          "spike_median_absz": 0.023286679455293856,
+          "quantile_within_calm": 0.8125
+        },
+        "planes/0/mass/1/gamma2": {
+          "col": 7,
+          "spike_median_absz": 0.028837270566288667,
+          "quantile_within_calm": 0.693359375
+        }
+      },
+      "wall_stat_clone": {
+        "planes/0/mass/0/Rs": {
+          "col": 0,
+          "spike_median_absz": 1.6365912208169249,
+          "quantile_within_calm": 0.5091863517060368
+        },
+        "planes/0/mass/0/alpha_Rs": {
+          "col": 1,
+          "spike_median_absz": 0.09328985589411345,
+          "quantile_within_calm": 0.4645669291338583
+        },
+        "planes/0/mass/0/e1": {
+          "col": 4,
+          "spike_median_absz": 0.45285531118975025,
+          "quantile_within_calm": 0.49343832020997375
+        },
+        "planes/0/mass/0/e2": {
+          "col": 5,
+          "spike_median_absz": 0.3412931194361502,
+          "quantile_within_calm": 0.5065616797900262
+        },
+        "planes/0/mass/1/gamma1": {
+          "col": 6,
+          "spike_median_absz": 0.012325517572485796,
+          "quantile_within_calm": 0.5091863517060368
+        },
+        "planes/0/mass/1/gamma2": {
+          "col": 7,
+          "spike_median_absz": 0.021906686439318517,
+          "quantile_within_calm": 0.5118110236220472
+        }
+      },
+      "stiff_ratio_real": 6.033936875378023,
+      "stiff_ratio_clone": 1.7168237709856764,
+      "median_c_real": {
+        "spike": 120.57707172022478,
+        "calm": 19.983151002498794
+      },
+      "median_c_clone": {
+        "spike": 3.8068149981822392,
+        "calm": 2.217359208625496
+      },
+      "verdicts": {
+        "P_T23_wall_MET": true,
+        "F_T23_wall_FIRES": false,
+        "P_T23_stiff_MET": false,
+        "F_T23_stiff_FIRES": false,
+        "P_T23_clone_clean": true,
+        "note": "all verdicts PROPOSED (UNCERTIFIED); orchestrator adjudicates"
+      }
+    },
+    "new": {
+      "registered_wall_coord": {
+        "name": "planes/0/mass/0/Rs",
+        "quantile": 0.0,
+        "clone_quantile": 0.5176470588235295
+      },
+      "wall_stat_real": {
+        "planes/0/mass/0/Rs": {
+          "col": 0,
+          "spike_median_absz": 1.8603432525948556,
+          "quantile_within_calm": 0.0
+        },
+        "planes/0/mass/0/e1": {
+          "col": 3,
+          "spike_median_absz": 0.434828814625406,
+          "quantile_within_calm": 0.509765625
+        },
+        "planes/0/mass/0/e2": {
+          "col": 4,
+          "spike_median_absz": 0.32931119187061286,
+          "quantile_within_calm": 0.474609375
+        },
+        "planes/0/mass/1/gamma1": {
+          "col": 6,
+          "spike_median_absz": 0.022091340857225077,
+          "quantile_within_calm": 0.978515625
+        },
+        "planes/0/mass/1/gamma2": {
+          "col": 7,
+          "spike_median_absz": 0.027105174477519117,
+          "quantile_within_calm": 0.966796875
+        }
+      },
+      "wall_stat_clone": {
+        "planes/0/mass/0/Rs": {
+          "col": 0,
+          "spike_median_absz": 2.7932319680053723,
+          "quantile_within_calm": 0.5176470588235295
+        },
+        "planes/0/mass/0/e1": {
+          "col": 3,
+          "spike_median_absz": 0.4335303454364614,
+          "quantile_within_calm": 0.45
+        },
+        "planes/0/mass/0/e2": {
+          "col": 4,
+          "spike_median_absz": 0.3284957624794904,
+          "quantile_within_calm": 0.40294117647058825
+        },
+        "planes/0/mass/1/gamma1": {
+          "col": 6,
+          "spike_median_absz": 0.01566957017584128,
+          "quantile_within_calm": 0.5970588235294118
+        },
+        "planes/0/mass/1/gamma2": {
+          "col": 7,
+          "spike_median_absz": 0.020662626685265445,
+          "quantile_within_calm": 0.6058823529411764
+        }
+      },
+      "stiff_ratio_real": 7.119348705346951,
+      "stiff_ratio_clone": 2.5998414991441585,
+      "median_c_real": {
+        "spike": 28.529115298453434,
+        "calm": 4.007264776485353
+      },
+      "median_c_clone": {
+        "spike": 3.824698735371739,
+        "calm": 1.4711276578325223
+      },
+      "verdicts": {
+        "P_T23_wall_MET": false,
+        "F_T23_wall_FIRES": false,
+        "P_T23_stiff_MET": false,
+        "F_T23_stiff_FIRES": false,
+        "P_T23_clone_clean": false,
+        "note": "all verdicts PROPOSED (UNCERTIFIED); orchestrator adjudicates"
+      }
+    }
+  }
+}

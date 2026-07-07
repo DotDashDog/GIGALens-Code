@@ -1,0 +1,54 @@
+{
+  "run": "/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc",
+  "name_source": "live_bijector_sorted",
+  "worst_ess_directions": [
+    {
+      "index": 17,
+      "param": "planes/1/light/0/e1",
+      "ess": 9196.426294630814,
+      "rhat": 1.000724814027561
+    },
+    {
+      "index": 3,
+      "param": "planes/0/light/0/e1",
+      "ess": 9788.179640049377,
+      "rhat": 1.0002524165846878
+    },
+    {
+      "index": 16,
+      "param": "planes/1/light/0/center_y",
+      "ess": 10074.846962743452,
+      "rhat": 1.0005149160166344
+    },
+    {
+      "index": 10,
+      "param": "planes/0/mass/0/gamma",
+      "ess": 10078.179789773994,
+      "rhat": 1.0005813814261877
+    },
+    {
+      "index": 14,
+      "param": "planes/1/light/0/beta",
+      "ess": 10081.35462774196,
+      "rhat": 1.000455418603843
+    },
+    {
+      "index": 0,
+      "param": "planes/0/light/0/R_sersic",
+      "ess": 10084.555932608546,
+      "rhat": 1.00065403288432
+    },
+    {
+      "index": 5,
+      "param": "planes/0/light/0/n_sersic",
+      "ess": 10095.146802736926,
+      "rhat": 1.0003890913526579
+    },
+    {
+      "index": 4,
+      "param": "planes/0/light/0/e2",
+      "ess": 10118.789981692453,
+      "rhat": 1.0008188952413442
+    }
+  ]
+}

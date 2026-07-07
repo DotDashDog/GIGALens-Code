@@ -1,0 +1,52 @@
+{
+  "experiment": "T13' Step 5 summary",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-03T01:07:50.565119+00:00",
+  "arm": "ss4",
+  "model_supersample": 4,
+  "n_seeds": 4,
+  "per_seed": [
+    {
+      "seed": 1,
+      "min_ess": 889.2952653790712,
+      "min_ess_param": "planes/0/mass/0/gamma",
+      "max_rhat": 1.0106282857325375,
+      "max_rhat_param": "planes/1/light/0/e2"
+    },
+    {
+      "seed": 2,
+      "min_ess": 1118.478306114853,
+      "min_ess_param": "planes/1/light/0/center_y",
+      "max_rhat": 1.0095833217477335,
+      "max_rhat_param": "planes/1/light/0/n_sersic"
+    },
+    {
+      "seed": 3,
+      "min_ess": 1163.923098278347,
+      "min_ess_param": "planes/0/mass/0/e1",
+      "max_rhat": 1.012299562245771,
+      "max_rhat_param": "planes/0/mass/0/e1"
+    },
+    {
+      "seed": 4,
+      "min_ess": 933.8218650944149,
+      "min_ess_param": "planes/0/mass/0/center_x",
+      "max_rhat": 1.0072612485863328,
+      "max_rhat_param": "planes/0/mass/0/center_y"
+    }
+  ],
+  "band": {
+    "min_ess_min": 889.2952653790712,
+    "min_ess_max": 1163.923098278347,
+    "min_ess_ratio": 1.3088151299020048,
+    "max_rhat_min": 1.0072612485863328,
+    "max_rhat_max": 1.012299562245771
+  },
+  "old_T0_band": [
+    11.2,
+    15.3
+  ],
+  "prediction": "{d', model ss4}: min-ESS >= 10x the old band (>= 130, plausibly approaching the clone's ~1700)",
+  "falsifier": "{d', ss4} unchanged (min-ESS still ~old band) => the comb was NOT the ESS bottleneck; C-4's sampling relevance dies",
+  "prediction_vs_measured": "measured min-ESS band [889.3, 1163.9] vs predicted >= 130 -> MET (>=10x)"
+}

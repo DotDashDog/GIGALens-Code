@@ -1,0 +1,33 @@
+=== T3 float64 (full) ===
+[t3] precision=float64 eps_mach=2.2e-16 reduced=False
+[t3] eps_step=0.125458 L_ref=13.2994 dim=22
+[t3] 7 directions: ['random_0', 'random_1', 'random_2', 'stiffest', 'softest', 'axis[planes/1/light/0/center_y]', 'axis[planes/0/mass/0/gamma]']
+[t3] logp(x0)=-336.417 energy_dtype=float64
+[t3] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t3/float64/t3_results_float64.json
+
+=== T3 per-direction summary [float64] (PROPOSED / UNCERTIFIED) ===
+direction                     sigma_dir   plateauD2    h_D2_dev       flr    fd_min    h_fd_dev
+random_0                      5.316e-02  -4.477e+06      stable  1.42e-05  1.35e-09      stable
+random_1                      4.782e-02  -4.877e+06    3.47e-03  1.28e-05  5.03e-08      stable
+random_2                      5.154e-02  -5.777e+06    3.74e-03  1.38e-05  4.82e-08    1.03e-01
+stiffest                      1.719e-04  -9.328e+08      stable  4.60e-08  5.63e-09    3.44e-04
+softest                       2.317e-01  -4.344e+01    5.31e-07  6.20e-05  9.14e-09      stable
+axis[planes/1/light/0/center_y]  9.887e-03  -8.179e+06    9.03e-05  2.64e-06  1.71e-08      stable
+axis[planes/0/mass/0/gamma]   9.911e-02  -1.672e+05    2.49e-02  2.65e-05  7.10e-09      stable
+
+[t3] done.
+=== T3 float32 (positive control, reduced) ===
+/opt/jax/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype float64 requested in astype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+  return lax_numpy.astype(self, dtype, copy=copy, device=device)
+[t3] precision=float32 eps_mach=1.2e-07 reduced=True
+[t3] eps_step=0.125458 L_ref=13.2994 dim=22
+[t3] 2 directions: ['random_0', 'stiffest']
+[t3] logp(x0)=-336.418 energy_dtype=float32
+[t3] wrote /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t3/float32/t3_results_float32.json
+
+=== T3 per-direction summary [float32] (PROPOSED / UNCERTIFIED) ===
+direction                     sigma_dir   plateauD2    h_D2_dev       flr    fd_min    h_fd_dev
+random_0                      5.316e-02  -4.477e+06    1.16e-05  1.42e-05  2.69e-03      stable
+stiffest                      1.719e-04  -9.324e+08    6.85e-07  4.60e-08  2.81e-03    3.44e-04
+
+[t3] done.

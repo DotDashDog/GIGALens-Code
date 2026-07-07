@@ -1,0 +1,52 @@
+{
+  "experiment": "T13' Step 5 summary",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-03T01:07:50.084214+00:00",
+  "arm": "ss2",
+  "model_supersample": 2,
+  "n_seeds": 4,
+  "per_seed": [
+    {
+      "seed": 1,
+      "min_ess": 1030.9753249268397,
+      "min_ess_param": "planes/0/mass/0/gamma",
+      "max_rhat": 1.0112257052609073,
+      "max_rhat_param": "planes/0/mass/0/e1"
+    },
+    {
+      "seed": 2,
+      "min_ess": 1070.0436201580992,
+      "min_ess_param": "planes/0/mass/0/gamma",
+      "max_rhat": 1.0094440788166157,
+      "max_rhat_param": "planes/0/mass/0/theta_E"
+    },
+    {
+      "seed": 3,
+      "min_ess": 1253.0612143033711,
+      "min_ess_param": "planes/0/mass/0/e1",
+      "max_rhat": 1.0088293636670531,
+      "max_rhat_param": "planes/0/light/0/R_sersic"
+    },
+    {
+      "seed": 4,
+      "min_ess": 1109.2313993962741,
+      "min_ess_param": "planes/0/mass/0/gamma",
+      "max_rhat": 1.0077399150361221,
+      "max_rhat_param": "planes/0/light/0/Ie"
+    }
+  ],
+  "band": {
+    "min_ess_min": 1030.9753249268397,
+    "min_ess_max": 1253.0612143033711,
+    "min_ess_ratio": 1.2154133896388755,
+    "max_rhat_min": 1.0077399150361221,
+    "max_rhat_max": 1.0112257052609073
+  },
+  "old_T0_band": [
+    11.2,
+    15.3
+  ],
+  "prediction": "{d', model ss2}: min-ESS within ~the old T0 band (11.2, 15.3) (the comb is model-side and survives the data fix)",
+  "falsifier": "{d', ss2} fast (min-ESS >> old band) => the comb was data-side after all; C-4 mechanism misassigned",
+  "prediction_vs_measured": "measured band [1031.0, 1253.1] vs old T0 band (11.2, 15.3) -> OUTSIDE old band"
+}

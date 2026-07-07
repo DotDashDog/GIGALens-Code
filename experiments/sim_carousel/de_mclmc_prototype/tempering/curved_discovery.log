@@ -1,0 +1,32 @@
+GATE-1 linear-DE within-mode acceptance = 1.85%  (carousel-faithful 0.5-1.5%)
+classify agreement on exact draws: 1.000
+
+=== EEVPD step tuning at beta=1 (CURVED target) ===
+   [tune beta=1] step=0.00300  EEVPD=1.142e-16  (target 5.0e-04)
+   [tune beta=1] step=0.00445  EEVPD=1.211e-15  (target 5.0e-04)
+   [tune beta=1] step=0.00659  EEVPD=9.314e-15  (target 5.0e-04)
+   [tune beta=1] step=0.00977  EEVPD=8.030e-14  (target 5.0e-04)
+   [tune beta=1] step=0.01448  EEVPD=9.048e-13  (target 5.0e-04)
+   [tune beta=1] step=0.02146  EEVPD=6.906e-12  (target 5.0e-04)
+   [tune beta=1] step=0.03181  EEVPD=1.193e-10  (target 5.0e-04)
+   [tune beta=1] step=0.04715  EEVPD=1.411e-09  (target 5.0e-04)
+   [tune beta=1] step=0.06989  EEVPD=2.572e-08  (target 5.0e-04)
+   [tune beta=1] step=0.10359  EEVPD=1.470e-06  (target 5.0e-04)
+   [tune beta=1] step=0.15354  EEVPD=3.480e-05  (target 5.0e-04)
+   [tune beta=1] step=0.22759  EEVPD=4.747e-03  (target 5.0e-04)
+   [tune beta=1] step=0.33733  EEVPD=8.837e-01  (target 5.0e-04)
+   [tune beta=1] step=0.50000  EEVPD=2.439e+00  (target 5.0e-04)
+   [tune beta=1] EEVPD-tuned step ~= 0.19006
+beta=1 EEVPD-tuned step = 0.19006
+
+[D] FAITHFULNESS step sweep (tempered burn-in from all-modeB init):
+   step=0.190: anneal_max_EEVPD=5.84e-02 (TOO COARSE)  cold occ_A=0.5156
+   step=0.070: anneal_max_EEVPD=1.15e-06 (FAITHFUL)  cold occ_A=0.2656
+   step=0.050: anneal_max_EEVPD=1.40e-08 (FAITHFUL)  cold occ_A=0.1875
+   step=0.030: anneal_max_EEVPD=3.77e-10 (FAITHFUL)  cold occ_A=0.1250
+   step=0.020: anneal_max_EEVPD=1.79e-11 (FAITHFUL)  cold occ_A=0.0938
+
+   FAITHFUL step = 0.070; cold occ_A = 0.2656 (truth w_A=0.6)
+[D] vanilla MCLMC (beta=1) from same init (faithful step) ...
+   vanilla cold occ_A = 0.0000 (should be ~0; affine DE 0 round-trips, C-14)
+wall 137.0s

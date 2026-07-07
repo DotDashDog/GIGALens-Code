@@ -38,6 +38,49 @@ _tfd = tfp.distributions
 DEFAULT_SUBSAMPLE_N = 5000
 
 
+# ---------------------------------------------------------------------------
+# Rank-normalized split convergence diagnostics (Vehtari et al. 2021,
+# "Rank-Normalization, Folding, and Localization: An Improved R̂").
+#
+# Why this and not plain Gelman-Rubin / tfp.effective_sample_size: the sampler
+# works in unconstrained (z) space, where a prior bound induces a z->inf
+# bijector stretch -> heavy-tailed / non-normal marginals. The classic PSRF
+# badly over-reports R̂ there (we measured z-PSRF ~12 where the *physical*
+# posterior is essentially one mode; rank-R̂ ~1.7). Rank normalization is
+# invariant to any monotone reparameterization, so it neither invents nor
+# hides convergence because of the prior's parameterization.
+#
+# We defer to ArviZ's reference implementation rather than re-derive the
+# rank/fold/Geyer machinery here (a hand-rolled ESS is an easy way to fool
+# yourself). ArviZ is part of the canonical env (docs/env_setup.md); runtime
+# deps are env-managed, not declared in pyproject.
+# ---------------------------------------------------------------------------
+
+
+def _require_arviz():
+    try:
+        import arviz as az
+    except ImportError as e:  # pragma: no cover
+        raise ImportError(
+            "Rank-normalized R̂/ESS diagnostics require ArviZ. It is part of the "
+            "canonical gigalens env (docs/env_setup.md); install with `pip install arviz`."
+        ) from e
+    return az
+
+
+def _az_diag(sz: np.ndarray, fn) -> np.ndarray:
+    """Apply an ArviZ diagnostic ``fn`` (e.g. ``az.rhat``) per parameter.
+
+    ArviZ's array API only takes a uni-dimensional ``(chain, draw)`` variable,
+    so we wrap our canonical ``(chains, steps, params)`` array as a dataset
+    (chain, draw, param) and read the per-param result back.
+    """
+    az = _require_arviz()
+    ds = az.convert_to_dataset(np.asarray(sz))
+    var = list(ds.data_vars)[0]
+    return np.atleast_1d(np.asarray(fn(ds)[var].values))
+
+
 def _n_basis(light_model) -> int:
     """Number of linear-amplitude basis functions a light profile contributes
     when used with ``use_lstsq=True``.
@@ -169,7 +212,7 @@ class Posterior(ABC):
         ``(n, n_params)``. Returns the nested-list-of-dicts structure the
         :class:`~gigalens.jax.simulator.LensSimulator` expects."""
         z = jnp.atleast_2d(jnp.asarray(z))
-        return self.ctx.prob_model.bij.forward(list(z.T))
+        return self.ctx.prob_model.bij.forward(z)
 
     def x_grouped(self, point: str = "median"):
         """Physical params at ``point`` in the legacy 3-group nested form
@@ -229,14 +272,72 @@ class Posterior(ABC):
                     loc[(i, "light", j)] = ("lens_light", li); li += 1
         groups = {"lens_mass": {}, "lens_light": {}, "source_light": {}}
         for path, ukey in scene._site_to_unique:
-            if not path or path[0] != "planes":
-                continue  # cosmo etc. are not corner groups
+            if not path:
+                continue
+            if path[0] == "cosmo":
+                # Cosmology params (H0, Om0, w0, ...) form their OWN corner group
+                # instead of being dropped — for a cosmology run these are the
+                # parameters of interest. Keyed under a single pseudo-profile "0"
+                # so the flatten machinery labels them ``cosmo_<param>``.
+                groups.setdefault("cosmo", {}).setdefault("0", {})[path[1]] = x_flat[ukey]
+                continue
+            # Only mass/light profile sites are corner columns; plane geometry
+            # (redshift / deflection_ratio) — a 4-tuple path — is skipped, and the
+            # guard also keeps the 5-tuple unpack below from raising if a geometry
+            # or other non-profile site is ever free.
+            if path[0] != "planes" or len(path) != 5 or path[2] not in ("mass", "light"):
+                continue
             _, i, role, j, param = path
             info = loc.get((i, role, j))
             if info is None:
                 continue
             grp, idx = info
             groups[grp].setdefault(str(idx), {})[param] = x_flat[ukey]
+        return groups
+
+    def regroup_truth(self, point):
+        """Regroup an EXTERNAL truth / overlay point into the same label space as
+        :meth:`grouped_free_x` (the legacy 3-group form plus a ``cosmo`` group), so
+        a physically-structured scene truth
+        (``{"planes": {i: {"mass"/"light": {j: {...}}}}, "cosmo": {...}}``) aligns
+        column-for-column with the sampled :attr:`flat_x`.
+
+        Pass-through for a point that is already grouped (a legacy 3-group dict, or
+        anything without a top-level ``planes`` key). Only the FREE cosmo params
+        (those actually sampled — read from the scene's site map) are carried, so
+        fixed cosmology constants don't become phantom truth columns. Missing
+        profiles / params are simply left absent; the corner and z-score layers
+        fill them with NaN.
+        """
+        if not (isinstance(point, dict) and "planes" in point):
+            return point  # already grouped, or not a scene-nested point
+        scene = self._scene_model
+        planes_t = point.get("planes", {}) or {}
+
+        def _get(d, k):
+            # truth dicts key planes/profiles by int; tolerate stringified keys too.
+            return d.get(k, d.get(str(k), {})) if isinstance(d, dict) else {}
+
+        groups = {"lens_mass": {}, "lens_light": {}, "source_light": {}}
+        mi = li = si = 0
+        for i, plane in enumerate(scene.planes):
+            lensed = any(scene.planes[k].has_mass for k in range(i))
+            pt = _get(planes_t, i)
+            tmass = _get(pt, "mass")
+            for j in range(len(plane.mass)):
+                groups["lens_mass"][str(mi)] = dict(_get(tmass, j)); mi += 1
+            tlight = _get(pt, "light")
+            for j in range(len(plane.light)):
+                prof = dict(_get(tlight, j))
+                if lensed:
+                    groups["source_light"][str(si)] = prof; si += 1
+                else:
+                    groups["lens_light"][str(li)] = prof; li += 1
+        free_cosmo = [p[1] for p, _ in scene._site_to_unique
+                      if p and p[0] == "cosmo"]
+        if free_cosmo:
+            cosmo_t = point.get("cosmo", {}) or {}
+            groups["cosmo"] = {"0": {c: cosmo_t[c] for c in free_cosmo if c in cosmo_t}}
         return groups
 
     @property
@@ -323,8 +424,16 @@ class Posterior(ABC):
         attribute presence.
         """
         pm = self.ctx.prob_model
-        # Multi-dataset-aware: read the band's frozen error map directly.
-        if self.is_backward and self._prob_datasets is not None:
+        # Scene ProbModel (forward OR lstsq) and any dataset-aware model: σ is the
+        # frozen per-dataset error_map that the likelihood itself scores against
+        # (sqrt(bg**2 + clip(image,0,inf)/exp_time), built at Dataset init from the
+        # *observed* image), so ``predicted`` is not consulted. This must run for
+        # BOTH modes: the scene forward likelihood also uses ds.error_map, and a
+        # multi-dataset scene ProbModel exposes noise only per-Dataset — it has no
+        # top-level error_map/background_rms/exp_time (its ``error_map`` property
+        # even raises for >1 dataset), which is why the old is_backward gating and
+        # the background_rms/exp_time fallback below both missed the forward case.
+        if self._prob_datasets is not None:
             return self._error_for(dataset)
         if self.is_backward and hasattr(pm, "error_map"):
             return np.asarray(pm.error_map)
@@ -601,12 +710,12 @@ class SamplerPosterior(Posterior):
 
     @cached_property
     def rhat(self) -> np.ndarray:
-        """Gelman-Rubin R-hat per parameter (shape ``(n_params,)``)."""
+        """Rank-normalized split-R-hat per parameter (shape ``(n_params,)``)."""
         return self._rhat(self._samples_z)
 
     @cached_property
     def ess(self) -> np.ndarray:
-        """Effective sample size per parameter (shape ``(n_params,)``)."""
+        """Rank-normalized bulk-ESS per parameter (shape ``(n_params,)``)."""
         return self._ess(self._samples_z)
 
     def running_rhat(self, *, schedule=None) -> Tuple[np.ndarray, np.ndarray]:
@@ -634,15 +743,24 @@ class SamplerPosterior(Posterior):
 
     @staticmethod
     def _rhat(sz: np.ndarray) -> np.ndarray:
-        # tfp wants (num_results, num_chains, ...) so we transpose from our
-        # canonical (chains, steps, params) layout.
-        sz_t = jnp.transpose(jnp.asarray(sz), (1, 0, 2))
-        return np.asarray(tfp.mcmc.potential_scale_reduction(sz_t))
+        """Rank-normalized split-R-hat (Vehtari et al. 2021), per parameter.
+
+        Reported as ``max(rank, folded)``: the *rank* term catches location
+        non-convergence; the *folded* term (ranks of ``|theta - median|``)
+        catches scale/variance non-convergence. ArviZ expects ``(chain, draw,
+        ...)``, which is our canonical layout, so the trailing param axis maps
+        straight through. Standard (sqrt-form) R̂ -> thresholds 1.01/1.1 apply.
+        """
+        az = _require_arviz()
+        rank = _az_diag(sz, lambda ds: az.rhat(ds, method="rank"))
+        folded = _az_diag(sz, lambda ds: az.rhat(ds, method="folded"))
+        return np.maximum(rank, folded)
 
     @staticmethod
     def _ess(sz: np.ndarray) -> np.ndarray:
-        sz_t = jnp.transpose(jnp.asarray(sz), (1, 0, 2))
-        return np.asarray(tfp.mcmc.effective_sample_size(sz_t))
+        """Rank-normalized bulk-ESS (Vehtari et al. 2021), per parameter."""
+        az = _require_arviz()
+        return _az_diag(sz, lambda ds: az.ess(ds, method="bulk"))
 
     # -- representative point ----------------------------------------------
 

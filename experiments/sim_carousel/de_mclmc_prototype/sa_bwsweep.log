@@ -1,0 +1,9 @@
+balanced init occ(global)=0.500; truth~1.0 (secondary ~1e-5). ROUNDS=200
+bw      occ_first10  occ_last50  sub_rate   -> DRAINS?
+ 0.01   0.500        0.500       0.401      frozen
+ 0.02   0.500        0.500       0.295      frozen
+ 0.05   0.500        0.500       0.157      frozen
+ 0.10   0.500        0.500       0.078      frozen
+ 0.20   0.500        0.500       0.042      frozen
+
+wall 3416s

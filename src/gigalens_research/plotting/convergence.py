@@ -16,9 +16,27 @@ from .labels import flatten_param_names, flatten_params, latex_label
 
 
 def _param_labels(posterior) -> list:
-    """Best-effort parameter labels from the bijector's nested structure."""
+    """Best-effort parameter labels in sampler-column order.
+
+    COLUMN ORDER NOTE: Running R-hat, ESS, and trace diagnostics are indexed by
+    sampler column ``i`` (i.e. position ``i`` in the unconstrained z-vector).
+    The bijector output dict iterates in reversed-alphabetical order for TFP's
+    ``JointDistributionNamed`` bijector, so ``flatten_param_names(bij_output)``
+    returns names where position ``a`` corresponds to sampler column ``DIM-1-a``.
+    Sorting the scene-API flat output dict keys alphabetically recovers JAX's
+    pytree-leaf order, which IS the sampler column order.
+
+    Falls back to ``flatten_param_names`` natural order for legacy nested
+    bijector output, and to generic ``param[i]`` labels if the bijector call
+    fails entirely.
+    """
     try:
         x = posterior.z_to_x(posterior.median_z)
+        # Scene-API flat form: a dict whose top-level values are all scalars.
+        # Sorting keys recovers JAX pytree-leaf order = sampler column order.
+        if isinstance(x, dict) and x and all(
+                not isinstance(v, (dict, list)) for v in x.values()):
+            return sorted(x.keys())
         return list(flatten_param_names(x))
     except Exception:
         return [f"param[{i}]" for i in range(posterior.n_params)]

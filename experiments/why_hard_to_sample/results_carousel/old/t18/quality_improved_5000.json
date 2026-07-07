@@ -1,0 +1,42 @@
+{
+  "label": "improved_5000",
+  "dim": 14,
+  "n_fail": 0,
+  "D1": {
+    "test": "D1_trajectory_slope",
+    "value": 0.0,
+    "value_desc": "best-so-far logp gain over final 10% of steps (nats)",
+    "threshold": 0.5,
+    "status": "PASS",
+    "counts_as_fail": false,
+    "note": "NECESSARY not sufficient: a plateau does NOT prove convergence (reference old MAP plateaued at step 421 yet sat 7 nats low).",
+    "n_steps": 5000,
+    "best_so_far_final": -119514.23958488811
+  },
+  "D2": {
+    "test": "D2_newton_decrement",
+    "value": 0.04416133628096443,
+    "value_desc": "predicted one-Newton-step logp gain lambda^2/2 (nats)",
+    "threshold_fail": 0.5,
+    "threshold_pass": 0.1,
+    "status": "PASS",
+    "counts_as_fail": false,
+    "lambda": 0.2971913063363881,
+    "grad_norm": 1311.6955760110263,
+    "min_eig_negH": 126.21834758847221,
+    "hessian_pd": true,
+    "reason": "at a sharp local maximum"
+  },
+  "D3": {
+    "test": "D3_mode_vs_typical_gap",
+    "value": null,
+    "value_desc": "loglike(z_best) - median sample loglike (nats)",
+    "threshold_pass": 1.0,
+    "threshold_fail": 0.0,
+    "status": "N/A",
+    "counts_as_fail": false,
+    "ballpark_gap": 7.0,
+    "reason": "no posterior samples supplied (D3 skipped)"
+  },
+  "status": "proposed (UNCERTIFIED)"
+}

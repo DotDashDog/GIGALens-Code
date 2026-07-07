@@ -1,0 +1,280 @@
+{
+  "experiment": "T10 spike_list -- input contract for T11",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-02T22:32:23.327530+00:00",
+  "run_dir": "/global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc",
+  "data_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/sys60",
+  "note": "z at each point is samples_z[chain, step] from run_dir/arrays.npz; std_z is per-coordinate std over pooled results positions (ddof=1); M_zhat = gn_metric(scale_cols(J_z, std_z), W).",
+  "n_spikes": 12,
+  "n_baselines": 12,
+  "spike_factor": 3.0,
+  "baseline_min_dist": 20,
+  "spikes": [
+    {
+      "segment": 6,
+      "chain": 6,
+      "step": 16302,
+      "seg_step": 53,
+      "lambda1": 59884328.071510576,
+      "segment_median": 106497.92870704376,
+      "segment_threshold": 319493.78612113127,
+      "above_threshold": true,
+      "rank": 0
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10311,
+      "seg_step": 206,
+      "lambda1": 4173678.081862466,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 1
+    },
+    {
+      "segment": 7,
+      "chain": 7,
+      "step": 18867,
+      "seg_step": 136,
+      "lambda1": 3591054.7732234695,
+      "segment_median": 185163.7608960439,
+      "segment_threshold": 555491.2826881318,
+      "above_threshold": true,
+      "rank": 2
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10296,
+      "seg_step": 191,
+      "lambda1": 3152577.147848513,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 3
+    },
+    {
+      "segment": 6,
+      "chain": 6,
+      "step": 16310,
+      "seg_step": 61,
+      "lambda1": 2695485.551222161,
+      "segment_median": 106497.92870704376,
+      "segment_threshold": 319493.78612113127,
+      "above_threshold": true,
+      "rank": 4
+    },
+    {
+      "segment": 7,
+      "chain": 7,
+      "step": 18849,
+      "seg_step": 118,
+      "lambda1": 2694944.794711957,
+      "segment_median": 185163.7608960439,
+      "segment_threshold": 555491.2826881318,
+      "above_threshold": true,
+      "rank": 5
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10289,
+      "seg_step": 184,
+      "lambda1": 2608429.2926991913,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 6
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10297,
+      "seg_step": 192,
+      "lambda1": 2593147.1920924354,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 7
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10274,
+      "seg_step": 169,
+      "lambda1": 2586781.0515887444,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 8
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10290,
+      "seg_step": 185,
+      "lambda1": 2463867.42422558,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 9
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10263,
+      "seg_step": 158,
+      "lambda1": 2328044.8733498612,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 10
+    },
+    {
+      "segment": 1,
+      "chain": 1,
+      "step": 10288,
+      "seg_step": 183,
+      "lambda1": 2273731.416698172,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "above_threshold": true,
+      "rank": 11
+    }
+  ],
+  "baselines": [
+    {
+      "matched_spike_rank": 0,
+      "segment": 6,
+      "chain": 6,
+      "step": 16471,
+      "seg_step": 222,
+      "lambda1": 107593.24383732678,
+      "segment_median": 106497.92870704376,
+      "segment_threshold": 319493.78612113127,
+      "dist_to_nearest_spike": 128
+    },
+    {
+      "matched_spike_rank": 1,
+      "segment": 1,
+      "chain": 1,
+      "step": 10145,
+      "seg_step": 40,
+      "lambda1": 284899.8238470314,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 32
+    },
+    {
+      "matched_spike_rank": 2,
+      "segment": 7,
+      "chain": 7,
+      "step": 18778,
+      "seg_step": 47,
+      "lambda1": 185177.82795687043,
+      "segment_median": 185163.7608960439,
+      "segment_threshold": 555491.2826881318,
+      "dist_to_nearest_spike": 50
+    },
+    {
+      "matched_spike_rank": 3,
+      "segment": 1,
+      "chain": 1,
+      "step": 10139,
+      "seg_step": 34,
+      "lambda1": 278534.13577765104,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 26
+    },
+    {
+      "matched_spike_rank": 4,
+      "segment": 6,
+      "chain": 6,
+      "step": 16412,
+      "seg_step": 163,
+      "lambda1": 105402.61357676072,
+      "segment_median": 106497.92870704376,
+      "segment_threshold": 319493.78612113127,
+      "dist_to_nearest_spike": 69
+    },
+    {
+      "matched_spike_rank": 5,
+      "segment": 7,
+      "chain": 7,
+      "step": 18805,
+      "seg_step": 74,
+      "lambda1": 186610.82401232692,
+      "segment_median": 185163.7608960439,
+      "segment_threshold": 555491.2826881318,
+      "dist_to_nearest_spike": 23
+    },
+    {
+      "matched_spike_rank": 6,
+      "segment": 1,
+      "chain": 1,
+      "step": 10153,
+      "seg_step": 48,
+      "lambda1": 276281.3396493109,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 40
+    },
+    {
+      "matched_spike_rank": 7,
+      "segment": 1,
+      "chain": 1,
+      "step": 10176,
+      "seg_step": 71,
+      "lambda1": 273745.5286570686,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 63
+    },
+    {
+      "matched_spike_rank": 8,
+      "segment": 1,
+      "chain": 1,
+      "step": 10207,
+      "seg_step": 102,
+      "lambda1": 272269.3488459934,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 55
+    },
+    {
+      "matched_spike_rank": 9,
+      "segment": 1,
+      "chain": 1,
+      "step": 10154,
+      "seg_step": 49,
+      "lambda1": 266855.0620191464,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 41
+    },
+    {
+      "matched_spike_rank": 10,
+      "segment": 1,
+      "chain": 1,
+      "step": 10239,
+      "seg_step": 134,
+      "lambda1": 266779.7417402818,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 23
+    },
+    {
+      "matched_spike_rank": 11,
+      "segment": 1,
+      "chain": 1,
+      "step": 10142,
+      "seg_step": 37,
+      "lambda1": 310254.1717208033,
+      "segment_median": 286091.1070605519,
+      "segment_threshold": 858273.3211816556,
+      "dist_to_nearest_spike": 29
+    }
+  ]
+}

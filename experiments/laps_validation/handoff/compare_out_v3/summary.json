@@ -1,0 +1,79 @@
+{
+  "seed": 0,
+  "configs": [
+    [
+      "warm",
+      512
+    ],
+    [
+      "warm",
+      128
+    ],
+    [
+      "prior",
+      512
+    ],
+    [
+      "prior",
+      128
+    ]
+  ],
+  "rows": [
+    {
+      "init": "warm",
+      "M": 512,
+      "wall_s": 238.13,
+      "switched": true,
+      "n_samples": 512,
+      "p2_accept_final": 0.9981,
+      "p2_accept_on_target_flag": false,
+      "rhat_max": 1.008,
+      "ess_min": 503.9,
+      "max_bias_sigma": 2.83,
+      "worst_param": "$\\epsilon_2$",
+      "error": null
+    },
+    {
+      "init": "warm",
+      "M": 128,
+      "wall_s": 99.3,
+      "switched": true,
+      "n_samples": 128,
+      "p2_accept_final": 0.9944,
+      "p2_accept_on_target_flag": false,
+      "rhat_max": 1.0576,
+      "ess_min": 114.4,
+      "max_bias_sigma": 3.447,
+      "worst_param": "$\\epsilon_2$",
+      "error": null
+    },
+    {
+      "init": "prior",
+      "M": 512,
+      "wall_s": 232.6,
+      "switched": true,
+      "n_samples": 512,
+      "p2_accept_final": 0.8718,
+      "p2_accept_on_target_flag": false,
+      "rhat_max": 1.0106,
+      "ess_min": 501.3,
+      "max_bias_sigma": 0.699,
+      "worst_param": "$\\epsilon_2$",
+      "error": null
+    },
+    {
+      "init": "prior",
+      "M": 128,
+      "wall_s": 95.18,
+      "switched": true,
+      "n_samples": 128,
+      "p2_accept_final": 0.882,
+      "p2_accept_on_target_flag": false,
+      "rhat_max": 1.0369,
+      "ess_min": 119.1,
+      "max_bias_sigma": 1.016,
+      "worst_param": "$x$",
+      "error": null
+    }
+  ]
+}

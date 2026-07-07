@@ -1,0 +1,197 @@
+{
+  "experiment": "T28 observable-slope prior MCLMC",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T20:26:42.665239+00:00",
+  "prior_spec": {
+    "observable": "s(Rs) = dln(alpha)/dln(r) at r=theta_E*",
+    "theta_E_star": 13.8126953867242,
+    "s_prior": "Uniform(0.0, 0.75)",
+    "Rs_at_s0": 10.478,
+    "Rs_at_s075": 614.4,
+    "other_priors": "UNCHANGED from carousel_min_new"
+  },
+  "artifact": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/transform_sprior.npz",
+  "artifact_sha256": "55dff80e9acb7c5dfbf573bc342d9ab8f50046190a7749d53a43bf98946d852a",
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "smoke_limit": null,
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "qz_scale": 0.001,
+  "z_init_seed": 20260703,
+  "rs_col": 0,
+  "param_names": [
+    "planes/0/mass/0/Rs",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/0/theta_E",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/beta",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/1/beta",
+    "planes/1/light/1/center_x",
+    "planes/1/light/1/center_y"
+  ],
+  "z_init_ledger": {
+    "z_init_selection_seed": 20260703,
+    "n_sub": 512,
+    "logp_chunk": 16,
+    "median_logp_of_subsample": -119526.5464244658,
+    "subsample_logp_min": -119539.89296671815,
+    "subsample_logp_max": -119521.41377269368,
+    "median_draw_used_as_init": {
+      "chain": 6,
+      "t": 6147,
+      "logp": -119526.5363246717
+    },
+    "best_draw_NOT_used": {
+      "chain": 6,
+      "t": 9495,
+      "logp": -119521.41377269368
+    },
+    "abs_logp_gap_median_draw_to_median": 0.01009979410446249,
+    "ref_samples": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_newbij/mclmc/arrays.npz",
+    "chains_used": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "u_init_Rs": 1.1110969647124347,
+  "conv_precision_env": "float64",
+  "T21_new_baseline": {
+    "eps": 0.354,
+    "min_ess": 143,
+    "frac_xi_gt10": [
+      0.077,
+      0.087
+    ]
+  },
+  "gates_all_pass": true,
+  "per_seed": [
+    {
+      "seed": 1,
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_seed1.npz",
+      "min_ess": 1587.3821412898228,
+      "min_ess_param": "planes/0/mass/0/Rs",
+      "max_rhat": 1.0088329394821094,
+      "max_rhat_param": "planes/0/mass/1/gamma1",
+      "ess_per_param": {
+        "planes/0/mass/0/Rs": 1587.3821412898228,
+        "planes/0/mass/0/center_x": 1782.2639086728034,
+        "planes/0/mass/0/center_y": 1817.642642339754,
+        "planes/0/mass/0/e1": 1955.756904363758,
+        "planes/0/mass/0/e2": 1895.9956467804666,
+        "planes/0/mass/0/theta_E": 1894.4525905107837,
+        "planes/0/mass/1/gamma1": 1672.6590298659007,
+        "planes/0/mass/1/gamma2": 1706.3833305002806,
+        "planes/1/light/0/beta": 1625.6067789069546,
+        "planes/1/light/0/center_x": 1671.0499960348072,
+        "planes/1/light/0/center_y": 1662.5182847137228,
+        "planes/1/light/1/beta": 1722.278044592472,
+        "planes/1/light/1/center_x": 1776.3049779234411,
+        "planes/1/light/1/center_y": 1608.1203694925036
+      },
+      "n_persistent": 0,
+      "persistent_chains": [],
+      "xi": {
+        "frac_gt10": 0.0278125,
+        "p50": 0.024706051323220762,
+        "p90": 0.9629184668931655,
+        "p99": 62.11081508109903,
+        "max": 45941.2820116672,
+        "n_post": 16000,
+        "num_results_used": 2000
+      }
+    },
+    {
+      "seed": 2,
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_seed2.npz",
+      "min_ess": 1639.7388477983216,
+      "min_ess_param": "planes/1/light/0/beta",
+      "max_rhat": 1.0041225204800959,
+      "max_rhat_param": "planes/0/mass/0/e2",
+      "ess_per_param": {
+        "planes/0/mass/0/Rs": 1652.9457977511258,
+        "planes/0/mass/0/center_x": 2042.6713201215523,
+        "planes/0/mass/0/center_y": 2061.37988850181,
+        "planes/0/mass/0/e1": 1896.6596751168488,
+        "planes/0/mass/0/e2": 1920.812793618439,
+        "planes/0/mass/0/theta_E": 1761.0058360907826,
+        "planes/0/mass/1/gamma1": 1661.618810013394,
+        "planes/0/mass/1/gamma2": 1683.8704329752454,
+        "planes/1/light/0/beta": 1639.7388477983216,
+        "planes/1/light/0/center_x": 1649.2056412691918,
+        "planes/1/light/0/center_y": 1710.9534937465412,
+        "planes/1/light/1/beta": 1880.3668528618591,
+        "planes/1/light/1/center_x": 1656.165298890629,
+        "planes/1/light/1/center_y": 1654.2595048865276
+      },
+      "n_persistent": 0,
+      "persistent_chains": [],
+      "xi": {
+        "frac_gt10": 0.029875,
+        "p50": 0.043342803782960654,
+        "p90": 1.4245901971531825,
+        "p99": 57.02138284770417,
+        "max": 54391.49871576289,
+        "n_post": 16000,
+        "num_results_used": 2000
+      }
+    },
+    {
+      "seed": 3,
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/t28_seed3.npz",
+      "min_ess": 1186.9202325922854,
+      "min_ess_param": "planes/1/light/0/beta",
+      "max_rhat": 1.0056704872868263,
+      "max_rhat_param": "planes/0/mass/0/e1",
+      "ess_per_param": {
+        "planes/0/mass/0/Rs": 1197.8978917398285,
+        "planes/0/mass/0/center_x": 1498.7585251911685,
+        "planes/0/mass/0/center_y": 1452.4737277695745,
+        "planes/0/mass/0/e1": 1415.4096367747795,
+        "planes/0/mass/0/e2": 1551.4888629790198,
+        "planes/0/mass/0/theta_E": 1384.9233232100637,
+        "planes/0/mass/1/gamma1": 1216.1096474119988,
+        "planes/0/mass/1/gamma2": 1239.5223143369265,
+        "planes/1/light/0/beta": 1186.9202325922854,
+        "planes/1/light/0/center_x": 1210.3285531491395,
+        "planes/1/light/0/center_y": 1246.7041597645652,
+        "planes/1/light/1/beta": 1407.5732173381768,
+        "planes/1/light/1/center_x": 1237.1896987783457,
+        "planes/1/light/1/center_y": 1228.5761791971306
+      },
+      "n_persistent": 0,
+      "persistent_chains": [],
+      "xi": {
+        "frac_gt10": 0.009125,
+        "p50": 0.005466759978405985,
+        "p90": 0.20353362958983587,
+        "p99": 9.054106815987396,
+        "max": 5952.1737838613435,
+        "n_post": 16000,
+        "num_results_used": 2000
+      }
+    }
+  ],
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908"
+}

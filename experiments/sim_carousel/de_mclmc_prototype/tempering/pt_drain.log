@@ -1,0 +1,5 @@
+w_minor=1e-03: cold occ_minor = 0.00125 +/- 0.00017 (truth 1e-03, pin 0.0417) -> DRAINED
+   swap acc: [0.28 0.28 0.28 0.28 0.27 0.27 0.27 0.27 0.27]
+w_minor=1e-05: cold occ_minor = 0.00000 +/- 0.00000 (truth 1e-05, pin 0.0417) -> DRAINED
+   swap acc: [0.27 0.28 0.28 0.27 0.27 0.27 0.27 0.27 0.27]
+wall 2334.3s

@@ -1,0 +1,37 @@
+{
+  "experiment": "T18_map_arm",
+  "stage": "map",
+  "status": "proposed (UNCERTIFIED)",
+  "config": {
+    "num_steps": 5000,
+    "n_samples": 64,
+    "n_samples_effective": 64,
+    "seed": 42,
+    "optimizer_id": "adabelief_1e-2_b1_0.95_b2_0.99_nesterov",
+    "output_type": "best_step",
+    "system": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/carousel_min_old",
+    "devices": 1
+  },
+  "best_lp": -119514.23958488811,
+  "best_chisq": 1.1859159993722241,
+  "best_step": 2530,
+  "loglike_z_best": -119478.80231029408,
+  "logprior_z_best": -35.43802637415922,
+  "wall_time_s": 2034.2714477069967,
+  "best_so_far_trajectory": {
+    "100": -124227.52026681683,
+    "250": -119546.08817565735,
+    "500": -119514.55545672435,
+    "1000": -119514.55545672435,
+    "2000": -119514.34533226518,
+    "3500": -119514.23958488811,
+    "5000": -119514.23958488811
+  },
+  "logp_gain_after_step_500": 0.3158718362392392,
+  "reference_old_best_lp": -119514.83136782396,
+  "P_T18a_loglike_min": -119470.0,
+  "P_T18a_meets": false,
+  "arrays_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/old/t18/map_arrays.npz",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "reuse": "gigalens/jax/inference.py:ModellingSequence.MAP (output_type='best_step'); optimizer via pipeline._default_map_optimizer; best-selection np.nanargmax(lp_hist) as pipeline.MAPStage.run:1384"
+}

@@ -1,0 +1,21 @@
+point slow-coords: [-0.214 -0.106 -0.061 -0.023  0.018  0.042  0.064  0.085  0.18 ]
+H64 finite=True  max rel-asymmetry=0.0e+00
+
+--- top-4 stiff subspace ---
+  precision stability (f32 vs f64) median=0.0 deg  max=0.0 deg
+  GAUSSIAN-CONTROL rotation: median=0.00 deg  max=0.00 deg  (noise floor)
+  REAL-MODEL rotation:       median=43.0 deg  max=87.4 deg
+  REAL at max separation: 85.6 deg;  monotonic? corr(angle,sep)=+0.62
+
+--- top-6 stiff subspace ---
+  precision stability (f32 vs f64) median=0.0 deg  max=0.0 deg
+  GAUSSIAN-CONTROL rotation: median=0.00 deg  max=0.00 deg  (noise floor)
+  REAL-MODEL rotation:       median=17.7 deg  max=39.5 deg
+  REAL at max separation: 7.3 deg;  monotonic? corr(angle,sep)=-0.32
+
+--- top-8 stiff subspace ---
+  precision stability (f32 vs f64) median=0.0 deg  max=0.0 deg
+  GAUSSIAN-CONTROL rotation: median=0.00 deg  max=0.00 deg  (noise floor)
+  REAL-MODEL rotation:       median=46.3 deg  max=81.9 deg
+  REAL at max separation: 56.8 deg;  monotonic? corr(angle,sep)=+0.05
+saved hess_rotation.png

@@ -1,0 +1,3 @@
+w_minor=1e-03: cold occ_minor = 0.43750 (truth 1e-03, pin 0.0625, half-chain 0.0312) -> NOT DRAINED
+w_minor=1e-05: cold occ_minor = 0.00000 (truth 1e-05, pin 0.0625, half-chain 0.0312) -> DRAINED
+wall 40.0s

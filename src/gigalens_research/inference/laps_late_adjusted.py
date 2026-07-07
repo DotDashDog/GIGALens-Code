@@ -1017,10 +1017,10 @@ def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
                 "(prob_model.prior / prob_model.bij are None for a constants-only "
                 "model).")
         # Sample num_chains prior draws (constrained), map to UNCONSTRAINED via the
-        # bijector inverse, and stack to (num_chains, dim). Same idiom as gigalens'
-        # gigalens/src/gigalens/jax/inference.py:
-        #     start = prob_model.prior.sample(n, seed=key)        # constrained
-        #     params = jnp.stack(prob_model.bij.inverse(start)).T # unconstrained
+        # bijector inverse (flat-z convention: (n, dim) in, (n, dim) out). Same
+        # idiom as gigalens' gigalens/src/gigalens/jax/inference.py:
+        #     start = prob_model.prior.sample(n, seed=key)   # constrained
+        #     params = prob_model.bij.inverse(start)         # unconstrained
         ndev = len(jax.devices())
         n_init = (num_chains // ndev) * ndev
         if n_init < 1:
@@ -1028,7 +1028,7 @@ def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
                 f"num_chains ({num_chains}) must be >= num_devices ({ndev}).")
         k_prior = jax.random.fold_in(jax.random.key(seed), 0x9E3779B9)
         start = prob_model.prior.sample(n_init, seed=k_prior)     # constrained draws
-        init_positions = jnp.stack(prob_model.bij.inverse(start)).T  # (n_init, dim)
+        init_positions = prob_model.bij.inverse(start)            # (n_init, dim)
         dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
         init_positions = init_positions.astype(dtype)             # sampler dtype
         return LAPS_late_adjusted(

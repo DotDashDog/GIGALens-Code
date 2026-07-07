@@ -1,0 +1,54 @@
+{
+  "run": "/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc",
+  "name_source": "z_index_no_data_dir",
+  "worst_ess_directions": [
+    {
+      "index": 17,
+      "param": "z[17]",
+      "ess": 9196.426294630814,
+      "rhat": 1.000724814027561
+    },
+    {
+      "index": 3,
+      "param": "z[3]",
+      "ess": 9788.179640049377,
+      "rhat": 1.0002524165846878
+    },
+    {
+      "index": 16,
+      "param": "z[16]",
+      "ess": 10074.846962743452,
+      "rhat": 1.0005149160166344
+    },
+    {
+      "index": 10,
+      "param": "z[10]",
+      "ess": 10078.179789773994,
+      "rhat": 1.0005813814261877
+    },
+    {
+      "index": 14,
+      "param": "z[14]",
+      "ess": 10081.35462774196,
+      "rhat": 1.000455418603843
+    },
+    {
+      "index": 0,
+      "param": "z[0]",
+      "ess": 10084.555932608546,
+      "rhat": 1.00065403288432
+    },
+    {
+      "index": 5,
+      "param": "z[5]",
+      "ess": 10095.146802736926,
+      "rhat": 1.0003890913526579
+    },
+    {
+      "index": 4,
+      "param": "z[4]",
+      "ess": 10118.789981692453,
+      "rhat": 1.0008188952413442
+    }
+  ]
+}

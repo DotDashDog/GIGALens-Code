@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-operating-card.sh\"",
+            "timeout": 10,
+            "statusMessage": "Loading GIGALens operating card"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-operating-card.sh\"",
+            "timeout": 10,
+            "statusMessage": "Loading GIGALens operating card"
+          }
+        ]
+      }
+    ]
+  }
+}

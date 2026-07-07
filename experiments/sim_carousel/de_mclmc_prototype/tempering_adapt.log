@@ -1,0 +1,30 @@
+all-secondary init occ(global)=0.000; L0=10.58 ss0=0.0484 adapt: DEVAR=0.0005 TRUST=1.5 decay=0.9868
+
+[anneal] per-step adaptive step; betas geom 0.02->1.0
+  beta   occ(global)  EEVPD(mean dE^2/D)  step(med)
+  0.020   0.125        4.86e-04            0.2287
+  0.029   0.312        6.22e-04            0.1680
+  0.041   0.312        5.07e-04            0.1442
+  0.058   0.438        4.02e-04            0.1070
+  0.083   0.500        5.58e-04            0.0803
+  0.118   0.375        4.63e-04            0.0746
+  0.169   0.500        5.02e-04            0.0576
+  0.241   0.438        4.90e-04            0.0488
+  0.344   0.562        4.27e-04            0.0501
+  0.491   0.562        4.62e-04            0.0401
+  0.701   0.562        5.29e-04            0.0267
+  1.000   0.562        4.88e-04            0.0285
+[anneal] post-anneal occ(global)=0.562
+
+[cold] beta=1 adaptive sampling from annealed ensemble (2500 steps) ...
+[cold] occ(global) last1500=0.628  EEVPD=4.95e-04  step(med)=0.0267
+
+[vanilla] beta=1 adaptive from all-secondary init (no anneal) ...
+[vanilla] occ(global) last1500=0.000 (should stay ~0)
+
+========== RESULT (PROPOSED/UNCERTIFIED) ==========
+  tempered burn-in (adaptive step) cold occ(global) = 0.628  (truth ~1.0)
+  vanilla (trapped)                cold occ(global) = 0.000
+  per-stage EEVPD all ~5e-04? YES (faithful)
+  -> occ cap at faithful step ⇒ FREEZE-OUT is the ceiling
+  wall 2095s  -> /global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/de_mclmc_prototype/tempering_carousel_adapt.npz

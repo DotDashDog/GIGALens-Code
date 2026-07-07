@@ -1,0 +1,17 @@
+truth-init dim0 std = 2.972 (target s_ridge=3.0)  N=64 D=10
+
+[a] vanilla MCLMC ONLY (no SA) from truth init, dim0 std after 3000 steps:
+   step=0.20: dim0 std last500=0.198 (truth 3.0)  mean logp last=-0.9
+   step=0.10: dim0 std last500=1.543 (truth 3.0)  mean logp last=-4.5
+   step=0.05: dim0 std last500=2.507 (truth 3.0)  mean logp last=-5.0
+
+[b] pure SA (K=0, mixture bw=0.20) from truth init, dim0 std vs round:
+   pure-SA dim0 std: init=2.972 round100=2.927 round400=2.856 last200mean=2.866 (truth 3.0)
+
+[b2] pure SA (K=0) with bw=1.0 (better ridge coverage):
+   pure-SA bw=1.0 dim0 std: round100=2.999 last200mean=2.996 (truth 3.0)
+
+[c] composite (K=20 step0.2 + SA bw0.20) from truth init (reproduce C1):
+   composite dim0 std: round100=0.595 last200mean=0.634 (truth 3.0)
+
+total wall 543s

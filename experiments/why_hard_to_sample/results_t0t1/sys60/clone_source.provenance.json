@@ -1,0 +1,6 @@
+{
+  "converted_from": "/global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc",
+  "note": "position=samples_z (post-burn-in only) from pipeline MCLMCStage arrays.npz; converted for build_clone.py",
+  "upstream_qz_hash": "e59573bb9e715b71",
+  "seed": 0
+}

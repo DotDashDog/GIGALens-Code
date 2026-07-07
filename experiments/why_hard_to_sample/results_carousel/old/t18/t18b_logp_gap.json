@@ -1,0 +1,28 @@
+{
+  "ref_old_500": {
+    "logp_z_best": -119514.83640942082,
+    "sample_logp_median": -119509.56452464378,
+    "sample_logp_max": -119504.15129321182,
+    "logp_gap_mode_minus_median": -5.271884777044761,
+    "n_draws_beating_mode": 453,
+    "n_sub": 512
+  },
+  "ref_new_500": {
+    "logp_z_best": -119531.68409897489,
+    "sample_logp_median": -119526.23860465514,
+    "sample_logp_max": -119521.21818782961,
+    "logp_gap_mode_minus_median": -5.445494319748832,
+    "n_draws_beating_mode": 475,
+    "n_sub": 512
+  },
+  "improved_5000": {
+    "logp_z_best": -119514.24033666824,
+    "sample_logp_median": -119509.3960627887,
+    "sample_logp_max": -119504.34451338043,
+    "logp_gap_mode_minus_median": -4.8442738795420155,
+    "n_draws_beating_mode": 441,
+    "n_sub": 512
+  },
+  "verdict": "(b) NON-GLOBAL LOCAL MAX: posterior draws beat the improved 'mode' in logp",
+  "status": "proposed (UNCERTIFIED)"
+}

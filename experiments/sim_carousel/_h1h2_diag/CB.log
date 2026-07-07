@@ -1,0 +1,15 @@
+=== TEST C: slowest eigen-directions (by bulk-ESS) ===
+  eigdir  9: bulkESS=   19 rankRhat=1.41 eigval=5.21e-03 | top: e1(-0.49), gamma2(+0.40), e2(+0.36)
+  eigdir  4: bulkESS=   22 rankRhat=1.37 eigval=1.65e-01 | top: center_y(-0.62), e1(-0.43), n_sersic(-0.33)
+  eigdir  3: bulkESS=   33 rankRhat=1.19 eigval=9.07e-01 | top: center_y(-0.72), alpha_Rs(-0.49), center_x(+0.47)
+  eigdir  6: bulkESS=   46 rankRhat=1.15 eigval=3.69e-02 | top: theta_E(-0.84), center_y(-0.27), e1(+0.24)
+  eigdir  1: bulkESS=   48 rankRhat=1.16 eigval=1.47e+00 | top: alpha_Rs(+0.66), gamma(+0.64), center_x(+0.28)
+  -> ridge-tracing eigendir 9 (ESS=19, Rhat=1.41)
+
+=== TEST B: ridge-trace along slow eigendir ===
+  conditional-slice logp range: -291977.8..-291662.0
+  PROFILE logp range:           -291630.9..-291600.9
+  profile #local maxima (smoothed): 1
+  profile barrier depth (max - min over interior): 30.1
+  optimizer climbed: median(profile - slice) = 118.0 (should be >0)
+saved CB_ridge.png

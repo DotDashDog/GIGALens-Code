@@ -1,0 +1,46 @@
+{
+  "label": "ref_old_500",
+  "dim": 14,
+  "n_fail": 2,
+  "D1": {
+    "test": "D1_trajectory_slope",
+    "value": 0.0,
+    "value_desc": "best-so-far logp gain over final 10% of steps (nats)",
+    "threshold": 0.5,
+    "status": "PASS",
+    "counts_as_fail": false,
+    "note": "NECESSARY not sufficient: a plateau does NOT prove convergence (reference old MAP plateaued at step 421 yet sat 7 nats low).",
+    "n_steps": 500,
+    "best_so_far_final": -119514.83136782396
+  },
+  "D2": {
+    "test": "D2_newton_decrement",
+    "value": NaN,
+    "value_desc": "predicted Newton gain (undefined: -H not PD)",
+    "threshold_fail": 0.5,
+    "threshold_pass": 0.1,
+    "status": "FAIL",
+    "counts_as_fail": true,
+    "grad_norm": 3723.277476234417,
+    "min_eig_negH": -375.47473214364317,
+    "hessian_pd": false,
+    "negative_eigenvalues": [
+      -375.47473214364317
+    ],
+    "reason": "z_best is not at a local max (indefinite Hessian)"
+  },
+  "D3": {
+    "test": "D3_mode_vs_typical_gap",
+    "value": -6.43072477937676,
+    "value_desc": "loglike(z_best) - median sample loglike (nats)",
+    "threshold_pass": 1.0,
+    "threshold_fail": 0.0,
+    "status": "FAIL",
+    "counts_as_fail": true,
+    "ballpark_gap": 7.0,
+    "loglike_z_best": -119479.6775707152,
+    "median_sample_loglike": -119473.24684593582,
+    "n_sub": 512
+  },
+  "status": "proposed (UNCERTIFIED)"
+}

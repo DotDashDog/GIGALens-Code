@@ -1,0 +1,151 @@
+{
+  "experiment": "T13' Steps 0-3 -- re-simulated sys60 data at ss16",
+  "status": "proposed (UNCERTIFIED) -- grader inspects plots + numbers",
+  "timestamp_utc": "2026-07-03T00:44:50.426899+00:00",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "strict_separation": "all products under resim/sys60_ss16/; data/, results/, and the MAIN checkout are read-only / untouched",
+  "original_npz": "/global/homes/l/linusu/GIGALens-Code/data/simulated_systems/100SystemsStandard80px.npz",
+  "original_npz_sha1": "2bead5f685ff00d0459bb0c99b1c029cc683bda9",
+  "truth_provenance": {
+    "yaml": "/global/homes/l/linusu/GIGALens-Code/data/simulated_systems/100SystemsStandardParams.yaml",
+    "index": 60,
+    "method": "params_lists_to_jax(yaml)[i=60] (read directly); z_truth = bij.inverse(nested truth); render via verified render(z)",
+    "truth_flat": {
+      "planes/0/mass/0/center_x": 0.006229735445231199,
+      "planes/0/mass/0/center_y": 0.010014527477324009,
+      "planes/0/mass/0/e1": -0.03198112174868584,
+      "planes/0/mass/0/e2": 0.052991677075624466,
+      "planes/0/mass/0/gamma": 1.7618887424468994,
+      "planes/0/mass/0/theta_E": 1.6466327905654907,
+      "planes/0/mass/1/gamma1": -0.002721871482208371,
+      "planes/0/mass/1/gamma2": -0.028574151918292046,
+      "planes/0/light/0/Ie": 388.7494201660156,
+      "planes/0/light/0/R_sersic": 2.112677812576294,
+      "planes/0/light/0/center_x": -0.0036720584612339735,
+      "planes/0/light/0/center_y": 0.011179879307746887,
+      "planes/0/light/0/e1": 0.018337594345211983,
+      "planes/0/light/0/e2": 0.07069269567728043,
+      "planes/0/light/0/n_sersic": 3.5304622650146484,
+      "planes/1/light/0/Ie": 111.72496032714844,
+      "planes/1/light/0/R_sersic": 0.18498770892620087,
+      "planes/1/light/0/center_x": -0.22731827199459076,
+      "planes/1/light/0/center_y": 0.13541971147060394,
+      "planes/1/light/0/e1": -0.23172716796398163,
+      "planes/1/light/0/e2": 0.19236542284488678,
+      "planes/1/light/0/n_sersic": 3.3852245807647705
+    },
+    "roundtrip_err_ss2": 1.1368683772161603e-13
+  },
+  "dim": 22,
+  "param_names": [
+    "planes/0/light/0/Ie",
+    "planes/0/light/0/R_sersic",
+    "planes/0/light/0/center_x",
+    "planes/0/light/0/center_y",
+    "planes/0/light/0/e1",
+    "planes/0/light/0/e2",
+    "planes/0/light/0/n_sersic",
+    "planes/0/mass/0/center_x",
+    "planes/0/mass/0/center_y",
+    "planes/0/mass/0/e1",
+    "planes/0/mass/0/e2",
+    "planes/0/mass/0/gamma",
+    "planes/0/mass/0/theta_E",
+    "planes/0/mass/1/gamma1",
+    "planes/0/mass/1/gamma2",
+    "planes/1/light/0/Ie",
+    "planes/1/light/0/R_sersic",
+    "planes/1/light/0/center_x",
+    "planes/1/light/0/center_y",
+    "planes/1/light/0/e1",
+    "planes/1/light/0/e2",
+    "planes/1/light/0/n_sersic"
+  ],
+  "render_config": {
+    "delta_pix": 0.065,
+    "num_pix": 80,
+    "supersamples": [
+      2,
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "ss_hi": 128,
+    "background_rms": 0.2,
+    "exp_time": 100,
+    "psf": "gigalens/assets/psf.npy",
+    "error_map": "sqrt(bg^2 + clip(observed,0,inf)/exp_time) (Dataset's own; original data's map)"
+  },
+  "gate_a_reproduction": {
+    "passed": true,
+    "reduced_chi2_full": {
+      "measured": 0.9729182711834815,
+      "interval": [
+        0.956,
+        1.044
+      ]
+    },
+    "smoothed_absmax": {
+      "measured": 0.34601425937571995,
+      "threshold_lt": 1.5,
+      "kernel_px": 13,
+      "loc": [
+        13,
+        78
+      ]
+    },
+    "reduced_chi2_window": {
+      "measured": 0.9958662261201279,
+      "interval": [
+        0.53,
+        1.47
+      ],
+      "window": [
+        57,
+        12,
+        "15x15"
+      ]
+    },
+    "plot": "t13_gate_a_residual.png"
+  },
+  "gate_b_convergence": {
+    "passed": true,
+    "converged_at_ss": 128,
+    "top_pair_max_over_err": {
+      "measured": 0.029374180193360837,
+      "threshold_lt": 0.05,
+      "loc": [
+        40,
+        39
+      ]
+    },
+    "report_max_m2_mhi_over_err": {
+      "measured": 13.879165427258934,
+      "loc": [
+        57,
+        12
+      ],
+      "note": "data-side aliasing of the original ss2 data; expected at the counter-image"
+    },
+    "plot": "t13_gate_b_convergence.png"
+  },
+  "step3_output": {
+    "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/observed_ss16.npz",
+    "keys": [
+      "err_map",
+      "m128",
+      "m16",
+      "m2",
+      "m32",
+      "m64",
+      "m8",
+      "m_hi",
+      "observed",
+      "residual_noise",
+      "ss_hi"
+    ],
+    "d_prime": "m128 + (observed - m2)  [SAME recovered noise]"
+  }
+}

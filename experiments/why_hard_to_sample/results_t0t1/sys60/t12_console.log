@@ -1,0 +1,66 @@
+=== T12 flank-crossing / pixelation check (float64) ===
+[T12] scan points: TOP seg6 ch6 step16302 lam1=5.988e+07; MID seg7 ch7 step18849 lam1=2.695e+06; BASELINE seg6 ch6 step16471 lam1=1.076e+05
+[T12] samples_z (8, 20000, 22); std_z vs T10 max|diff|=0.000e+00 (must be ~0 -- same run/std)
+[T12] ss2 model built; event_size=6400
+[T12/ss2] chi2 gate pt0: recomputed=6.2503491898e+03 aux*event_size=6.2503491898e+03 rel=0.000e+00
+[T12/ss2] chi2 gate pt1: recomputed=6.2057117027e+03 aux*event_size=6.2057117027e+03 rel=1.466e-16
+[T12/ss2] chi2 gate pt2: recomputed=6.2284222938e+03 aux*event_size=6.2284222938e+03 rel=1.460e-16
+[T12/ss2] chi^2 gate PASSED (worst rel=1.466e-16)
+[T12] top spike (ss2): calibration R=
+[[22.51795536  6.42579038]
+ [ 6.61482831 23.85340298]]
+  d_dir(px->theta)=[ 0.04822529 -0.01337344]  x_c0=12.1994 y_c0=57.1316  round-trip err=0.00e+00
+[T12] top spike (ss2) scan chunk   0- 32/97 (  3.9s)
+[T12] top spike (ss2) scan chunk  32- 64/97 (  4.0s)
+[T12] top spike (ss2) scan chunk  64- 96/97 (  4.2s)
+[T12] top spike (ss2) scan chunk  96- 97/97 (  7.2s)
+[T12] top spike (ss2): measured x_c range [10.206,14.390] px (disp [-1.993,2.191]); lambda1 range [1.434e+03,5.988e+07]; peak-to-trough=30644.89 fourier_peak_ratio=0.64
+[T12] mid spike (ss2): calibration R=
+[[20.25489069  4.98299541]
+ [ 5.3341014  22.09665641]]
+  d_dir(px->theta)=[ 0.05248792 -0.01267051]  x_c0=12.1892 y_c0=57.1335  round-trip err=0.00e+00
+[T12] mid spike (ss2) scan chunk   0- 32/97 (  2.4s)
+[T12] mid spike (ss2) scan chunk  32- 64/97 (  2.6s)
+[T12] mid spike (ss2) scan chunk  64- 96/97 (  2.7s)
+[T12] mid spike (ss2) scan chunk  96- 97/97 (  4.8s)
+[T12] mid spike (ss2): measured x_c range [10.184,14.377] px (disp [-2.005,2.188]); lambda1 range [1.333e+03,2.695e+06]; peak-to-trough=1540.41 fourier_peak_ratio=0.24
+[T12] baseline (ss2): calibration R=
+[[21.54811195  2.73795807]
+ [ 0.09730543 28.61582631]]
+  d_dir(px->theta)=[ 0.04642784 -0.00015787]  x_c0=12.1960 y_c0=57.1062  round-trip err=0.00e+00
+[T12] baseline (ss2) scan chunk   0- 32/97 (  2.5s)
+[T12] baseline (ss2) scan chunk  32- 64/97 (  2.6s)
+[T12] baseline (ss2) scan chunk  64- 96/97 (  2.7s)
+[T12] baseline (ss2) scan chunk  96- 97/97 (  4.9s)
+[T12] baseline (ss2): measured x_c range [10.306,14.304] px (disp [-1.890,2.108]); lambda1 range [1.430e+03,9.406e+06]; peak-to-trough=9979.30 fourier_peak_ratio=2.22
+[T12] === Part 2: rebuilding model at supersample=4 ===
+[T12/ss4] chi2 gate pt0: recomputed=6.6051684997e+03 aux*event_size=6.6051684997e+03 rel=0.000e+00
+[T12/ss4] chi^2 gate PASSED (worst rel=0.000e+00)
+[T12] top spike (ss4): calibration R=
+[[23.98793621  7.05852511]
+ [ 7.39528694 25.91597803]]
+  d_dir(px->theta)=[ 0.04550886 -0.01298624]  x_c0=12.2080 y_c0=57.1041  round-trip err=0.00e+00
+[T12] top spike (ss4) scan chunk   0- 32/97 (  4.1s)
+[T12] top spike (ss4) scan chunk  32- 64/97 (  4.5s)
+[T12] top spike (ss4) scan chunk  64- 96/97 (  4.8s)
+[T12] top spike (ss4) scan chunk  96- 97/97 (  8.0s)
+[T12] top spike (ss4): measured x_c range [10.317,14.242] px (disp [-1.891,2.034]); lambda1 range [1.290e+03,4.230e+04]; peak-to-trough=4.73 fourier_peak_ratio=1.40
+[T12] ss4/ss2 fourier-amp ratio=0.553  peak-to-trough-amp ratio=0.150  branch=mixed
+[T12] === Part 3: census phase cross-check (2048 renders) ===
+[T12] reconstructed 2048 census z-points (8 segments x 256); reusing t10 lambda1 (NOT recomputed)
+[T12] census render 128/2048 (  1.0s)
+[T12] census render 640/2048 (  1.1s)
+[T12] census render 1152/2048 (  1.3s)
+[T12] census render 1664/2048 (  1.4s)
+[T12] census: R2_flux=0.055 R2_full=0.618 DeltaR2=0.563 (predict >= 0.4; falsify <= 0.1); magnification-branch signature=False
+[T12] wrote ./results_t0t1/sys60/t12/t12_results.json, ./results_t0t1/sys60/t12/t12_scans_lambda1.png, ./results_t0t1/sys60/t12/t12_detrend_fft.png, ./results_t0t1/sys60/t12/t12_census_phase.png, ./results_t0t1/sys60/t12/t12_dial_sanity.png
+
+=== T12 summary (PROPOSED / UNCERTIFIED) ===
+  chi^2 gate ss2: worst rel 1.466e-16
+  [P1 top spike ] peak-to-trough=30644.89 (predict >= 10, falsify <= 2); fourier_peak=  0.64 (predict >= 5)
+  [P1 mid spike ] peak-to-trough= 1540.41 (predict >= 10, falsify <= 2); fourier_peak=  0.24 (predict >= 5)
+  [P1 baseline  ] peak-to-trough= 9979.30 (predict >= 10, falsify <= 2); fourier_peak=  2.22 (predict >= 5)
+  [P2 ss4/ss2] fourier-amp ratio=0.553, peak-to-trough-amp ratio=0.150 => mixed (physical >= 0.7, artifact <= 0.5)
+  [P3 census] R2_flux=0.055 R2_full=0.618 DeltaR2=0.563 (predict >= 0.4, falsify <= 0.1; magnif-branch=False)
+[T12] done.
+[wall] T12 = 69 s

@@ -37,3 +37,14 @@ svi_samples.npy
 # adaptation-collapse diagnosis (keep the scripts + .md writeups + small plots).
 experiments/mclmc/debugging/**/*.npy
 experiments/mclmc/debugging/**/*.npz
+
+# Claude Code worktrees: these are full checkouts of this repo (each its own
+# branch) living under .claude/. Never commit them.
+.claude/worktrees/
+
+# Regenerable array / image outputs from experiment scripts. These are large
+# and reproducible from the committed scripts + notebooks; do not commit them.
+# (Small curated plots committed deliberately can be force-added with `git add -f`.)
+*.npz
+*.npy
+*.fits

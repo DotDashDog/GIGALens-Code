@@ -1,5 +1,11 @@
 # Inference Diagnostics
-Accumulated experience about diagnostics for running inference with gigalens
+Accumulated experience about diagnostics for running inference with gigalens.
+
+> The distilled **decision table** (signal → reading → required first action) lives on the
+> operating card (`docs/agent-operating-card.md`), which is auto-injected into every session —
+> this file is the depth behind it: what each diagnostic means and how to read the plots. If
+> you change a threshold here, update the card's table to match. The ordered diagnostic
+> *workflow* is the `/diagnose-sampling` skill (`.claude/skills/diagnose-sampling/SKILL.md`).
 
 # Numerical Diagnostics
 ## Point Diagnostics
@@ -23,13 +29,18 @@ However, the visual ones are tried-and-true and invaluable for human users. A pi
 ## Posterior-Side Plot Diagnostics
 ### Cornerplots
 These are one of the most comprehensive diagnostics you can use. You can overplot results from any inference stage: point estimates from MAP, samples from a surrogate posterior, or MCMC samples.
-However, they can be hard to read and slow to create, especially for models with many parameters. 
-A few examples of things you can do with cornerplots:
-- See how far different inference stages migrate from previous ones. If HMC is far (multiple standard deviations) from the SVI results, that suggests SVI didn't find a very good surrogate posterior.
+However, they can be hard to read and slow to create, especially for models with many parameters. If you are an AI agent, DO NOT create cornerplots that are more than 4x4. Your vision model downsamples too much for them to be readable.
+#### How to read cornerplots of MCMC samples:
+- Fuzzy/irregular edges typically come along with low ESS
+- Chains that are frozen, separated, or otherwise not mixing will often show up as self-contained (frequently small) blobs. This won't always happen, depending on how many chains there are and their proximity.
+- If there are long, winding tracks, the chains are likely migrating towards an area of higher probability density.
+- Don't equate the shape of the samples and the true shape of the posterior until at least Rhat < 1.1, ideally < 1.01.
+- You can often spot a second mode on these plots. Note that this is a mode in the samples, not necessarily a true, high-probability mode. Also, be careful, since the KDE that draws the contours can make poorly sampled posteriors appear multimodal when they aren't.
+
+#### Things to do with cornerplots
+- See how far different inference stages migrate from previous ones. If HMC is far (multiple standard deviations) from the SVI results, that suggests SVI didn't find a very good surrogate posterior. This can be fine, but the sampling algorithm will have to work harder.
 - Compare inverse mass matrix estimates with true posterior. If the inverse mass matrix being used (can plot as a multivariate normal surrogate with a mean at the mean of the real samples) is very different in spread from the true samples, that's a suggestion that sampling may be being held back by inverse mass matrix estimation.
 - Check bias of sampling methods. Plotting the converged results from a known MCMC method on the same cornerplot as an experimental one can give a one-look way to check if they're similar.
-- Eyeballing MCMC sampling behavior. If it produces long, winding tracks, odds are the samples are still migrating towards the true concentration of probability mass (MAP-like behavior). If the posterior looks super fuzzy or has very irregular contours, there's a good chance sampling hasn't converged.
-- Looking for multimodality. It can be easier to spot multiple modes in the 2d contours of a cornerplot than 1d histograms, especially if the two modes are separated in more than one parameter.
 
 ### MCMC Trace Plots
 Show the tracks of the parallel sampling chains in a single parameter. Usually less useful than cornerplots, but easier and faster to produce.

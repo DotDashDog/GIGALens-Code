@@ -1,0 +1,24 @@
+### CONFIG 0.03 mixture 1.0
+w_minor=0.03  bw=1.0  est_occupancy=0.07849 +/- 0.00161 (block=35)
+   truth=0.03  |est-truth|=0.04849 (3SE=0.00482)
+   pin level 1/16=0.0625; drained=0.  est is OFF
+   PROPOSED: OFF  | wall 36s
+
+### CONFIG 0.03 gaussian 1.0
+w_minor=0.03  bw=1.0  est_occupancy=0.07133 +/- 0.00380 (block=377)
+   truth=0.03  |est-truth|=0.04133 (3SE=0.01141)
+   pin level 1/16=0.0625; drained=0.  est is OFF
+   PROPOSED: OFF  | wall 9s
+
+### CONFIG 0.001 mixture 1.0
+w_minor=0.001  bw=1.0  est_occupancy=0.06299 +/- 0.00018 (block=12)
+   truth=0.001  |est-truth|=0.06199 (3SE=0.00053)
+   pin level 1/16=0.0625; drained=0.  est is OFF
+   PROPOSED: OFF  | wall 34s
+
+### CONFIG 0.001 gaussian 1.0
+w_minor=0.001  bw=1.0  est_occupancy=0.03865 +/- 0.01125 (block=1200)
+   truth=0.001  |est-truth|=0.03765 (3SE=0.03375)
+   pin level 1/16=0.0625; drained=0.  est is OFF
+   PROPOSED: OFF  | wall 10s
+

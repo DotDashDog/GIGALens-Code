@@ -83,6 +83,7 @@ def run_one(target, *, run_id=None, qz_mode="warm", num_chains=512,
         target.log_prob, qz, dim=target.dim, num_chains=num_chains, **laps_kwargs)
 
     samples = np.asarray(res.samples, dtype=np.float64)
+    samples = samples.reshape(-1, samples.shape[-1])   # (M,K,d)->(M*K,d); legacy (M,d) noop
     M = samples.shape[0]
 
     b2 = _metrics.b2_metrics(samples, target)

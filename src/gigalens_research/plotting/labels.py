@@ -18,11 +18,19 @@ Naming convention (deliberately matches gigalens' simulator-side flattener,
 - Lens light (``params[1]``): ``lens_`` prefix (``lens_R_sersic``, ...).
 - Source light (``params[2]``): ``src_`` prefix (``src_R_sersic``, ...).
 
-If a profile group has more than one component (e.g. two mass profiles), each
-component contributes all its keys without further indexing — they will appear
-sequentially in the flat dict. If two components share a key name within the
-same group, the later one overwrites the earlier one in the flat dict; pass
-``_index_collisions=True`` to disambiguate with ``_0`` / ``_1`` suffixes.
+If a profile group has more than one component (e.g. two mass profiles), every
+parameter of that group is tagged with its **profile index within the group**
+via a ``__<i>`` suffix, so it is always clear which profile a column belongs to
+and no parameter is ever dropped. For example a mass group of
+``[NFW, EPL, EPL, Shear]`` yields ``Rs__0``, ``theta_E__1``, ``theta_E__2``,
+``gamma1__3`` (profile indices follow the order the profiles appear in the
+group, which matches the model definition order). Single-profile groups are left
+un-suffixed, so common one-lens / one-source models are unchanged.
+
+This is the default (``_index_collisions=True``). Passing
+``_index_collisions=False`` restores the legacy behavior where same-named
+parameters in a group silently overwrite each other — kept only for callers that
+deliberately want the collapsed, simulator-matching label space.
 """
 
 from __future__ import annotations
@@ -65,6 +73,13 @@ LATEX_LABELS: Dict[str, str] = {
     "src_center_x": r"$x_s$",
     "src_center_y": r"$y_s$",
     "src_Ie": r"$I_s$",
+    # Cosmology (own corner group; labelled cosmo_<param> by flatten_params)
+    "cosmo_H0": r"$H_0$",
+    "cosmo_Om0": r"$\Omega_m$",
+    "cosmo_Ode0": r"$\Omega_\Lambda$",
+    "cosmo_Ok0": r"$\Omega_k$",
+    "cosmo_w0": r"$w_0$",
+    "cosmo_wa": r"$w_a$",
 }
 
 
@@ -72,7 +87,18 @@ def latex_label(name: str, *, fallback: Optional[str] = None) -> str:
     """Return a LaTeX-formatted version of ``name`` if known, else ``fallback``
     (which defaults to ``name`` itself, useful for unknown shapelet coefficients
     etc.).
+
+    A ``__<i>`` profile-index suffix (added by :func:`flatten_params` for
+    multi-profile groups) is rendered as a ``(i)`` superscript on the base label,
+    e.g. ``theta_E__1`` -> ``$\\theta_E^{(1)}$``. Unknown bases keep a readable
+    ``name (p<i>)`` form.
     """
+    base, sep, idx = name.rpartition("__")
+    if sep and idx.isdigit():
+        base_tex = LATEX_LABELS.get(base)
+        if base_tex is not None and base_tex.startswith("$") and base_tex.endswith("$"):
+            return f"${base_tex[1:-1]}^{{({idx})}}$"
+        return f"{base} (p{idx})" if fallback is None else fallback
     return LATEX_LABELS.get(name, name if fallback is None else fallback)
 
 
@@ -108,19 +134,21 @@ def _iter_groups(params):
 
 
 def _iter_profiles(group):
-    """Yield profile param-dicts in a group, for either a dict ``{'0': {..}, ..}``
-    keyed by stringified profile index or the legacy list of dicts."""
+    """Yield ``(profile_index, param_dict)`` per profile in a group, for either a
+    dict ``{'0': {..}, ..}`` keyed by stringified profile index or the legacy
+    list of dicts. The index follows the model definition order and is what the
+    ``__<i>`` disambiguation suffix uses."""
     if isinstance(group, dict):
         for pkey in sorted(group, key=int):
-            yield group[pkey]
+            yield int(pkey), group[pkey]
     else:
-        yield from group
+        yield from enumerate(group)
 
 
 def flatten_params(
     params: Any,
     *,
-    _index_collisions: bool = False,
+    _index_collisions: bool = True,
 ) -> Dict[str, Any]:
     """Flatten a nested parameter structure into a flat ``{label: array}`` dict.
 
@@ -143,18 +171,20 @@ def flatten_params(
         return dict(params)
 
     flat: Dict[str, Any] = {}
-    seen: Dict[str, int] = {}
     for prefix, group in _iter_groups(params):
-        for profile in _iter_profiles(group):
+        profiles = list(_iter_profiles(group))
+        multi = len(profiles) > 1
+        for pidx, profile in profiles:
             for key, value in profile.items():
                 label = f"{prefix}{key}"
-                if label in flat:
-                    if _index_collisions:
-                        seen[label] = seen.get(label, 0) + 1
-                        flat[f"{label}_{seen[label]}"] = value
-                        continue
-                    # Otherwise the later value silently overwrites the earlier;
-                    # documented behavior. Disambiguate caller-side if needed.
+                if _index_collisions and multi:
+                    # Tag every parameter of a multi-profile group with its
+                    # profile index, so same-named params across profiles stay
+                    # distinct columns and the owning profile is unambiguous.
+                    label = f"{label}__{pidx}"
+                # Else (single-profile group, or legacy collapse mode): a repeat
+                # label overwrites the earlier value — the documented legacy
+                # behavior, only reachable with _index_collisions=False.
                 flat[label] = value
     return flat
 

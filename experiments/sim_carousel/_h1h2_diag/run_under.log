@@ -1,0 +1,6 @@
+E0626 12:26:08.379225  648119 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+[under] devices: [CudaDevice(id=0), CudaDevice(id=1)]
+Sampling took 1561.246676412993 s
+[under] sampling wall 1584.6s
+[under] results-phase xi: median=5.363e-04, frac>1=0.042, frac==-1(sentinel)=0.000, max=3.79e+07
+[under] saved run_under.npz

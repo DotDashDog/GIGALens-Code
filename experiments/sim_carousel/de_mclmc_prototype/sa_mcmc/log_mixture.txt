@@ -1,0 +1,26 @@
+config: {'D': 10, 'n_chains': 64, 'L': 2.0, 'step_size': 0.5, 'K': 20, 'n_sa': 64, 'proposal': 'mixture', 'prop_scale': 1.0, 'diag_cov': False, 'bandwidth': 1.0}
+
+[V1] SA(mixture) from ALL-in-+mode init ...
+   2500 rounds in 272.9s
+   weight(+mode)=1.0000 +/- 0.0000 (block=5, tau~1.0)  |est-0.70|=0.3000 (3SE=0.0000)
+[V1] vanilla MCLMC (no SA) from SAME init ...
+   vanilla weight(+mode) tail=1.0000 (should be >0.85)
+
+[V2] SA(mixture) from EXACT mixture init (correct 0.7/0.3) ...
+   2500 rounds in 337.2s
+   weight(+mode)=0.7037 +/- 0.0029  drift |-0.0019| (3SE_diff=0.0172)
+   +mode mean=5.011 var=1.006; -mode mean=-5.005 var=0.990; axis1 var=0.995
+   KS axis0 p=0.936  KS axis1 p=0.741  (spacing 6, tau2~6)
+
+[V4] SA substitution rate=0.718 (0.05..0.95); min eig pooled cov=0.9500
+
+========== PRE-REGISTERED CHECKS (PROPOSED / UNCERTIFIED) ==========
+ V1  weight recovery  1.0000+/-0.0000 vs .70 -> FAIL
+ V1  vanilla trapped  1.0000 > 0.85         -> PASS
+ V2a weight@truth     0.7037+/-0.0029 vs .70    -> PASS
+ V2b no drift         |-0.0019|<0.0172    -> PASS
+ V2c per-mode moments within 0.10                    -> PASS
+ V2d KS axis0 p=0.936                            -> PASS
+ V3  KS marginals a0=0.936 a1=0.741          -> PASS
+ V4  sub-rate=0.718 min_eig=0.950      -> PASS
+ total wall 618s

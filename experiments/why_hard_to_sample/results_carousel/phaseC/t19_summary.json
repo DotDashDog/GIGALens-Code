@@ -1,0 +1,84 @@
+{
+  "status": "proposed (UNCERTIFIED)",
+  "registered_constants": {
+    "XI_SPIKE_THRESH": 10.0,
+    "P_T19C_ALIGN_TOL": 0.002,
+    "KNOWN_FRAC": {
+      "old": 0.1235,
+      "new": 0.1037
+    },
+    "SEED": 20260703,
+    "N_TOP": 128,
+    "N_BOT": 128,
+    "N_UNIF": 256,
+    "DECILE_HI": 90.0,
+    "DECILE_LO": 10.0,
+    "OLD_EXCL_CHAIN": 0,
+    "OLD_EXCL_TMAX": 5000,
+    "P_T19A_RATIO": 2.0,
+    "F_T19A_RATIO": 1.3,
+    "F_T19A_RHO": 0.1,
+    "P_T19B_FLAT": 1.3,
+    "P_T19B_LAMBDA_RATIO": 3.0
+  },
+  "P_T19c_gate": {
+    "old": {
+      "frac_measured": 0.1235375,
+      "frac_known": 0.1235,
+      "passed": true,
+      "n_nonpd": 0
+    },
+    "new": {
+      "frac_measured": 0.1037,
+      "frac_known": 0.1037,
+      "passed": true,
+      "n_nonpd": 0
+    }
+  },
+  "per_arm": {
+    "old": {
+      "pooled": {
+        "cond_ratio": 1.0109044333392434,
+        "lam_ratio": 1.5924099827368188,
+        "med_cond_top": 3367.9464291378736,
+        "med_cond_bot": 3331.6170332865127,
+        "med_lam_top": 506641.39574874967,
+        "med_lam_bot": 318160.14797772304,
+        "rho_cond": 0.032175769411389187,
+        "rho_lmin": -0.08060136252273459,
+        "rho_lam": 0.3650652103407602,
+        "p_t19a_meets": false,
+        "p_t19b_branch": false
+      },
+      "excl": {
+        "cond_ratio": 1.0152310504794646,
+        "lam_ratio": 1.6193223087184994,
+        "med_cond_top": 3317.4232081846285,
+        "med_cond_bot": 3267.6534140853005,
+        "med_lam_top": 516721.88905259524,
+        "med_lam_bot": 319097.61649706354,
+        "rho_cond": 0.037726400558903014,
+        "rho_lmin": -0.04524323126266288,
+        "rho_lam": 0.42105812307042256,
+        "p_t19a_meets": false,
+        "p_t19b_branch": false
+      }
+    },
+    "new": {
+      "pooled": {
+        "cond_ratio": 1.07871761899112,
+        "lam_ratio": 0.470219573520876,
+        "med_cond_top": 435.2349705173955,
+        "med_cond_bot": 403.4744244971661,
+        "med_lam_top": 1715.128695141023,
+        "med_lam_bot": 3647.5059562038364,
+        "rho_cond": 0.11049768756938007,
+        "rho_lmin": -0.12026820761950537,
+        "rho_lam": -0.16428423012439775,
+        "p_t19a_meets": false,
+        "p_t19b_branch": false
+      }
+    }
+  },
+  "F_T19a_fires": false
+}

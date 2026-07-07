@@ -1,0 +1,210 @@
+{
+  "experiment": "T26 acceptance battery route A",
+  "status": "proposed (UNCERTIFIED)",
+  "stage": "both",
+  "smoke_limit": null,
+  "T21_new_baseline": {
+    "eps": 0.354,
+    "min_ess": 143,
+    "clone_eps": 1.22,
+    "clone_min_ess": 1008,
+    "frac_xi_gt10": [
+      0.077,
+      0.087
+    ]
+  },
+  "census_sigma": 2.0,
+  "conv_precision_env": "float64",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "result": {
+    "route": "A",
+    "dim": 14,
+    "qz_scale": 0.001,
+    "artifact": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t25/transform_A.npz",
+    "artifact_sha256": "38cfa7429e00862591cdb0ba285c923bfcee2de59cbcebb8eec41a693be277f7",
+    "z_init_ledger": {
+      "z_init_selection_seed": 20260703,
+      "n_sub": 512,
+      "logp_chunk": 16,
+      "median_logp_of_subsample": -119526.5464244658,
+      "subsample_logp_min": -119539.89296671815,
+      "subsample_logp_max": -119521.41377269368,
+      "median_draw_used_as_init": {
+        "chain": 6,
+        "t": 6147,
+        "logp": -119526.5363246717
+      },
+      "best_draw_NOT_used": {
+        "chain": 6,
+        "t": 9495,
+        "logp": -119521.41377269368
+      },
+      "abs_logp_gap_median_draw_to_median": 0.01009979410446249,
+      "ref_samples": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_newbij/mclmc/arrays.npz",
+      "chains_used": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "config": {
+      "n_hmc": 8,
+      "num_burnin_steps": 2000,
+      "num_results": 2000,
+      "desired_energy_variance": 0.0005,
+      "regularize_mass_matrix": true,
+      "progress_bar": false
+    },
+    "rs_col": 0,
+    "param_names": [
+      "planes/0/mass/0/Rs",
+      "planes/0/mass/0/center_x",
+      "planes/0/mass/0/center_y",
+      "planes/0/mass/0/e1",
+      "planes/0/mass/0/e2",
+      "planes/0/mass/0/theta_E",
+      "planes/0/mass/1/gamma1",
+      "planes/0/mass/1/gamma2",
+      "planes/1/light/0/beta",
+      "planes/1/light/0/center_x",
+      "planes/1/light/0/center_y",
+      "planes/1/light/1/beta",
+      "planes/1/light/1/center_x",
+      "planes/1/light/1/center_y"
+    ],
+    "u_init_Rs": 3.6363276599760566,
+    "z_init_Rs": 3.63617747915683,
+    "real": {
+      "per_seed": [
+        {
+          "seed": 1,
+          "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t26/routeA/t0_seed1.npz",
+          "min_ess": 478.38404428988315,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0284338937551722,
+          "max_rhat_param": "planes/0/mass/0/Rs",
+          "ess_per_param": {
+            "planes/0/mass/0/Rs": 478.38404428988315,
+            "planes/0/mass/0/center_x": 2394.7590818048393,
+            "planes/0/mass/0/center_y": 2410.573033771676,
+            "planes/0/mass/0/e1": 2647.3159723974204,
+            "planes/0/mass/0/e2": 2558.673161887783,
+            "planes/0/mass/0/theta_E": 2404.6675320858812,
+            "planes/0/mass/1/gamma1": 823.9035962078826,
+            "planes/0/mass/1/gamma2": 1069.8465721144382,
+            "planes/1/light/0/beta": 520.360590712572,
+            "planes/1/light/0/center_x": 827.2654212995592,
+            "planes/1/light/0/center_y": 933.7419308808304,
+            "planes/1/light/1/beta": 2080.8691768528047,
+            "planes/1/light/1/center_x": 1864.409778658727,
+            "planes/1/light/1/center_y": 567.9097356323368
+          },
+          "n_persistent": 0,
+          "persistent_chains": [],
+          "xi": {
+            "frac_gt10": 0.026875,
+            "p50": 0.07433391742621598,
+            "p90": 1.922176119027741,
+            "p99": 27.273312115546215,
+            "max": 2462.7028663726896,
+            "n_post": 16000,
+            "num_results_used": 2000
+          }
+        },
+        {
+          "seed": 2,
+          "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t26/routeA/t0_seed2.npz",
+          "min_ess": 435.88848967994085,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0121131684548808,
+          "max_rhat_param": "planes/0/mass/0/Rs",
+          "ess_per_param": {
+            "planes/0/mass/0/Rs": 435.88848967994085,
+            "planes/0/mass/0/center_x": 2336.602338770987,
+            "planes/0/mass/0/center_y": 2467.520257308841,
+            "planes/0/mass/0/e1": 2291.2851386419493,
+            "planes/0/mass/0/e2": 2273.8176463541463,
+            "planes/0/mass/0/theta_E": 2098.097830716444,
+            "planes/0/mass/1/gamma1": 751.2823658939423,
+            "planes/0/mass/1/gamma2": 961.3613175825545,
+            "planes/1/light/0/beta": 471.7788597478385,
+            "planes/1/light/0/center_x": 710.2167363751861,
+            "planes/1/light/0/center_y": 893.2070733697933,
+            "planes/1/light/1/beta": 2081.6378423323695,
+            "planes/1/light/1/center_x": 1673.6356227570614,
+            "planes/1/light/1/center_y": 506.8698906983521
+          },
+          "n_persistent": 0,
+          "persistent_chains": [],
+          "xi": {
+            "frac_gt10": 0.0175625,
+            "p50": 0.05730353579952174,
+            "p90": 1.3646804759211226,
+            "p99": 15.833351235193966,
+            "max": 795.369500879926,
+            "n_post": 16000,
+            "num_results_used": 2000
+          }
+        },
+        {
+          "seed": 3,
+          "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t26/routeA/t0_seed3.npz",
+          "min_ess": 462.5112345290379,
+          "min_ess_param": "planes/0/mass/0/Rs",
+          "max_rhat": 1.0118382509279624,
+          "max_rhat_param": "planes/0/mass/0/e2",
+          "ess_per_param": {
+            "planes/0/mass/0/Rs": 462.5112345290379,
+            "planes/0/mass/0/center_x": 2327.234568997384,
+            "planes/0/mass/0/center_y": 2348.454726359054,
+            "planes/0/mass/0/e1": 2285.555999830178,
+            "planes/0/mass/0/e2": 2439.0415346810805,
+            "planes/0/mass/0/theta_E": 2158.7416214562827,
+            "planes/0/mass/1/gamma1": 694.9619308433685,
+            "planes/0/mass/1/gamma2": 995.8204922800899,
+            "planes/1/light/0/beta": 506.7561427510513,
+            "planes/1/light/0/center_x": 671.7980447718585,
+            "planes/1/light/0/center_y": 813.6792168114803,
+            "planes/1/light/1/beta": 2102.7617622492476,
+            "planes/1/light/1/center_x": 1629.4420408340193,
+            "planes/1/light/1/center_y": 541.2668591528304
+          },
+          "n_persistent": 0,
+          "persistent_chains": [],
+          "xi": {
+            "frac_gt10": 0.0149375,
+            "p50": 0.046805765024451065,
+            "p90": 1.2254415497237436,
+            "p99": 14.418040669899172,
+            "max": 472.0521375681522,
+            "n_post": 16000,
+            "num_results_used": 2000
+          }
+        }
+      ]
+    },
+    "clone": {
+      "seed": 1,
+      "npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t26/routeA/t1_clone_typical_seed1.npz",
+      "clone_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t26/routeA/clone.npz",
+      "min_ess": 531.0150451289481,
+      "min_ess_param": "planes/0/mass/0/Rs",
+      "max_rhat": 1.0087257759954924,
+      "max_rhat_param": "planes/1/light/1/center_y",
+      "xi": {
+        "frac_gt10": 0.019625,
+        "p50": 0.12026614568668018,
+        "p90": 2.4071152219469276,
+        "p99": 16.260540295767463,
+        "max": 107.55206841562,
+        "n_post": 16000,
+        "num_results_used": 2000
+      }
+    }
+  }
+}

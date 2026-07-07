@@ -288,7 +288,7 @@ def test_scene_model_card_multiplane_distances():
     psf = np.zeros((9, 9), dtype=np.float32); psf[4, 4] = 1.0
     epl0 = dict(theta_E=1.0, gamma=2.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0)
     epl1 = dict(theta_E=0.5, gamma=2.0, e1=0.0, e2=0.0, center_x=0.2, center_y=0.0)
-    cosmo = Component(wCDM_Cosmo(z_lens=0.4), dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0))
+    cosmo = Component(wCDM_Cosmo(z_lens=0.4, z_source_ref=10.0), dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0))
     model = LensModel([
         Plane(redshift=0.4, mass=[Component(EPL(50), epl0)]),
         Plane(redshift=0.8, mass=[Component(EPL(50), epl1)]),
@@ -301,7 +301,7 @@ def test_scene_model_card_multiplane_distances():
     ds = Dataset(obs, cfg, background_rms=0.01, exp_time=1000.0, sees="all")
     pm = ProbModel(model, ds, mode="lstsq")
     ctx = InferenceContext.from_modelling_sequence(
-        ModellingSequence.from_scene(model, pm, cfg))
+        ModellingSequence.from_scene(pm))
 
     card = model_card(ctx)
     scene = card["scene"]

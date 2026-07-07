@@ -1,0 +1,32 @@
+{
+  "experiment": "T20 prepare t3 inputs",
+  "timestamp_utc": "2026-07-04T00:23:57.205575+00:00",
+  "arms": [
+    {
+      "arm": "old",
+      "samples_adapter": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t20/inputs/old_samples.npz",
+      "samples_key_mapping": "position <- samples_z",
+      "samples_shape": [
+        8,
+        10000,
+        14
+      ],
+      "clone_used_directly": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/old/t1/clone.npz",
+      "ref_diagnostics_used_directly": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_oldbij/mclmc/diagnostics.npz",
+      "note": "clone.npz (cov) and diagnostics.npz (step_size,L) already match t3's expected key layout -> passed to t3 directly, not copied."
+    },
+    {
+      "arm": "new",
+      "samples_adapter": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t20/inputs/new_samples.npz",
+      "samples_key_mapping": "position <- samples_z",
+      "samples_shape": [
+        8,
+        10000,
+        14
+      ],
+      "clone_used_directly": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/new/t1/clone.npz",
+      "ref_diagnostics_used_directly": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_newbij/mclmc/diagnostics.npz",
+      "note": "clone.npz (cov) and diagnostics.npz (step_size,L) already match t3's expected key layout -> passed to t3 directly, not copied."
+    }
+  ]
+}

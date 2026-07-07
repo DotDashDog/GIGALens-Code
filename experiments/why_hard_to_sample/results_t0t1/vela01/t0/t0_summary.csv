@@ -1,0 +1,5 @@
+seed,min_ess,min_ess_param,max_rhat,max_rhat_param
+1,2584.43,planes/1/light/0/e1,1.00653,planes/0/light/0/R_sersic
+2,1731.86,planes/1/light/0/e1,1.00968,planes/1/light/0/e1
+3,1275.53,planes/1/light/0/e1,1.01098,planes/1/light/0/e1
+4,803.43,planes/1/light/0/e1,1.01858,planes/1/light/0/e1

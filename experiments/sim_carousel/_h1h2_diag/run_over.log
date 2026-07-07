@@ -1,0 +1,5 @@
+[over] devices: [CudaDevice(id=0), CudaDevice(id=1)]
+Sampling took 1566.1782986710314 s
+[over] sampling wall 1589.1s
+[over] results-phase xi: median=6.129e-03, frac>1=0.160, frac==-1(sentinel)=0.000, max=1.33e+06
+[over] saved run_over.npz

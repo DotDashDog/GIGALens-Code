@@ -2,7 +2,9 @@
 
 **Required reading, high priority.** This file is the project's *general* research-method discipline — the standards for not fooling yourself when evaluating a method, metric, model, or inference procedure. It is domain-independent. The *project-specific* standards (controls/baselines, validation, failure modes, domain conventions) live in the project-standards file and are equally required reading.
 
-The governing idea (Feynman, *Cargo Cult Science*): **you are the easiest person to fool.** Following the letter of a rigor checklist — even performing the pre-registration ritual below — does not protect you if the test itself is mis-specified. A confident "PASS" certified against an arbitrary threshold, while a plot of the same result shows a structured disagreement plainly, is the canonical failure these rules exist to prevent.
+> **This file is canonical** for the general method discipline. What is auto-injected at session/subagent start is the distilled **operating card** (`docs/agent-operating-card.md`, via `.claude/hooks/inject-operating-card.sh`), which carries the most-violated rules from this file in trigger→action form; this file is the full discipline behind it. It supersedes any shorter "debugging/method-evaluation protocol" in a personal global CLAUDE.md; where they differ, this file wins. Edit the discipline here first, then re-distill the card.
+
+The governing idea (Feynman, [*Cargo Cult Science*](https://calteches.library.caltech.edu/51/2/CargoCult.htm) — read it, it is short and covers most of the failure modes below): **you are the easiest person to fool.** Following the letter of a rigor checklist — even performing the pre-registration ritual below — does not protect you if the test itself is mis-specified. A confident "PASS" certified against an arbitrary threshold, while a plot of the same result shows a structured disagreement plainly, is the canonical failure these rules exist to prevent.
 
 ---
 
@@ -49,3 +51,8 @@ For any diagnostic metric, state in one sentence **what real disagreement it wou
 ## 7. Surface assumptions
 
 When making any inference, make assumptions explicit — a comment in code or a note in the log. A statement like "I am treating [X] as proportional to [Y]" is the kind of thing that should be visible, not buried.
+
+## 8. Baselines and controls (Feynman: repeat before extending; known-answer tests)
+
+- **Repeat before extending.** Before testing a change under new conditions, first reproduce the known-good result under the *original* conditions in your *current* setup. Never compare a new run against a baseline number produced under different code / precision / config — rerun the baseline on the same apparatus. (The Cornell rat-student and NAL-deuterium lessons in *Cargo Cult Science*.)
+- **Known-answer controls.** Before attributing an effect to a cause, run the same pipeline on a case where the answer is known (synthetic truth, analytic posterior, null case). Ask: through what channel could the pipeline produce this result *without* the claimed cause — and run the control that blocks that channel. (Young's rat-maze lesson: the rats were reading the floor, not the maze.)

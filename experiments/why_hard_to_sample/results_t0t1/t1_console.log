@@ -1,0 +1,96 @@
+=== T1 sys60 seed 1 ===
+[T1] clone dim=22; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 13.670451001999027 s
+[run_standard_mclmc] seed=1 sampling wall 17.5s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed1.manifest.json
+
+=== diagnostics: T1 clone seed 1 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.72e+03  (param planes/1/light/0/Ie)
+  max rank-Rhat = 1.0052  (param planes/0/mass/1/gamma1)
+
+[T1] done. min bulk-ESS=1718 (planes/1/light/0/Ie), max rank-Rhat=1.0052 (planes/0/mass/1/gamma1)
+=== T1 sys60 seed 2 ===
+[T1] clone dim=22; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 14.164778455000487 s
+[run_standard_mclmc] seed=2 sampling wall 17.9s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed2.manifest.json
+
+=== diagnostics: T1 clone seed 2 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.73e+03  (param planes/1/light/0/Ie)
+  max rank-Rhat = 1.0042  (param planes/1/light/0/e2)
+
+[T1] done. min bulk-ESS=1734 (planes/1/light/0/Ie), max rank-Rhat=1.0042 (planes/1/light/0/e2)
+=== T1 sys60 seed 3 ===
+[T1] clone dim=22; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 13.950982113001373 s
+[run_standard_mclmc] seed=3 sampling wall 17.8s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed3.manifest.json
+
+=== diagnostics: T1 clone seed 3 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.85e+03  (param planes/0/mass/1/gamma1)
+  max rank-Rhat = 1.0058  (param planes/0/light/0/e2)
+
+[T1] done. min bulk-ESS=1851 (planes/0/mass/1/gamma1), max rank-Rhat=1.0058 (planes/0/light/0/e2)
+=== T1 sys60 seed 4 ===
+[T1] clone dim=22; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 14.017743807000443 s
+[run_standard_mclmc] seed=4 sampling wall 17.7s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed4.manifest.json
+
+=== diagnostics: T1 clone seed 4 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.72e+03  (param planes/0/mass/0/center_y)
+  max rank-Rhat = 1.0073  (param planes/0/light/0/e2)
+
+[T1] done. min bulk-ESS=1722 (planes/0/mass/0/center_y), max rank-Rhat=1.0073 (planes/0/light/0/e2)
+=== T1 vela seed 1 ===
+[T1] clone dim=20; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 13.747747928000535 s
+[run_standard_mclmc] seed=1 sampling wall 17.6s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed1.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed1.manifest.json
+
+=== diagnostics: T1 clone seed 1 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 2.24e+03  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0032  (param planes/0/light/0/n_sersic)
+
+[T1] done. min bulk-ESS=2237 (planes/1/light/0/e1), max rank-Rhat=1.0032 (planes/0/light/0/n_sersic)
+=== T1 vela seed 2 ===
+[T1] clone dim=20; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 13.605882216001191 s
+[run_standard_mclmc] seed=2 sampling wall 17.3s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed2.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed2.manifest.json
+
+=== diagnostics: T1 clone seed 2 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.79e+03  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0057  (param planes/1/light/0/e1)
+
+[T1] done. min bulk-ESS=1792 (planes/1/light/0/e1), max rank-Rhat=1.0057 (planes/1/light/0/e1)
+=== T1 vela seed 3 ===
+[T1] clone dim=20; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 13.793078355000034 s
+[run_standard_mclmc] seed=3 sampling wall 17.5s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed3.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed3.manifest.json
+
+=== diagnostics: T1 clone seed 3 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 1.03e+03  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0085  (param planes/0/light/0/R_sersic)
+
+[T1] done. min bulk-ESS=1028 (planes/1/light/0/e1), max rank-Rhat=1.0085 (planes/0/light/0/R_sersic)
+=== T1 vela seed 4 ===
+[T1] clone dim=20; qz = MAP-centered isotropic 1e-2 ball (SAME as real run). config={'n_hmc': 8, 'num_burnin_steps': 2000, 'num_results': 2000, 'desired_energy_variance': 0.0005, 'regularize_mass_matrix': True, 'progress_bar': False}
+Sampling took 13.899673558000359 s
+[run_standard_mclmc] seed=4 sampling wall 17.8s
+[run_standard_mclmc] saved /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed4.npz and /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/vela01/t1/t1_clone_seed4.manifest.json
+
+=== diagnostics: T1 clone seed 4 ===
+  chains=8 results_used=2000
+  min bulk-ESS = 764  (param planes/1/light/0/e1)
+  max rank-Rhat = 1.0112  (param planes/1/light/0/center_y)
+
+[T1] done. min bulk-ESS=764.5 (planes/1/light/0/e1), max rank-Rhat=1.0112 (planes/1/light/0/center_y)

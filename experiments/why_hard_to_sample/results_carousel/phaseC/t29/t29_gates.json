@@ -1,0 +1,53 @@
+{
+  "GB_slope_roundtrip_supported": {
+    "value": 4.819344912032619e-08,
+    "tol": 1e-06,
+    "pass": true
+  },
+  "GB_slope_roundtrip_core": {
+    "value": 1.3724002712045547e-08,
+    "tol": 1e-07,
+    "pass": true
+  },
+  "GB2_Rs_roundtrip_rel": {
+    "value": 4.7404705109480955e-07,
+    "tol": 5e-06,
+    "pass": true
+  },
+  "GA_render_identity_rel": {
+    "value": 1.39969892093511e-09,
+    "tol": 1e-07,
+    "pass": true
+  },
+  "GC_fd_vs_ad_theta_E": {
+    "value": 2.042122146878869e-08,
+    "tol": 1e-06,
+    "pass": true
+  },
+  "GC_fd_vs_ad_s_E_noisefloor": {
+    "value": 0.0003505048028770408,
+    "tol": 0.001,
+    "pass": true
+  },
+  "GC3_ad_vs_ad_tangent": {
+    "value": 4.016253592362781e-11,
+    "tol": 1e-10,
+    "pass": true
+  },
+  "GC2_secondorder_rel": {
+    "value": 2.357444665729112e-06,
+    "tol": 1e-05,
+    "pass": true
+  },
+  "GD_batch_vs_loop": {
+    "value": 0.0,
+    "tol": 1e-14,
+    "pass": true
+  },
+  "GE_edges_finite": {
+    "value": true,
+    "tol": null,
+    "pass": true
+  },
+  "all_pass": true
+}

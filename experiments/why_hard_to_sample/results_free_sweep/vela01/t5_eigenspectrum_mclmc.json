@@ -1,0 +1,187 @@
+{
+  "experiment": "T5",
+  "run": "/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc",
+  "run_tag": "mclmc",
+  "num_chains": 8,
+  "num_results_used": 5000,
+  "dim": 20,
+  "name_source": "z_index_no_data_dir",
+  "name_source_live_import_error": null,
+  "raw_condition_number": 19470102.956987415,
+  "raw_log10_condition_number": 7.289368248054869,
+  "raw_eigenvalues_ascending": [
+    7.151062539757768e-08,
+    7.905261284276801e-08,
+    1.1657267404366038e-07,
+    5.174848038092318e-07,
+    6.298837991142969e-07,
+    2.5519024104234124e-06,
+    4.443059286780703e-06,
+    4.9006914074972365e-06,
+    7.108425613995858e-06,
+    1.1447412812161408e-05,
+    5.511992685845946e-05,
+    6.92783234562674e-05,
+    7.980111577375518e-05,
+    0.00010504204918398504,
+    0.00013271953879119547,
+    0.00015142905936528256,
+    0.000204280736350029,
+    0.001008992796516922,
+    0.0018581647391775202,
+    1.3923192390093966
+  ],
+  "stiffest": {
+    "eigenvalue": 7.151062539757768e-08,
+    "participation_top": [
+      {
+        "index": 1,
+        "param": "z[1]",
+        "component": 0.7439850263664096,
+        "component_sq": 0.5535137194574272
+      },
+      {
+        "index": 13,
+        "param": "z[13]",
+        "component": -0.59944262500302,
+        "component_sq": 0.3593314606705113
+      },
+      {
+        "index": 11,
+        "param": "z[11]",
+        "component": -0.2550901202265092,
+        "component_sq": 0.0650709694371749
+      },
+      {
+        "index": 6,
+        "param": "z[6]",
+        "component": 0.10078403241356128,
+        "component_sq": 0.01015742118953777
+      },
+      {
+        "index": 9,
+        "param": "z[9]",
+        "component": 0.0686985188142188,
+        "component_sq": 0.0047194864872675745
+      },
+      {
+        "index": 2,
+        "param": "z[2]",
+        "component": -0.06020027793816819,
+        "component_sq": 0.0036240734638327
+      },
+      {
+        "index": 10,
+        "param": "z[10]",
+        "component": 0.03985131017080336,
+        "component_sq": 0.0015881269223295752
+      },
+      {
+        "index": 7,
+        "param": "z[7]",
+        "component": 0.039183717929548854,
+        "component_sq": 0.0015353637507824485
+      }
+    ],
+    "top_component_sq_fraction": 0.5535137194574272,
+    "uniform_spread_reference": 0.05
+  },
+  "softest": {
+    "eigenvalue": 1.3923192390093966,
+    "participation_top": [
+      {
+        "index": 17,
+        "param": "z[17]",
+        "component": 0.999993136099488,
+        "component_sq": 0.9999862722460892
+      },
+      {
+        "index": 18,
+        "param": "z[18]",
+        "component": -0.002114265733463464,
+        "component_sq": 4.4701195916978e-06
+      },
+      {
+        "index": 8,
+        "param": "z[8]",
+        "component": -0.0020438958431885897,
+        "component_sq": 4.177510217803596e-06
+      },
+      {
+        "index": 12,
+        "param": "z[12]",
+        "component": -0.001293764932853752,
+        "component_sq": 1.673827701482073e-06
+      },
+      {
+        "index": 19,
+        "param": "z[19]",
+        "component": -0.0010153822590845407,
+        "component_sq": 1.0310011320636253e-06
+      },
+      {
+        "index": 14,
+        "param": "z[14]",
+        "component": -0.0009840938142327,
+        "component_sq": 9.68440635211064e-07
+      },
+      {
+        "index": 10,
+        "param": "z[10]",
+        "component": -0.0007595277847517629,
+        "component_sq": 5.768824558099202e-07
+      },
+      {
+        "index": 3,
+        "param": "z[3]",
+        "component": -0.0005918552605685781,
+        "component_sq": 3.5029264946269945e-07
+      }
+    ],
+    "top_component_sq_fraction": 0.9999862722460892,
+    "uniform_spread_reference": 0.05
+  },
+  "preconditioner": {
+    "shape": [
+      20,
+      20
+    ],
+    "max_abs_offdiag": 0.002105024809034231,
+    "max_abs_diag": 0.8632052674985645,
+    "ratio_maxabs_offdiag_to_diag": 0.0024386144157047,
+    "frobenius_offdiag": 0.005714474413810919,
+    "frobenius_diag": 0.8632069437356568,
+    "ratio_frobenius_offdiag_to_diag": 0.006620051489716567,
+    "whitened_status": "ok",
+    "whitened_note": null,
+    "whitened_eigenvalues_ascending": [
+      0.11559860759112575,
+      0.12682192491608216,
+      0.17697691869390472,
+      0.4853183612807754,
+      0.5293990492345688,
+      0.7892616443656639,
+      0.831790514567888,
+      0.8821882359503342,
+      0.8955074350054871,
+      0.9282087640131742,
+      0.9532618817246947,
+      0.9713475380341177,
+      0.9896845223266239,
+      1.0053094089610182,
+      1.0338911115617146,
+      1.0625014192831823,
+      1.0904598580285496,
+      1.1249385874452666,
+      1.1742564966483464,
+      1.6488574250809078
+    ],
+    "whitened_condition_number": 14.263644341746266,
+    "whitened_log10_condition_number": 1.154230501343495
+  },
+  "raw_vs_whitened_improvement_factor": 1365016.0148765834,
+  "eigenspectrum_plot_path": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_free_sweep/vela01/t5_eigenspectrum_mclmc.png",
+  "prediction": "H2 predicts: condition number >~ 1e4 with stiff directions strongly rotated (spread across many parameters), and the preconditioner form unable to capture them (whitened condition number still large).",
+  "falsifier": "Falsifier: modest condition number (<~ 1e2) or axis-aligned stiffness that the existing preconditioner already represents (whitened condition number close to 1 / much smaller than the raw condition number).",
+  "verdict": "proposed (UNCERTIFIED) -- see condition numbers/participation tables above; this script does not adjudicate the falsifier, a grader must inspect the plot/numbers."
+}

@@ -294,7 +294,7 @@ class PartialTruthBootstrapQzStage(InferenceStage):
                      exp_time=self.system.exp_time, sees="all")
         mode = getattr(ctx.prob_model, "mode", "lstsq")
         fixed_prob = ProbModel(fixed_model, ds, mode=mode)
-        fixed_seq = ModellingSequence.from_scene(fixed_model, fixed_prob, sim_config)
+        fixed_seq = ModellingSequence.from_scene(fixed_prob)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
         map_samples, lps, _ = fixed_seq.MAP(
@@ -312,7 +312,7 @@ class PartialTruthBootstrapQzStage(InferenceStage):
 
         # Recovered free (source) params, keyed by the fixed_model's unique keys (which
         # are a SUBSET of the inference model's unique keys, same site->key strings).
-        recovered_unique = fixed_model.bijector.forward(list(jnp.atleast_2d(map_z).T))
+        recovered_unique = fixed_model.bijector.forward(jnp.atleast_2d(map_z))
         recovered_unique = {k: jnp.squeeze(jnp.asarray(v))
                             for k, v in recovered_unique.items()}
 
@@ -333,7 +333,7 @@ class PartialTruthBootstrapQzStage(InferenceStage):
                 val = jnp.squeeze(jnp.asarray(cur))
             full_unique[ukey] = val
 
-        true_z = jnp.stack(model.bijector.inverse(full_unique))
+        true_z = model.bijector.inverse(full_unique)
         d_dim = true_z.shape[-1]
         scale_tril = jnp.diag(jnp.ones(d_dim) * jnp.sqrt(self.diag_scale))
 

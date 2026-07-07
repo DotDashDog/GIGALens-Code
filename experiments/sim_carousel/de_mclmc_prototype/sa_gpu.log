@@ -1,0 +1,10 @@
+sec logp=-119514.9 (col9=4.339) | glob logp=-119508.4 (col9=4.435) | L0=10.581 ss0=0.0484 (EEVPD-tuned)
+
+=== SA-mixture, balanced init (equilibration: should drain secondary -> occ~1.0) ===
+[sa_balanced] 1668s  round-trips/chain=[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]  total_cross=0  occ(global)=0.500  extra(mean)=0.038
+
+=== controls, balanced init ===
+[vanilla_balanced] 1536s  round-trips/chain=[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]  total_cross=2  occ(global)=0.563
+[de_balanced] 1630s  round-trips/chain=[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]  total_cross=6  occ(global)=0.695  extra(mean)=0.006
+
+=== SA-mixture, ALL-secondary init (discovery test; expected to FAIL) ===

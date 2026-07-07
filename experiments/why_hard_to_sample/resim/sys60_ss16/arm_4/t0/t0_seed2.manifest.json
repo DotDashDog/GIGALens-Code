@@ -1,0 +1,37 @@
+{
+  "out_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/t0/t0_seed2.npz",
+  "config": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false
+  },
+  "mclmc_kwargs": {
+    "n_hmc": 8,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
+    "desired_energy_variance": 0.0005,
+    "regularize_mass_matrix": true,
+    "progress_bar": false,
+    "seed": 2,
+    "debug_output": true
+  },
+  "seed": 2,
+  "target_desc": "T13' re-simulated sys60 (data ss16), model ss=4",
+  "provenance": {
+    "data_dir": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/systems/sys60_ss16data",
+    "observed": "resim/sys60_ss16/observed_ss16.npz (d'=m16+noise)",
+    "qz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/resim/sys60_ss16/arm_4/svi/arrays.npz",
+    "arm": "ss4"
+  },
+  "position_shape": [
+    8,
+    4000,
+    22
+  ],
+  "sampling_wall_s": 154.15920994299813,
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "timestamp_utc": "2026-07-03T01:01:54.446146+00:00"
+}

@@ -1,0 +1,8 @@
+R=800 sweep b=[1.0, 2.0, 3.0, 4.0, 6.0]
+  b= 1.0 | linDE rt=   0 acc= 1.320% | near rt=   2 acc= 0.305% | gamma1 rt=   0 acc= 0.789%
+  b= 2.0 | linDE rt=   0 acc= 0.867% | near rt=   4 acc= 0.375% | gamma1 rt=   0 acc= 0.688%
+  b= 3.0 | linDE rt=   2 acc= 1.172% | near rt=   1 acc= 0.258% | gamma1 rt=   0 acc= 1.016%
+  b= 4.0 | linDE rt=   0 acc= 0.844% | near rt=   1 acc= 0.203% | gamma1 rt=   0 acc= 0.805%
+  b= 6.0 | linDE rt=   0 acc= 0.805% | near rt=   0 acc= 0.203% | gamma1 rt=   0 acc= 0.539%
+
+saved audit_curvature_sweep.png/.npz/.json  total 145.7s

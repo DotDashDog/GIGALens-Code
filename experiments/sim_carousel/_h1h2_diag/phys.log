@@ -1,0 +1,13 @@
+VALIDATION: round-trip |inverse(forward(z))-z| max = 4.93e-08
+VALIDATION: lp(z) = -291609.3566  vs  phys(x)+fldj(z) = -291609.3566  diff=1.79e-05
+  (fldj(z0)=-34.75; a sign error would show diff ~ 69.5)
+VALIDATION PASSED -- proceeding
+
+phys Hessian finite=True
+
+  k     z-rotation(median/max)    PHYS-rotation(median/max)
+  4       43.0/87.4                   14.3/21.2          
+  6       17.7/39.5                   18.5/45.2          
+  8       46.3/81.9                   14.4/33.6          
+
+=> phys-rotation ~ z-rotation: curvature is PHYSICAL; phys-rotation ~0: bijector-induced

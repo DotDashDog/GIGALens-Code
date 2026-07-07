@@ -1,0 +1,342 @@
+{
+  "experiment": "T2",
+  "run": "/global/homes/l/linusu/GIGALens-Code/results/test_new_api_elliptical_sersiclets/vela01_cam12_rep03_a0.500_f814w/mclmc",
+  "run_tag": "mclmc",
+  "num_chains": 8,
+  "num_results_used": 5000,
+  "dim": 20,
+  "name_source": "live_bijector_sorted",
+  "name_source_live_import_error": null,
+  "min_ess": 9196.426294630814,
+  "min_ess_param": "planes/1/light/0/e1",
+  "max_rhat": 1.0011008714633112,
+  "max_rhat_param": "planes/0/mass/1/gamma2",
+  "worst_ess_directions": [
+    {
+      "index": 17,
+      "param": "planes/1/light/0/e1",
+      "ess": 9196.426294630814,
+      "rhat": 1.000724814027561
+    },
+    {
+      "index": 3,
+      "param": "planes/0/light/0/e1",
+      "ess": 9788.179640049377,
+      "rhat": 1.0002524165846878
+    },
+    {
+      "index": 16,
+      "param": "planes/1/light/0/center_y",
+      "ess": 10074.846962743452,
+      "rhat": 1.0005149160166344
+    },
+    {
+      "index": 10,
+      "param": "planes/0/mass/0/gamma",
+      "ess": 10078.179789773994,
+      "rhat": 1.0005813814261877
+    },
+    {
+      "index": 14,
+      "param": "planes/1/light/0/beta",
+      "ess": 10081.35462774196,
+      "rhat": 1.000455418603843
+    },
+    {
+      "index": 0,
+      "param": "planes/0/light/0/R_sersic",
+      "ess": 10084.555932608546,
+      "rhat": 1.00065403288432
+    },
+    {
+      "index": 5,
+      "param": "planes/0/light/0/n_sersic",
+      "ess": 10095.146802736926,
+      "rhat": 1.0003890913526579
+    },
+    {
+      "index": 4,
+      "param": "planes/0/light/0/e2",
+      "ess": 10118.789981692453,
+      "rhat": 1.0008188952413442
+    }
+  ],
+  "bound_crowding_status": "ok",
+  "bound_crowding_note": null,
+  "corner_plot_paths": [
+    "results_free_sweep/vela01_named/t2_corner_mclmc_chunk00.png",
+    "results_free_sweep/vela01_named/t2_corner_mclmc_chunk01.png",
+    "results_free_sweep/vela01_named/t2_corner_mclmc_chunk02.png",
+    "results_free_sweep/vela01_named/t2_corner_mclmc_chunk03.png",
+    "results_free_sweep/vela01_named/t2_corner_mclmc_chunk04.png"
+  ],
+  "zmarginal_hist_paths": [
+    "results_free_sweep/vela01_named/t2_zhist_mclmc_chunk00.png",
+    "results_free_sweep/vela01_named/t2_zhist_mclmc_chunk01.png"
+  ],
+  "table": [
+    {
+      "index": 0,
+      "param": "planes/0/light/0/R_sersic",
+      "z_ess": 10084.555932608546,
+      "z_rhat": 1.00065403288432,
+      "z_skew": 0.018339854775014305,
+      "z_kurtosis_excess": 0.026012420624963006,
+      "z_mad_tail_frac_proxy": 0.00675,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": 0.03877815899853595,
+      "theta_kurtosis_excess": 0.028825094737764623
+    },
+    {
+      "index": 1,
+      "param": "planes/0/light/0/center_x",
+      "z_ess": 36572.006324045244,
+      "z_rhat": 1.0005613302760334,
+      "z_skew": -0.0028718771394011604,
+      "z_kurtosis_excess": -0.028988889585732647,
+      "z_mad_tail_frac_proxy": 0.006425,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": -0.0028718771394254795,
+      "theta_kurtosis_excess": -0.02898888958573531
+    },
+    {
+      "index": 2,
+      "param": "planes/0/light/0/center_y",
+      "z_ess": 22884.93756523192,
+      "z_rhat": 1.000019892968086,
+      "z_skew": 0.0021558636494429188,
+      "z_kurtosis_excess": 0.03785035734023756,
+      "z_mad_tail_frac_proxy": 0.00765,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": 0.002155863649210599,
+      "theta_kurtosis_excess": 0.037850357340196705
+    },
+    {
+      "index": 3,
+      "param": "planes/0/light/0/e1",
+      "z_ess": 9788.179640049377,
+      "z_rhat": 1.0002524165846878,
+      "z_skew": 0.007830699267303613,
+      "z_kurtosis_excess": -0.03429872323140026,
+      "z_mad_tail_frac_proxy": 0.006475,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": 0.026273497675946136,
+      "theta_kurtosis_excess": -0.03318047845163319
+    },
+    {
+      "index": 4,
+      "param": "planes/0/light/0/e2",
+      "z_ess": 10118.789981692453,
+      "z_rhat": 1.0008188952413442,
+      "z_skew": 0.016367908130988342,
+      "z_kurtosis_excess": -0.019171229949769497,
+      "z_mad_tail_frac_proxy": 0.0065,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": 0.011640121199664965,
+      "theta_kurtosis_excess": -0.019565846351068394
+    },
+    {
+      "index": 5,
+      "param": "planes/0/light/0/n_sersic",
+      "z_ess": 10095.146802736926,
+      "z_rhat": 1.0003890913526579,
+      "z_skew": 0.029879276883533493,
+      "z_kurtosis_excess": 0.013860828214626864,
+      "z_mad_tail_frac_proxy": 0.00655,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": 0.031330012974570616,
+      "theta_kurtosis_excess": 0.013951649744080807
+    },
+    {
+      "index": 6,
+      "param": "planes/0/mass/0/center_x",
+      "z_ess": 10492.861686170034,
+      "z_rhat": 1.0005953016326392,
+      "z_skew": -0.0029980321197059976,
+      "z_kurtosis_excess": -0.040738678573870146,
+      "z_mad_tail_frac_proxy": 0.0063,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": -0.0029980321196634175,
+      "theta_kurtosis_excess": -0.0407386785738324
+    },
+    {
+      "index": 7,
+      "param": "planes/0/mass/0/center_y",
+      "z_ess": 10320.371092515355,
+      "z_rhat": 1.000586942620111,
+      "z_skew": 0.033857005728824933,
+      "z_kurtosis_excess": 0.046667539423791204,
+      "z_mad_tail_frac_proxy": 0.0072,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": 0.033857005728791904,
+      "theta_kurtosis_excess": 0.04666753942374857
+    },
+    {
+      "index": 8,
+      "param": "planes/0/mass/0/e1",
+      "z_ess": 10262.227427518646,
+      "z_rhat": 1.0001173193153443,
+      "z_skew": 0.011433048357798183,
+      "z_kurtosis_excess": 0.02248364627179189,
+      "z_mad_tail_frac_proxy": 0.007375,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": 0.0032436029693381904,
+      "theta_kurtosis_excess": 0.021963534763240755
+    },
+    {
+      "index": 9,
+      "param": "planes/0/mass/0/e2",
+      "z_ess": 10163.623312046842,
+      "z_rhat": 1.000452871150139,
+      "z_skew": -0.0586524757511346,
+      "z_kurtosis_excess": -0.0567973164960307,
+      "z_mad_tail_frac_proxy": 0.005425,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": -0.03810014875394193,
+      "theta_kurtosis_excess": -0.0615185058765908
+    },
+    {
+      "index": 10,
+      "param": "planes/0/mass/0/gamma",
+      "z_ess": 10078.179789773994,
+      "z_rhat": 1.0005813814261877,
+      "z_skew": -0.02327852636868105,
+      "z_kurtosis_excess": 0.0899243034356223,
+      "z_mad_tail_frac_proxy": 0.0086,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": -0.0027619474801231668,
+      "theta_kurtosis_excess": 0.08455290231261703
+    },
+    {
+      "index": 11,
+      "param": "planes/0/mass/0/theta_E",
+      "z_ess": 11952.033240436649,
+      "z_rhat": 1.0006937574442876,
+      "z_skew": -0.00714403992281054,
+      "z_kurtosis_excess": -0.022792426203585237,
+      "z_mad_tail_frac_proxy": 0.00655,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": -0.003035239098025447,
+      "theta_kurtosis_excess": -0.022909477226446207
+    },
+    {
+      "index": 12,
+      "param": "planes/0/mass/1/gamma1",
+      "z_ess": 10128.67513532746,
+      "z_rhat": 1.000350967447868,
+      "z_skew": -0.037914920188006795,
+      "z_kurtosis_excess": 0.012736711048362714,
+      "z_mad_tail_frac_proxy": 0.007625,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": -0.03874383614881875,
+      "theta_kurtosis_excess": 0.012780659358170965
+    },
+    {
+      "index": 13,
+      "param": "planes/0/mass/1/gamma2",
+      "z_ess": 10491.96532488659,
+      "z_rhat": 1.0011008714633112,
+      "z_skew": 0.009465463741441995,
+      "z_kurtosis_excess": -0.0707809029816584,
+      "z_mad_tail_frac_proxy": 0.0061,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": 0.009465463741379883,
+      "theta_kurtosis_excess": -0.07078090298164197
+    },
+    {
+      "index": 14,
+      "param": "planes/1/light/0/beta",
+      "z_ess": 10081.35462774196,
+      "z_rhat": 1.000455418603843,
+      "z_skew": -0.06894633925083452,
+      "z_kurtosis_excess": 0.10431390992362566,
+      "z_mad_tail_frac_proxy": 0.008325,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": -0.006041857056833004,
+      "theta_kurtosis_excess": 0.08023359379192296
+    },
+    {
+      "index": 15,
+      "param": "planes/1/light/0/center_x",
+      "z_ess": 10622.503692875787,
+      "z_rhat": 1.0007664034697519,
+      "z_skew": -0.013372182320332862,
+      "z_kurtosis_excess": 0.03204167624812815,
+      "z_mad_tail_frac_proxy": 0.007675,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": -0.01337218232055553,
+      "theta_kurtosis_excess": 0.0320416762481317
+    },
+    {
+      "index": 16,
+      "param": "planes/1/light/0/center_y",
+      "z_ess": 10074.846962743452,
+      "z_rhat": 1.0005149160166344,
+      "z_skew": -0.007201661658593313,
+      "z_kurtosis_excess": 0.0704557454253405,
+      "z_mad_tail_frac_proxy": 0.008125,
+      "theta_crowding_frac": null,
+      "theta_crowding_status": "unbounded_prior_no_box",
+      "theta_skew": -0.007201661657989532,
+      "theta_kurtosis_excess": 0.07045574542529609
+    },
+    {
+      "index": 17,
+      "param": "planes/1/light/0/e1",
+      "z_ess": 9196.426294630814,
+      "z_rhat": 1.000724814027561,
+      "z_skew": -1.3157698326017584,
+      "z_kurtosis_excess": 2.7108701511398845,
+      "z_mad_tail_frac_proxy": 0.04,
+      "theta_crowding_frac": 0.9839,
+      "theta_crowding_status": "ok",
+      "theta_skew": 1.2377931443499814,
+      "theta_kurtosis_excess": 1.6688993186974432
+    },
+    {
+      "index": 18,
+      "param": "planes/1/light/0/e2",
+      "z_ess": 10188.663758319006,
+      "z_rhat": 1.0007010859200323,
+      "z_skew": -0.019594931400028694,
+      "z_kurtosis_excess": -0.054146456401769516,
+      "z_mad_tail_frac_proxy": 0.00645,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": 0.039996872120638016,
+      "theta_kurtosis_excess": -0.05568623845201337
+    },
+    {
+      "index": 19,
+      "param": "planes/1/light/0/n_sersic",
+      "z_ess": 10245.422879799424,
+      "z_rhat": 1.0007801756951014,
+      "z_skew": -0.053045164089136856,
+      "z_kurtosis_excess": 0.021027207375282853,
+      "z_mad_tail_frac_proxy": 0.0072,
+      "theta_crowding_frac": 0.0,
+      "theta_crowding_status": "ok",
+      "theta_skew": -0.028476083524604862,
+      "theta_kurtosis_excess": 0.015602611501804198
+    }
+  ],
+  "prediction": "H3 predicts: worst-ESS parameters are bound-crowded and/or z-marginals show heavy tails/funnel shapes absent from their theta-marginals.",
+  "falsifier": "z-marginals as Gaussian as theta-marginals and bound-crowding ~ 0 for the worst-ESS parameters (threshold: a posterior comfortably inside the box puts ~0 mass in the outer 1%; anything >~ a few % is crowding -- derive the exact number from the actual histograms before judging, and record it).",
+  "verdict": "proposed (UNCERTIFIED) -- see per-param table; this script does not adjudicate the falsifier, a grader must inspect the plots/numbers."
+}

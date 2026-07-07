@@ -46,13 +46,12 @@ DIM = 4
 # Fakes: the minimal prob_model surface LAPS_late_adjusted_JIT touches        #
 # --------------------------------------------------------------------------- #
 class _FakeBij:
-    """Mimics gigalens' bijector INVERSE map: constrained (n, dim) array ->
-    list of dim (n,) arrays (the same shape LAPS_late_adjusted_JIT expects
-    from ``prob_model.bij.inverse``, per its "prior" init_mode docstring)."""
+    """Mimics gigalens' bijector INVERSE map under the flat-z convention:
+    constrained (n, dim) array -> unconstrained (n, dim) array (the shape
+    LAPS_late_adjusted_JIT expects from ``prob_model.bij.inverse``)."""
 
     def inverse(self, x):
-        x = jnp.asarray(x)
-        return [x[:, i] for i in range(x.shape[-1])]
+        return jnp.asarray(x)
 
 
 class _FakeProbModel:

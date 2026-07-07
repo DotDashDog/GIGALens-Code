@@ -1,0 +1,38 @@
+=== T8 breathing transects (float64) ===
+[T8] 4 directions verified against stored g_dot_e/sigma_dir
+[T8] chi2 gate pt0: recomputed=6.1969373379e+03 aux*event_size=6.1969373379e+03 rel=0.000e+00
+[T8] chi2 gate pt1: recomputed=6.4204809763e+03 aux*event_size=6.4204809763e+03 rel=0.000e+00
+[T8] chi2 gate pt2: recomputed=6.5451316439e+03 aux*event_size=6.5451316439e+03 rel=0.000e+00
+[T8] chi^2 gate PASSED (worst rel=0.000e+00)
+[T8] random_1                         h_dev=3.470e-03 g_ratio(|t|<=h_dev)=111.99 breathing_share=3.87 bending_share=0.22 (g-identity err 0.00e+00)
+[T8] random_2                         h_dev=3.741e-03 g_ratio(|t|<=h_dev)=43.27 breathing_share=0.61 bending_share=2.77 (g-identity err 0.00e+00)
+[T8] axis[planes/0/mass/0/gamma]      h_dev=2.495e-02 g_ratio(|t|<=h_dev)=84.43 breathing_share=1.00 bending_share=0.68 (g-identity err 0.00e+00)
+[T8] stiffest                         h_dev=3.500e-03 g_ratio(|t|<=h_dev)=55.58 breathing_share=0.99 bending_share=2.32 (g-identity err 0.00e+00)
+[T8] wrote ./results_t0t1/sys60/t8/t8_results.json and ./results_t0t1/sys60/t8/t8_breathing_transects.png
+
+=== T8 summary (PROPOSED / UNCERTIFIED) ===
+  chi^2 render gate: PASSED, worst rel 0.000e+00
+  random_1                         (transition): g_ratio(|t|<=h_dev)=111.99 breathing=3.87 bending=0.22
+  random_2                         (transition): g_ratio(|t|<=h_dev)=43.27 breathing=0.61 bending=2.77
+  axis[planes/0/mass/0/gamma]      (transition): g_ratio(|t|<=h_dev)=84.43 breathing=1.00 bending=0.68
+  stiffest                         (D2 stable; h* range): g_ratio(|t|<=h_dev)=55.58 breathing=0.99 bending=2.32
+  prediction: g_ratio >= 3 & breathing_share >= 70% ; falsifier: g_ratio(2*h_dev) <= 1.5
+[T8] done.
+=== T9 xi vs lambda1 (float64) ===
+[T9] positions (8, 20000, 22) (results-only); xi (8, 40000) (burnin=20000+results=20000); using last 20000 xi columns
+[T9] xi results: min=1.000e-08 max=2.017e+08 median=2.472e-04; floor/sentinel excluded=1, non-finite excluded=0, valid frac=1.0000
+[T9] stratified sample: 300 points (top=100, middle=100, bottom=100)
+[T9] chi2 gate pt0: recomputed=6.1996899110e+03 aux*event_size=6.1996899110e+03 rel=0.000e+00
+[T9] chi2 gate pt1: recomputed=6.2031129551e+03 aux*event_size=6.2031129551e+03 rel=0.000e+00
+[T9] chi2 gate pt2: recomputed=6.2197404679e+03 aux*event_size=6.2197404679e+03 rel=0.000e+00
+[T9] chi^2 gate PASSED (worst rel=0.000e+00)
+[T9] Spearman rho(lambda1, xi_s) all = 0.439  (top 0.004 mid -0.011 bot 0.202)
+[T9] median lambda1 top-decile/bottom-decile = 3.758e+05/1.139e+05 = 3.30x
+[T9] wrote ./results_t0t1/sys60/t9/t9_results.json, ./results_t0t1/sys60/t9/t9_scatter_lambda1_vs_xi.png, ./results_t0t1/sys60/t9/t9_xi_traces.png
+
+=== T9 summary (PROPOSED / UNCERTIFIED) ===
+  chi^2 render gate: PASSED, worst rel 0.000e+00
+  n points = 300 (top/mid/bot = 100/100/100)
+  [T9] Spearman rho(lambda1, xi_s) = 0.439 (predict > 0.5; falsify < 0.2)
+  [T9] median lambda1 top/bottom decile ratio = 3.30x (predict >= 3; falsify ~ 1)
+[T9] done.

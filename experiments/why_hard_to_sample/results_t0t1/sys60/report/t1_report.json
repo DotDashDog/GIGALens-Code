@@ -1,0 +1,29 @@
+{
+  "experiment": "T1_report",
+  "status": "proposed (UNCERTIFIED)",
+  "real_run": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t0/t0_seed1.npz",
+  "clone_run": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/t1/t1_clone_seed1.npz",
+  "real_min_bulk_ess": 12.827987493398986,
+  "real_min_ess_param": "18",
+  "real_max_rank_rhat": 1.6559622849642028,
+  "clone_min_bulk_ess": 1717.7899333724963,
+  "clone_min_ess_param": "15",
+  "clone_max_rank_rhat": 1.0052480819342984,
+  "T0_band": {
+    "min_ess_lo": 11.224040411232577,
+    "min_ess_hi": 15.340149447076433,
+    "ratio": 1.3667225780588437
+  },
+  "verdict": "H2 INSUFFICIENT: clone min-ESS (1718) exceeds the real run's (12.83) by more than the T0 band (x1.37) -- the clone is much EASIER than the real posterior. Conditioning alone cannot explain the slowness; the hardness lives in the true log-density's fine structure (H1) or its non-Gaussian z-shape (H3). Next: run T3 (and T2 to separate H3).",
+  "verdict_status": "proposed (UNCERTIFIED)",
+  "ess_table_csv": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_ess_table.csv",
+  "trace_figures": [
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_traces_realVSclone_block1.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_traces_realVSclone_block2.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_traces_realVSclone_block3.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_traces_realVSclone_block4.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_traces_realVSclone_block5.png",
+    "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_t0t1/sys60/report/t1_traces_realVSclone_block6.png"
+  ],
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908"
+}

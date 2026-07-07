@@ -1,0 +1,19 @@
+{
+  "clone_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/new/t1/clone.npz",
+  "source_run": "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/minimal_case_newbij/mclmc",
+  "source_key": "samples_z",
+  "excluded_chains": [],
+  "num_results_pooled": 10000,
+  "n_chains": 8,
+  "n_pooled_samples": 80000,
+  "dim": 14,
+  "cov_min_eigenvalue": 5.133505784232541e-08,
+  "cholesky_jitter_added": 0.0,
+  "source_run_min_bulk_ess": 724.9250388476911,
+  "source_run_min_ess_param": "0",
+  "source_run_max_rank_rhat": 1.0206937448442925,
+  "source_run_max_rhat_param": "0",
+  "note": "Clone is built from this run's post-burn-in z-samples; its difficulty is only meaningful if the source run converged. See source_run_* fields.",
+  "git_commit": "e6c6cb15af9a890f392d45cb5f7dbe6181b8a908",
+  "timestamp_utc": "2026-07-03T21:15:32.507292+00:00"
+}

@@ -1,0 +1,31 @@
+{
+  "arrays": [
+    "qz_loc",
+    "qz_scale_tril",
+    "svi_loss_hist"
+  ],
+  "class": "SVIStage",
+  "config": {
+    "init_scales": 0.001,
+    "n_vi": 125,
+    "num_steps": 1000,
+    "optimizer_id": "adabelief_1e-4_b1_0.95_b2_0.99",
+    "pbar_interval": 5
+  },
+  "diagnostics": [],
+  "diagnostics_config": {},
+  "input_hash": "f5ccec054de01235",
+  "metadata": {
+    "final_loss": 484.8269696718956,
+    "n_vi": 125,
+    "num_steps": 1000,
+    "wall_time_s": 187.53381197500858
+  },
+  "schema_version": 1,
+  "seed": 0,
+  "stage": "svi",
+  "timestamp": "2026-07-03T00:56:05.299923+00:00",
+  "upstream_hashes": {
+    "z_best": "e9c3a9256c374afe"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "experiment": "T28 Rs(s) leaf build + login gates",
+  "status": "proposed (UNCERTIFIED)",
+  "timestamp_utc": "2026-07-04T19:31:26.704820+00:00",
+  "artifact": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/experiments/why_hard_to_sample/results_carousel/phaseC/t28/transform_sprior.npz",
+  "artifact_sha256": "55dff80e9acb7c5dfbf573bc342d9ab8f50046190a7749d53a43bf98946d852a",
+  "theta_E_star": 13.8126953867242,
+  "prior": {
+    "s_low": 0.0,
+    "s_high": 0.75,
+    "Rs_at_s_low": 10.478415571109224,
+    "Rs_at_s_high": 614.387061843628
+  },
+  "grid": {
+    "s_knot_lo": -0.04,
+    "s_knot_hi": 0.78,
+    "n_knots": 2000,
+    "rs_table": [
+      6.0,
+      2000.0
+    ],
+    "rs_knot_range": [
+      9.21507250639656,
+      1067.2222793140736
+    ]
+  },
+  "gates": {
+    "G1_roundtrip_max": 8.585909760938648e-09,
+    "G1_pass": true,
+    "chart_consistency_numpy_max_abs_err": 0.00035935806563958117,
+    "chart_consistency_is_blocking": false,
+    "chart_consistency_note": "FD-roundoff-limited diagnostic of chart flatness; NOT a correctness gate. Physical posterior is exact by construction (G2+G3); GPU uses exact jax.grad ds/dRs (see t28_run_gpu.py internal jnp consistency).",
+    "Rs_at_s0": 10.478415571109224,
+    "Rs_at_s075": 614.387061843628,
+    "endpoint_pass": true,
+    "leaf_strictly_increasing": true,
+    "Rs_times_pRs_probe": {
+      "12.0": 0.41697275863320843,
+      "50.0": 0.2922293952625432,
+      "100.0": 0.20808931915550663,
+      "200.0": 0.14388025537773272,
+      "500.0": 0.09023092613342892
+    },
+    "all_login_gates_pass": true
+  },
+  "note": "G4 (jnp s vs numpy s < 1e-10), G1-in-jnp, G2 prior-density and G3 loglike identities run on GPU in t28_run_gpu.py."
+}

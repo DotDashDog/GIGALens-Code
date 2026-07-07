@@ -20,13 +20,12 @@ Examples:
 
 ## 4. Uncertainty is reported, not hidden
 
-- Every reported metric carries an uncertainty estimate (bootstrap CI, posterior credible interval, or equivalent). Point estimates alone are insufficient.
-- [FILL IN: domain conventions — e.g. prefer fitting with a likelihood/NLL so you get calibrated per-result uncertainty for free.]
+- Every reported metric carries an uncertainty estimate (bootstrap CI, posterior credible interval, or equivalent). Point estimates alone are insufficient. This includes MAP on its own.
+- SVI is not a valid measure of a posterior. It carries no convergence guarantees and no real metrics to verify its success.
 
 ## 5. Reproducibility
 
 - **Seeds** recorded (all RNGs). **Versions** pinned (code, data snapshot, key dependencies). **Inputs addressable** (commit hash / checksum / dataset-version tag — not "the data at `/some/path` as of today"). **Configs saved next to results.**
-- [FILL IN: any domain-specific reproducibility needs — hardware, solver tolerances, pipeline/instrument versions.]
 
 ## 6. Negative and null results are recorded
 
@@ -34,7 +33,10 @@ Examples:
 
 ## 7. Failure modes to actively watch for - Update as needed
 
-List this project's known traps — if any occurs, stop and reassess:
+List this project's known traps — if any occurs, stop and reassess. The *tempting-but-wrong
+moves* (what an agent will reach for by default and shouldn't) live in the companion playbook
+`docs/anti-patterns.md`; the top headlines from both are mirrored on the always-injected
+operating card (`docs/agent-operating-card.md`) — keep the card in sync when editing here.
 
 - **Silent scientific defaults.** A missing/empty model input (PSF, noise model, mask,
   units, pixel grid, regularization, priors, `n_max`) must **raise**, never default to a
