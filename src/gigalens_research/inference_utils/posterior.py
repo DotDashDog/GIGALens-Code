@@ -271,15 +271,18 @@ class Posterior(ABC):
                 else:
                     loc[(i, "light", j)] = ("lens_light", li); li += 1
         groups = {"lens_mass": {}, "lens_light": {}, "source_light": {}}
-        for path, ukey in scene._site_to_unique:
+        for path, ukey, cidx in scene._site_to_unique:
             if not path:
                 continue
+            # cidx selects one component of a grouped (tuple-key) prior's vector value
+            # (e.g. e1/e2 of a DiskEllipticity); None for an ordinary scalar param.
+            val = x_flat[ukey] if cidx is None else x_flat[ukey][..., cidx]
             if path[0] == "cosmo":
                 # Cosmology params (H0, Om0, w0, ...) form their OWN corner group
                 # instead of being dropped — for a cosmology run these are the
                 # parameters of interest. Keyed under a single pseudo-profile "0"
                 # so the flatten machinery labels them ``cosmo_<param>``.
-                groups.setdefault("cosmo", {}).setdefault("0", {})[path[1]] = x_flat[ukey]
+                groups.setdefault("cosmo", {}).setdefault("0", {})[path[1]] = val
                 continue
             # Only mass/light profile sites are corner columns; plane geometry
             # (redshift / deflection_ratio) — a 4-tuple path — is skipped, and the
@@ -292,7 +295,7 @@ class Posterior(ABC):
             if info is None:
                 continue
             grp, idx = info
-            groups[grp].setdefault(str(idx), {})[param] = x_flat[ukey]
+            groups[grp].setdefault(str(idx), {})[param] = val
         return groups
 
     def regroup_truth(self, point):
@@ -333,7 +336,7 @@ class Posterior(ABC):
                     groups["source_light"][str(si)] = prof; si += 1
                 else:
                     groups["lens_light"][str(li)] = prof; li += 1
-        free_cosmo = [p[1] for p, _ in scene._site_to_unique
+        free_cosmo = [p[1] for p, *_ in scene._site_to_unique
                       if p and p[0] == "cosmo"]
         if free_cosmo:
             cosmo_t = point.get("cosmo", {}) or {}

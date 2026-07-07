@@ -321,17 +321,31 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         # params free, so we fill each of its unique keys from its site->unique map.
         full_unique = {}
         free_vals = {}
-        for path, ukey in model._site_to_unique:
+        # A grouped (tuple-key) prior maps several sites to one ukey via cidx; its truth
+        # scalars are assembled back into a vector. group_size[ukey] = #components.
+        group_size = {}
+        for _p, uk, ci in model._site_to_unique:
+            if ci is not None:
+                group_size[uk] = group_size.get(uk, 0) + 1
+        pending_group = {}   # ukey -> {cidx: truth value}
+        for path, ukey, cidx in model._site_to_unique:
             if ukey in recovered_unique:
                 val = recovered_unique[ukey]
-                free_vals[ukey.replace("/", "_")] = float(np.asarray(val))
+                if cidx is None:                       # scalar site -> labelled free val
+                    free_vals[ukey.replace("/", "_")] = float(np.asarray(val))
+                full_unique[ukey] = val
+                continue
+            # truth at this site (structured truth_scene), squeezed scalar.
+            cur = truth_scene
+            for key in path:
+                cur = cur[key]
+            tval = jnp.squeeze(jnp.asarray(cur))
+            if cidx is None:
+                full_unique[ukey] = tval
             else:
-                # truth at this site (structured truth_scene), squeezed scalar.
-                cur = truth_scene
-                for key in path:
-                    cur = cur[key]
-                val = jnp.squeeze(jnp.asarray(cur))
-            full_unique[ukey] = val
+                pending_group.setdefault(ukey, {})[cidx] = tval
+        for ukey, comps in pending_group.items():
+            full_unique[ukey] = jnp.stack([comps[i] for i in range(group_size[ukey])])
 
         true_z = model.bijector.inverse(full_unique)
         d_dim = true_z.shape[-1]
