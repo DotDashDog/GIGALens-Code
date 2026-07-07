@@ -1,0 +1,7 @@
+jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim (num free params): 22
+Final Chi-squared: 0.98602
+STEPS overridden by env -> 18000
+srun: error: nid001173: task 0: Terminated
+srun: Terminating StepId=55356332.9
+srun: Force Terminated StepId=55356332.9

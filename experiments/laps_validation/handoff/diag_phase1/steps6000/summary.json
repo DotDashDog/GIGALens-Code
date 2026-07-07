@@ -1,0 +1,172 @@
+{
+  "STEPS": 6000,
+  "T1": 6000,
+  "dim": 22,
+  "final_third_start": 4000,
+  "switch_index_prior_paper": 6000,
+  "switch_index_prior_active": 6000,
+  "switch_index_warm_paper": 6000,
+  "switch_index_warm_active": 6000,
+  "t_warm_s": 246.15604758262634,
+  "t_prior_s": 244.58270359039307,
+  "tight8_dims": [
+    3,
+    2,
+    12,
+    17,
+    7,
+    8,
+    14,
+    18
+  ],
+  "per_dim": [
+    {
+      "dim": 3,
+      "target_std": 0.000674497648346637,
+      "prior_at_switch": 0.002432739795653412,
+      "prior_at_final": 0.002432739795653412,
+      "ratio_final_over_target": 3.6067431837852473,
+      "logslope_final_third": -6.562203760706193e-05
+    },
+    {
+      "dim": 2,
+      "target_std": 0.0007775053460601022,
+      "prior_at_switch": 0.0026348889445568773,
+      "prior_at_final": 0.0026348889445568773,
+      "ratio_final_over_target": 3.38890138557735,
+      "logslope_final_third": -7.927482550179324e-05
+    },
+    {
+      "dim": 12,
+      "target_std": 0.001279451781740527,
+      "prior_at_switch": 0.28349157881793413,
+      "prior_at_final": 0.28349157881793413,
+      "ratio_final_over_target": 221.57269454287749,
+      "logslope_final_third": 3.701837600892357e-05
+    },
+    {
+      "dim": 17,
+      "target_std": 0.0014212550995681482,
+      "prior_at_switch": 0.3858553597686376,
+      "prior_at_final": 0.3858553597686376,
+      "ratio_final_over_target": 271.4891646727464,
+      "logslope_final_third": 5.240070606216032e-05
+    },
+    {
+      "dim": 7,
+      "target_std": 0.0018775515482869919,
+      "prior_at_switch": 0.3653426463047224,
+      "prior_at_final": 0.3653426463047224,
+      "ratio_final_over_target": 194.58461560645162,
+      "logslope_final_third": 5.020217486046314e-05
+    },
+    {
+      "dim": 8,
+      "target_std": 0.001951315008461431,
+      "prior_at_switch": 0.3150536446597294,
+      "prior_at_final": 0.3150536446597294,
+      "ratio_final_over_target": 161.4570908815703,
+      "logslope_final_third": 8.161747038810175e-05
+    },
+    {
+      "dim": 14,
+      "target_std": 0.004197778016348635,
+      "prior_at_switch": 0.15376351847497705,
+      "prior_at_final": 0.15376351847497705,
+      "ratio_final_over_target": 36.629740275958085,
+      "logslope_final_third": 2.560009937583073e-05
+    },
+    {
+      "dim": 18,
+      "target_std": 0.004253082834753366,
+      "prior_at_switch": 0.29751340218339684,
+      "prior_at_final": 0.29751340218339684,
+      "ratio_final_over_target": 69.9524118722342,
+      "logslope_final_third": 5.1376703853606906e-05
+    }
+  ],
+  "straggler_frac_tight8": [
+    0.28125,
+    0.169921875,
+    0.99609375,
+    0.673828125,
+    0.787109375,
+    0.986328125,
+    0.955078125,
+    0.7890625
+  ],
+  "physical_anchor": [
+    {
+      "param": "planes/0/mass/0/theta_E",
+      "label": "$\\theta_E$",
+      "hmc_std": 0.001400848969154143,
+      "warm_std": 0.0014090523388809219,
+      "prior_std": 0.5226797137903217,
+      "warm_over_hmc": 1.0058559986889466,
+      "prior_over_hmc": 373.1163924872821
+    },
+    {
+      "param": "planes/0/mass/0/center_y",
+      "label": "$y$",
+      "hmc_std": 0.001894580454057618,
+      "warm_std": 0.0019513150084614322,
+      "prior_std": 0.3150536446597294,
+      "warm_over_hmc": 1.0299457087094432,
+      "prior_over_hmc": 166.29203789418384
+    },
+    {
+      "param": "planes/0/mass/0/center_x",
+      "label": "$x$",
+      "hmc_std": 0.001974420157810064,
+      "warm_std": 0.001877551548288006,
+      "prior_std": 0.3653426463047226,
+      "warm_over_hmc": 0.9509381986711988,
+      "prior_over_hmc": 185.03794385382687
+    },
+    {
+      "param": "planes/0/mass/1/gamma2",
+      "label": "$\\gamma_{2,ext}$",
+      "hmc_std": 0.004124502127081225,
+      "warm_std": 0.004197778016348641,
+      "prior_std": 0.153763518474977,
+      "warm_over_hmc": 1.0177659962365617,
+      "prior_over_hmc": 37.28050410384692
+    },
+    {
+      "param": "planes/0/mass/1/gamma1",
+      "label": "$\\gamma_{1,ext}$",
+      "hmc_std": 0.006020233104022643,
+      "warm_std": 0.005992066743180755,
+      "prior_std": 0.18272939939642113,
+      "warm_over_hmc": 0.9953213836814612,
+      "prior_over_hmc": 30.35254553089044
+    },
+    {
+      "param": "planes/0/mass/0/e2",
+      "label": "$\\epsilon_1$",
+      "hmc_std": 0.006429231469696086,
+      "warm_std": 0.006552958514363169,
+      "prior_std": 0.1621452475032908,
+      "warm_over_hmc": 1.0192444532834546,
+      "prior_over_hmc": 25.220004640921022
+    },
+    {
+      "param": "planes/0/mass/0/e1",
+      "label": "$\\epsilon_2$",
+      "hmc_std": 0.007458053528736153,
+      "warm_std": 0.007673008903148456,
+      "prior_std": 0.2192474091538589,
+      "warm_over_hmc": 1.0288219135977064,
+      "prior_over_hmc": 29.397403532850845
+    },
+    {
+      "param": "planes/0/mass/0/gamma",
+      "label": "$\\gamma$",
+      "hmc_std": 0.0810875608904074,
+      "warm_std": 0.08175130522736378,
+      "prior_std": 0.28628004585291816,
+      "warm_over_hmc": 1.0081855259878079,
+      "prior_over_hmc": 3.5305050825222795
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim: 22
+Final Chi-squared: 0.98602
+MAP best_chisq (min): 0.986017758610098
+SVI done.
+M=512  STEPS_PER_BETA=200  betas=[0.003  0.0057 0.0109 0.0208 0.0397 0.0756 0.1442 0.275  0.5244 1.    ]
+[prior-init] median true logp = -1.6830e+05  (min -3.574e+06, max -1.776e+04)
+[beta  1/10  beta=0.00300] median true_logp=-1.6206e+04  median tempered_logp=-4.8834e+01  elapsed=31.5s
+[beta  2/10  beta=0.00572] median true_logp=-1.0185e+04  median tempered_logp=-6.0486e+01  elapsed=26.3s
+[beta  3/10  beta=0.01091] median true_logp=-6.7324e+03  median tempered_logp=-7.7406e+01  elapsed=26.1s
+[beta  4/10  beta=0.02080] median true_logp=-3.3959e+03  median tempered_logp=-7.9444e+01  elapsed=26.2s
+[beta  5/10  beta=0.03966] median true_logp=-2.0434e+03  median tempered_logp=-8.8311e+01  elapsed=26.3s
+[beta  6/10  beta=0.07563] median true_logp=-1.3802e+03  median tempered_logp=-1.2381e+02  elapsed=26.5s
+[beta  7/10  beta=0.14422] median true_logp=-9.6926e+02  median tempered_logp=-1.5122e+02  elapsed=26.0s
+[beta  8/10  beta=0.27502] median true_logp=-7.5834e+02  median tempered_logp=-2.2010e+02  elapsed=26.1s
+[beta  9/10  beta=0.52442] median true_logp=-5.3945e+02  median tempered_logp=-2.8620e+02  elapsed=26.1s
+[beta 10/10  beta=1.00000] median true_logp=-3.6872e+02  median tempered_logp=-3.6872e+02  elapsed=27.3s
+
+[ANNEALED (beta=1)] median true logp = -3.6872e+02  (min -1.257e+04, max 1.694e+02)
+[ANNEALED] per-dim std: median=2.2193e-01  max=1.6177e+00  ladder_time=268.3s
+
+=== warm-init full LAPS (default budgets) [reference] ===
+[warm full LAPS] median true logp = 1.6221e+02  per-dim std median=1.3185e-02 max=1.7189e-01  time=263.1s
+
+=== final full LAPS from ANNEALED ensemble (default budgets) ===
+[final full LAPS] median true logp = 4.9979e+01  time=253.1s
+
+[FINAL/WARM per-dim std ratio] MAX=213.511  MEDIAN=18.083  (no-anneal prior baseline was ~236x max / 22x median; warm=1.0)
+
+===== BETA LADDER TRACKING TABLE =====
+      beta   median_true_logp   median_temp_logp   std_median      std_max
+   0.00300        -1.6206e+04        -4.8834e+01   2.1131e-01   1.8258e+00
+   0.00572        -1.0185e+04        -6.0486e+01   1.9985e-01   1.8143e+00
+   0.01091        -6.7324e+03        -7.7406e+01   2.1427e-01   1.7995e+00
+   0.02080        -3.3959e+03        -7.9444e+01   2.1441e-01   1.7760e+00
+   0.03966        -2.0434e+03        -8.8311e+01   2.2174e-01   1.7511e+00
+   0.07563        -1.3802e+03        -1.2381e+02   2.2998e-01   1.7261e+00
+   0.14422        -9.6926e+02        -1.5122e+02   2.1523e-01   1.7006e+00
+   0.27502        -7.5834e+02        -2.2010e+02   2.1530e-01   1.6731e+00
+   0.52442        -5.3945e+02        -2.8620e+02   2.1888e-01   1.6438e+00
+   1.00000        -3.6872e+02        -3.6872e+02   2.2193e-01   1.6177e+00
+
+===== FINAL PER-DIM STD RATIO (final / warm) =====
+ dim    final_std     warm_std      ratio
+   0   4.7570e-01   3.2082e-02     14.828
+   1   3.1976e-01   2.1287e-02     15.021
+   2   2.2425e-03   6.9178e-04      3.242
+   3   2.3878e-03   6.7289e-04      3.549
+   4   1.2345e-01   1.9090e-02      6.467
+   5   2.9407e-01   2.3261e-02     12.642
+   6   8.7573e-01   7.1661e-02     12.220
+   7   2.3090e-01   1.8120e-03    127.429
+   8   2.3408e-01   1.8092e-03    129.382
+   9   1.9070e-01   7.2796e-03     26.196
+  10   1.2274e-01   6.3807e-03     19.236
+  11   4.6569e-01   1.7189e-01      2.709
+  12   2.6045e-01   1.2198e-03    213.511
+  13   1.7160e-01   6.2853e-03     27.302
+  14   1.4770e-01   4.0369e-03     36.587
+  15   6.1887e-01   1.1155e-01      5.548
+  16   3.3045e-01   7.9964e-02      4.133
+  17   2.4221e-01   1.4375e-03    168.497
+  18   2.1110e-01   4.4102e-03     47.866
+  19   1.7917e+00   4.3222e-02     41.452
+  20   1.3554e+00   4.3548e-02     31.125
+  21   1.9442e+00   1.1483e-01     16.930
+
+SUMMARY: {
+  "dim": 22,
+  "M": 512,
+  "steps_per_beta": 200,
+  "betas": [
+    0.003,
+    0.005720593855676909,
+    0.01090839802053613,
+    0.02080083823051905,
+    0.039664382458145526,
+    0.07563460752642873,
+    0.1442249570307409,
+    0.27501746767510743,
+    0.5244210785953473,
+    1.0
+  ],
+  "map_best_chisq": 0.986017758610098,
+  "prior_median_true_logp": -168302.41248229594,
+  "annealed_median_true_logp": -368.721139012657,
+  "annealed_std_median": 0.2219311843639257,
+  "annealed_std_max": 1.617703645907046,
+  "warm_median_logp": 162.21414612485268,
+  "warm_std_median": 0.013184963361622067,
+  "warm_std_max": 0.1718946314761229,
+  "final_median_logp": 49.97883144379182,
+  "ratio_max": 213.51117851933847,
+  "ratio_median": 18.083001096654147,
+  "track": [
+    {
+      "beta": 0.003,
+      "median_true_logp": -16205.879791513104,
+      "median_temp_logp": -48.83356733293459,
+      "std_median": 0.2113137783400602,
+      "std_max": 1.8258253471974148
+    },
+    {
+      "beta": 0.005720593855676909,
+      "median_true_logp": -10184.928545289813,
+      "median_temp_logp": -60.486346213832334,
+      "std_median": 0.19985090967769817,
+      "std_max": 1.81432192300395
+    },
+    {
+      "beta": 0.01090839802053613,
+      "median_true_logp": -6732.35504836089,
+      "median_temp_logp": -77.40633446389953,
+      "std_median": 0.21427496061399876,
+      "std_max": 1.7994859580825342
+    },
+    {
+      "beta": 0.02080083823051905,
+      "median_true_logp": -3395.8624988233673,
+      "median_temp_logp": -79.44409232958716,
+      "std_median": 0.21440548768091972,
+      "std_max": 1.7760066408774153
+    },
+    {
+      "beta": 0.039664382458145526,
+      "median_true_logp": -2043.3838040026685,
+      "median_temp_logp": -88.31066808663905,
+      "std_median": 0.22173991284180203,
+      "std_max": 1.7510716567927609
+    },
+    {
+      "beta": 0.07563460752642873,
+      "median_true_logp": -1380.1942902341004,
+      "median_temp_logp": -123.81330078313181,
+      "std_median": 0.22997604581565315,
+      "std_max": 1.7261080861655542
+    },
+    {
+      "beta": 0.1442249570307409,
+      "median_true_logp": -969.2586924707298,
+      "median_temp_logp": -151.22140462457364,
+      "std_median": 0.21523446924814665,
+      "std_max": 1.700604612863592
+    },
+    {
+      "beta": 0.27501746767510743,
+      "median_true_logp": -758.3376872911172,
+      "median_temp_logp": -220.10468269672072,
+      "std_median": 0.2153049298245172,
+      "std_max": 1.6731193502141675
+    },
+    {
+      "beta": 0.5244210785953473,
+      "median_true_logp": -539.4540357395103,
+      "median_temp_logp": -286.2004917787383,
+      "std_median": 0.21887501032747528,
+      "std_max": 1.6437899556988358
+    },
+    {
+      "beta": 1.0,
+      "median_true_logp": -368.721139012657,
+      "median_temp_logp": -368.721139012657,
+      "std_median": 0.2219311843639257,
+      "std_max": 1.617703645907046
+    }
+  ]
+}
+DIAG DONE

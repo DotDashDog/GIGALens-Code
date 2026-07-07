@@ -1,0 +1,18 @@
+jax.devices(): [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim (num free params): 22
+Final Chi-squared: 0.98602
+MAP best_lp: 167.0468944693141   MAP reduced chi^2: 8.937592120423531
+[        init_prior] nf_logp=0.0000 nf_grad=0.0000 |x|>5=1.0000  logp[p5/p50/p95]=-8.71e+05/-1.57e+05/-3.41e+04  |x|[p5/p50/p95]=7.91/8.56/9.82
+[         init_warm] nf_logp=0.0000 nf_grad=0.0000 |x|>5=1.0000  logp[p5/p50/p95]=158/163/167  |x|[p5/p50/p95]=8.18/8.23/8.29
+
+--- Phase-1 ladder: num_unadjusted_steps=300 (prior init) ---
+[     prior_step300] nf_logp=0.0000 nf_grad=0.0000 |x|>5=1.0000  logp[p5/p50/p95]=-6.8e+04/-1.91e+04/-4.34e+03  |x|[p5/p50/p95]=7.68/8.35/9.6
+
+--- Phase-1 ladder: num_unadjusted_steps=1500 (prior init) ---
+[    prior_step1500] nf_logp=0.0000 nf_grad=0.0000 |x|>5=1.0000  logp[p5/p50/p95]=-2.91e+04/-5.73e+03/165  |x|[p5/p50/p95]=7.18/8.18/9.35
+
+MAP reduced chi^2 = 8.937592120423531
+saved: /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/laps/experiments/laps_validation/handoff/diag_freeze/freeze_summary.json
+saved: /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/laps/experiments/laps_validation/handoff/diag_freeze/freeze.png
+PRIMARY nonfinite-grad frac  init_prior = 0.0  prior_step1500 = 0.0
+DIAG DONE
