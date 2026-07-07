@@ -9,23 +9,36 @@ try:
 except AttributeError:
     from jax.experimental.shard_map import shard_map as _shard_map
 
-# import blackjax
-# from blackjax.mcmc.integrators import GeneralIntegrator, IntegratorState, ArrayTree, Callable, euclidean_position_update_fn
-# from blackjax.mcmc.integrators import with_isokinetic_maruyama, generalized_two_stage_integrator, format_isokinetic_state_output, ravel_pytree, _normalized_flatten_array
-# from blackjax.mcmc.integrators import mclachlan_coefficients, velocity_verlet_coefficients, yoshida_coefficients, omelyan_coefficients
-# from blackjax.adaptation.mass_matrix import welford_algorithm, WelfordAlgorithmState
-# from blackjax.util import generate_unit_vector, pytree_size
-# from blackjax.types import ArrayLike, PRNGKey
-# from blackjax.mcmc.mclmc import MCLMCInfo
-# from blackjax.adaptation.mclmc_adaptation import pytree_size, MCLMCAdaptationState, handle_nans, incremental_value_update
+# MAMS = Metropolis-Adjusted Microcanonical Sampler (Robnik, Cohn-Gordon, Seljak).
+# This module is the adjusted sibling of mclmc.py: it shares MCLMC's microcanonical
+# (isokinetic) dynamics, dense windowed mass-matrix adaptation, SVI-seeded prior, and
+# sharded multi-chain scaffolding, but (1) fully refreshes the momentum once per
+# transition and integrates a DETERMINISTIC trajectory of `n` isokinetic steps,
+# (2) adds a Metropolis-Hastings accept/reject (so samples are asymptotically
+# unbiased), and (3) tunes the step size by dual averaging to a target acceptance
+# rate instead of the MCLMC energy-variance setpoint.
+#
+# Variant implemented: pure Hamiltonian (no Langevin partial refreshment) with a
+# DETERMINISTIC, SHARED Halton trajectory length -- n_k is computed once per step
+# from the cross-chain-mean step size and the global L, so every chain integrates
+# the same number of steps and the batch stays perfectly uniform under shard_map.
+# Per the paper, dropping Langevin makes little difference on their benchmarks, and
+# the Halton (vs i.i.d.-uniform) schedule preserves the anti-cycling benefit of
+# randomized trajectory lengths while remaining shared across chains.
 
 from .blackjax_updated_utils import *
 from .blackjax_updated_utils import (
-    _build_kernel_shardmap,
+    _build_adjusted_kernel_shardmap,
     _ess_shardmap,
     _gen_scan_fn_one_bar,
-    KernelExtras,
+    AdjustedKernelExtras,
 )
+
+from blackjax.adaptation.step_size import (
+    dual_averaging_adaptation,
+    DualAveragingAdaptationState,
+)
+from blackjax.mcmc.dynamic_hmc import halton_trajectory_length
 
 import functools
 from typing import Callable, NamedTuple, Optional
@@ -35,9 +48,9 @@ import time
 from threading import Lock
 
 
-
-def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
-          desired_energy_variance=5e-4, init_L=None, init_step_size=None, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
+def MAMS_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
+          target_acceptance=0.9, init_L=None, init_step_size=None,
+          frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
           progress_bar=False, seed=0, debug_output=False, regularize_mass_matrix=False):
     # Scene-only: the ProbModel owns batch-flexible per-dataset SceneSimulators, so
     # log_prob(z) renders through them directly -- no separately-built simulator.
@@ -47,13 +60,12 @@ def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
     n_chains = n_hmc
     integrator = isokinetic_mclachlan_smart
 
-    build_kernel_fn = _build_kernel_shardmap
+    build_kernel_fn = _build_adjusted_kernel_shardmap
     kernel = lambda inverse_mass_matrix : build_kernel_fn(
         logdensity_fn=log_prob,
         integrator=integrator,
         inverse_mass_matrix=inverse_mass_matrix,
     )
-
 
     rng_key = jax.random.key(seed)
     init_key, tune_key, run_key = jax.random.split(rng_key, 3)
@@ -67,9 +79,7 @@ def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
         L=init_L, step_size=init_step_size, inverse_mass_matrix=qz.covariance()
     )
 
-
-
-    adapt_fn = full_mclmc_with_adapt_sharded
+    adapt_fn = full_mams_with_adapt_sharded
 
     starttime = time.perf_counter()
     debug_hist, params = adapt_fn(
@@ -83,12 +93,10 @@ def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
         frac_tune1=frac_tune1,
         frac_tune2=frac_tune2,
         frac_tune3=frac_tune3,
-        desired_energy_var=desired_energy_variance,
+        target_acceptance=target_acceptance,
         num_chains=n_chains,
         num_effective_samples=100,
         svi_mass_matrix_weight=10.0 * n_chains,
-        # mass_matrix_num_effective_samples=mass_matrix_num_effective_samples,
-        step_size_adapt_use_psmile=False,
         windowed_mass_matrix=True,
         regularize_mass_matrix=regularize_mass_matrix,
         progress_bar=progress_bar,
@@ -104,7 +112,7 @@ def MCLMC_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
         return result_samples
 
 
-def full_mclmc_with_adapt_sharded(
+def full_mams_with_adapt_sharded(
     kernel,
     num_burnin_steps,
     num_results,
@@ -115,21 +123,36 @@ def full_mclmc_with_adapt_sharded(
     frac_tune1=0.1,
     frac_tune2=0.1,
     frac_tune3=0.1,
-    desired_energy_var=5e-4,
-    trust_in_estimate=1.5,
+    target_acceptance=0.9,
     num_effective_samples=150,
-    Lfactor=0.4,
+    Lfactor=0.3,
+    L_max_ratio=2.0,
     num_chains=8,
     svi_mass_matrix_weight=20.,
-    # mass_matrix_num_effective_samples=1000,
-    step_size_adapt_use_psmile=False,
     windowed_mass_matrix=True,
     regularize_mass_matrix=False,
     progress_bar=False,
 ):
-    """Sharded version of full_mclmc_with_adapt. Distributes chains across
-    devices via shard_map with explicit batching (no vmap axis_name).
-    Cross-chain reductions use jnp ops locally + psum/pmin('device').
+    """Sharded MAMS tuning + sampling, mirroring `full_mclmc_with_adapt_sharded`.
+
+    Same multi-chain shard_map scaffolding, expanding-window dense mass-matrix
+    adaptation, SVI-seeded Welford prior, and single-scan mode schedule as MCLMC.
+    The three MAMS-specific changes:
+
+      * the kernel runs a deterministic `n_k`-step trajectory + MH accept/reject
+        (`_build_adjusted_kernel_shardmap`) instead of a single Langevin step;
+      * the step size is tuned by dual averaging to `target_acceptance` (the paper
+        uses 0.9 for the 2nd-order McLachlan integrator) instead of the MCLMC
+        energy-variance controller;
+      * the trajectory length L is tuned via the ALBA / ESS relation
+        L_new = Lfactor * L * num_steps3 / ESS  (Lfactor=0.3 for the no-Langevin
+        variant), the adjusted analog of MCLMC's L = Lfactor * num_steps3 * eps / ESS.
+        The inter-sample interval here is one trajectory (~ L in dynamics time),
+        not one step (eps), which is why L (not eps) appears on the RHS.
+
+    n_k (number of integration steps) is a SHARED Halton draw computed once per step
+    from the cross-chain-mean step size and the global L, so the fori_loop trip count
+    is identical across all chains -- no ragged trajectories under shard_map.
     """
     num_devices = len(jax.devices())
     num_chains = (num_chains // num_devices) * num_devices
@@ -139,18 +162,14 @@ def full_mclmc_with_adapt_sharded(
 
     dim = state_init.position.shape[-1]
     decay_rate = (num_effective_samples - 1.0) / (num_effective_samples + 1.0)
-    # decay_rate_mass_matrix = (mass_matrix_num_effective_samples - 1.0) / (mass_matrix_num_effective_samples + 1.0)
 
     welford_init_fn, _, welford_cov = welford_algorithm(is_diagonal_matrix=False)
 
-    # F4 (opt-in): Stan-style regularization of EVERY window's sample covariance before it is
-    # installed as the inverse mass matrix. Baseline only regularizes window 1 (via the SVI
-    # prior); windows 2/3 accumulate from an empty Welford with no shrinkage, so a window built
-    # from frozen/correlated/multi-modal chains can be rank-deficient or (under float32 Welford)
-    # non-PSD -> cholesky NaN -> rejection cascade (diagnosis F3/F4). This mirrors blackjax's
-    # mass_matrix_adaptation: scale by n/(n+5), add a 1e-3 shrinkage*I floor on all windows, and
-    # lift any roundoff-negative eigenvalues so the downstream cholesky never sees a non-PSD
-    # metric. Default False => byte-identical to baseline.
+    # Dual averaging controller for the step size (targets `target_acceptance`).
+    da_init, da_update, da_final = dual_averaging_adaptation(target=target_acceptance)
+
+    # F4 (opt-in): Stan-style regularization of every window's sample covariance
+    # before it is installed as the inverse mass matrix. Identical to MCLMC.
     def _regularize_cov(cov, n):
         if not regularize_mass_matrix:
             return cov
@@ -159,18 +178,12 @@ def full_mclmc_with_adapt_sharded(
         eye = jnp.eye(cov.shape[-1], dtype=cov.dtype)
         shrink = 1e-3 * (5.0 / (n + 5.0))
         reg = (n / (n + 5.0)) * cov + shrink * eye              # Stan window shrinkage
-        w, V = jnp.linalg.eigh(reg)                             # PSD floor (belt-and-suspenders)
+        w, V = jnp.linalg.eigh(reg)                             # PSD floor
         w = jnp.clip(w, shrink, None)
         return (V * w[..., jnp.newaxis, :]) @ jnp.swapaxes(V, -1, -2)
 
-    # Single-dtype sampler. The log-density / energy dtype drives EVERYTHING: it is float64
-    # when the likelihood runs in high precision under jax_enable_x64, float32 otherwise.
-    # qz.sample() can yield float32 positions/momentum even when the energy is float64 (and
-    # qz.mean()/covariance() may be float32 too), which mixes float32 state with float64
-    # energy/step_size and trips lax.select/cond dtype checks (blackjax handle_nans, the
-    # mass-matrix cond). Cast the whole initial state AND all adaptation params to the energy
-    # dtype so the scan carry is uniformly one dtype. The likelihood forward model stays
-    # float32 regardless (see gigalens.jax.model.BackwardProbModel.log_prob).
+    # Single-dtype sampler: the energy/log-density dtype drives EVERYTHING. Cast the
+    # whole initial state and all adaptation params to it (see MCLMC for rationale).
     _canon = jnp.asarray(state_init.logdensity).dtype
     _cast_float = lambda a: (
         jnp.asarray(a).astype(_canon)
@@ -194,54 +207,27 @@ def full_mclmc_with_adapt_sharded(
     step_size_sync_step = num_steps1 + num_steps2
     L_adaptation_step = tuning_steps
 
-    # --- Per-chain step size adaptation (unchanged, called via vmap without axis_name) ---
+    # --- Per-chain step-size adaptation via dual averaging (replaces MCLMC's
+    #     energy-variance controller). Carried adaptive_state = (da_state, step_size_max). ---
 
     def step_size_adapt(previous_state, next_state, info, params, adaptive_state, nan_key):
-        time, x_average, step_size_max = adaptive_state
-        success, state, step_size_max, energy_change = handle_nans(
-            previous_state, next_state, params.step_size, step_size_max, info.energy_change, nan_key,
+        da_state, step_size_max = adaptive_state
+        # NaN guard (blackjax MCLMC-adaptation handle_nans): reverts to old state and
+        # shrinks step_size_max by 0.8 on a non-finite proposal. The MH step already
+        # rejects divergences, so on a clean reject `next_state` is finite and this is
+        # a no-op; dual averaging shrinks the step size when acceptance drops.
+        success, state, step_size_max, _ = handle_nans(
+            previous_state, next_state, params.step_size, step_size_max,
+            info.energy_change, nan_key,
         )
-        xi = jnp.square(energy_change) / (dim * desired_energy_var) + 1e-8
-        weight = jnp.exp(-0.5 * jnp.square(jnp.log(xi) / (6.0 * trust_in_estimate)))
-        weighted_x = weight * (xi / jnp.power(params.step_size, 6.0))
-        x_average = decay_rate * x_average + weighted_x
-        time = decay_rate * time + weight
-        step_size = jnp.power(x_average / time, -1.0 / 6.0)
+        da_state = da_update(da_state, info.acceptance_rate)
+        step_size = jnp.exp(da_state.log_step_size)
         step_size = jnp.minimum(step_size, step_size_max)
-        adaptive_state = (time, x_average, step_size_max)
-        return state, params._replace(step_size=step_size), adaptive_state, success, xi
+        da_state = da_state._replace(log_step_size=jnp.log(step_size))
+        adaptive_state = (da_state, step_size_max)
+        return state, params._replace(step_size=step_size), adaptive_state, success, info.acceptance_rate
 
-    def step_size_adapt_psmile_continuous(previous_state, next_state, info, params, adaptive_state, nan_key):
-        mu, sigma2, count, step_size_max = adaptive_state
-        success, state, step_size_max, energy_change = handle_nans(
-            previous_state, next_state, params.step_size, step_size_max, info.energy_change, nan_key,
-        )
-        xi = jnp.square(energy_change) / (dim * desired_energy_var) + 1e-8
-        beta = 1 - decay_rate
-        delta = 0.1
-        eps = 1e-8
-        abs_dE = jnp.abs(energy_change)
-        count = count + 1
-        mu_next = (1.0 - beta) * mu + beta * abs_dE
-        sigma2_next = (1.0 - beta) * sigma2 + beta * jnp.square(abs_dE - mu_next)
-        bias_correction = 1.0 - jnp.power(1.0 - beta, count)
-        mu_hat = mu_next / bias_correction
-        sigma2_hat = sigma2_next / bias_correction
-        shape = jnp.square(mu_hat) / (sigma2_hat + eps)
-        scale = sigma2_hat / (mu_hat + eps)
-        # Wilson-Hilferty normal approximation to gamma CDF
-        # (avoids igamma's internal while_loop which triggers VMA mismatches in shard_map)
-        x_std = abs_dE / (scale * shape + eps)
-        z = (jnp.cbrt(x_std) - (1.0 - 1.0 / (9.0 * shape))) / jnp.sqrt(1.0 / (9.0 * shape + eps))
-        cdf_value = jax.scipy.special.ndtr(z)
-        step_size = params.step_size * (1 + (0.5 - cdf_value) * delta)
-        step_size = jnp.minimum(step_size, step_size_max)
-        adaptive_state_new = (mu_next, sigma2_next, count, step_size_max)
-        return state, params._replace(step_size=step_size), adaptive_state_new, success, xi
-
-    step_size_adapt_func = step_size_adapt_psmile_continuous if step_size_adapt_use_psmile else step_size_adapt
-
-    # --- Windowed mass matrix setup (STAN-style expanding windows) ---
+    # --- Windowed mass matrix setup (STAN-style expanding windows) -- identical to MCLMC. ---
     if windowed_mass_matrix:
         n_windows = 3
         num_mm_steps = round(0.67 * num_steps2)
@@ -261,25 +247,23 @@ def full_mclmc_with_adapt_sharded(
         window_end_mask = jnp.array(_mask)
         welford_empty = WelfordAlgorithmState(
             jnp.zeros(dim), jnp.zeros((dim, dim)), jnp.array(0.0))
-        if step_size_adapt_use_psmile:
-            def _make_adapt_reset(cur):
-                return (jnp.zeros_like(cur[0]), jnp.zeros_like(cur[1]),
-                        jnp.zeros_like(cur[2]), cur[3])
-        else:
-            def _make_adapt_reset(cur):
-                return (jnp.zeros_like(cur[0]), jnp.zeros_like(cur[1]), cur[2])
 
-    # --- Batched scan body: explicit batch dim, collectives only use 'device' ---
+        def _make_adapt_reset(cur):
+            # cur = (da_state, step_size_max); reset DA, keep step_size_max.
+            da_state, step_size_max = cur
+            return (da_init(jnp.exp(da_state.log_step_size)), step_size_max)
+
+    # --- Batched scan body: explicit batch dim, collectives only use 'device'. ---
 
     Hist = namedtuple("hist", [
-        "position", "step_size", "L", "inverse_mass_matrix", "nonan", "xi",
-        "energy_change_raw", "kernel_nonan", "step_norm",
+        "position", "step_size", "L", "inverse_mass_matrix", "nonan", "acceptance_rate",
+        "is_accepted", "num_integration_steps", "energy_change_raw", "kernel_nonan", "step_norm",
     ])
 
     l_buffer_start = L_adaptation_step - num_steps3
 
     def step_batched(carry, mode_and_key):
-        with jax.named_scope("mclmc_step_batched"):
+        with jax.named_scope("mams_step_batched"):
             i, mode, rng_keys_batch = mode_and_key
 
             states, params, step_sizes, adapt_states, welford_state, l_stage_bufs = carry
@@ -293,25 +277,34 @@ def full_mclmc_with_adapt_sharded(
 
             kernel_fn = kernel(params.inverse_mass_matrix)
 
+            # --- Shared (cross-chain) Halton trajectory length for this step. ---
+            # avg_n = L / mean(step_size); identical across chains -> uniform fori_loop.
+            with jax.named_scope("trajectory_length"):
+                local_ss_sum = jnp.sum(step_sizes)
+                global_ss_sum = jax.lax.psum(local_ss_sum, axis_name='device')
+                mean_ss = global_ss_sum / (chains_per_device * jax.lax.axis_size('device'))
+                avg_n = jnp.maximum(params.L / mean_ss, 1.0)
+                num_integration_steps = jnp.maximum(
+                    halton_trajectory_length(i, avg_n), 1
+                ).astype(jnp.int32)
+
             def per_chain(prev_state, rng_key, nan_key, step_size, adapt_state):
                 with jax.named_scope("per_chain_kernel"):
                     new_state, info = kernel_fn(
-                        rng_key=rng_key, state=prev_state, L=params.L, step_size=step_size)
+                        rng_key=rng_key, state=prev_state, step_size=step_size,
+                        num_integration_steps=num_integration_steps)
 
-                    # Capture diagnostic fields before NaN-zeroing happens in
-                    # step_size_adapt (via handle_nans).  info.energy_change has
-                    # already been zeroed for NaN/Inf steps by the kernel; the
-                    # raw (pre-zeroed) value is in info.extras.energy_change_raw.
                     energy_change_raw = info.extras.energy_change_raw
                     kernel_nonan_flag = info.extras.kernel_nonan
-                    # Step norm: ||x_t - x_{t-1}|| in position space
+                    acceptance_rate = info.acceptance_rate
+                    is_accepted = info.is_accepted
                     pos_diff = new_state.position.reshape(-1) - prev_state.position.reshape(-1)
                     step_norm_val = jnp.sqrt(jnp.sum(pos_diff ** 2))
 
                 def adapt_one(_):
                     with jax.named_scope("step_size_adapt"):
                         pseudo_params = params._replace(step_size=step_size)
-                        a_state, a_params, a_adapt, a_success, a_xi = step_size_adapt_func(
+                        a_state, a_params, a_adapt, a_success, a_acc = step_size_adapt(
                             prev_state, new_state, info, pseudo_params, adapt_state, nan_key
                         )
                         return (
@@ -319,25 +312,17 @@ def full_mclmc_with_adapt_sharded(
                             a_params.step_size,
                             a_adapt,
                             a_success,
-                            a_xi,
+                            a_acc,
                         )
 
                 def skip_adapt(_):
                     success_placeholder = jnp.isfinite(new_state.position.reshape(-1)[0])
-                    # Log the real energy-error ratio xi even when step-size adaptation
-                    # is off (modes 0=results and 3=L-tuning), instead of the old -1
-                    # sentinel. Uses the SAME definition as step_size_adapt
-                    # (info.energy_change is already NaN-zeroed by the kernel), so the
-                    # burn-in and results-phase xi are directly comparable. This value
-                    # is logged only (it feeds the Hist diagnostic, never the kernel or
-                    # step-size), so it does not change sampling.
-                    xi_val = jnp.square(info.energy_change) / (dim * desired_energy_var) + 1e-8
                     return (
                         new_state,
                         step_size,
                         adapt_state,
                         success_placeholder,
-                        xi_val.astype(step_size.dtype),
+                        acceptance_rate,
                     )
 
                 result = jax.lax.cond(
@@ -346,10 +331,10 @@ def full_mclmc_with_adapt_sharded(
                     skip_adapt,
                     operand=None,
                 )
-                return result + (energy_change_raw, kernel_nonan_flag, step_norm_val)
+                return result + (is_accepted, energy_change_raw, kernel_nonan_flag, step_norm_val)
 
-            (new_states, new_step_sizes, new_adapt_states, successes, xis,
-             energy_changes_raw, kernel_nonans, step_norms) = jax.vmap(per_chain)(
+            (new_states, new_step_sizes, new_adapt_states, successes, accs,
+             is_accepteds, energy_changes_raw, kernel_nonans, step_norms) = jax.vmap(per_chain)(
                 states, chain_keys, nan_keys, step_sizes, adapt_states
             )
 
@@ -367,7 +352,7 @@ def full_mclmc_with_adapt_sharded(
 
             _sel = lambda c, a, b: jax.tree.map(lambda x, y: jnp.where(c, x, y), a, b)
 
-            # Cross-chain mass matrix adaptation (jnp locally, psum across devices)
+            # Cross-chain mass matrix adaptation (jnp locally, psum across devices) -- identical to MCLMC.
             with jax.named_scope("mass_matrix_adapt"):
                 def run_mass_matrix_adapt(_):
                     xs_pos = jax.vmap(lambda s: ravel_pytree(s.position)[0])(new_states)
@@ -414,7 +399,7 @@ def full_mclmc_with_adapt_sharded(
                     operand=None,
                 )
 
-            # Step size sync
+            # Step size sync (average the per-chain step sizes at the stage boundary).
             with jax.named_scope("step_size_sync"):
                 local_ss_sum = jnp.sum(new_step_sizes)
                 global_ss_sum = jax.lax.psum(local_ss_sum, axis_name='device')
@@ -425,7 +410,8 @@ def full_mclmc_with_adapt_sharded(
                     new_step_sizes,
                 )
 
-            # L adaptation
+            # L adaptation (ALBA / ESS): L_new = Lfactor * L * num_steps3 / min_ESS,
+            # capped at L * L_max_ratio. Cross-chain-min ESS = worst parameter, worst chain.
             def calc_new_L(_):
                 with jax.named_scope("L_adaptation"):
                     per_chain_ess = jax.vmap(lambda buf: _ess_shardmap(
@@ -434,7 +420,8 @@ def full_mclmc_with_adapt_sharded(
                     ))(l_stage_bufs)
                     local_min_ess = jnp.min(per_chain_ess)
                     global_min_ess = jax.lax.pmin(local_min_ess, axis_name='device')
-                    return Lfactor * num_steps3 * synced_ss / global_min_ess
+                    L_new = Lfactor * params.L * num_steps3 / global_min_ess
+                    return jnp.minimum(L_new, params.L * L_max_ratio)
 
             new_L = jax.lax.cond(
                 i == L_adaptation_step,
@@ -450,14 +437,16 @@ def full_mclmc_with_adapt_sharded(
                 L=jnp.broadcast_to(params.L, new_step_sizes.shape),
                 inverse_mass_matrix=jnp.broadcast_to(params.inverse_mass_matrix[jnp.newaxis], (chains_per_device, dim, dim)),
                 nonan=successes,
-                xi=xis,
+                acceptance_rate=accs,
+                is_accepted=is_accepteds,
+                num_integration_steps=jnp.broadcast_to(num_integration_steps, new_step_sizes.shape),
                 energy_change_raw=energy_changes_raw,
                 kernel_nonan=kernel_nonans,
                 step_norm=step_norms,
             )
             return (new_states, params, new_step_sizes, new_adapt_states, welford_state, l_stage_bufs), h
 
-    # --- Setup inputs ---
+    # --- Setup inputs (identical mode schedule to MCLMC). ---
 
     mode = jnp.concatenate((
         jnp.ones(num_steps1, dtype=jnp.int32),
@@ -470,20 +459,17 @@ def full_mclmc_with_adapt_sharded(
     keys = jax.random.split(rng_key, (num_chains, total_steps))
     keys = jnp.moveaxis(keys, 0, 1)  # (total_steps, num_chains, key_shape)
 
-    welford_start = WelfordAlgorithmState(svi_mean, svi_inverse_mass_matrix*svi_mass_matrix_weight, svi_mass_matrix_weight)#welford_init_fn(dim)
+    welford_start = WelfordAlgorithmState(svi_mean, svi_inverse_mass_matrix*svi_mass_matrix_weight, svi_mass_matrix_weight)
 
-
-    if step_size_adapt_use_psmile:
-        adapt_single = (jnp.array(0.0), jnp.array(0.0), jnp.array(0, dtype=jnp.int32), jnp.array(jnp.inf))
-    else:
-        adapt_single = (jnp.array(0.0), jnp.array(0.0), jnp.array(jnp.inf))
+    # Per-chain adaptive state = (dual-averaging state, step_size_max).
+    adapt_single = (da_init(jnp.asarray(params_init.step_size)), jnp.asarray(jnp.inf, _canon))
 
     _tile = lambda x: jnp.broadcast_to(jnp.asarray(x)[jnp.newaxis], (num_chains,) + jnp.asarray(x).shape)
     step_sizes_init = jnp.full((num_chains,), params_init.step_size)
     adapt_states_init = jax.tree.map(_tile, adapt_single)
     l_stage_bufs_init = jnp.zeros((num_chains, num_steps3, dim))
 
-    # --- shard_map (no vmap axis_name — collectives only use 'device') ---
+    # --- shard_map (no vmap axis_name -- collectives only use 'device'). ---
 
     mesh = jax.make_mesh((num_devices,), ('device',))
 
@@ -500,7 +486,7 @@ def full_mclmc_with_adapt_sharded(
         ),
         out_specs=(carry_out_specs, samples_out_specs))
     def run_sharded(xs, state_init, params_init, step_sizes, adapt_states, welford_start, l_stage_bufs):
-        with jax.named_scope("mclmc_run_sharded"):
+        with jax.named_scope("mams_run_sharded"):
             carry, samples = pbar_scan_fn(
                 step_batched,
                 init=(state_init, params_init, step_sizes, adapt_states, welford_start, l_stage_bufs),
@@ -509,11 +495,6 @@ def full_mclmc_with_adapt_sharded(
             samples = jax.tree.map(lambda x: jnp.moveaxis(x, 0, 1), samples)
             return carry, samples
 
-    # JAX 0.10+ no longer auto-reshards shard_map inputs to match in_specs.
-    # Pre-shard only the inputs whose in_specs is a PartitionSpec (skipping
-    # None-spec inputs, since those bypass the strict check inside shard_map
-    # and remain plain replicated arrays — important to avoid the
-    # "Closing over inputs sharded on Explicit axes" follow-on error).
     _sharded_chain = NamedSharding(mesh, P('device'))
     _sharded_keys = NamedSharding(mesh, P(None, 'device'))
     _reshard = getattr(jax, 'reshard', jax.device_put)
@@ -534,11 +515,6 @@ def full_mclmc_with_adapt_sharded(
     )
     _, params_final, _, _, _, _ = carry
 
-    # Gather sharded outputs back to fully-replicated arrays. Without this,
-    # JAX 0.10's strict gather/sharding rules raise ShardingTypeError on
-    # innocuous indexing like `samples.step_size[0, -1]` because the chain
-    # axis is sharded across 'device'. Replicating after sampling restores
-    # the pre-0.10 UX without changing semantics. No-op on older JAX.
     _replicated = NamedSharding(mesh, P())
     samples = jax.tree.map(lambda x: _reshard(x, _replicated), samples)
     params_final = jax.tree.map(lambda x: _reshard(x, _replicated), params_final)
@@ -546,6 +522,5 @@ def full_mclmc_with_adapt_sharded(
     return samples, params_final
 
 
-# Short public name for new code; MCLMC_JIT is kept for compatibility with
-# mclmc_alt.py-era scripts/notebooks.
-MCLMC = MCLMC_JIT
+# Short public name, mirroring MCLMC.
+MAMS = MAMS_JIT
