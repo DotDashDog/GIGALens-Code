@@ -791,7 +791,7 @@ def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
                 f"num_chains ({num_chains}) must be >= num_devices ({ndev}).")
         k_prior = jax.random.fold_in(jax.random.key(seed), 0x9E3779B9)
         start = prob_model.prior.sample(n_init, seed=k_prior)     # constrained draws
-        init_positions = jnp.stack(prob_model.bij.inverse(start)).T  # (n_init, dim)
+        init_positions = prob_model.bij.inverse(start)  # (n_init, dim)
         dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
         init_positions = init_positions.astype(dtype)             # sampler dtype
         return LAPS_late_adjusted(

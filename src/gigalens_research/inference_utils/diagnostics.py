@@ -26,7 +26,6 @@ def get_chisq(true_img, predicted_img, background_rms=0.2, exp_time=100):
 
 
 def log_prob_image(prob_model, simulator, z):
-    z = list(z.T)
     x = prob_model.bij.forward(z)
     im_sim = simulator.simulate(x)
     err_map = jnp.sqrt(prob_model.background_rms ** 2 + im_sim / prob_model.exp_time)
@@ -40,7 +39,6 @@ def log_prob_image(prob_model, simulator, z):
     # )
 
 def log_prob_image_patched(prob_model, simulator, z, kernel_size=3):
-    z = list(z.T)
     x = prob_model.bij.forward(z)
     im_sim = simulator.simulate(x)
     err_map = jnp.sqrt(prob_model.background_rms ** 2 + im_sim / prob_model.exp_time)

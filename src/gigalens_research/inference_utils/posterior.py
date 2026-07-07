@@ -212,7 +212,7 @@ class Posterior(ABC):
         ``(n, n_params)``. Returns the nested-list-of-dicts structure the
         :class:`~gigalens.jax.simulator.LensSimulator` expects."""
         z = jnp.atleast_2d(jnp.asarray(z))
-        return self.ctx.prob_model.bij.forward(list(z.T))
+        return self.ctx.prob_model.bij.forward(z)
 
     def x_grouped(self, point: str = "median"):
         """Physical params at ``point`` in the legacy 3-group nested form
