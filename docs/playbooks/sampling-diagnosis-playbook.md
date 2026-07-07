@@ -492,6 +492,40 @@ class** — characterize it and report it; do NOT map it onto our catalog or app
 
 ---
 
+### 3.15 position dial-scan discriminator battery + core-softening arm (cusp-tooth attribution)
+
+- **Measures:** `logL` and the FD comb `|∂logL/∂(component position)|` along a fine 1-D cut through
+  a ξ-spike region (other params frozen at the max-ξ draw), under a battery of one-knob arms that
+  each kill a different candidate tooth generator: `supersample`↑ (aliasing, §3.10), `niter`↑ (EPL
+  angular series), `conv_precision=float64` (float32 numerics), and a **core-softening arm** — the
+  same profile with only the singular radial factor regularized, `(b/R)^(γ−2) → (b/√(R²+rc²))^(γ−2)`,
+  `rc ∈ {0, 0.25, 0.5, 1, 2}×pixel` (the profile's central cusp).
+- **Cost:** ~10 s/arm per 401-pt cut on one A100 (chunk ≤16 renders); the whole battery ~10–20
+  GPU-min. **How:** `test1_dialscan.py` pattern + `CoredEPL` subclass (`core_dialscan.py`); two hard
+  gates before any scan — the rebuild must reproduce the run's logged red-χ² at the frozen point to
+  ~1e-3 rel, and the `rc=0` arm must equal stock logL to float64 roundoff.
+- **How to read it:** each arm is a one-directional kill test. Aliasing ⇒ teeth collapse under
+  supersampling (§3.10). Series ⇒ collapse under `niter`↑. Numerics ⇒ collapse under f64. **Cusp ⇒
+  ONLY the core arm collapses the teeth (peak-to-trough ≥10×) while the smooth logL envelope — the
+  actual parameter information — is untouched; supersampling makes cusp teeth *sharper*, not
+  smoother** (finer grids resolve the singularity better).
+- **What we saw (carousel EPL_Lf perturber, C-21/C-22):** ss5/ss1 prominence 0.48 with teeth
+  *proliferating* (aliasing falsified); niter 50→200 ratio 1.000 (series falsified); f64/f32 = 1.001
+  (numerics falsified); core arm PtT collapse **13×** at the old run's max-ξ point (|e|=0.50) and
+  **119×** at the new run's (|e|=0.23), prominence → 0 at `rc ≥ 0.5 px = 0.1″`, envelope (~35
+  nats/window) intact. Stock teeth were 4× *taller* at |e|=0.23 than at 0.50 — ellipticity magnitude
+  irrelevant, the cusp is the generator.
+- **Blind spots:** endpoint-frozen 1-D cuts (a stiff region met mid-trajectory is unprobed — pair
+  with the encounter census §3.8); a 401-pt grid can under-resolve the sharpest tooth (conservative:
+  understates `PtT(rc=0)`, never fakes a collapse); the cored surrogate is **not a self-consistent
+  mass model** — it attributes the mechanism, it is not the fix. Sub-pixel cores can *re-phase* the
+  cusp against the grid before killing it (rc=0.25 px amplified PtT 3.6× at one point) — do not read
+  a sub-pixel-core arm alone, and do not deploy sub-pixel cores as a remedy.
+- **Other shapes:** teeth that collapse under supersampling = §3.10 aliasing (different disease,
+  different fix); teeth that survive the core arm = critical-curve/caustic structure not anchored at
+  the profile center (reparameterization and cores won't help; that is a sampler-robustness or
+  model-choice problem).
+
 ## 4. Disease catalog (validated classes only)
 
 Each entry: **Signature / Discriminating test / Validated fix / Receipts.** These are the classes
@@ -592,6 +626,33 @@ we actually reached ground on. A run that does not match one of these is not the
     1.22×), not an absolute ESS (T26 lesson).
 - **Receipts:** T23–T26.
 
+### (vi) Physical cusp teeth: core-less cuspy perturber among bright arcs
+
+- **Signature:** catastrophic ξ spikes (max ξ ~1e6–1e8, ~4–6 orders above target) whose Σξ is
+  carried almost entirely by a few dozen steps (top-8 burn-in share 74–88%); tuned `eps` suppressed
+  **globally** and bit-identical across chains; the ξ-spike draws localize (possibly as a quantized
+  lattice) in one compact component's **position** coordinates; that component is cuspy (EPL with
+  central γ>2 divergence), small (θ_E of order a few pixels), and sits **among the bright lensed
+  arcs**; per-pixel |∂model/∂position| is extremely concentrated (top-1% of pixels carrying >90%,
+  peaking at the component). Prior-wall pinning of the component's shape parameters (e.g. e1 at the
+  box edge) may **co-occur but is a red herring** — the spikes sit mid-marginal, not at walls.
+- **Discriminating test:** the §3.15 battery on a position cut through the spike region — aliasing,
+  series, and numerics arms all null while **only the core-softening arm collapses the teeth**
+  (carousel: 13×/119× at rc ≥ 0.5 px, envelope intact; supersampling made the teeth *sharper*,
+  falsifying the §4(i) look-alike). Wall exoneration **by intervention**: a norm-bounding
+  ellipticity prior (`DiskEllipticity(0.3, 0.1)`, engaged and Jacobian-verified, pinning eliminated)
+  changed nothing — ξ rate per step slightly *worse*, eps still suppressed ~3×, spikes still on the
+  same component's position (C-22). Teeth 4× taller at |e|=0.23 than at |e|=0.50 — ellipticity
+  magnitude is not the driver.
+- **Validated fix:** replace the cusp with a **physically-better-motivated cored profile** — the
+  dPIE swap for the carousel's EPL_Lf removed the ξ spikes outright (user run, 2026-07-07; the
+  registered out-of-sample prediction from the core dial-scan). The diagnostic `CoredEPL` surrogate
+  is for attribution only, never production. Sampler-side robustness (adjusted kernel / MAMS,
+  tail-robust eps tuning) treats the symptom and may be needed when the cusp is a deliberate
+  modeling choice — but it leaves the teeth in the posterior.
+- **Receipts:** carousel log (`docs/logs/carousel-mclmc-sampling.md`) C-21 + C-22 (Tests 1/2/4,
+  DiskEllipticity intervention, core dial-scan, dPIE confirmation).
+
 ---
 
 ## 5. The fix ladder
@@ -601,6 +662,10 @@ failure mode than the next. Sampler knobs are **last** and mostly do not help (t
 lower eps?" answer, T23 Addendum-2: `eps` is already the adapted compromise, so a global-tax funnel
 gap *is* the eps suppression — sliding along the adapted trade-off curve buys little).
 
+0. **Likelihood-side regularity first.** If the disease census implicates the likelihood itself —
+   render fidelity (§4i) or a profile cusp (§4vi) — no coordinate change, prior, or knob can remove
+   it: the structure is *in the posterior*. Check data/model fidelity pairing and profile regularity
+   (cored vs cuspy, and whether the cusp is physically required) before reaching for rungs 1–3.
 1. **Coordinates.**
    - *Default:* a **measured 1-D variance-stabilizing** transform from the conditional-precision
      profile (Route A, §4v). Cheap, mechanical, provably family-preserving, and it cured the
