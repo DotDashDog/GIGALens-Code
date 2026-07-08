@@ -81,8 +81,9 @@ FLOW_MAMS_BURNIN = 1000
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
 # lr 3e-3 (was 1e-3): s must travel log(scale-mismatch) ~ 2 nats on the demo; adam
-# travel ~ lr*steps, so 1e-3 x 3000 was marginal. 5e-3 measured stable, 2e-2 not
-# (flows.py one-shot test) -- 3e-3 leaves x4 headroom on both sides.
+# travel ~ lr*steps, so 1e-3 x 3000 was marginal. Headroom as measured (flows.py
+# one-shot test): stable at 5e-3 (1.7x above), unstable at 2e-2, onset unmeasured
+# in between.
 PHASE_A_LR = 3e-3
 PHASE_B_STEPS = 1000
 PHASE_B_LR = 1e-4
