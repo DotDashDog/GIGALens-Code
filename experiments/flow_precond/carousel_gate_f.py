@@ -21,9 +21,11 @@ DiagScale — the demo-validated v4 architecture, nothing data-derived) on the
              histories, learned exp(s) range.
 
 Phase-B data: the fresh 64-chain MAMS run (messy_tests/dpie/mams/arrays.npz,
-(64,1000,33)) -- DEVIATION from the plan's named mclmc file (8x10k), rationale:
-MAMS is MH-exact (pocket occupancy ~4.6% = true) while MCLMC over-weights the
-pocket ~3x (14.6%), which would distort forward-KL training toward the pocket.
+(64,1000,33)) -- DEVIATION from the plan's named mclmc file (8x10k). Measured
+occupancies (checkpoint entry has full provenance): MAMS64 9.57% (per-chain
+range [0.001, 0.951] -- pocket-segregated chains, estimate uncertain ~2x),
+MCLMC 14.57%; Laplace proxy 5.4%. MAMS64 is MH-exact in law and the least
+over-weighted MH-correct set available; forward-KL trains toward its weights.
 
 GPU only. Outputs to carousel_gate_f_out/ (flows cached with config keys).
 """

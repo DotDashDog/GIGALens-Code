@@ -431,18 +431,30 @@ multimodality, conditioning, or the NFW profile.
   / 8 bins / trainable DiagScale / lr 3e-3, 3000×128-draw reverse-KL; Phase B 1000-step
   full-batch fkl) on the 33-param carousel-dPIE posterior.
   **DEVIATION from plan §4.4 (pre-registered):** Phase-B data = the fresh 64-chain MAMS run
-  (`messy_tests/dpie/mams/arrays.npz`, 64×1000, MH-exact, pocket occupancy measured at load
-  time, ≈4.6% = truth) instead of the plan's named MCLMC file (8×10k, pocket over-weighted
-  ~3× at 14.6%) — forward-KL trains toward its data's weights, so MH-correct weights are
-  truer to the plan's intent.
+  (`messy_tests/dpie/mams/arrays.npz`, 64×1000) instead of the plan's named MCLMC file
+  (8×10k). Measured occupancies (z[:,6] > −22.35, the plan-§6 pocket test, verified
+  2026-07-07): **MAMS64 = 9.57%** (6127 pocket draws; per-chain occupancy range
+  [0.001, 0.951] — chains are strongly pocket-SEGREGATED, so this finite-sample estimate
+  from correlated draws is itself uncertain, plausibly ~2× — a NEW finding, recorded);
+  MCLMC = 14.57% (11660 draws; matches the plan-§5.4 table's 14.6%, over-weighted vs the
+  Laplace proxy 5.4% and old-MAMS8 4.6%). MAMS64 is preferred because its stationary law is
+  MH-exact and it is the least over-weighted MH-correct set available; forward-KL trains
+  toward its data's weights. Lost vs MCLMC: ~6.1k vs ~11.7k pocket draws (less pocket-shape
+  information — immaterial to the median-point coverage gate).
   **Cause hypothesis:** reverse-KL from the SVI start assigns the separate ~5% pocket mode
   (14σ from the SVI solution) probability ≈ 0 (mode-dropping — the mechanism the demo could
   not test, having no second mode); forward-KL on MH-exact samples restores it.
   **Pre-registered predictions:** (F1) A-only FAILS the pocket gate: log q(zP) − log q(zM)
   < −8 nats, plausibly ≪ −8 (SVI itself was 14σ ⇒ ratio ~ −100s; the flow starts there and
   reverse-KL has no gradient signal to build density at an unvisited mode) — its failure is
-  a RESULT confirming §4.4, not a bug; (F2) A+B PASSES: ratio ≥ −8 (true value ≈ −3; Phase-B
-  data contains ~2.9k pocket draws); (F3) both flows pass the ELBO gate: direct 5×128-draw
+  a RESULT confirming §4.4, not a bug; (F2) A+B PASSES: ratio ≥ −8. Expected magnitude for a
+  well-covering flow: **≈ +5.4 nats** — the gate statistic is a DENSITY ratio at the two
+  medians, and for perfect q it equals lp(zP) − lp(zM) = −291319.81 − (−291325.24) = +5.43
+  (normalization cancels; both values pinned by carousel_model.verify()). CORRECTION to
+  plan §5.2, which says "true value ≈ −3": that is the log MASS ratio log(0.05/0.95) ≈ −3
+  — a different quantity. The −8 coverage floor is unaffected (mode-dropped flows sit at
+  ≈ −100s; the gate's separation is huge either way). Phase-B data contains ~6.1k pocket
+  draws. (F3) both flows pass the ELBO gate: direct 5×128-draw
   neg-ELBO ≤ SVI final 291453.1 (family nesting; identity-init starts AT the SVI loss);
   (F4) A+B passes the pullback-scale gate on MAIN-BASIN draws (sd ∈ [0.5,2], |mean| ≤ 1;
   band derivation as in the demo checkpoint); pocket-draw pullback reported separately as a
@@ -453,8 +465,11 @@ multimodality, conditioning, or the NFW profile.
   retry with subsampling/early-stopping (the v4-flagged overfit levers), then if still
   failing: pre-registered NEGATIVE finding "Phase B as designed cannot restore the pocket"
   ⇒ escalate to the human before any benchmark (the plan's §5.4 pocket-occupancy win
-  condition would be unreachable); F3 wrong ⇒ apply the pre-registered lr fallback (ONE
-  retrain at 1e-3); F4 wrong while F2 passes ⇒ scale layer insufficient at 33 dims ⇒
+  condition would be unreachable); F3 wrong for the A-ONLY flow ⇒ Phase-A optimization
+  issue ⇒ apply the pre-registered lr fallback (ONE retrain at 1e-3, no further iteration);
+  F3 wrong ONLY for A+B (A-only passes) ⇒ the Phase-B shift moved the flow off the
+  reverse-KL optimum — evaluate as Phase-B evidence jointly with F2/F4, NO lr iteration;
+  F4 wrong while F2 passes ⇒ scale layer insufficient at 33 dims ⇒
   diagnose (s travel ~ measured mismatch) before benchmark. **Blind spots:** (a) gates
   evaluate the FLOW, not sampling — no MAMS run here; mixing/occupancy claims wait for the
   benchmark; (b) zP/zM are 2 points — the pocket gate tests coverage at the medians, not
