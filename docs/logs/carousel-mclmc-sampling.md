@@ -424,6 +424,46 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: demo 4-arm flow-preconditioning validation** (plan §5.2/§5.3 dry run before any
+  carousel work; script `experiments/flow_precond/demo_validation.py`, branch
+  `flow-precond-mams`). Demo lens (22 params, easiest system), identical 8-chain budgets:
+  A = vanilla MAMS (300+300, in-family reference; demo posterior itself validated vs HMC in
+  `laps_validation`); B = flow-MAMS, whitened-spline flow Phase-A (128-draw reverse-KL,
+  3000 steps); C = flow-MAMS, same flow + Phase-B forward-KL (1000 steps on the GATE I
+  vanilla-MAMS draws — exercises the fwd-KL path; demo has no secondary mode for it to add);
+  D = plain NeuTra, NumPyro-faithful (3-block IAF, 1-sample ELBO Adam 3e-3 10k steps, NUTS
+  target 0.8, 1000 warmup + 300 draws). All diagnostics on decoded z = T(u).
+  **Cause hypothesis:** the pulled-back targets are the same posterior re-parameterized;
+  with MH-corrected kernels every arm is exactly unbiased regardless of flow quality, so on
+  an easy unimodal posterior all arms must agree with A. This is a CORRECTNESS gate for the
+  implementation (Jacobian, decoding, qz_u plumbing), not an efficiency benchmark.
+  **Predictions (direction + magnitude):** (1) flow gate: spline Phase-A neg-ELBO tail ≤ SVI
+  final loss (−70.98; family nesting — flow ⊇ affine — makes ≤ derivable; expect ~0–10 nats
+  below, demo ≈ Gaussian); (2) agreement gates pass on ALL 22 params for B, C, D vs A: |Δmean|
+  ≤ 4·SE_MC and sd-ratio within 4·SE_r (both SEs derived from measured ESS; with (3+1)×22
+  width tests + 3×22 mean tests ≈ 154 4σ tests, expected false failures ≈ 0.01 ⇒ ANY failure
+  is a finding); (3) C ≈ B via a DIRECT B-vs-C sd-ratio gate (within 4·SE_r; implemented in
+  the script as `bc_width_gate`); (4) health booleans: max split-R̂ < 1.05 every arm
+  (`rhat_health_pass`); NUTS divergent transitions = 0 exactly (`divergence_gate_pass`;
+  any divergence fails and is a recorded finding).
+  **Falsifier:** any arm failing (2) on ≥1 param ⇒ a bug in that arm's path (fldj sign/scale,
+  decode, latent init/mass, NUTS plumbing) — the demo is easy by construction, so "hard
+  posterior" is NOT an admissible explanation; STOP and diagnose before any carousel run.
+  **Metric + derived thresholds:** as in (1)–(4); all thresholds derived (family nesting;
+  MC error at measured ESS), none tuned. **Blind spots:** (a) agreement at ESS ~O(10²) is
+  blind to biases ≲0.2σ; (b) a bug common to BOTH MAMS arms' shared path (wrapper/decode)
+  could cancel in B vs A only if it vanishes at identity — arm D uses a different kernel AND
+  different flow family, mitigating common-mode failure; (c) u-space split-R̂/ESS computed and
+  reported for B/C/D, not gated; (d) agreement SEs assume near-Gaussian marginals and use
+  bulk-ESS as the mean/variance-ESS proxy — adequate at 4σ on the demo; re-derive before
+  reusing the gate on a non-Gaussian target. **Cost:** ≤ 45 GPU-min one allocation (flows
+  ~10 min + 3 sampler runs + NUTS).
+  **Status:** graded REVISE 2026-07-08 (rigor-grader: arm-C `num_steps=0` crash in
+  `train_flow`; prediction (3) B-vs-C gate unimplemented; prediction (4) thresholds not
+  evaluated as booleans; blind-spot (c) wording — design sound, no threshold/budget changes)
+  → all four fixed (+ script now imports the tested library losses from flows.py instead of
+  inline re-implementations) → awaiting re-confirmation.
+
 - **Run: GATE I — identity-flow wrapper ≡ vanilla MAMS on the demo lens** (flow-preconditioning
   plan `docs/plans/flow-preconditioned-mams.md` §5.1; script
   `experiments/flow_precond/gate_i_identity.py`, branch `flow-precond-mams`). Demo lens
@@ -449,9 +489,9 @@ multimodality, conditioning, or the NFW profile.
   nonzero-flow run) or about latent-`qz` plumbing (§5.3, gated later). A green GATE I
   validates only the no-op-at-identity property, nothing more. **Cost:** ~5–10 GPU-min
   (MAP+SVI+2 short MAMS). **Status:** graded REVISE 2026-07-08 (rigor-grader; 4 doc/diagnostic
-  fixes, no design change) → fixes applied → **approved 2026-07-08 (rigor-grader
-  re-inspection); run authorized at stated cost (~5–10 GPU-min); pass discharges
-  no-op-at-identity only.** Human approves carousel-scale runs.
+  fixes, no design change) → fixes applied → approved 2026-07-08 (rigor-grader re-inspection)
+  → **RAN 2026-07-08: PASS, bit-identical (see Log entry).** Human approves carousel-scale
+  runs.
 
 - **Run: Test 4 — conv_precision=float64 dial-scan arm** (rerun the EPL_Lf center_x dial-scan at
   ss∈{1,5} with conv_precision float32 vs float64, niter=50, other 30 params frozen at the max-ξ draw).
@@ -531,6 +571,22 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (GATE I RAN — PASS)** — **Identity-flow wrapper ≡ vanilla MAMS, bit-identical.**
+  `proposed (UNCERTIFIED)`. Observed vs predicted: predicted max|Δ|=0.0 exactly; observed
+  `np.array_equal=True`, max|Δ|=0.0, on (8,300,22) demo-lens result samples (seed 0), plus
+  pre-diagnostic `log_prob` bit-identity on 64 qz draws (max|Δ|=0.0). Trace overlay confirms
+  (gate_i_traces.png). Model card: worktree `gigalens_research`, jax 0.10.0.dev20260708, x64,
+  1×A100. Discharges ONLY the no-op-at-identity property (per approved checkpoint); the
+  nonzero-Jacobian path is covered by `inference/tests/test_flows.py` (11 green: fldj vs
+  autodiff slogdet at ~1e-15 for IAF + whitened-spline) — unit-level, not yet a sampling gate.
+  Two environmental fixes en route, neither touching the wrapper: (a) demo SVI n_vi=1000 OOMs
+  a 40GB A100 → 128; (b) `model_seq.SVI`-returned qz carries Explicit device sharding that
+  new JAX rejects when MAMS closes over `qz.covariance()` inside shard_map → rebuild qz from
+  host arrays (what pipeline SVIStage does anyway). NOTE for anyone running MAMS_JIT outside
+  the pipeline: fix (b) is required in this jax version. Artifacts:
+  `experiments/flow_precond/gate_i_out/{gate_i_verdict.json,gate_i_arrays.npz,gate_i_traces.png}`,
+  branch `flow-precond-mams`. Cost: ~0.5 GPU-h incl. 2 failed attempts.
 
 - **2026-07-06 (Test 4 + Test 2)** — **Catastrophic ξ = PHYSICAL localized caustic stiffness; numerics fully excluded.** `proposed (UNCERTIFIED)`. Test 4 (EPL_Lf.center_x dial-scan, conv_precision float32 vs float64 at ss1 and ss5): **f64/f32 comb ratio = 1.001** at both ss ⇒ the teeth are NOT float32-convolution roughness. Test 2 (per-pixel |∂model/∂center_x| via jvp at the max-ξ draw): sensitivity is highly localized — **top-1% of pixels carry 92% (band0) / 95% (band1)** — and in band0 it **traces the bright lensed arcs, peaking right at the perturber** (peak px→(-15.0,-4.6) vs perturber (-14.78,-4.48)). Synthesis: the small (θ_E≈1.07), maximally-elliptical (e1≈0.50, pinned at the +0.5 wall) EPL_Lf perturber sits among the lensed arcs; its position near-singularly controls those arc pixels (a critical-curve/caustic effect), producing the sharp likelihood teeth that at ss=1 the sampler occasionally hits → the catastrophic ξ that suppress eps globally. Ruled OUT across Tests 1/4: pixel-aliasing, EPL series, float32 numerics. **Fix is NOT render fidelity / conv precision / a variance-stabilizing reparam (this is not a smooth funnel).** Likely levers: regularize the perturber (cap ellipticity below the wall / add a core / question whether the component is justified) or sampler robustness. This unifies the user's two symptoms (ellipticity-at-bounds + ξ spikes) into one cause. Artifacts (on $SCRATCH, home quota full): /pscratch/sd/l/linusu/carousel_diag/{P12_f64_vs_f32_comb,P13_localize_band0_shapelets,P13_localize_band1_sersic}.png, test_f64_loc.npz. NOT yet done: cond(G) of the lstsq Gram at spike vs calm (lstsq-conditioning sub-check).
 - **2026-07-06 (later)** — **Test 1 dial-scan RAN + Batch A labeling CORRECTED.** `proposed (UNCERTIFIED)`. (a) C-8 trap caught: Batch A names were insertion-order; true map is sorted-key (`z_names_TRUE.json`, perturbation-verified). The ξ lattice is in **EPL_Lf position (center_x,center_y)**, not (theta_E,gamma). (b) Test 1 (EPL_Lf position dial-scan, supersample{1,3,5}×niter{50,200}, other 30 params frozen at the max-ξ draw; faithful rebuild reproduces run red_chi2=1.1608): **teeth do NOT collapse under supersampling — they proliferate**; **niter has zero effect**. ⇒ pixel-aliasing and the EPL series both FALSIFIED. The perturber (small θ_E≈1.07, e1 at the +0.5 wall) produces near-singular caustic structure in the likelihood-vs-position that finer grids resolve as sharper; at the run's ss=1 it is mostly blurred with a few sharp teeth = the catastrophic ξ events. **Implication: raising supersampling is NOT a fix (would expose more teeth) — Test 3's premise is falsified in advance.** Remaining discriminator (cheap): rerun the SAME dial-scan at conv_precision=float64 to separate physical-caustic from float32-conv roughness that worsens with pixel count. Artifacts: batchA_diag/P9–P11, test1_dialscan.npz.

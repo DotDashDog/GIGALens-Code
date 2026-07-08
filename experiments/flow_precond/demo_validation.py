@@ -195,32 +195,28 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
         leaves, treedef = jax.tree_util.tree_flatten(init_params)
         params = jax.tree_util.tree_unflatten(
             treedef, [jnp.asarray(c[f"leaf_{i}"]) for i in range(len(leaves))])
+        ha = c["hist_a"]
         print(f"flow[{tag}] loaded from cache; final A loss "
-              f"{float(c['hist_a'][-1]):.2f}")
-        return params, {"a": c["hist_a"],
+              f"{float(ha[-1]):.2f}" if ha.size else
+              f"flow[{tag}] loaded from cache; no Phase A steps")
+        return params, {"a": ha,
                         "b": c["hist_b"] if "hist_b" in c.files else None}
 
-    base = make_latent_qz(dim)
-
-    def neg_elbo(params, key):
-        u = base.sample((n_draws,), seed=key)
-        bij = make_bij(params)
-        z = bij.forward(u)
-        fldj = bij.forward_log_det_jacobian(u, event_ndims=1)
-        lq = base.log_prob(u) - fldj          # log q_flow(z)
-        lp = jax.vmap(lp_fn)(z)
-        return jnp.mean(lq - lp)
+    # Losses come from the 11-green-tested library (flows.py), not re-implemented
+    # here: neg_elbo_loss expects a batched target_log_prob_fn (n, dim) -> (n,).
+    batched_lp = jax.vmap(lp_fn)
 
     opt = optax.adam(lr)
 
     @jax.jit
     def step_a(params, opt_state, key):
-        loss, g = jax.value_and_grad(neg_elbo)(params, key)
+        loss, g = jax.value_and_grad(flows.neg_elbo_loss)(
+            params, make_bij, batched_lp, key, n_draws, dim)
         updates, opt_state = opt.update(g, opt_state, params)
         return optax.apply_updates(params, updates), opt_state, loss
 
     params, opt_state = init_params, opt.init(init_params)
-    keys = jax.random.split(jax.random.key(seed), num_steps)
+    keys = jax.random.split(jax.random.key(seed), num_steps) if num_steps else []
     hist_a = []
     t0 = time.perf_counter()
     for i in range(num_steps):
@@ -228,18 +224,15 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
         hist_a.append(float(loss))
         if i % 500 == 0:
             print(f"flow[{tag}] A step {i}: {hist_a[-1]:.2f}")
-    print(f"flow[{tag}] Phase A done in {time.perf_counter()-t0:.1f}s, "
-          f"final {hist_a[-1]:.2f}")
+    print(f"flow[{tag}] Phase A done in {time.perf_counter()-t0:.1f}s, final "
+          + (f"{hist_a[-1]:.2f}" if hist_a else "n/a (0 steps)"))
 
     hist_b = None
     if phase_b_samples is not None and phase_b_steps > 0:
         zs = jnp.asarray(phase_b_samples)
 
         def fkl(params):
-            bij = make_bij(params)
-            u = bij.inverse(zs)
-            ildj = bij.inverse_log_det_jacobian(zs, event_ndims=1)
-            return -jnp.mean(base.log_prob(u) + ildj)
+            return flows.forward_kl_loss(params, make_bij, zs)
 
         opt_b = optax.adam(phase_b_lr)
 
@@ -310,7 +303,7 @@ def split_rhat_ess(x):
 
 
 def decode_batch(prob_model, flow_bij, u_samples):
-    """(chains, draws, dim) u -> z via T, in draw-chunks to bound memory."""
+    """(chains, draws, dim) u -> z via T (single vmap; flow forward is cheap)."""
     c, n, d = u_samples.shape
     flat = jnp.asarray(u_samples.reshape(-1, d))
     z = jax.vmap(flow_bij.forward)(flat)
@@ -407,9 +400,18 @@ def main():
         summary["arms"][tag] = dict(
             max_rhat=float(np.max(rhat)), min_ess=float(np.min(ess)),
             worst_rhat_param=int(np.argmax(rhat)), worst_ess_param=int(np.argmin(ess)),
+            # Pre-registered health gate: max split-Rhat < 1.05 (prediction 4).
+            rhat_health_pass=bool(np.max(rhat) < 1.05),
         )
+        if "u" in r:
+            u_rhat, u_ess = split_rhat_ess(r["u"])
+            summary["arms"][tag]["u_max_rhat"] = float(np.max(u_rhat))
+            summary["arms"][tag]["u_min_ess"] = float(np.min(u_ess))
         if "divergences" in r:
+            # Pre-registered rule: 0 divergent transitions expected on this easy
+            # whitened target; ANY divergence fails the gate and is a recorded finding.
             summary["arms"][tag]["divergences"] = r["divergences"]
+            summary["arms"][tag]["divergence_gate_pass"] = bool(r["divergences"] == 0)
 
     mean_a = results["A"]["z"].reshape(-1, dim).mean(0)
     sd_a = results["A"]["z"].reshape(-1, dim).std(0, ddof=1)
@@ -428,6 +430,21 @@ def main():
             width_ratio_range=[float(ratio.min()), float(ratio.max())],
             n_mean_fail=int((~mean_ok).sum()), n_width_fail=int((~width_ok).sum()),
         )
+
+    # Pre-registered prediction (3): direct B-vs-C width comparison (Phase B on a
+    # unimodal target is a small perturbation). Direct comparison beats inferring
+    # from B~A and C~A, where the shared arm-A noise partially cancels.
+    zb = results["B"]["z"].reshape(-1, dim)
+    zc = results["C"]["z"].reshape(-1, dim)
+    sd_b, sd_c = zb.std(0, ddof=1), zc.std(0, ddof=1)
+    ess_b, ess_c = diag["B"][1], diag["C"][1]
+    se_r_bc = np.sqrt(1 / (2 * (ess_b - 1)) + 1 / (2 * (ess_c - 1)))
+    ratio_bc = sd_c / sd_b
+    bc_ok = (ratio_bc >= 1 - 4 * se_r_bc) & (ratio_bc <= 1 + 4 * se_r_bc)
+    summary["bc_width_gate"] = dict(
+        pass_=bool(bc_ok.all()), n_fail=int((~bc_ok).sum()),
+        ratio_range=[float(ratio_bc.min()), float(ratio_bc.max())],
+    )
 
     # ---- Plots (before metrics are trusted) ------------------------------------
     # Traces: worst-ESS param of arm A, all arms.
