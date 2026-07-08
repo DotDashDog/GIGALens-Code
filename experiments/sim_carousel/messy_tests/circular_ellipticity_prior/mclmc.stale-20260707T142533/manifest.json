@@ -12,8 +12,8 @@
     "init_L": null,
     "init_step_size": null,
     "n_chains": 8,
-    "num_burnin_steps": 10000,
-    "num_results": 10000,
+    "num_burnin_steps": 2000,
+    "num_results": 2000,
     "progress_bar": true,
     "regularize_mass_matrix": true
   },
@@ -30,22 +30,22 @@
     "frac_tune1": 0.2,
     "frac_tune2": 0.6,
     "frac_tune3": 0.2,
-    "num_burnin_steps": 10000,
-    "num_results": 10000
+    "num_burnin_steps": 2000,
+    "num_results": 2000
   },
-  "input_hash": "45d266099e0890b9",
+  "input_hash": "55209b41fe365dea",
   "metadata": {
     "debug": true,
     "n_params": 32,
     "num_chains": 8,
-    "num_steps": 10000,
-    "wall_time_s": 959.994269338029
+    "num_steps": 2000,
+    "wall_time_s": 247.52239164803177
   },
   "schema_version": 1,
   "seed": 42,
   "stage": "mclmc",
-  "timestamp": "2026-07-06T00:02:37.455601+00:00",
+  "timestamp": "2026-07-07T21:13:36.158428+00:00",
   "upstream_hashes": {
-    "qz": "a49c8090655f274d"
+    "qz": "c9477a57233f8ed6"
   }
 }

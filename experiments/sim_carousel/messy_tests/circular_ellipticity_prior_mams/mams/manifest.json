@@ -2,50 +2,52 @@
   "arrays": [
     "samples_z"
   ],
-  "class": "MCLMCStage",
+  "class": "MAMSStage",
   "config": {
     "debug": true,
-    "desired_energy_variance": 0.0005,
     "frac_tune1": 0.2,
     "frac_tune2": 0.6,
     "frac_tune3": 0.2,
     "init_L": null,
     "init_step_size": null,
     "n_chains": 8,
-    "num_burnin_steps": 10000,
-    "num_results": 10000,
+    "num_burnin_steps": 1000,
+    "num_results": 500,
     "progress_bar": true,
-    "regularize_mass_matrix": true
+    "regularize_mass_matrix": true,
+    "target_acceptance": 0.9
   },
   "diagnostics": [
     "L",
+    "acceptance_rate",
     "inverse_mass_matrix",
     "nonan",
+    "num_integration_steps",
     "samples_cov",
     "samples_z",
-    "step_size",
-    "xi"
+    "step_size"
   ],
   "diagnostics_config": {
     "frac_tune1": 0.2,
     "frac_tune2": 0.6,
     "frac_tune3": 0.2,
-    "num_burnin_steps": 10000,
-    "num_results": 10000
+    "num_burnin_steps": 1000,
+    "num_results": 500,
+    "target_acceptance": 0.9
   },
-  "input_hash": "45d266099e0890b9",
+  "input_hash": "fa7071ca157d6eb0",
   "metadata": {
     "debug": true,
     "n_params": 32,
     "num_chains": 8,
-    "num_steps": 10000,
-    "wall_time_s": 959.994269338029
+    "num_steps": 500,
+    "wall_time_s": 1471.8344442779198
   },
   "schema_version": 1,
   "seed": 42,
-  "stage": "mclmc",
-  "timestamp": "2026-07-06T00:02:37.455601+00:00",
+  "stage": "mams",
+  "timestamp": "2026-07-07T22:30:11.126276+00:00",
   "upstream_hashes": {
-    "qz": "a49c8090655f274d"
+    "qz": "42517d4e65b6585b"
   }
 }

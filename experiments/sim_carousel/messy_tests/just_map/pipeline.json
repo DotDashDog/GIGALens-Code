@@ -1,28 +1,28 @@
 {
-  "ctx_hash": "e4dfa6247c09c937",
+  "ctx_hash": "8fd6e74ecc8727dc",
   "seed": 42,
   "stages": [
     {
       "class": "MAPStage",
-      "input_hash": "3567f8440238e957",
+      "input_hash": "5768723575d475ff",
       "stage": "map",
-      "status": "loaded",
-      "wall_time_s": 91.80044178297976
+      "status": "ran",
+      "wall_time_s": 97.97533062199363
     },
     {
       "class": "BridgeStage",
-      "input_hash": "f89717847a69ea56",
+      "input_hash": "666211516413c2eb",
       "stage": "diag_qz",
-      "status": "computed",
-      "wall_time_s": 0.005248691013548523
+      "status": "ran",
+      "wall_time_s": 0.048753015988040715
     },
     {
       "class": "MCLMCStage",
-      "input_hash": "2cab44cf592226bd",
+      "input_hash": "45d266099e0890b9",
       "stage": "mclmc",
       "status": "ran",
-      "wall_time_s": 951.8584873399814
+      "wall_time_s": 959.994269338029
     }
   ],
-  "timestamp": "2026-07-05T04:19:35.124286+00:00"
+  "timestamp": "2026-07-06T00:02:38.361151+00:00"
 }

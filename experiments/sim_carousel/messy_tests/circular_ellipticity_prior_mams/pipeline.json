@@ -1,0 +1,28 @@
+{
+  "ctx_hash": "69379e06f09b6c1a",
+  "seed": 42,
+  "stages": [
+    {
+      "class": "MAPStage",
+      "input_hash": "627669ca09bd8a8c",
+      "stage": "map",
+      "status": "ran",
+      "wall_time_s": 95.79239663202316
+    },
+    {
+      "class": "BridgeStage",
+      "input_hash": "b5a7184df65e931d",
+      "stage": "diag_qz",
+      "status": "ran",
+      "wall_time_s": 0.04879500297829509
+    },
+    {
+      "class": "MAMSStage",
+      "input_hash": "fa7071ca157d6eb0",
+      "stage": "mams",
+      "status": "ran",
+      "wall_time_s": 1471.8344442779198
+    }
+  ],
+  "timestamp": "2026-07-07T22:30:11.232159+00:00"
+}

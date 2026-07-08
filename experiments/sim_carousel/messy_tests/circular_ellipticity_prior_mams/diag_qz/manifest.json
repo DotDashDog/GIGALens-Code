@@ -6,16 +6,16 @@
   },
   "diagnostics": [],
   "diagnostics_config": {},
-  "input_hash": "666211516413c2eb",
+  "input_hash": "b5a7184df65e931d",
   "metadata": {
     "version": "v1",
-    "wall_time_s": 0.048753015988040715
+    "wall_time_s": 0.04879500297829509
   },
   "schema_version": 1,
   "seed": 42,
   "stage": "diag_qz",
-  "timestamp": "2026-07-05T23:46:35.484202+00:00",
+  "timestamp": "2026-07-07T22:05:38.416545+00:00",
   "upstream_hashes": {
-    "z_best": "f6b4a441303a0ae8"
+    "z_best": "c45af802f474e2e8"
   }
 }

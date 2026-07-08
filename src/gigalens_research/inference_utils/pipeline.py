@@ -141,6 +141,16 @@ def _feed(h: "hashlib._Hash", obj: Any) -> None:
             # parameters as pytree leaves still surface them via ``.parameters``.
             h.update(b"params:"); h.update(type(obj).__name__.encode()); h.update(b":")
             _feed(h, obj.parameters)
+        elif callable(obj) and getattr(obj, "__qualname__", None) is not None:
+            # Functions / methods / classes: hash by stable module-qualified name, NOT
+            # repr() (which embeds a memory address and so changes every process,
+            # silently breaking resume). TFP's TransformedDistribution stashes helper
+            # functions in ``.parameters`` (e.g. ``_default_kwargs_split_fn``), which is
+            # how a DiskEllipticity / any transformed-distribution prior reaches here.
+            # These are fixed library callables, so a name-based key is both stable and
+            # correct (their identity, not their address, is what matters).
+            h.update(b"func:")
+            h.update(f"{getattr(obj, '__module__', '?')}.{obj.__qualname__}".encode())
         else:
             warnings.warn(
                 f"[pipeline.stable_hash] no structural hash for {type(obj).__name__}; "
