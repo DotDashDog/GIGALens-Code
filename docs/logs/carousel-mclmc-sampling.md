@@ -424,6 +424,47 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE F — one-shot flow training + pocket-coverage A/B** (plan §5.2/§4.4;
+  script `experiments/flow_precond/carousel_gate_f.py`, branch `flow-precond-mams`; model
+  via `carousel_model.py`, identity-verified to 0.01 nats against basin_slice records).
+  Trains Phase-A-only and Phase-A+B one-shot flows (demo-v4-validated architecture: range 6
+  / 8 bins / trainable DiagScale / lr 3e-3, 3000×128-draw reverse-KL; Phase B 1000-step
+  full-batch fkl) on the 33-param carousel-dPIE posterior.
+  **DEVIATION from plan §4.4 (pre-registered):** Phase-B data = the fresh 64-chain MAMS run
+  (`messy_tests/dpie/mams/arrays.npz`, 64×1000, MH-exact, pocket occupancy measured at load
+  time, ≈4.6% = truth) instead of the plan's named MCLMC file (8×10k, pocket over-weighted
+  ~3× at 14.6%) — forward-KL trains toward its data's weights, so MH-correct weights are
+  truer to the plan's intent.
+  **Cause hypothesis:** reverse-KL from the SVI start assigns the separate ~5% pocket mode
+  (14σ from the SVI solution) probability ≈ 0 (mode-dropping — the mechanism the demo could
+  not test, having no second mode); forward-KL on MH-exact samples restores it.
+  **Pre-registered predictions:** (F1) A-only FAILS the pocket gate: log q(zP) − log q(zM)
+  < −8 nats, plausibly ≪ −8 (SVI itself was 14σ ⇒ ratio ~ −100s; the flow starts there and
+  reverse-KL has no gradient signal to build density at an unvisited mode) — its failure is
+  a RESULT confirming §4.4, not a bug; (F2) A+B PASSES: ratio ≥ −8 (true value ≈ −3; Phase-B
+  data contains ~2.9k pocket draws); (F3) both flows pass the ELBO gate: direct 5×128-draw
+  neg-ELBO ≤ SVI final 291453.1 (family nesting; identity-init starts AT the SVI loss);
+  (F4) A+B passes the pullback-scale gate on MAIN-BASIN draws (sd ∈ [0.5,2], |mean| ≤ 1;
+  band derivation as in the demo checkpoint); pocket-draw pullback reported separately as a
+  diagnostic (A-only SHOULD place pocket draws far out — that is F1 seen from the sample
+  side). **Falsifiers + pre-committed responses:** F1 wrong (A-only covers the pocket) ⇒
+  surprising positive about reverse-KL here; investigate how (lp evaluations at 128 draws/
+  step CAN see the pocket if draws land there) before any claim; F2 wrong (A+B fails) ⇒ ONE
+  retry with subsampling/early-stopping (the v4-flagged overfit levers), then if still
+  failing: pre-registered NEGATIVE finding "Phase B as designed cannot restore the pocket"
+  ⇒ escalate to the human before any benchmark (the plan's §5.4 pocket-occupancy win
+  condition would be unreachable); F3 wrong ⇒ apply the pre-registered lr fallback (ONE
+  retrain at 1e-3); F4 wrong while F2 passes ⇒ scale layer insufficient at 33 dims ⇒
+  diagnose (s travel ~ measured mismatch) before benchmark. **Blind spots:** (a) gates
+  evaluate the FLOW, not sampling — no MAMS run here; mixing/occupancy claims wait for the
+  benchmark; (b) zP/zM are 2 points — the pocket gate tests coverage at the medians, not
+  pocket shape; (c) pullback-scale uses MAMS64 draws — fresh but finite (ESS unknown at
+  gate time; band has 3.5× slack). **Cost:** ≤ 60 GPU-min, one allocation (Phase A ≈ 3000
+  steps × 128 two-band 300² lstsq renders; Phase B render-free; gate evals ≈ 15 renders'
+  worth). Per the user-approved plan (2026-07-08, "Go ahead with this updated plan"), GATE F
+  is grader-approved; the §5.4 benchmark checkpoint goes to the human.
+  **Status: awaiting rigor-grader approval.**
+
 - **Run: demo 4-arm flow-preconditioning validation** (plan §5.2/§5.3 dry run before any
   carousel work; script `experiments/flow_precond/demo_validation.py`, branch
   `flow-precond-mams`). Demo lens (22 params, easiest system), identical 8-chain budgets:
@@ -673,6 +714,24 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (demo validation v4 RAN — one-shot config CLEAN SWEEP)**
+  `proposed (UNCERTIFIED)`. Observed vs predicted, all pre-registered: **(10) PASS** —
+  pullback-scale gate passes for BOTH one-shot flows (A-only sd [0.99, 1.14], A+B
+  [1.02, 1.13]; |mean|max 0.19/0.06) at FIXED range 6 + trainable DiagScale — nothing
+  data-derived. **(11) PASS, unconfounded** — arm B′ R̂ 1.003, worst mean dev 1.48σ, sd
+  ratios in gate, min bulk-ESS 1151 (vs vanilla 412); flow gate −76.75 ≤ −70.98 (best flow
+  of any config). **(12) health-fail branch NOT triggered** — arm C′ (Phase B) PASSED
+  health (R̂ 1.015, ESS 575) + agreement + the B-vs-C width gate (0/22 fail; v3's fail was
+  annotated non-interpretable) — Phase B did NOT degrade the one-shot flow (unlike v3's
+  range-35 flow; C′ still 4× arm B′'s wall: 339 s vs 85 s). Carousel Phase B therefore
+  proceeds as planned (full-batch fkl), per the pre-commitment. (6) arm D diverged
+  (expected, recorded); arm E repeat pass with divergence gate FAILED again (7/2400 —
+  flag persists, third occurrence). Phase-B gate PASS (−82.9→−86.6, finite decreasing).
+  **Demo validation phase COMPLETE**: flow-MAMS and whitened-NeuTra-NUTS both validated at
+  demo scale on the one-shot architecture; faithful NeuTra divergence + mechanism archived.
+  Cumulative demo-phase cost ≈ 2.7 GPU-h. Artifacts: demo_validation_out/* (cache keys
+  r6b8ts1lr0.003).
 
 - **2026-07-08 (demo validation v3 RAN — flow-MAMS VALIDATED on demo; 2 predictions failed,
   both informative)** `proposed (UNCERTIFIED)`. Observed vs predicted, per pre-registered gate:
