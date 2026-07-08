@@ -119,7 +119,8 @@ def main():
     params_ab, hist_ab = dv.train_flow(
         f"AB_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 12,
-        phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR)
+        phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR,
+        n_chunks=8)  # fkl gradient accumulated over 8x8000-sample chunks (exact)
     t_b = time.perf_counter() - t0
 
     summary = {"model_card": model_card, "timings_s": dict(phase_a=t_a, phase_b=t_b),

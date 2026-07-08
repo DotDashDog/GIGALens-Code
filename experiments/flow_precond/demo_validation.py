@@ -300,15 +300,29 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
     hist_b = None
     if phase_b_samples is not None and phase_b_steps > 0 and not diverged:
         zs = jnp.asarray(phase_b_samples)
-
-        def fkl(params):
-            return flows.forward_kl_loss(params, make_bij, zs)
-
         opt_b = optax.adam(phase_b_lr)
+
+        # Chunk the full-batch fkl gradient over samples when needed (EXACTLY
+        # equivalent -- deterministic mean over equal chunks; carousel: 64k
+        # samples x 6 coupling layers' reverse-mode intermediates OOM at 23GiB).
+        n_b = zs.shape[0]
+        chunks_b = max(1, n_chunks)
+        while n_b % chunks_b:
+            chunks_b += 1  # equal chunks required for exact equivalence
+        zs_c = zs.reshape(chunks_b, n_b // chunks_b, zs.shape[-1])
 
         @jax.jit
         def step_b(params, opt_state):
-            loss, g = jax.value_and_grad(fkl)(params)
+            def body(carry, z_chunk):
+                cl, cg = carry
+                l, g = jax.value_and_grad(flows.forward_kl_loss)(
+                    params, make_bij, z_chunk)
+                return (cl + l / chunks_b,
+                        jax.tree_util.tree_map(
+                            lambda a, b: a + b / chunks_b, cg, g)), None
+
+            zero_g = jax.tree_util.tree_map(jnp.zeros_like, params)
+            (loss, g), _ = jax.lax.scan(body, (jnp.zeros(()), zero_g), zs_c)
             updates, opt_state = opt_b.update(g, opt_state, params)
             return optax.apply_updates(params, updates), opt_state, loss
 
