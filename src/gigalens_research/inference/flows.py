@@ -565,6 +565,30 @@ class _RQSplineCoupling(_Bijector):
         return jnp.sum(ldj * self.activef, axis=-1)
 
 
+class DiagScale(_Bijector):
+    """Trainable per-dimension diagonal scale: y = exp(s) * x, s a (dim,)
+    float64 vector. fldj = sum(s) (constant in x). At s = 0 this is exactly
+    the identity, so inserting it does not disturb identity-at-init flows.
+    """
+
+    def __init__(self, log_scale):
+        self.s = log_scale
+
+    def forward(self, u):
+        return u * jnp.exp(self.s)
+
+    def inverse(self, z):
+        return z * jnp.exp(-self.s)
+
+    def forward_log_det_jacobian(self, u, event_ndims=1):
+        assert event_ndims == 1
+        return jnp.broadcast_to(jnp.sum(self.s), u.shape[:-1])
+
+    def inverse_log_det_jacobian(self, z, event_ndims=1):
+        assert event_ndims == 1
+        return jnp.broadcast_to(-jnp.sum(self.s), z.shape[:-1])
+
+
 def make_whitened_spline_flow(
     key,
     dim,
@@ -574,13 +598,33 @@ def make_whitened_spline_flow(
     num_bins=8,
     spline_range=6.0,
     hidden_dims=(64, 64),
+    trainable_scale=False,
 ):
     """T(u) = qz_loc + qz_scale_tril @ C(u), C = stack of RQ-spline couplings
     with alternating even/odd binary masks.
 
+    With ``trainable_scale=True`` (one-shot mode):
+
+        T(u) = qz_loc + qz_scale_tril @ (exp(s) * C(u))
+
+    where ``s`` is a trainable (dim,) float64 vector initialized to ZEROS, so T
+    at init is still exactly the affine whitening map. Rationale: the posterior
+    can be 30+ SVI-sigma wide in some whitened directions, so a spline box
+    derived from the SVI scale alone would clip; exp(s) absorbs arbitrary
+    per-dimension scale corrections by gradient descent during reverse-KL
+    training, C only ever shapes O(1) base coordinates (its INPUT is raw
+    u ~ N(0, I); s acts on its OUTPUT), and the FIXED spline_range box suffices
+    with no data-derived range. fldj gains the constant sum(s); the inverse
+    divides by exp(s) before C^{-1}.
+
     At init C = identity EXACTLY (zero final conditioner layer + uniform
-    bins/unit slopes), so T equals the affine whitening map (the SVI solution).
-    fldj includes both the couplings and the constant log|det qz_scale_tril|.
+    bins/unit slopes), so T equals the affine whitening map (the SVI solution)
+    for BOTH settings. fldj includes the couplings' contribution, sum(s) when
+    trainable, and the constant log|det qz_scale_tril|.
+
+    Backward compatibility: with ``trainable_scale=False`` (default) the params
+    pytree ({"couplings": ...}) and the bijector are bit-identical to the
+    previous version; ``trainable_scale=True`` adds a ``"log_scale"`` leaf.
     """
     dim = int(dim)
     idx = np.arange(dim)
@@ -596,6 +640,8 @@ def make_whitened_spline_flow(
         mlp_params.append(_init_mlp(keys[i], dim, hidden_dims, out_dim))
 
     init_params = {"couplings": mlp_params}
+    if trainable_scale:
+        init_params["log_scale"] = jnp.zeros((dim,), dtype=_DT)  # exp(0)=1
     affine = Affine(qz_loc, qz_scale_tril)
 
     def make_bijector(params):
@@ -606,7 +652,9 @@ def make_whitened_spline_flow(
                     params["couplings"][i], masks[i], num_bins, spline_range
                 )
             )
-        seq.append(affine)  # applied last: y = qz_loc + qz_scale_tril @ C(u)
+        if trainable_scale:
+            seq.append(DiagScale(params["log_scale"]))  # exp(s) * C(u)
+        seq.append(affine)  # applied last: y = qz_loc + qz_scale_tril @ (...)
         return Sequential(seq)
 
     return init_params, make_bijector

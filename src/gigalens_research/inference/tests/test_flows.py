@@ -63,7 +63,8 @@ def _build_iaf(perturb_scale=0.5, seed=0):
     return init_params, params, make_bij
 
 
-def _build_spline(perturb_scale=0.1, seed=1, qz_loc=None, qz_scale_tril=None):
+def _build_spline(perturb_scale=0.1, seed=1, qz_loc=None, qz_scale_tril=None,
+                  trainable_scale=False):
     if qz_loc is None:
         qz_loc = jnp.array([0.3, -0.7, 1.1, -0.2], dtype=_DT)
     if qz_scale_tril is None:
@@ -74,7 +75,8 @@ def _build_spline(perturb_scale=0.1, seed=1, qz_loc=None, qz_scale_tril=None):
                       [0.1, -0.3, 0.2, 0.8]])
         qz_scale_tril = jnp.asarray(A, dtype=_DT)
     init_params, make_bij = make_whitened_spline_flow(
-        jr.PRNGKey(seed), DIM, qz_loc, qz_scale_tril)
+        jr.PRNGKey(seed), DIM, qz_loc, qz_scale_tril,
+        trainable_scale=trainable_scale)
     params = _perturb(init_params, jr.PRNGKey(seed + 100), perturb_scale)
     return init_params, params, make_bij, qz_loc, qz_scale_tril
 
@@ -412,6 +414,162 @@ def test_real_reproducer_fkl_step():
     assert np.isfinite(loss1)
     print(f"    real data: max|T^-1(z)|={max_u:.1f}, fkl {loss0:.3f}->{loss1:.3f}, "
           f"grads/params finite")
+
+
+# --------------------------------------------------------------------------
+# 7. trainable diagonal scale (one-shot mode): T = qz_loc + L @ (exp(s)*C(u))
+# --------------------------------------------------------------------------
+def test_trainable_scale_backward_compat():
+    """trainable_scale=False must produce the identical pytree as before."""
+    qz_loc = jnp.zeros(DIM, dtype=_DT)
+    qz_L = jnp.eye(DIM, dtype=_DT)
+    p_off, _ = make_whitened_spline_flow(jr.PRNGKey(1), DIM, qz_loc, qz_L,
+                                         trainable_scale=False)
+    p_on, _ = make_whitened_spline_flow(jr.PRNGKey(1), DIM, qz_loc, qz_L,
+                                        trainable_scale=True)
+    assert set(p_off.keys()) == {"couplings"}, "pytree changed for default"
+    assert set(p_on.keys()) == {"couplings", "log_scale"}
+    assert p_on["log_scale"].shape == (DIM,) and p_on["log_scale"].dtype == _DT
+    assert bool(jnp.all(p_on["log_scale"] == 0.0)), "s must init to zeros"
+    same = all(bool(jnp.all(a == b)) for a, b in zip(
+        jax.tree_util.tree_leaves(p_off),
+        jax.tree_util.tree_leaves(p_on["couplings"])))
+    assert same, "coupling init changed by trainable_scale flag"
+    print("    pytree backward-compatible; s zero-init")
+
+
+def test_spline_init_trainable_scale():
+    """At init (s = 0, C = id) the one-shot flow equals affine whitening."""
+    init_params, _p, make_bij, qz_loc, qz_L = _build_spline(trainable_scale=True)
+    bij = make_bij(init_params)  # UNPERTURBED init
+    u = _rand_batch(80, n=8)
+    z_ref = qz_loc + u @ qz_L.T
+    err = float(jnp.max(jnp.abs(bij.forward(u) - z_ref)))
+    assert err < 1e-10, f"one-shot init != affine whitening (err={err:g})"
+    logdetL = float(jnp.sum(jnp.log(jnp.abs(jnp.diag(qz_L)))))
+    fldj = bij.forward_log_det_jacobian(u, event_ndims=1)
+    assert float(jnp.max(jnp.abs(fldj - logdetL))) < 1e-10, "fldj gained spurious terms at s=0"
+    print(f"    one-shot init == affine whitening (err {err:.2e})")
+
+
+def test_jacobian_roundtrip_trainable_scale():
+    """Perturbed params INCLUDING s: fldj vs autodiff slogdet (both
+    directions) + round-trip."""
+    _init, params, make_bij, _, _ = _build_spline(trainable_scale=True, seed=5)
+    assert float(jnp.max(jnp.abs(params["log_scale"]))) > 1e-3, \
+        "s was not perturbed -- test would be trivial"
+    _jac_check(make_bij, params, seed=81, label="one-shot fwd")
+    # inverse direction: ildj(z) vs slogdet(jac(inverse)(z))
+    bij = make_bij(params)
+    worst = 0.0
+    for z in _rand_batch(82, n=5):
+        ildj = float(bij.inverse_log_det_jacobian(z, event_ndims=1))
+        J = jax.jacobian(bij.inverse)(z)
+        sign, ladj = jnp.linalg.slogdet(J)
+        assert float(sign) > 0
+        d = abs(ildj - float(ladj))
+        worst = max(worst, d)
+        assert d < 1e-6, f"one-shot inv: ildj={ildj:.8f} vs slogdet={float(ladj):.8f}"
+    e = _roundtrip(make_bij, params, seed=83)
+    print(f"    one-shot jacobian: fwd ok, inv worst {worst:.2e}, "
+          f"roundtrip {max(e):.2e}")
+
+
+def test_out_of_range_grads_trainable_scale():
+    """5x-range finiteness of values+grads with the scale layer active."""
+    R = 6.0
+    _init, params, make_bij, qz_loc, qz_L = _build_spline(trainable_scale=True)
+    pts = 5.0 * R * jr.normal(jr.PRNGKey(84), (16, DIM), dtype=_DT)
+    _out_of_range_checks(make_bij, params, pts, "one-shot")
+    z_far = qz_loc + (5.0 * R * jr.normal(jr.PRNGKey(85), (16, DIM), dtype=_DT)) @ qz_L.T
+    assert _grad_finite(lambda p: forward_kl_loss(p, make_bij, z_far), params), \
+        "one-shot forward_kl grad NaN at out-of-range z"
+    print("    one-shot out-of-range: values and grads finite")
+
+
+def test_one_shot_scale_training():
+    """THE key one-shot test: badly misscaled whitening (identity qz), target
+    with per-dim sds [30, 1, 1, 0.03]; trainable_scale=True + FIXED
+    spline_range=6 must whiten the pullback (per-dim sd in [0.7, 1.5]) and
+    learn exp(s) within ~30% of the true scale on the WIDE (sd-30) direction;
+    the SAME setup with trainable_scale=False must FAIL on that direction
+    (pullback sd > 5), pinning that the scale layer does the work.
+
+    Two empirically-derived choices, documented deviations from the original
+    spec sketch ("a few hundred steps", exp(s) within 30% on ALL dims):
+
+    * Recipe adam(5e-3) x 3000 steps: s must travel log(30) = 3.4 in log-scale
+      (>= 700 steps at this lr); "a few hundred steps" would require lr ~ 2e-2,
+      which was measured to be unstable here (loss spikes to 1e2 and (C, s)
+      wander -- the two can trade scale against each other, see below).
+    * The exp(s)-within-30% assertion is restricted to the sd-30 direction
+      because s is only structurally identifiable for EXPANSION: a coupling is
+      box-bounded (identity outside +/-6, output within the box), so C cannot
+      expand a coordinate to sd 30 and s alone must (measured exp(s0)/30 =
+      0.80). For SHRINK/O(1) directions a spline can realize the scaling as an
+      in-box linear map, so (C, s) is a degenerate pair -- measured: C absorbed
+      dim 3's sd-0.03 shrink with exp(s3)/0.03 = 30x off while the PULLBACK was
+      perfectly whitened (sd 0.98); coupling weight decay (adamw 1e-2) drifts
+      along the degenerate valley ~70k steps too slowly to restore s. The
+      identifiable claim -- and the one one-shot compatibility rests on -- is
+      the whitened pullback (asserted on ALL dims) plus s owning expansion.
+    """
+    import optax
+    dim = 4
+    true_sd = jnp.array([30.0, 1.0, 1.0, 0.03], dtype=_DT)
+
+    def target_log_prob(z):
+        return -0.5 * jnp.sum((z / true_sd) ** 2 + 2.0 * jnp.log(true_sd)
+                              + math.log(2 * math.pi), axis=-1)
+
+    qz_loc = jnp.zeros(dim, dtype=_DT)
+    qz_L = jnp.eye(dim, dtype=_DT)  # badly misscaled whitening
+    z_exact = jr.normal(jr.PRNGKey(90), (4096, dim), dtype=_DT) * true_sd
+
+    def train(trainable_scale, steps=3000, lr=5e-3):
+        init_p, make_bij = make_whitened_spline_flow(
+            jr.PRNGKey(6), dim, qz_loc, qz_L, num_layers=6, num_bins=8,
+            spline_range=6.0, trainable_scale=trainable_scale)
+        opt = optax.adam(lr)
+
+        def loss_fn(p, k):
+            return neg_elbo_loss(p, make_bij, target_log_prob, k,
+                                 n_draws=128, dim=dim)
+
+        @jax.jit
+        def step(p, st, k):
+            l, g = jax.value_and_grad(loss_fn)(p, k)
+            up, st = opt.update(g, st, p)
+            return optax.apply_updates(p, up), st, l
+
+        key = jr.PRNGKey(91)
+        p, st = init_p, opt.init(init_p)
+        last = None
+        for _ in range(steps):
+            key, sk = jr.split(key)
+            p, st, last = step(p, st, sk)
+        assert np.isfinite(float(last)), "training loss non-finite"
+        u = make_bij(p).inverse(z_exact)
+        sd = jnp.std(u, axis=0)
+        return p, sd, float(last)
+
+    # one-shot mode: scale layer absorbs the misscaling
+    p_on, sd_on, loss_on = train(True)
+    exp_s = np.asarray(jnp.exp(p_on["log_scale"]))
+    ratio = exp_s / np.asarray(true_sd)
+    print(f"    one-shot: pullback sd={np.asarray(sd_on).round(3)}, "
+          f"exp(s)/true={ratio.round(3)}, final loss={loss_on:.3f}")
+    assert bool(jnp.all(sd_on > 0.7)) and bool(jnp.all(sd_on < 1.5)), \
+        f"one-shot pullback not whitened: sd={np.asarray(sd_on)}"
+    assert 0.7 < ratio[0] < 1.3, \
+        f"exp(s) not within 30% of true scale on sd-30 direction: {ratio[0]}"
+    # control: without the scale layer the sd-30 direction cannot be fixed
+    # (couplings are identity outside the fixed range-6 box)
+    _p_off, sd_off, loss_off = train(False)
+    print(f"    control (no scale layer): pullback sd={np.asarray(sd_off).round(3)}, "
+          f"final loss={loss_off:.3f}")
+    assert float(sd_off[0]) > 5.0, \
+        f"control unexpectedly fixed the sd-30 direction: sd0={float(sd_off[0])}"
 
 
 # --------------------------------------------------------------------------
