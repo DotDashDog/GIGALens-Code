@@ -501,17 +501,27 @@ multimodality, conditioning, or the NFW profile.
   identity mass cannot learn residual flow-imperfection scales — chains spread 1.1–3.6σ vs
   target 7.2σ). Arm A stays 300 (it converged; R̂ 1.015).
   (v3.iii) NEW pullback-scale gate: per-dim sd(T⁻¹(arm-A draws)) ∈ [0.5, 2] and |mean| ≤ 1.
-  Pre-registered prediction (7): the Phase-A+B flow PASSES it (with range 35 the training
-  data is finally in-range, so forward-KL can fix scales); prediction (8): Phase-A-only
-  FAILS it (mode-seeking reverse KL — the demo analog of the carousel §4.4 pocket claim;
-  its failure is a result, not a bug). Candidate GATE F addition for the carousel stage.
+  Derivation basis: an order-unity fitness band for what identity-init mass adaptation can
+  absorb within the burnin budget (mass adaptation corrects O(1) scale mismatches cheaply);
+  the measured failure was sd 7.2, 3.5× beyond the band edge, so the verdict is
+  threshold-insensitive. Pre-registered prediction (7): the Phase-A+B flow PASSES it (with
+  range 35 the training data is finally in-range, so forward-KL can fix scales);
+  prediction (8): Phase-A-only FAILS it (mode-seeking reverse KL — the demo analog of the
+  carousel §4.4 pocket claim; its failure is a result, not a bug). Candidate GATE F
+  addition for the carousel stage. CROSS-CHECK: if (7) FAILS while B/C health passes, a
+  green agreement result is budget-carried (MAMS brute-forcing a bad geometry) — record it
+  as requiring diagnosis, not as a flow-MAMS pass.
   (v3.iv) Gate semantics fixed: agreement gates are interpretable as bias evidence ONLY
   when the arm's health gate passes (`agreement_interpretable`); an unconverged arm is a
   budget/adaptation finding, not a bias verdict (v2's falsifier conflated these).
   Predictions for the v3 rerun: (2') arm C passes health + agreement (154-accounting
   unchanged, arms B/C/E vs A + B-vs-C); (9) arm B: pullback-scale fails (8) but with 1000
   burnin its health gate may pass — if health passes, agreement must pass (MH exactness);
-  if health fails, that is the recorded budget finding. E expected to repeat its v2 pass.
+  if health fails at 1000 burnin, that is PRE-REGISTERED as an approach-level NEGATIVE
+  finding for flow-MAMS with identity-init mass on this system (same adaptation budget
+  under which NUTS passed, easiest system, range-fixed flow — evidence against its
+  viability relative to NeuTra-NUTS here), and NO further burnin escalation happens on the
+  demo without an explicit human decision. E expected to repeat its v2 pass.
   **Cost: ≤35 GPU-min** (flows retrain at new arch; MAP/SVI cached; B/C burnin ×3.3).
   **Status: awaiting rigor-grader approval of v3.**
 
@@ -627,9 +637,10 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   + under-adaptation, not a bug)** `proposed (UNCERTIFIED)`. Observed vs predicted:
   predictions (1) flow gate PASS (−75.18 ≤ −70.98), (5) Phase B PASS (19.94→7.14),
   (6) faithful NeuTra diverged step 2 as predicted (mechanism archived), and **arm E
-  (whitened-IAF NeuTra-NUTS) passed ALL gates** (worst mean dev 1.9σ, sd ratios
-  [0.97,1.08], R̂ 1.009; 6/2400 divergent transitions → divergence_gate FAIL recorded as a
-  minor finding). **Arms B/C (flow-MAMS) FAILED agreement + health** (worst 18σ, sd ratios
+  (whitened-IAF NeuTra-NUTS) passed all agreement + health gates** (worst mean dev 1.9σ,
+  sd ratios [0.97,1.08], R̂ 1.009); E's pre-registered divergence gate FAILED (6/2400
+  divergent transitions vs the 0-exactly rule — recorded finding; a curvature flag whose
+  weight is to be assessed later, not graded away now). **Arms B/C (flow-MAMS) FAILED agreement + health** (worst 18σ, sd ratios
   →0.48, R̂≈1.26–1.28, u-R̂ 1.39). Diagnosis (CPU, from committed arrays): the pulled-back
   demo posterior through the spline flow has per-dim sd up to **7.2** and |mean| 6.4 in
   u-space (reverse-KL mode-seeking inherited SVI's underdispersion — the SAME flaw family
@@ -638,7 +649,9 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   1000 warmup steps. AND Phase B could not fix the scales (sd 7.18→7.21 unchanged) because
   the offending draws sit at up to **31 whitened-σ — outside the ±6 spline range where the
   flow is exact-identity with zero capacity** (plan §6 "widen if not" realized; range is
-  binding). Kernel exactness NOT in question (E shares the wrapper; GATE I bit-identical).
+  binding). Kernel exactness is not the leading hypothesis (E validates wrapper+decode on
+  the NUTS path; GATE I validates MAMS at identity flow) — but the MAMS × nonzero-flow
+  combination that B/C exercise is validated by neither and is tested by v3 prediction (9).
   v3 amendments follow in the design checkpoint. Cost: ~0.4 GPU-h (run ~20 min).
   Artifacts: demo_validation_out/{demo_validation_summary.json, demo_validation_arrays.npz,
   traces_worst_param.png, agreement.png, flow_losses.png}.
