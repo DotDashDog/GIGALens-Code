@@ -25,7 +25,10 @@ GPU only. Artifacts to OUT_DIR; flows/MAP/SVI cached as .npz so reruns skip stag
 """
 import os
 import json
+import sys
 import time
+
+sys.stdout.reconfigure(line_buffering=True)  # survive SIGTERM with output intact
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(HERE, "demo_validation_out")
@@ -87,7 +90,10 @@ MODEL_CARD = {
     "x64": bool(jax.config.jax_enable_x64),
     "devices": [str(d) for d in jax.devices()],
     "seed": SEED,
-    "arms": "A=vanilla MAMS, B=spline-A flow-MAMS, C=spline-A+B flow-MAMS, D=IAF NeuTra-NUTS",
+    "arms": ("A=vanilla MAMS, B=spline-A flow-MAMS, C=spline-A+B flow-MAMS, "
+             "D=faithful unwhitened-IAF NeuTra-NUTS (expected to record divergence), "
+             "E=whitened-IAF NeuTra-NUTS (documented deviation: SVI whitening composed "
+             "under the NumPyro IAF recipe)"),
     "budgets": dict(n_chains=N_CHAINS, mams=[NUM_BURNIN, NUM_RESULTS],
                     nuts=[NUTS_WARMUP, NUTS_RESULTS]),
     "spline": {**SPLINE_CFG, "phase_a": [PHASE_A_STEPS, PHASE_A_DRAWS, PHASE_A_LR],
@@ -193,14 +199,20 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
     if os.path.exists(cache):
         c = np.load(cache, allow_pickle=True)
         leaves, treedef = jax.tree_util.tree_flatten(init_params)
-        params = jax.tree_util.tree_unflatten(
-            treedef, [jnp.asarray(c[f"leaf_{i}"]) for i in range(len(leaves))])
-        ha = c["hist_a"]
-        print(f"flow[{tag}] loaded from cache; final A loss "
-              f"{float(ha[-1]):.2f}" if ha.size else
-              f"flow[{tag}] loaded from cache; no Phase A steps")
-        return params, {"a": ha,
-                        "b": c["hist_b"] if "hist_b" in c.files else None}
+        cached_leaves = [jnp.asarray(c[f"leaf_{i}"]) for i in range(len(leaves))]
+        if not all(bool(jnp.isfinite(l).all()) for l in cached_leaves):
+            print(f"flow[{tag}] cache contains non-finite params -- retraining")
+            os.remove(cache)
+        else:
+            params = jax.tree_util.tree_unflatten(treedef, cached_leaves)
+            ha = c["hist_a"]
+            print(f"flow[{tag}] loaded from cache; final A loss "
+                  f"{float(ha[-1]):.2f}" if ha.size else
+                  f"flow[{tag}] loaded from cache; no Phase A steps")
+            return params, {"a": ha,
+                            "b": c["hist_b"] if "hist_b" in c.files else None,
+                            "diverged": bool(c["diverged"]) if "diverged" in c.files
+                            else False}
 
     # Losses come from the 11-green-tested library (flows.py), not re-implemented
     # here: neg_elbo_loss expects a batched target_log_prob_fn (n, dim) -> (n,).
@@ -215,20 +227,32 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
         updates, opt_state = opt.update(g, opt_state, params)
         return optax.apply_updates(params, updates), opt_state, loss
 
+    def _params_finite(p):
+        return all(bool(jnp.isfinite(l).all()) for l in jax.tree_util.tree_leaves(p))
+
     params, opt_state = init_params, opt.init(init_params)
     keys = jax.random.split(jax.random.key(seed), num_steps) if num_steps else []
     hist_a = []
+    diverged = False
     t0 = time.perf_counter()
     for i in range(num_steps):
+        prev = params
         params, opt_state, loss = step_a(params, opt_state, keys[i])
-        hist_a.append(float(loss))
+        hist_a.append(float(loss))  # loss is evaluated at `prev`
+        # The observed failure mode is finite loss -> NaN grad -> NaN params, so
+        # gate on the UPDATED params (a NaN loss alone lags one step behind).
+        if not np.isfinite(hist_a[-1]) or not _params_finite(params):
+            print(f"flow[{tag}] Phase A DIVERGED at step {i}; reverting to last "
+                  "finite params and stopping. Divergence is a recorded finding.")
+            params, diverged = prev, True
+            break
         if i % 500 == 0:
             print(f"flow[{tag}] A step {i}: {hist_a[-1]:.2f}")
     print(f"flow[{tag}] Phase A done in {time.perf_counter()-t0:.1f}s, final "
           + (f"{hist_a[-1]:.2f}" if hist_a else "n/a (0 steps)"))
 
     hist_b = None
-    if phase_b_samples is not None and phase_b_steps > 0:
+    if phase_b_samples is not None and phase_b_steps > 0 and not diverged:
         zs = jnp.asarray(phase_b_samples)
 
         def fkl(params):
@@ -245,20 +269,29 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
         opt_state = opt_b.init(params)
         hist_b = []
         for i in range(phase_b_steps):
+            prev = params
             params, opt_state, loss = step_b(params, opt_state)
             hist_b.append(float(loss))
+            if not np.isfinite(hist_b[-1]) or not _params_finite(params):
+                print(f"flow[{tag}] Phase B DIVERGED at step {i}; reverting to "
+                      "last finite params and stopping.")
+                params, diverged = prev, True
+                break
             if i % 200 == 0:
                 print(f"flow[{tag}] B step {i}: {hist_b[-1]:.4f}")
-        print(f"flow[{tag}] Phase B done, final {hist_b[-1]:.4f}")
+        if hist_b and np.isfinite(hist_b[-1]):
+            print(f"flow[{tag}] Phase B done, final {hist_b[-1]:.4f}")
 
     leaves = jax.tree_util.tree_leaves(params)
     save = {f"leaf_{i}": np.asarray(l) for i, l in enumerate(leaves)}
     save["hist_a"] = np.asarray(hist_a)
+    save["diverged"] = np.asarray(diverged)
     if hist_b is not None:
         save["hist_b"] = np.asarray(hist_b)
     np.savez(cache, **save)
     return params, {"a": np.asarray(hist_a),
-                    "b": np.asarray(hist_b) if hist_b is not None else None}
+                    "b": np.asarray(hist_b) if hist_b is not None else None,
+                    "diverged": diverged}
 
 
 # --------------------------------------------------------------------------- #
@@ -357,39 +390,98 @@ def main():
         num_steps=IAF_STEPS, lr=IAF_LR, seed=SEED + 4)
     timings["flow_iaf"] = time.perf_counter() - t0
 
+    # Whitened-IAF (arm E): the identical NumPyro recipe, but the IAF acts in the
+    # SVI-whitened space (T = Affine_qz o IAF). Documented deviation from vanilla
+    # NeuTra; kept alongside faithful arm D so D's outcome is a finding, not a gap.
+    k_iaf_w = jax.random.split(key, 3)[2]
+    whiten = flows.Affine(jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril))
+    iafw_init, iafw_inner_make = flows.make_numpyro_iaf_flow(k_iaf_w, dim, **IAF_CFG)
+    iafw_make = lambda p: flows.Sequential([iafw_inner_make(p), whiten])
+    t0 = time.perf_counter()
+    iafw_params, iafw_hist = train_flow(
+        "iaf_whitened", iafw_init, iafw_make, lp_fn, dim, n_draws=IAF_DRAWS,
+        num_steps=IAF_STEPS, lr=IAF_LR, seed=SEED + 5)
+    timings["flow_iaf_whitened"] = time.perf_counter() - t0
+
     # Flow gate (B/C): neg-ELBO (mean over last 100 steps) <= SVI final loss.
     flow_elbo_tail = float(np.mean(sp_hist["a"][-100:]))
     print(f"FLOW GATE: spline neg-ELBO tail {flow_elbo_tail:.2f} vs SVI final "
           f"{svi_final_loss:.2f} (must be <=)")
 
-    # ---- Arm B/C: flow-MAMS --------------------------------------------------
-    qz_u = make_latent_qz(dim)
-    for tag, params in (("B", sp_params_a), ("C", sp_params_ab)):
-        bij = sp_make(params)
-        wrapped = FlowModelSeq(model_seq, TransformedProbModel(prob_model, bij))
-        t0 = time.perf_counter()
-        u = np.asarray(MAMS_JIT(
-            wrapped, qz_u, n_hmc=N_CHAINS, num_burnin_steps=NUM_BURNIN,
-            num_results=NUM_RESULTS, seed=SEED, progress_bar=False))
-        timings[f"{tag}_flow_mams"] = time.perf_counter() - t0
-        results[tag] = dict(z=decode_batch(prob_model, bij, u), u=u)
+    # ---- Sampling arms (fail fast on bad flows; isolate failures per arm) -----
+    arm_status = {"A": "OK"}
 
-    # ---- Arm D: plain NeuTra (IAF + NUTS) -------------------------------------
-    iaf_bij = iaf_make(iaf_params)
-    neutra_pm = TransformedProbModel(prob_model, iaf_bij)
-    nuts_lp = lambda u: neutra_pm.log_prob(u)[0]
-    t0 = time.perf_counter()
-    nuts_out = neutra_nuts(nuts_lp, dim, n_chains=N_CHAINS, num_warmup=NUTS_WARMUP,
-                           num_results=NUTS_RESULTS, seed=SEED,
-                           target_accept=0.8)
-    timings["D_neutra_nuts"] = time.perf_counter() - t0
-    u_d = np.asarray(nuts_out["samples"])
-    results["D"] = dict(z=decode_batch(prob_model, iaf_bij, u_d), u=u_d,
-                        divergences=int(np.sum(nuts_out.get("num_divergences", 0))))
+    def flow_ok(tag, hist, params):
+        if hist.get("diverged"):
+            arm_status[tag] = "SKIPPED: flow training diverged (recorded finding)"
+            return False
+        if not all(bool(jnp.isfinite(l).all())
+                   for l in jax.tree_util.tree_leaves(params)):
+            arm_status[tag] = "SKIPPED: non-finite flow params"
+            return False
+        return True
+
+    qz_u = make_latent_qz(dim)
+    for tag, params, hist in (("B", sp_params_a, sp_hist),
+                              ("C", sp_params_ab, sp_hist_ab)):
+        if not flow_ok(tag, hist, params):
+            print(f"arm {tag}: {arm_status[tag]}")
+            continue
+        try:
+            bij = sp_make(params)
+            wrapped = FlowModelSeq(model_seq, TransformedProbModel(prob_model, bij))
+            t0 = time.perf_counter()
+            u = np.asarray(MAMS_JIT(
+                wrapped, qz_u, n_hmc=N_CHAINS, num_burnin_steps=NUM_BURNIN,
+                num_results=NUM_RESULTS, seed=SEED, progress_bar=False))
+            timings[f"{tag}_flow_mams"] = time.perf_counter() - t0
+            results[tag] = dict(z=decode_batch(prob_model, bij, u), u=u)
+            arm_status[tag] = "OK"
+        except Exception as e:  # isolate: one arm's failure must not kill the run
+            arm_status[tag] = f"FAILED: {type(e).__name__}: {e}"
+            print(f"arm {tag}: {arm_status[tag]}")
+
+    # ---- Arms D/E: NeuTra (IAF + NUTS); D faithful-unwhitened, E whitened ------
+    for tag, params, make, hist in (("D", iaf_params, iaf_make, iaf_hist),
+                                    ("E", iafw_params, iafw_make, iafw_hist)):
+        if not flow_ok(tag, hist, params):
+            print(f"arm {tag}: {arm_status[tag]}")
+            continue
+        try:
+            bij = make(params)
+            neutra_pm = TransformedProbModel(prob_model, bij)
+            nuts_lp = lambda u: neutra_pm.log_prob(u)[0]
+            t0 = time.perf_counter()
+            nuts_out = neutra_nuts(nuts_lp, dim, n_chains=N_CHAINS,
+                                   num_warmup=NUTS_WARMUP,
+                                   num_results=NUTS_RESULTS, seed=SEED,
+                                   target_accept=0.8)
+            timings[f"{tag}_neutra_nuts"] = time.perf_counter() - t0
+            u_s = np.asarray(nuts_out["samples"])
+            results[tag] = dict(z=decode_batch(prob_model, bij, u_s), u=u_s,
+                                divergences=int(np.sum(
+                                    nuts_out.get("num_divergences", 0))))
+            arm_status[tag] = "OK"
+        except Exception as e:
+            arm_status[tag] = f"FAILED: {type(e).__name__}: {e}"
+            print(f"arm {tag}: {arm_status[tag]}")
 
     # ---- Diagnostics + gates ---------------------------------------------------
     summary = {"model_card": MODEL_CARD, "timings_s": timings,
                "svi_final_loss": svi_final_loss,
+               "arm_status": arm_status,
+               "flow_training": {
+                   "spline_A": dict(steps=int(sp_hist["a"].size),
+                                    diverged=bool(sp_hist.get("diverged"))),
+                   "spline_B": dict(
+                       steps=int(sp_hist_ab["b"].size)
+                       if sp_hist_ab["b"] is not None else 0,
+                       diverged=bool(sp_hist_ab.get("diverged"))),
+                   "iaf": dict(steps=int(iaf_hist["a"].size),
+                               diverged=bool(iaf_hist.get("diverged"))),
+                   "iaf_whitened": dict(steps=int(iafw_hist["a"].size),
+                                        diverged=bool(iafw_hist.get("diverged"))),
+               },
                "flow_gate": {"spline_neg_elbo_tail": flow_elbo_tail,
                              "pass": flow_elbo_tail <= svi_final_loss},
                "arms": {}}
@@ -413,10 +505,11 @@ def main():
             summary["arms"][tag]["divergences"] = r["divergences"]
             summary["arms"][tag]["divergence_gate_pass"] = bool(r["divergences"] == 0)
 
+    completed = [t for t in ("B", "C", "D", "E") if t in results]
     mean_a = results["A"]["z"].reshape(-1, dim).mean(0)
     sd_a = results["A"]["z"].reshape(-1, dim).std(0, ddof=1)
     ess_a = diag["A"][1]
-    for tag in ("B", "C", "D"):
+    for tag in completed:
         zi = results[tag]["z"].reshape(-1, dim)
         mean_i, sd_i, ess_i = zi.mean(0), zi.std(0, ddof=1), diag[tag][1]
         se_mean = np.sqrt(sd_i**2 / ess_i + sd_a**2 / ess_a)
@@ -434,26 +527,33 @@ def main():
     # Pre-registered prediction (3): direct B-vs-C width comparison (Phase B on a
     # unimodal target is a small perturbation). Direct comparison beats inferring
     # from B~A and C~A, where the shared arm-A noise partially cancels.
-    zb = results["B"]["z"].reshape(-1, dim)
-    zc = results["C"]["z"].reshape(-1, dim)
-    sd_b, sd_c = zb.std(0, ddof=1), zc.std(0, ddof=1)
-    ess_b, ess_c = diag["B"][1], diag["C"][1]
-    se_r_bc = np.sqrt(1 / (2 * (ess_b - 1)) + 1 / (2 * (ess_c - 1)))
-    ratio_bc = sd_c / sd_b
-    bc_ok = (ratio_bc >= 1 - 4 * se_r_bc) & (ratio_bc <= 1 + 4 * se_r_bc)
-    summary["bc_width_gate"] = dict(
-        pass_=bool(bc_ok.all()), n_fail=int((~bc_ok).sum()),
-        ratio_range=[float(ratio_bc.min()), float(ratio_bc.max())],
-    )
+    if "B" in results and "C" in results:
+        zb = results["B"]["z"].reshape(-1, dim)
+        zc = results["C"]["z"].reshape(-1, dim)
+        sd_b, sd_c = zb.std(0, ddof=1), zc.std(0, ddof=1)
+        ess_b, ess_c = diag["B"][1], diag["C"][1]
+        se_r_bc = np.sqrt(1 / (2 * (ess_b - 1)) + 1 / (2 * (ess_c - 1)))
+        ratio_bc = sd_c / sd_b
+        bc_ok = (ratio_bc >= 1 - 4 * se_r_bc) & (ratio_bc <= 1 + 4 * se_r_bc)
+        summary["bc_width_gate"] = dict(
+            pass_=bool(bc_ok.all()), n_fail=int((~bc_ok).sum()),
+            ratio_range=[float(ratio_bc.min()), float(ratio_bc.max())],
+        )
+    else:
+        summary["bc_width_gate"] = dict(
+            pass_=None, note="not computed: arm B and/or C did not complete")
 
     # ---- Plots (before metrics are trusted) ------------------------------------
     # Traces: worst-ESS param of arm A, all arms.
     wp = summary["arms"]["A"]["worst_ess_param"]
-    fig, axes = plt.subplots(4, 1, figsize=(10, 10), sharex=False)
-    for ax, tag in zip(axes, ("A", "B", "C", "D")):
+    present = ["A"] + completed
+    fig, axes = plt.subplots(len(present), 1, figsize=(10, 2.5 * len(present)),
+                             sharex=False, squeeze=False)
+    for ax, tag in zip(axes[:, 0], present):
         for ci in range(N_CHAINS):
             ax.plot(results[tag]["z"][ci, :, wp], lw=0.5, alpha=0.7)
         ax.set_ylabel(f"{tag}: z[{wp}]")
+    axes = axes[:, 0]
     axes[-1].set_xlabel("draw")
     fig.suptitle(f"traces, worst-ESS param z[{wp}] (all chains)")
     fig.tight_layout()
@@ -461,7 +561,9 @@ def main():
 
     # Mean/width agreement per param.
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
-    for tag, mk in (("B", "o"), ("C", "s"), ("D", "^")):
+    markers = {"B": "o", "C": "s", "D": "^", "E": "v"}
+    for tag in completed:
+        mk = markers[tag]
         zi = results[tag]["z"].reshape(-1, dim)
         se = np.sqrt(zi.std(0, ddof=1)**2 / diag[tag][1] + sd_a**2 / ess_a)
         ax1.plot(np.abs(zi.mean(0) - mean_a) / se, mk, label=tag, alpha=0.8)
@@ -479,17 +581,21 @@ def main():
     if sp_hist_ab["b"] is not None:
         ax.plot(np.arange(len(sp_hist_ab["b"])) + PHASE_A_STEPS, sp_hist_ab["b"],
                 label="spline Phase B (fwd-KL)")
-    ax.plot(iaf_hist["a"], label="IAF 1-draw ELBO", alpha=0.5)
+    if iaf_hist["a"].size:
+        ax.plot(iaf_hist["a"], label="IAF 1-draw ELBO (faithful)", alpha=0.5)
+    if iafw_hist["a"].size:
+        ax.plot(iafw_hist["a"], label="IAF 1-draw ELBO (whitened)", alpha=0.5)
     ax.axhline(svi_final_loss, color="r", ls="--", label="SVI final loss")
     ax.set_xlabel("step"); ax.set_ylabel("loss"); ax.legend(); ax.set_yscale("symlog")
     fig.tight_layout()
     fig.savefig(os.path.join(OUT_DIR, "flow_losses.png"), dpi=140)
 
     np.savez(os.path.join(OUT_DIR, "demo_validation_arrays.npz"),
+             arms=np.array(present),
              **{f"z_{t}": results[t]["z"] for t in results},
              **{f"u_{t}": results[t]["u"] for t in results if "u" in results[t]},
-             rhat=np.stack([diag[t][0] for t in ("A", "B", "C", "D")]),
-             ess=np.stack([diag[t][1] for t in ("A", "B", "C", "D")]))
+             **{f"rhat_{t}": diag[t][0] for t in present},
+             **{f"ess_{t}": diag[t][1] for t in present})
     with open(os.path.join(OUT_DIR, "demo_validation_summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
     print("SUMMARY:", json.dumps(summary, indent=2, default=str))

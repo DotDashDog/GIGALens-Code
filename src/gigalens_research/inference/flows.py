@@ -442,16 +442,30 @@ def _gather(a, idx):
 
 
 def _rqs_forward(x, widths, heights, slopes, B):
-    """Forward spline + log|dy/dx|, elementwise; identity (logdet 0) outside."""
+    """Forward spline + log|dy/dx|, elementwise; identity (logdet 0) outside.
+
+    NaN-grad safety (double-where trick): ``jnp.where(inside, ...)`` selects
+    the identity *value* outside [-B, B], but reverse-mode AD still
+    differentiates the untaken spline branch; evaluated at raw far-out-of-range
+    inputs that branch can be ill-conditioned and its NaN/inf cotangents poison
+    the gradients w.r.t. the spline params (NaN * 0 = NaN). Observed for real:
+    forward_kl_loss grads went all-NaN on whitened demo-posterior samples
+    reaching |x| ~ 31 with B = 6. Fix: compute the spline branch at
+    ``x_safe = where(inside, x, 0)`` (0 is always interior since B > 0), so
+    both branches are finite everywhere; the outer where then zeros the spline
+    branch's gradient for outside points, leaving EXACT identity values and
+    finite gradients w.r.t. all params in both directions.
+    """
     K = widths.shape[-1]
     xk, yk, d = _spline_knots(widths, heights, slopes, B)
     inside = (x > -B) & (x < B)
-    k = jnp.clip(jnp.sum(x[..., None] >= xk[..., 1:-1], axis=-1), 0, K - 1)
+    x_safe = jnp.where(inside, x, jnp.zeros_like(x))  # double-where trick
+    k = jnp.clip(jnp.sum(x_safe[..., None] >= xk[..., 1:-1], axis=-1), 0, K - 1)
     xkk, wk = _gather(xk, k), _gather(widths, k)
     ykk, hk = _gather(yk, k), _gather(heights, k)
     dk, dk1 = _gather(d, k), _gather(d, k + 1)
     s = hk / wk
-    xi = jnp.clip((x - xkk) / wk, 0.0, 1.0)
+    xi = jnp.clip((x_safe - xkk) / wk, 0.0, 1.0)
     xi1 = 1.0 - xi
     denom = s + (dk1 + dk - 2.0 * s) * xi * xi1
     y_in = ykk + hk * (s * xi * xi + dk * xi * xi1) / denom
@@ -462,17 +476,30 @@ def _rqs_forward(x, widths, heights, slopes, B):
 
 
 def _rqs_inverse(y, widths, heights, slopes, B):
-    """Inverse spline + log|dx/dy|, elementwise; identity outside."""
+    """Inverse spline + log|dx/dy|, elementwise; identity outside.
+
+    Same double-where safety as ``_rqs_forward`` (see its docstring). Here the
+    untaken branch is *provably* ill-posed at out-of-range dy: the citardauq
+    discriminant ``b^2 - 4ac`` can go negative (e.g. dy^2 * delta * (delta+4s)
+    with delta < 0), so ``sqrt(maximum(disc, 0))`` sits at 0 where sqrt has an
+    infinite gradient, and ``-b - sqrt(disc)`` can vanish. This was the actual
+    source of the all-NaN forward_kl_loss gradients. With ``y_safe`` the
+    quadratic is only ever evaluated in-range, where disc >= 0 strictly and the
+    denominator is nonzero (Durkan et al. 2019, App. A), making the maximum()
+    guard inert.
+    """
     K = widths.shape[-1]
     xk, yk, d = _spline_knots(widths, heights, slopes, B)
     inside = (y > -B) & (y < B)
-    k = jnp.clip(jnp.sum(y[..., None] >= yk[..., 1:-1], axis=-1), 0, K - 1)
+    y_safe = jnp.where(inside, y, jnp.zeros_like(y))  # double-where trick
+    k = jnp.clip(jnp.sum(y_safe[..., None] >= yk[..., 1:-1], axis=-1), 0, K - 1)
     xkk, wk = _gather(xk, k), _gather(widths, k)
     ykk, hk = _gather(yk, k), _gather(heights, k)
     dk, dk1 = _gather(d, k), _gather(d, k + 1)
     s = hk / wk
-    dy = y - ykk
+    dy = y_safe - ykk
     delta = dk1 + dk - 2.0 * s
+    # citardauq root of the RQ quadratic (Durkan et al. 2019 reference impl)
     a = hk * (s - dk) + dy * delta
     b = hk * dk - dy * delta
     c = -s * dy
