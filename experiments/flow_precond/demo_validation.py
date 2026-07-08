@@ -206,7 +206,8 @@ def build_model_and_fit():
 # Flow training                                                                #
 # --------------------------------------------------------------------------- #
 def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr,
-               seed, phase_b_samples=None, phase_b_steps=0, phase_b_lr=1e-4):
+               seed, phase_b_samples=None, phase_b_steps=0, phase_b_lr=1e-4,
+               n_chunks=1):
     """Phase A reverse-KL (+ optional Phase B forward-KL). Returns (params, hists).
 
     `tag` must encode the architecture/training config (cache key) -- caches carry
@@ -238,12 +239,39 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
 
     opt = optax.adam(lr)
 
-    @jax.jit
-    def step_a(params, opt_state, key):
-        loss, g = jax.value_and_grad(flows.neg_elbo_loss)(
-            params, make_bij, batched_lp, key, n_draws, dim)
-        updates, opt_state = opt.update(g, opt_state, params)
-        return optax.apply_updates(params, updates), opt_state, loss
+    # n_chunks > 1: evaluate the SAME n_draws-draw estimator as a mean of
+    # gradient-accumulated chunks (identical loss/grad in expectation; memory
+    # divided by n_chunks). Needed on the carousel, whose 128-draw render batch
+    # OOMs a 40GB A100 (~30GiB VJP alloc, 2026-07-08).
+    assert n_draws % n_chunks == 0
+    chunk_draws = n_draws // n_chunks
+
+    if n_chunks == 1:
+        # Original path, kept bit-identical (no key split) so demo runs/caches
+        # keep their exact random stream.
+        @jax.jit
+        def step_a(params, opt_state, key):
+            loss, g = jax.value_and_grad(flows.neg_elbo_loss)(
+                params, make_bij, batched_lp, key, n_draws, dim)
+            updates, opt_state = opt.update(g, opt_state, params)
+            return optax.apply_updates(params, updates), opt_state, loss
+    else:
+        @jax.jit
+        def step_a(params, opt_state, key):
+            keys = jax.random.split(key, n_chunks)
+
+            def body(carry, k):
+                cl, cg = carry
+                l, g = jax.value_and_grad(flows.neg_elbo_loss)(
+                    params, make_bij, batched_lp, k, chunk_draws, dim)
+                return (cl + l / n_chunks,
+                        jax.tree_util.tree_map(
+                            lambda a, b: a + b / n_chunks, cg, g)), None
+
+            zero_g = jax.tree_util.tree_map(jnp.zeros_like, params)
+            (loss, g), _ = jax.lax.scan(body, (jnp.zeros(()), zero_g), keys)
+            updates, opt_state = opt.update(g, opt_state, params)
+            return optax.apply_updates(params, updates), opt_state, loss
 
     def _params_finite(p):
         return all(bool(jnp.isfinite(l).all()) for l in jax.tree_util.tree_leaves(p))

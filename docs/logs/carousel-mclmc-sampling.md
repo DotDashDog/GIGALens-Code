@@ -482,7 +482,11 @@ multimodality, conditioning, or the NFW profile.
   independently reproduced by grader); GATE F authorized at ≤60 GPU-min; §5.4 benchmark
   checkpoint reserved for human approval (win-condition band re-derivation required:
   occupancy estimates span 4.6–9.6%; pocket-occupancy R̂ across chains flagged as the
-  sharp benchmark diagnostic).**
+  sharp benchmark diagnostic).** First attempt OOM'd at Phase-A step 0 (128-draw ELBO
+  VJP wants ~30 GiB on a 40GB A100 — basis-gen+VJP dominance, cf. June profiling);
+  environmental fix, no design change: the SAME 128-draw estimator evaluated as 4
+  gradient-accumulated 32-draw chunks (identical loss/grad in expectation; demo n_chunks=1
+  path kept bit-identical). Cost of failed attempt ~0.15 GPU-h. Rerun launched same day.
 
 - **Run: demo 4-arm flow-preconditioning validation** (plan §5.2/§5.3 dry run before any
   carousel work; script `experiments/flow_precond/demo_validation.py`, branch

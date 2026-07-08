@@ -111,7 +111,8 @@ def main():
     t0 = time.perf_counter()
     params_a, hist_a = dv.train_flow(
         f"A_{sp_key}", sp_init, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
-        num_steps=PHASE_A_STEPS, lr=PHASE_A_LR, seed=SEED + 11)
+        num_steps=PHASE_A_STEPS, lr=PHASE_A_LR, seed=SEED + 11,
+        n_chunks=4)  # same 128-draw estimator, gradient-accumulated (OOM fix)
     t_a = time.perf_counter() - t0
 
     t0 = time.perf_counter()
@@ -140,10 +141,14 @@ def main():
 
     def direct_neg_elbo(params, n_batches=5):
         """Fresh Monte-Carlo neg-ELBO of the FINAL flow (Phase B shifts it off the
-        Phase-A history, so each flow gets its own estimate; 5x128 draws)."""
-        vals = [float(flows.neg_elbo_loss(
-            params, sp_make, batched_lp, jax.random.key(1000 + i),
-            PHASE_A_DRAWS, dim)) for i in range(n_batches)]
+        Phase-A history, so each flow gets its own estimate; 5x128 draws evaluated
+        in 32-draw memory chunks -- same estimator, OOM-safe)."""
+        vals = []
+        for i in range(n_batches):
+            ks = jax.random.split(jax.random.key(1000 + i), 4)
+            vals.append(float(np.mean([float(flows.neg_elbo_loss(
+                params, sp_make, batched_lp, k, PHASE_A_DRAWS // 4, dim))
+                for k in ks])))
         return float(np.mean(vals)), float(np.std(vals))
 
     results = {}
