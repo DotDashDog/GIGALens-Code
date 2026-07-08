@@ -1,0 +1,25 @@
+{
+  "model_card": {
+    "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/gate_i_identity.py",
+    "gigalens": "/global/homes/l/linusu/gigalens/src/gigalens/__init__.py",
+    "gigalens_research": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/src/gigalens_research/__init__.py",
+    "jax": "0.10.0.dev20260708",
+    "tfp": "0.26.0-dev20260505",
+    "x64": true,
+    "devices": [
+      "cuda:0"
+    ],
+    "seed": 0,
+    "n_chains": 8,
+    "num_burnin": 300,
+    "num_results": 300
+  },
+  "logprob_bit_identical_prediag": true,
+  "logprob_max_abs_diff_prediag": 0.0,
+  "bit_identical": true,
+  "max_abs_diff": 0.0,
+  "max_rel_diff": 0.0,
+  "frac_differing_elements": 0.0,
+  "ulp_floor_signature": true,
+  "gate_i_pass": true
+}
