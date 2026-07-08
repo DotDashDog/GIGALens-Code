@@ -494,10 +494,20 @@ multimodality, conditioning, or the NFW profile.
   resolution 1.33 ≈ demo's 1.5). ±16 is adopted as a FIXED method-level default (one-shot
   compatible — a constant like NUTS's max_treedepth, not per-problem derived), sized so a
   box must hold the post-scale shape: measured here, main-basin dynamic range ≤ 9.2 and
-  pocket offset ≤ 4.2 main-sd units ⇒ ±16 gives ~1.7× margin; per-problem violations are
-  caught by the box-coverage/pullback gates, which is the gates' job. Honesty note: the
-  default is chosen in light of this problem's measurements — its status as a universal
-  default is a hypothesis future systems test, not a validated fact.
+  pocket offset ≤ 4.2 main-sd units ⇒ ±16 gives ~1.7× margin against the dynamic range
+  alone and ~1.2× against the compound worst case (range + pocket offset ≈ 13.4 in one
+  dim; the operative check is the predicted |T⁻¹(z_pocket)| ≲ 10, verified by the F4′/box
+  gates); per-problem violations are caught by the box-coverage/pullback gates, which is
+  the gates' job. Honesty note: the default is chosen in light of this problem's
+  measurements — its status as a universal default is a hypothesis future systems test,
+  not a validated fact. PRE-COMMITTED demo re-validation: before the §5.4 benchmark runs,
+  the demo validation is re-run at ±16/24 (one flow retrain + arm B′, ~15–20 GPU-min with
+  caches) so the benchmark config is validated on BOTH systems; a demo failure at ±16/24
+  blocks the benchmark. PRE-COMMITTED premise-level reading (grader): this is the SECOND
+  post-failure widening (demo 6→35, now 6→16 as default) — if ±16/24 fails the demo
+  re-validation or a future system, the honest conclusion is NOT a third widening but
+  that the one-shot fixed-box premise is FALSIFIED, and the plan-§6 data-derived-range
+  path (v3, which passed) becomes the method.
   (Fv2.ii) The pre-committed F2 retry (subsampling/early-stopping) is SKIPPED: premise
   (overfit) falsified — Phase B trained monotonically; the failure is support, not fit.
   This amendment replaces that retry as the single pre-committed response.
@@ -506,13 +516,23 @@ multimodality, conditioning, or the NFW profile.
   was constraining reverse-KL's view of the pocket, an informative surprise); (F2′) A+B at
   ±16 PASSES (≥ −8; expected ≈ +5.4): pocket draws now pull back in-box (predicted
   |T⁻¹(z_pocket)| ≲ 10 post-scale), so fkl has spline capacity where its data lives;
-  (F3′) A-only ELBO ≤ SVI − 20 nats (at least matching the ±6 flow — more capacity, same
-  objective); A+B ELBO ≤ SVI (the ±6 version's F3 failure was the support problem);
+  (F3′) A-only ELBO ≤ SVI − 20 nats. Derivation (cross-architecture nesting): RQ-spline
+  widths/heights/slopes are trainable, so a ±16/24 layer can allocate knots to reproduce
+  any ±6/8 configuration inside ±6 and identity on [6,16] — the measured SVI−26 optimum is
+  (ε-approximately) representable in the new family; the 6-nat slack covers optimization
+  shortfall in the larger parameterization. PRE-COMMITTED intermediate reading: a result
+  in (SVI−20, SVI] is an OPTIMIZATION-QUALITY finding (bigger landscape, same representable
+  optimum), not a method failure — no post-hoc reclassification either way. A+B ELBO ≤ SVI
+  (the ±6 version's F3 failure was the support problem);
   (F4′) A+B passes the main-basin pullback-scale gate; A-only recorded (may still fail on
   |mean| — reverse-KL centering under ridge curvature is exactly what the benchmark
   probes). Falsifier: if F2′ fails WITH pocket pullbacks in-box, Phase B has a genuine
   fit problem ⇒ THEN the subsampling/early-stopping retry applies (ONE pass), else the
-  pre-registered negative finding + human escalation stands. **Cost: ≤ 45 GPU-min**
+  pre-registered negative finding + human escalation stands. The original GATE F falsifier
+  responses CARRY OVER mutatis mutandis: F3′ fails for A-only → lr fallback (ONE retrain
+  at 1e-3, no iteration); F3′ fails ONLY for A+B → Phase-B evidence evaluated jointly with
+  F2′/F4′, no lr iteration; F4′ fails while F2′ passes → diagnose the scale layer
+  (s travel vs measured mismatch) before any benchmark. **Cost: ≤ 45 GPU-min**
   (Phase A retrain at 24 bins + Phase B + gates). **Status: awaiting rigor-grader
   approval of Fv2.**
 
