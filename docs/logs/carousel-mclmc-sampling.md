@@ -533,8 +533,9 @@ multimodality, conditioning, or the NFW profile.
   at 1e-3, no iteration); F3′ fails ONLY for A+B → Phase-B evidence evaluated jointly with
   F2′/F4′, no lr iteration; F4′ fails while F2′ passes → diagnose the scale layer
   (s travel vs measured mismatch) before any benchmark. **Cost: ≤ 45 GPU-min**
-  (Phase A retrain at 24 bins + Phase B + gates). **Status: awaiting rigor-grader
-  approval of Fv2.**
+  (Phase A retrain at 24 bins + Phase B + gates). **Status: Fv2 approved 2026-07-08
+  (rigor-grader, second round; box-premise falsification pre-committed); run authorized at
+  ≤45 GPU-min; §5.4 benchmark blocked on demo-±16/24 re-validation + human approval.**
 
 - **Run: demo 4-arm flow-preconditioning validation** (plan §5.2/§5.3 dry run before any
   carousel work; script `experiments/flow_precond/demo_validation.py`, branch
