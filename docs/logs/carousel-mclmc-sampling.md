@@ -491,7 +491,29 @@ multimodality, conditioning, or the NFW profile.
   invalidation, per-arm isolation with arm_status, fail-fast skip of arms with non-finite
   flows (the timeout mechanism — MAMS NaN-guard ε-collapse — cannot recur), line-buffered
   stdout. **Cost: ≤30 GPU-min** (MAP/SVI + spline-A cached; retrain B-phase + 2 IAFs + 4
-  sampler arms). **Status: awaiting rigor-grader approval of v2.**
+  sampler arms). Status: v2 approved 2026-07-08 (rigor-grader, third round); v2 RAN — arms
+  A/E green, B/C failed agreement+health; diagnosed as range-clipped flow + under-adaptation
+  (see v2 Log entry). **AMENDED v3 (2026-07-08, post-v2-diagnosis; re-approval required):**
+  (v3.i) spline_range 6→35 (measured max|T⁻¹(z)| = 31.4; plan §6 "widen if not" — derived,
+  not tuned), num_bins 8→48 (preserves per-bin resolution); cache keys now encode
+  range/bins (stale-cache gap the grader flagged, now binding).
+  (v3.ii) Flow-MAMS arms B/C get burnin 1000 (= NUTS warmup budget; v2 showed 300 from
+  identity mass cannot learn residual flow-imperfection scales — chains spread 1.1–3.6σ vs
+  target 7.2σ). Arm A stays 300 (it converged; R̂ 1.015).
+  (v3.iii) NEW pullback-scale gate: per-dim sd(T⁻¹(arm-A draws)) ∈ [0.5, 2] and |mean| ≤ 1.
+  Pre-registered prediction (7): the Phase-A+B flow PASSES it (with range 35 the training
+  data is finally in-range, so forward-KL can fix scales); prediction (8): Phase-A-only
+  FAILS it (mode-seeking reverse KL — the demo analog of the carousel §4.4 pocket claim;
+  its failure is a result, not a bug). Candidate GATE F addition for the carousel stage.
+  (v3.iv) Gate semantics fixed: agreement gates are interpretable as bias evidence ONLY
+  when the arm's health gate passes (`agreement_interpretable`); an unconverged arm is a
+  budget/adaptation finding, not a bias verdict (v2's falsifier conflated these).
+  Predictions for the v3 rerun: (2') arm C passes health + agreement (154-accounting
+  unchanged, arms B/C/E vs A + B-vs-C); (9) arm B: pullback-scale fails (8) but with 1000
+  burnin its health gate may pass — if health passes, agreement must pass (MH exactness);
+  if health fails, that is the recorded budget finding. E expected to repeat its v2 pass.
+  **Cost: ≤35 GPU-min** (flows retrain at new arch; MAP/SVI cached; B/C burnin ×3.3).
+  **Status: awaiting rigor-grader approval of v3.**
 
 - **Run: GATE I — identity-flow wrapper ≡ vanilla MAMS on the demo lens** (flow-preconditioning
   plan `docs/plans/flow-preconditioned-mams.md` §5.1; script
@@ -600,6 +622,26 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (demo validation v2 RAN — mixed; B/C failure DIAGNOSED as range-clipped flow
+  + under-adaptation, not a bug)** `proposed (UNCERTIFIED)`. Observed vs predicted:
+  predictions (1) flow gate PASS (−75.18 ≤ −70.98), (5) Phase B PASS (19.94→7.14),
+  (6) faithful NeuTra diverged step 2 as predicted (mechanism archived), and **arm E
+  (whitened-IAF NeuTra-NUTS) passed ALL gates** (worst mean dev 1.9σ, sd ratios
+  [0.97,1.08], R̂ 1.009; 6/2400 divergent transitions → divergence_gate FAIL recorded as a
+  minor finding). **Arms B/C (flow-MAMS) FAILED agreement + health** (worst 18σ, sd ratios
+  →0.48, R̂≈1.26–1.28, u-R̂ 1.39). Diagnosis (CPU, from committed arrays): the pulled-back
+  demo posterior through the spline flow has per-dim sd up to **7.2** and |mean| 6.4 in
+  u-space (reverse-KL mode-seeking inherited SVI's underdispersion — the SAME flaw family
+  the plan §4.4 predicts for the carousel pocket); MAMS's 300-step burnin from identity
+  mass never adapted to those scales (chains spread only 1.1–3.6σ), while arm E's NUTS had
+  1000 warmup steps. AND Phase B could not fix the scales (sd 7.18→7.21 unchanged) because
+  the offending draws sit at up to **31 whitened-σ — outside the ±6 spline range where the
+  flow is exact-identity with zero capacity** (plan §6 "widen if not" realized; range is
+  binding). Kernel exactness NOT in question (E shares the wrapper; GATE I bit-identical).
+  v3 amendments follow in the design checkpoint. Cost: ~0.4 GPU-h (run ~20 min).
+  Artifacts: demo_validation_out/{demo_validation_summary.json, demo_validation_arrays.npz,
+  traces_worst_param.png, agreement.png, flow_losses.png}.
 
 - **2026-07-08 (demo 4-arm validation RAN — TIMEOUT; diagnosed, 3 findings)**
   `proposed (UNCERTIFIED)`. Run hit the 45-min limit with arms unfinished; stdout lost

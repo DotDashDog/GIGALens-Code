@@ -1,0 +1,168 @@
+{
+  "model_card": {
+    "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/demo_validation.py",
+    "gigalens": "/global/homes/l/linusu/gigalens/src/gigalens/__init__.py",
+    "gigalens_research": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/src/gigalens_research/__init__.py",
+    "jax": "0.10.0.dev20260708",
+    "x64": true,
+    "devices": [
+      "cuda:0"
+    ],
+    "seed": 0,
+    "arms": "A=vanilla MAMS, B=spline-A flow-MAMS, C=spline-A+B flow-MAMS, D=faithful unwhitened-IAF NeuTra-NUTS (expected to record divergence), E=whitened-IAF NeuTra-NUTS (documented deviation: SVI whitening composed under the NumPyro IAF recipe)",
+    "budgets": {
+      "n_chains": 8,
+      "mams": [
+        300,
+        300
+      ],
+      "nuts": [
+        1000,
+        300
+      ]
+    },
+    "spline": {
+      "num_layers": 6,
+      "num_bins": 8,
+      "spline_range": 6.0,
+      "hidden_dims": [
+        64,
+        64
+      ],
+      "phase_a": [
+        3000,
+        128,
+        0.001
+      ],
+      "phase_b": [
+        1000,
+        0.0001,
+        "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/gate_i_out/gate_i_arrays.npz"
+      ]
+    },
+    "iaf": {
+      "num_flows": 3,
+      "steps": 10000,
+      "lr": 0.003,
+      "n_draws": 1
+    }
+  },
+  "timings_s": {
+    "A_vanilla_mams": 48.78193840000313,
+    "flow_spline_A": 0.6170223919907585,
+    "flow_spline_B": 25.4241759669967,
+    "flow_iaf": 10.079645407036878,
+    "flow_iaf_whitened": 77.02549563499633,
+    "B_flow_mams": 101.57167887501419,
+    "C_flow_mams": 228.72344167495612,
+    "E_neutra_nuts": 174.81845087301917
+  },
+  "svi_final_loss": -70.98216791641367,
+  "arm_status": {
+    "A": "OK",
+    "B": "OK",
+    "C": "OK",
+    "D": "SKIPPED: flow training diverged (recorded finding)",
+    "E": "OK"
+  },
+  "flow_training": {
+    "spline_A": {
+      "steps": 3000,
+      "diverged": false
+    },
+    "spline_B": {
+      "steps": 1000,
+      "diverged": false
+    },
+    "iaf": {
+      "steps": 3,
+      "diverged": true
+    },
+    "iaf_whitened": {
+      "steps": 10000,
+      "diverged": false
+    }
+  },
+  "flow_gate": {
+    "spline_neg_elbo_tail": -75.18144408212476,
+    "pass": true
+  },
+  "phase_b_gate": {
+    "pass": true,
+    "first": 19.94478348270417,
+    "final": 7.136584711624222
+  },
+  "arms": {
+    "A": {
+      "max_rhat": 1.0151183662788323,
+      "min_ess": 412.5564593804917,
+      "worst_rhat_param": 11,
+      "worst_ess_param": 11,
+      "rhat_health_pass": true
+    },
+    "B": {
+      "max_rhat": 1.2614363598881968,
+      "min_ess": 654.7430772664458,
+      "worst_rhat_param": 21,
+      "worst_ess_param": 10,
+      "rhat_health_pass": false,
+      "u_max_rhat": 1.3884356050239608,
+      "u_min_ess": 558.5241315774895,
+      "mean_gate_pass": false,
+      "width_gate_pass": false,
+      "mean_gate_worst_sigma": 18.02669052892864,
+      "width_ratio_range": [
+        0.47589642549783256,
+        1.027555952657586
+      ],
+      "n_mean_fail": 15,
+      "n_width_fail": 11
+    },
+    "C": {
+      "max_rhat": 1.2812615602121171,
+      "min_ess": 980.3619618254609,
+      "worst_rhat_param": 0,
+      "worst_ess_param": 16,
+      "rhat_health_pass": false,
+      "u_max_rhat": 1.2833875815097995,
+      "u_min_ess": 927.5600643300485,
+      "mean_gate_pass": false,
+      "width_gate_pass": false,
+      "mean_gate_worst_sigma": 16.808522599066666,
+      "width_ratio_range": [
+        0.502828806306652,
+        1.0042180411168518
+      ],
+      "n_mean_fail": 12,
+      "n_width_fail": 11
+    },
+    "E": {
+      "max_rhat": 1.0087989374393698,
+      "min_ess": 750.5754342824338,
+      "worst_rhat_param": 11,
+      "worst_ess_param": 11,
+      "rhat_health_pass": true,
+      "u_max_rhat": 1.0071657967878833,
+      "u_min_ess": 1063.6716677887487,
+      "divergences": 6,
+      "divergence_gate_pass": false,
+      "mean_gate_pass": true,
+      "width_gate_pass": true,
+      "mean_gate_worst_sigma": 1.900534012604048,
+      "width_ratio_range": [
+        0.9728361783192148,
+        1.0794761356014775
+      ],
+      "n_mean_fail": 0,
+      "n_width_fail": 0
+    }
+  },
+  "bc_width_gate": {
+    "pass_": false,
+    "n_fail": 5,
+    "ratio_range": [
+      0.8155967634652325,
+      1.316540913376488
+    ]
+  }
+}

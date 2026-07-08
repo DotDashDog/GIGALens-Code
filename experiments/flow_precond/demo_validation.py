@@ -68,7 +68,12 @@ NUTS_RESULTS = 300        # same kept-draw budget as MAMS arms
 # Phase A (plan §4.2/§4.4): reverse-KL, 128 draws/step. Phase B: forward-KL on MAMS
 # samples from the GATE I run (demo posterior; exercises the code path -- on the demo
 # there is no secondary mode for it to add, so B should change little).
-SPLINE_CFG = dict(num_layers=6, num_bins=8, spline_range=6.0, hidden_dims=(64, 64))
+# v3: range widened 6->35 after measuring max|T^-1(z)| = 31.4 on demo posterior draws
+# (plan §6 "widen if not"); bins scaled 8->48 to keep per-bin resolution ~constant.
+SPLINE_CFG = dict(num_layers=6, num_bins=48, spline_range=35.0, hidden_dims=(64, 64))
+# Flow-MAMS arms get the same adaptation budget NUTS gets (1000 warmup): v2 showed
+# 300 burnin from identity mass cannot learn residual flow-imperfection scales.
+FLOW_MAMS_BURNIN = 1000
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
 PHASE_A_LR = 1e-3
@@ -194,7 +199,12 @@ def build_model_and_fit():
 # --------------------------------------------------------------------------- #
 def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr,
                seed, phase_b_samples=None, phase_b_steps=0, phase_b_lr=1e-4):
-    """Phase A reverse-KL (+ optional Phase B forward-KL). Returns (params, hists)."""
+    """Phase A reverse-KL (+ optional Phase B forward-KL). Returns (params, hists).
+
+    `tag` must encode the architecture/training config (cache key) -- caches carry
+    no hash, so a config change with an unchanged tag would silently reuse stale
+    params.
+    """
     cache = os.path.join(OUT_DIR, f"flow_{tag}.npz")
     if os.path.exists(cache):
         c = np.load(cache, allow_pickle=True)
@@ -365,10 +375,11 @@ def main():
 
     sp_init, sp_make = flows.make_whitened_spline_flow(
         k_spline, dim, jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril), **SPLINE_CFG)
+    sp_key = f"r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
 
     t0 = time.perf_counter()
     sp_params_a, sp_hist = train_flow(
-        "spline_A", sp_init, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
+        f"spline_A_{sp_key}", sp_init, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=PHASE_A_STEPS, lr=PHASE_A_LR, seed=SEED + 2)
     timings["flow_spline_A"] = time.perf_counter() - t0
 
@@ -377,7 +388,7 @@ def main():
 
     t0 = time.perf_counter()
     sp_params_ab, sp_hist_ab = train_flow(
-        "spline_AB", sp_params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
+        f"spline_AB_{sp_key}", sp_params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 3,
         phase_b_samples=phase_b_z, phase_b_steps=PHASE_B_STEPS,
         phase_b_lr=PHASE_B_LR)
@@ -432,7 +443,7 @@ def main():
             wrapped = FlowModelSeq(model_seq, TransformedProbModel(prob_model, bij))
             t0 = time.perf_counter()
             u = np.asarray(MAMS_JIT(
-                wrapped, qz_u, n_hmc=N_CHAINS, num_burnin_steps=NUM_BURNIN,
+                wrapped, qz_u, n_hmc=N_CHAINS, num_burnin_steps=FLOW_MAMS_BURNIN,
                 num_results=NUM_RESULTS, seed=SEED, progress_bar=False))
             timings[f"{tag}_flow_mams"] = time.perf_counter() - t0
             results[tag] = dict(z=decode_batch(prob_model, bij, u), u=u)
@@ -466,6 +477,22 @@ def main():
             arm_status[tag] = f"FAILED: {type(e).__name__}: {e}"
             print(f"arm {tag}: {arm_status[tag]}")
 
+    # ---- Pullback-scale gate (v3, pre-registered predictions 7/8) --------------
+    # Per-dim sd of T^{-1}(arm-A posterior draws) must be in [0.5, 2] and |mean| <= 1
+    # for the Phase-A+B flow (7); Phase-A-only is PREDICTED to fail it (mode-seeking
+    # reverse KL, prediction 8). This is the demo analog of the carousel GATE F
+    # pocket claim and a candidate addition to GATE F for the carousel stage.
+    zA_flat = jnp.asarray(results["A"]["z"].reshape(-1, dim))
+    pullback = {}
+    for name, params in (("spline_A", sp_params_a), ("spline_AB", sp_params_ab)):
+        uu = np.asarray(sp_make(params).inverse(zA_flat))
+        sd, mu = uu.std(0), np.abs(uu.mean(0))
+        pullback[name] = dict(
+            sd_range=[float(sd.min()), float(sd.max())], max_abs_mean=float(mu.max()),
+            pass_=bool((sd >= 0.5).all() and (sd <= 2.0).all() and (mu <= 1.0).all()))
+        print(f"pullback-scale[{name}]: sd [{sd.min():.2f},{sd.max():.2f}] "
+              f"|mean|max {mu.max():.2f} pass={pullback[name]['pass_']}")
+
     # ---- Diagnostics + gates ---------------------------------------------------
     summary = {"model_card": MODEL_CARD, "timings_s": timings,
                "svi_final_loss": svi_final_loss,
@@ -496,6 +523,7 @@ def main():
                    "final": float(sp_hist_ab["b"][-1])
                    if sp_hist_ab["b"] is not None and len(sp_hist_ab["b"]) else None,
                },
+               "pullback_scale_gate": pullback,
                "arms": {}}
     diag = {}
     for tag, r in results.items():
@@ -535,6 +563,11 @@ def main():
             width_ratio_range=[float(ratio.min()), float(ratio.max())],
             n_mean_fail=int((~mean_ok).sum()), n_width_fail=int((~width_ok).sum()),
         )
+        # v3: agreement gates are only interpretable as bias evidence when the arm
+        # is converged (health gate). An unconverged arm is a budget/adaptation
+        # finding, not a correctness verdict (the v2 B/C failure taught this).
+        summary["arms"][tag]["agreement_interpretable"] = \
+            summary["arms"][tag]["rhat_health_pass"]
         if tag == "D":
             # Arm D completing at all falsifies prediction (6); its agreement stats
             # are then diagnostic under (6)'s "investigate", NOT part of the
