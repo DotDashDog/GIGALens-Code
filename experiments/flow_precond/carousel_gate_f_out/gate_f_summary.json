@@ -1,0 +1,101 @@
+{
+  "model_card": {
+    "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_f.py",
+    "jax": "0.10.0.dev20260708",
+    "devices": [
+      "cuda:0"
+    ],
+    "x64": true,
+    "dim": 33,
+    "spline": {
+      "num_layers": 6,
+      "num_bins": 8,
+      "spline_range": 6.0,
+      "hidden_dims": [
+        64,
+        64
+      ],
+      "trainable_scale": true,
+      "phase_a": [
+        3000,
+        128,
+        0.003
+      ],
+      "phase_b": [
+        1000,
+        0.0001,
+        "mams64"
+      ]
+    },
+    "phase_b_data": {
+      "source": "messy_tests/dpie/mams/arrays.npz",
+      "n": 64000,
+      "pocket_occupancy": 0.095734375
+    },
+    "seed": 0
+  },
+  "timings_s": {
+    "phase_a": 0.7106227839831263,
+    "phase_b": 255.51114388706628
+  },
+  "training": {
+    "A": {
+      "steps": 3000,
+      "diverged": false
+    },
+    "B": {
+      "steps": 1000,
+      "diverged": false
+    }
+  },
+  "gates": {
+    "A_only": {
+      "status": "OK",
+      "elbo_direct": 291426.9015619756,
+      "elbo_direct_sd": 0.20425616157808685,
+      "elbo_gate_pass": true,
+      "pocket_log_ratio": -108.83415865328888,
+      "pocket_gate_pass": false,
+      "pullback_main_sd": [
+        1.1413322239602064,
+        4.5225598769494715
+      ],
+      "pullback_main_maxabsmean": 8.14371118196623,
+      "pullback_scale_pass": false,
+      "pullback_pocket_sd": [
+        0.8759598015465331,
+        5.005262231311676
+      ],
+      "pullback_pocket_maxabs": 22.27647990193216,
+      "max_abs_u_main": 22.09378969103792,
+      "exp_s_range": [
+        1.1144030932861464,
+        34.55730312040411
+      ]
+    },
+    "A_plus_B": {
+      "status": "OK",
+      "elbo_direct": 291458.8786459633,
+      "elbo_direct_sd": 7.996895354195096,
+      "elbo_gate_pass": false,
+      "pocket_log_ratio": -121.57549780592501,
+      "pocket_gate_pass": false,
+      "pullback_main_sd": [
+        0.982334739120451,
+        4.385928665381111
+      ],
+      "pullback_main_maxabsmean": 6.4340727324690805,
+      "pullback_scale_pass": false,
+      "pullback_pocket_sd": [
+        0.8321128488437708,
+        5.253750663544132
+      ],
+      "pullback_pocket_maxabs": 20.184098971856965,
+      "max_abs_u_main": 20.219180605658337,
+      "exp_s_range": [
+        1.2009931863888077,
+        35.69674237752177
+      ]
+    }
+  }
+}

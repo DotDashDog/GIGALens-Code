@@ -487,6 +487,34 @@ multimodality, conditioning, or the NFW profile.
   environmental fix, no design change: the SAME 128-draw estimator evaluated as 4
   gradient-accumulated 32-draw chunks (identical loss/grad in expectation; demo n_chunks=1
   path kept bit-identical). Cost of failed attempt ~0.15 GPU-h. Rerun launched same day.
+  RAN 2026-07-08: F1 confirmed (−108.8), F2/F3(A+B)/F4 FAILED — structural diagnosis in the
+  Log entry (box ±6 cannot contain the post-scale carousel geometry; |w| to 322, pullbacks
+  to 22). **AMENDED v2 (2026-07-08, re-approval required):**
+  (Fv2.i) Method-default box: spline_range 6 → **16**, num_bins 8 → **24** (per-bin
+  resolution 1.33 ≈ demo's 1.5). ±16 is adopted as a FIXED method-level default (one-shot
+  compatible — a constant like NUTS's max_treedepth, not per-problem derived), sized so a
+  box must hold the post-scale shape: measured here, main-basin dynamic range ≤ 9.2 and
+  pocket offset ≤ 4.2 main-sd units ⇒ ±16 gives ~1.7× margin; per-problem violations are
+  caught by the box-coverage/pullback gates, which is the gates' job. Honesty note: the
+  default is chosen in light of this problem's measurements — its status as a universal
+  default is a hypothesis future systems test, not a validated fact.
+  (Fv2.ii) The pre-committed F2 retry (subsampling/early-stopping) is SKIPPED: premise
+  (overfit) falsified — Phase B trained monotonically; the failure is support, not fit.
+  This amendment replaces that retry as the single pre-committed response.
+  (Fv2.iii) Predictions, re-registered: (F1′) A-only at ±16 STILL fails the pocket gate
+  (mode-dropping is about reverse-KL's objective, not the box — if it now PASSES, the box
+  was constraining reverse-KL's view of the pocket, an informative surprise); (F2′) A+B at
+  ±16 PASSES (≥ −8; expected ≈ +5.4): pocket draws now pull back in-box (predicted
+  |T⁻¹(z_pocket)| ≲ 10 post-scale), so fkl has spline capacity where its data lives;
+  (F3′) A-only ELBO ≤ SVI − 20 nats (at least matching the ±6 flow — more capacity, same
+  objective); A+B ELBO ≤ SVI (the ±6 version's F3 failure was the support problem);
+  (F4′) A+B passes the main-basin pullback-scale gate; A-only recorded (may still fail on
+  |mean| — reverse-KL centering under ridge curvature is exactly what the benchmark
+  probes). Falsifier: if F2′ fails WITH pocket pullbacks in-box, Phase B has a genuine
+  fit problem ⇒ THEN the subsampling/early-stopping retry applies (ONE pass), else the
+  pre-registered negative finding + human escalation stands. **Cost: ≤ 45 GPU-min**
+  (Phase A retrain at 24 bins + Phase B + gates). **Status: awaiting rigor-grader
+  approval of Fv2.**
 
 - **Run: demo 4-arm flow-preconditioning validation** (plan §5.2/§5.3 dry run before any
   carousel work; script `experiments/flow_precond/demo_validation.py`, branch
@@ -737,6 +765,30 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (carousel GATE F RAN — F1 CONFIRMED, F2/F3/F4 FAIL with structural
+  diagnosis; retry premise falsified)** `proposed (UNCERTIFIED)`. Observed vs predicted:
+  **(F1) CONFIRMED precisely** — A-only pocket ratio **−108.8 nats** (predicted ≈ −100s):
+  reverse-KL mode-dropping of the 14σ pocket is REAL on the carousel (the plan-§4.4 claim,
+  now measured). A-only ELBO 291426.9 ± 0.2 ≤ 291453.1 (F3 pass for A-only; −26 nats below
+  SVI; step-0 loss 291453.7 = SVI, nesting confirmed live). **(F2) FAILED, and worse than
+  A-only**: A+B pocket ratio −121.6; A+B ELBO 291458.9 ± 8.0 (> SVI ⇒ F3 fails for A+B
+  only); both flows FAIL F4 (main-basin pullback sd to 4.5, |mean| to 8.1).
+  **DIAGNOSIS (CPU, from caches + arrays):** NOT overfitting — Phase B trained cleanly
+  (fkl 131.3→15.5 monotone). STRUCTURAL: the carousel posterior in SVI-whitened coords
+  extends to **|w| = 322** (vs demo's 31; both basins — the curved ridge's tails, not the
+  pocket), pullbacks reach |u| ≈ 20–22 ≫ the ±6 box, so most training data sits where the
+  splines have ZERO capacity and only the shared DiagScale can respond — improving average
+  data-likelihood there (what fkl does) degrades the interior (ELBO ↑, pocket density at
+  zP ↓). A shared per-dim scale cannot represent bimodality; the box must contain the
+  POST-SCALE shape. Measured post-scale requirements (scales ≡ main-basin sd): per-dim
+  dynamic range ≤ 9.2 (median 4.4), pocket-mean offset ≤ 4.2 main-sd units ⇒ a fixed
+  ±12–16 box suffices with margin. **The pre-committed F2 retry (subsampling/
+  early-stopping) is NOT executed: its premise (overfit) is falsified by the diagnosis —
+  amendment v2 goes to the grader instead.** Two OOMs en route, both fixed exactly
+  (gradient-accumulated chunks; Phase-B equivalence verified to 9e-16). Cost: ~0.7 GPU-h
+  across 3 attempts. Artifacts: carousel_gate_f_out/{gate_f_summary.json, flow caches,
+  gate_f_losses.png}.
 
 - **2026-07-08 (demo validation v4 RAN — one-shot config CLEAN SWEEP)**
   `proposed (UNCERTIFIED)`. Observed vs predicted, all pre-registered: **(10) PASS** —

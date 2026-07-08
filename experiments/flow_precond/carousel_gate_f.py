@@ -56,7 +56,10 @@ import demo_validation as dv  # reuse the demo-validated train_flow loop
 dv.OUT_DIR = OUT_DIR          # redirect its flow caches here
 
 SEED = 0
-SPLINE_CFG = dict(num_layers=6, num_bins=8, spline_range=6.0, hidden_dims=(64, 64),
+# Fv2: box +-16 / 24 bins (method-level FIXED default; +-6 structurally cannot
+# contain the carousel's post-scale geometry -- see the GATE F Log entry: dynamic
+# range <= 9.2, pocket offset <= 4.2 main-sd units, so +-16 holds with ~1.7x margin).
+SPLINE_CFG = dict(num_layers=6, num_bins=24, spline_range=16.0, hidden_dims=(64, 64),
                   trainable_scale=True)
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
