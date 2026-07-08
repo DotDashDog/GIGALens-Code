@@ -1,0 +1,70 @@
+{
+  "leg_a_grad_finiteness": {
+    "1.0": {
+      "lp_finite": 16,
+      "n": 16,
+      "grad_finite_rows": 5,
+      "lp_min": -154799.9870229219,
+      "lp_max": -150554.7830202446,
+      "max_abs_grad": 6643.025307828468
+    },
+    "3.0": {
+      "lp_finite": 16,
+      "n": 16,
+      "grad_finite_rows": 1,
+      "lp_min": -173496.93498101737,
+      "lp_max": -135117.54474250937,
+      "max_abs_grad": 24709.219874217393
+    },
+    "5.0": {
+      "lp_finite": 16,
+      "n": 16,
+      "grad_finite_rows": 0,
+      "lp_min": -130296535.69377725,
+      "lp_max": -160094.382159377,
+      "max_abs_grad": 265508407.9973928
+    },
+    "8.0": {
+      "lp_finite": 16,
+      "n": 16,
+      "grad_finite_rows": 0,
+      "lp_min": -3.0120476945381528e+19,
+      "lp_max": -183217.7668838871,
+      "max_abs_grad": 6.024095639150668e+19
+    }
+  },
+  "leg_b_toy_control": {
+    "0": {
+      "any_nonfinite_loss": false,
+      "params_finite_at_end": true,
+      "first": 322870.189394869,
+      "last": 550.3636196763914
+    },
+    "1": {
+      "any_nonfinite_loss": false,
+      "params_finite_at_end": true,
+      "first": 248505.93779508426,
+      "last": 823.4718350551145
+    }
+  },
+  "config": {
+    "scales": [
+      1.0,
+      3.0,
+      5.0,
+      8.0
+    ],
+    "n_draws": 16,
+    "seed": 0,
+    "toy": {
+      "steps": 400,
+      "seeds": [
+        0,
+        1
+      ],
+      "mu": 1.17,
+      "sigma": 0.01,
+      "lr": 0.003
+    }
+  }
+}

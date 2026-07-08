@@ -484,6 +484,18 @@ def main():
                },
                "flow_gate": {"spline_neg_elbo_tail": flow_elbo_tail,
                              "pass": flow_elbo_tail <= svi_final_loss},
+               # Pre-registered prediction (5): Phase B trains -- loss finite and
+               # decreasing (final < initial).
+               "phase_b_gate": {
+                   "pass": bool(
+                       sp_hist_ab["b"] is not None and len(sp_hist_ab["b"]) > 0
+                       and np.isfinite(sp_hist_ab["b"][-1])
+                       and sp_hist_ab["b"][-1] < sp_hist_ab["b"][0]),
+                   "first": float(sp_hist_ab["b"][0])
+                   if sp_hist_ab["b"] is not None and len(sp_hist_ab["b"]) else None,
+                   "final": float(sp_hist_ab["b"][-1])
+                   if sp_hist_ab["b"] is not None and len(sp_hist_ab["b"]) else None,
+               },
                "arms": {}}
     diag = {}
     for tag, r in results.items():
@@ -523,6 +535,11 @@ def main():
             width_ratio_range=[float(ratio.min()), float(ratio.max())],
             n_mean_fail=int((~mean_ok).sum()), n_width_fail=int((~width_ok).sum()),
         )
+        if tag == "D":
+            # Arm D completing at all falsifies prediction (6); its agreement stats
+            # are then diagnostic under (6)'s "investigate", NOT part of the
+            # 154-test accounting (checkpoint AMENDED v2 (iii)).
+            summary["arms"][tag]["diagnostic_only"] = True
 
     # Pre-registered prediction (3): direct B-vs-C width comparison (Phase B on a
     # unimodal target is a small perturbation). Direct comparison beats inferring

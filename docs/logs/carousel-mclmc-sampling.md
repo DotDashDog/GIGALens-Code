@@ -462,7 +462,36 @@ multimodality, conditioning, or the NFW profile.
   `train_flow`; prediction (3) B-vs-C gate unimplemented; prediction (4) thresholds not
   evaluated as booleans; blind-spot (c) wording — design sound, no threshold/budget changes)
   → all four fixed (+ script now imports the tested library losses from flows.py instead of
-  inline re-implementations) → awaiting re-confirmation.
+  inline re-implementations) → approved 2026-07-08 (rigor-grader re-inspection); ran same day,
+  TIMEOUT — see Log entry (3 findings, all diagnosed). **AMENDED v2 (2026-07-08, post-diagnosis;
+  material design changes, re-approval required):**
+  (i) spline out-of-range NaN-gradient bug FIXED in flows.py (double-where; out-of-range =
+  bitwise identity, finite grads; suite 15/15 incl. real-reproducer fkl step) ⇒ Phase B now
+  expected to train: NEW prediction (5) Phase B loss finite and decreasing (final < initial
+  19.94); arm C proceeds. Spline range stays ±6 (identity tails absorb the 7% out-of-range
+  coords; hypothesis-driven — widen only if the flow gate or agreement gates fail).
+  (ii) NEW arm E = whitened-IAF NeuTra (identical NumPyro recipe with the SVI whitening
+  composed under the IAF; documented deviation from vanilla). E is subject to the same
+  agreement + health gates as B/C. Gate accounting unchanged at ≈154 tests (E replaces D
+  in the 3 gated arms).
+  (iii) Arm D (faithful unwhitened NeuTra) re-scoped: EXPECTED to diverge in training within
+  ~10 steps and be skipped for sampling — recorded as a finding with verified 3-leg mechanism,
+  ALL ARCHIVED: leg A (demo ∇lp non-finite at ordinary z: lp finite 16/16 but grad-finite
+  rows 5/16 at scale 1, 1/16 at 3, 0/16 at 5 and 8) + leg B (identical faithful recipe on an
+  equally-sharp finite-grad 22-dim Gaussian: 400 steps × 2 seeds, zero non-finite losses,
+  params finite, 3.2e5→550 / 2.5e5→823) re-derivable via
+  `experiments/flow_precond/armD_mechanism.py` → `armD_mechanism_out/{summary.json,arrays.npz}`;
+  leg C (IAF numerically faithful to numpyro source) pinned by
+  `test_flows.py::test_iaf_init_reproduces_numpyro_scheme` + Jacobian tests. NEW prediction
+  (6): if D does NOT diverge, the mechanism analysis is wrong ⇒ investigate before reporting
+  either way; if D completes, its agreement stats are `diagnostic_only` — outside the
+  154-test accounting. Non-finite ∇lp at prior-scale z is itself a finding (possible
+  connection to the cold-init LAPS pathology — flagged, not claimed).
+  (iv) Hardening: divergence-aware training (gate on updated params), NaN-cache
+  invalidation, per-arm isolation with arm_status, fail-fast skip of arms with non-finite
+  flows (the timeout mechanism — MAMS NaN-guard ε-collapse — cannot recur), line-buffered
+  stdout. **Cost: ≤30 GPU-min** (MAP/SVI + spline-A cached; retrain B-phase + 2 IAFs + 4
+  sampler arms). **Status: awaiting rigor-grader approval of v2.**
 
 - **Run: GATE I — identity-flow wrapper ≡ vanilla MAMS on the demo lens** (flow-preconditioning
   plan `docs/plans/flow-preconditioned-mams.md` §5.1; script
@@ -571,6 +600,30 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (demo 4-arm validation RAN — TIMEOUT; diagnosed, 3 findings)**
+  `proposed (UNCERTIFIED)`. Run hit the 45-min limit with arms unfinished; stdout lost
+  (buffered; use PYTHONUNBUFFERED next time). Observed vs predicted, from cached artifacts:
+  (1) **Spline Phase A healthy + flow gate (1) PASSES pre-registered prediction**: neg-ELBO
+  starts −71.2 (= SVI −70.98, the identity-init nesting prediction) → tail −75.18, no NaN.
+  (2) **Phase B forward-KL NaN at step 1** — the plan §6 "spline tail under-coverage" failure
+  mode, realized: demo MAMS draws reach **max |T⁻¹(z)| = 31.4 whitened-σ** (7.1% of coords
+  outside the ±6 spline range) ⇒ full-rank SVI (n_vi=128, 1500 steps) is strongly
+  underdispersed vs the true demo posterior along several directions. Step-0 loss finite
+  (19.9) ⇒ the NaN is the *gradient* at out-of-range points (spline out-of-range should be
+  exact-identity with finite grads — implementation hardening bug, fix + unit-test in
+  flows.py before any widen-the-range knob).
+  (3) **NumPyro-faithful IAF (unwhitened, 1-sample ELBO Adam 3e-3) NaN at step 3** from
+  neg-ELBO ~1.5e5 (N(0,I) start vs sharp posterior). Whether "plain NeuTra as-shipped
+  diverges on the easiest lensing system" is a real baseline finding or an implementation
+  artifact is OPEN until the numerics are audited vs numpyro source (stable log-scale
+  handling etc.). Do NOT cite as a result yet.
+  (4) **Hang mechanism (why timeout, not crash):** arms C/D sampled with all-NaN flow params;
+  MAMS's NaN-guard shrinks step_size_max ×0.8 per event ⇒ ε collapses ⇒ deterministic
+  trajectory length n_k = L/ε explodes ⇒ wall-clock black hole. Samplers must FAIL FAST on
+  non-finite flow params (guard added to the script).
+  Cost: 0.75 GPU-h. Artifacts: demo_validation_out/*.npz (flow caches incl. NaN params,
+  MAP/SVI cache). Next: fix + re-gate (grader), rerun with cached flows where valid.
 
 - **2026-07-08 (GATE I RAN — PASS)** — **Identity-flow wrapper ≡ vanilla MAMS, bit-identical.**
   `proposed (UNCERTIFIED)`. Observed vs predicted: predicted max|Δ|=0.0 exactly; observed
