@@ -24,7 +24,7 @@ Priors
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
@@ -314,6 +314,15 @@ def generate_gl2_existing(spec: Any, dataset_dir: str, seed: int) -> None:
     ``yaml_path`` — path to the truth params YAML.
     ``delta_pix``, ``num_pix``, ``supersample``, ``background_rms``,
     ``exp_time``, ``psf_srcdir``.
+    ``system_ids`` — optional list of integer indices (0-based, into the npz's
+    natural key order — the same order the YAML's vectorized truth is indexed
+    by) selecting a SUBSET of systems to adapt, e.g. ``[0, 1, ..., 9]`` for a
+    10-system transferability battery. System IDs are still zero-padded to the
+    FULL dataset's width (``sys_000``, not ``sys_0``), so a subset's IDs match
+    the IDs the same systems would have in the full-dataset campaign — useful
+    for cross-referencing runs across campaigns over the same 100SystemsStandard
+    data. Omitting this key adapts every system (byte-identical to the
+    pre-existing, unfiltered behavior).
     """
     import yaml as _yaml
 
@@ -331,13 +340,14 @@ def generate_gl2_existing(spec: Any, dataset_dir: str, seed: int) -> None:
     background_rms = float(extra.get("background_rms", 0.2))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
     exp_time = float(extra.get("exp_time", 100.0))  # physics-default-ok: documented GL2 generation default, persisted to meta.json
     psf_srcdir = extra.get("psf_srcdir", None)  # physics-default-ok: defaults to bundled gigalens PSF; _gl2_psf raises if missing
+    system_ids_filter = extra.get("system_ids", None)  # optional subset of 0-based indices
 
     psf = _gl2_psf(psf_srcdir)
 
     # Load images
     f = np.load(npz_path)
     keys = list(f.files)
-    n_systems = len(keys)
+    n_systems_total = len(keys)
 
     # Load truth params if available.
     # The YAML format stores ALL systems in vectorized form:
@@ -351,9 +361,15 @@ def generate_gl2_existing(spec: Any, dataset_dir: str, seed: int) -> None:
             with open(yaml_path) as fh:
                 raw_params = _yaml.safe_load(fh)
 
-    n_digits = len(str(n_systems - 1))
+    # Width is derived from the FULL dataset (not the selected subset), so a
+    # subset's IDs (e.g. sys_000..sys_009 out of 100) line up with the IDs the
+    # same systems carry in an unfiltered campaign over the same npz/yaml.
+    n_digits = len(str(n_systems_total - 1))
+    selected_indices = _resolve_selected_indices(system_ids_filter, n_systems_total)
+
     system_ids = []
-    for i, key in enumerate(keys):
+    for n_done, i in enumerate(selected_indices):
+        key = keys[i]
         system_id = f"sys_{i:0{n_digits}d}"
         system_ids.append(system_id)
 
@@ -374,18 +390,44 @@ def generate_gl2_existing(spec: Any, dataset_dir: str, seed: int) -> None:
             exp_time=exp_time,
         )
         sys.save(dataset_dir)
-        if (i + 1) % 10 == 0:
-            print(f"[gl2_existing] adapted {i + 1}/{n_systems}")
+        if (n_done + 1) % 10 == 0:
+            print(f"[gl2_existing] adapted {n_done + 1}/{len(selected_indices)}")
 
     dataset_hash = _hash_dataset(dataset_dir, system_ids)
+    manifest_extra = {"source_npz": npz_path}
+    if system_ids_filter is not None:
+        manifest_extra["system_ids_filter"] = selected_indices
     write_manifest(
         dataset_dir,
         generator="gl2_existing",
         seed=seed,
         system_ids=system_ids,
         dataset_hash=dataset_hash,
-        extra={"source_npz": npz_path},
+        extra=manifest_extra,
     )
+
+
+def _resolve_selected_indices(system_ids_filter: Optional[Any], n_systems_total: int) -> list:
+    """Pure selection-logic helper for the ``system_ids`` subset kwarg.
+
+    Deliberately factored out of :func:`generate_gl2_existing` so the
+    index-selection/validation logic is unit-testable without touching the
+    real npz/yaml/PSF assets. ``system_ids_filter`` is ``None`` (select every
+    system, 0..``n_systems_total``-1, the pre-existing behavior) or a
+    collection of 0-based integer indices into the npz's natural key order.
+    Raises ``ValueError`` if any requested index is out of range.
+    """
+    if system_ids_filter is None:
+        return list(range(n_systems_total))
+    selected = [int(i) for i in system_ids_filter]
+    bad = [i for i in selected if not (0 <= i < n_systems_total)]
+    if bad:
+        raise ValueError(
+            f"dataset.system_ids contains out-of-range index/indices {bad} "
+            f"for a dataset of {n_systems_total} systems (valid range "
+            f"0..{n_systems_total - 1})."
+        )
+    return selected
 
 
 def _extract_system_i(raw_params: Any, i: int) -> Any:

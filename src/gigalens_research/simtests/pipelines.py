@@ -3,6 +3,9 @@
 Registered pipeline builders
 ----------------------------
 - ``map_svi_hmc``: standard MAP → SVI → HMC pipeline (used for GL2 Sérsic test).
+- ``map_svi_hmc_laps``: ``map_svi_hmc`` plus two certified LAPS arms
+  (``laps_warm``, ``laps_cold``) appended after HMC, for the LAPS
+  transferability battery (``experiments/laps_transfer``).
 - ``map_bootstrap_mclmc``: fixed-lens MAP bootstrap → MCLMC (used for Vela
   shapelets systematics test).
 
@@ -32,6 +35,7 @@ tfd = tfp.distributions
 
 from gigalens_research.inference_utils.pipeline import (
     InferenceStage,
+    LAPSStage,
     MAPStage,
     MCLMCStage,
     StageResult,
@@ -77,6 +81,67 @@ def build_map_svi_hmc(system: Any, **kwargs) -> List[InferenceStage]:
             max_leapfrog_steps=int(kwargs.get("hmc_max_leapfrog_steps", 30)),
         ),
     ]
+
+
+@register_pipeline_builder("map_svi_hmc_laps")
+def build_map_svi_hmc_laps(system: Any, **kwargs) -> List[InferenceStage]:
+    """MAP → SVI → HMC → LAPS-warm → LAPS-cold: the LAPS transferability battery.
+
+    Reuses :func:`build_map_svi_hmc` verbatim for the MAP/SVI/HMC stages (same
+    kwargs, same construction) — the front end (MAP + SVI + HMC) is therefore
+    identical, byte-for-byte, to the ``map_svi_hmc`` pipeline, and is computed
+    exactly once per system in a sweep dir shared by all five stages
+    (content-addressed caching means adding the LAPS arms never invalidates or
+    recomputes MAP/SVI/HMC). Two certified :class:`~gigalens_research.
+    inference_utils.pipeline.LAPSStage` arms are appended after HMC:
+
+    - ``laps_warm`` (``name="laps_warm"``): certified warm preset, initializes
+      from the SVI ``qz`` artifact (``requires=("qz",)``).
+    - ``laps_cold`` (``name="laps_cold"``): certified cold (prior-init) preset;
+      does not consume ``qz`` (``requires=()``) but is still placed after HMC
+      so both LAPS arms share this one sweep dir with the (already-computed)
+      front end.
+
+    Both arms keep the certified cold/warm hyperparameter presets as-is
+    (see ``LAPSStage``/``_LAPS_PRESETS``) — nothing here overrides
+    num_chains/steps/resample knobs unless the corresponding kwarg below is
+    explicitly passed.
+
+    Extra kwargs consumed (all optional; forwarded to BOTH LAPS arms unless
+    noted):
+
+    ``laps_num_chains`` (int) — overrides ``num_chains`` on both arms.
+    ``laps_keep`` (int, default 4) — forwarded to both arms as
+    ``extra_kwargs={"p2_keep_per_chain": laps_keep}`` (verified against
+    ``LAPS_late_adjusted``'s ``p2_keep_per_chain`` kwarg).
+    ``laps_seed`` (int) — passed as ``seed=`` to both ``LAPSStage``
+    constructors, so LAPS can be re-seeded without invalidating the upstream
+    MAP/SVI/HMC caches (those stages fall back to the pipeline-wide seed).
+    ``laps_cold_min_survivors`` (int) — forwarded to the COLD arm only, as
+    ``p2_resample_min_survivors`` (the cold-arm resample-guard override).
+    """
+    stages = build_map_svi_hmc(system, **kwargs)
+
+    laps_num_chains = kwargs.get("laps_num_chains", None)
+    laps_keep = int(kwargs.get("laps_keep", 4))
+    laps_seed = kwargs.get("laps_seed", None)
+    laps_cold_min_survivors = kwargs.get("laps_cold_min_survivors", None)
+
+    def _laps_ctor_kwargs(*, cold: bool) -> Dict[str, Any]:
+        ctor_kwargs: Dict[str, Any] = {
+            "extra_kwargs": {"p2_keep_per_chain": laps_keep},
+        }
+        if laps_num_chains is not None:
+            ctor_kwargs["num_chains"] = int(laps_num_chains)
+        if laps_seed is not None:
+            ctor_kwargs["seed"] = int(laps_seed)
+        if cold and laps_cold_min_survivors is not None:
+            ctor_kwargs["p2_resample_min_survivors"] = int(laps_cold_min_survivors)
+        return ctor_kwargs
+
+    stages.append(LAPSStage(init="warm", name="laps_warm", **_laps_ctor_kwargs(cold=False)))
+    stages.append(LAPSStage(init="cold", name="laps_cold", **_laps_ctor_kwargs(cold=True)))
+    return stages
 
 
 @register_pipeline_builder("map_bootstrap_mclmc")
