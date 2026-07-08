@@ -523,8 +523,32 @@ multimodality, conditioning, or the NFW profile.
   viability relative to NeuTra-NUTS here), and NO further burnin escalation happens on the
   demo without an explicit human decision. E expected to repeat its v2 pass.
   **Cost: ≤35 GPU-min** (flows retrain at new arch; MAP/SVI cached; B/C burnin ×3.3).
-  **Status: v3 approved 2026-07-08 (rigor-grader, fourth round; all outcome branches
-  pre-committed); rerun authorized at ≤35 GPU-min.**
+  Status: v3 approved 2026-07-08 (rigor-grader, fourth round); v3 RAN — arm B FULL PASS
+  (flow-MAMS validated at demo scale, 3.0× vanilla ESS), arm E repeat pass, predictions
+  (8) and (2') failed informatively (see v3 Log entry). **AMENDED v4 (2026-07-08,
+  user-approved one-shot architecture; re-approval required):**
+  (v4.i) Spline config: range 35/48 bins (data-derived) → **fixed range 6 / 8 bins +
+  trainable per-dim scale layer** (`trainable_scale=True`; flows.py `DiagScale`,
+  T(u) = loc + L·(exp(s)⊙C(u)), s zeros-init so identity-at-init is preserved). Motivation:
+  the user's one-shot goal — no posterior samples may be needed to size the box. Unit-pinned:
+  sd-30 direction recovered through a ±6 box (pullback sd 1.03); control without the layer
+  stays at 29.5 (suite 20/20). Identifiability caveat recorded: exp(s) is a readout only for
+  expansion directions; T as a whole is pinned. Phase-A lr 1e-3→3e-3 (s must travel
+  ~log(7)≈2 nats; adam travel ≈ lr×steps; 5e-3 measured stable, 2e-2 not — ×4 headroom both
+  sides). Cache keys now encode range/bins/trainable_scale/lr.
+  (v4.ii) Arms: same A/B/C/D/E structure; B′/C′ use the one-shot flow. The v3 pre-commitment
+  "no demo re-runs of arm C without an explicit human decision" is discharged: the user
+  approved the one-shot-architecture revalidation plan (2026-07-08), which includes C′.
+  (v4.iii) Pre-registered predictions: (10) pullback-scale gate PASSES for the A-only
+  one-shot flow (the flows.py unit test is the same mechanism at harder mismatch);
+  (11) arm B′ passes health + agreement (as v3 arm B did with the data-derived range —
+  if B′ fails where B passed, the scale layer traded correctness for convenience ⇒ diagnose
+  before carousel use); (12) arm C′ (Phase B, full-batch fkl on 2400 correlated draws):
+  health outcome RECORDED either way; a repeat health-fail ⇒ Phase-B-as-implemented
+  overfits regardless of architecture, and the carousel Phase B design must add
+  subsampling/early-stopping BEFORE GATE F rather than after a failure there. D/E
+  unchanged (D expected-diverge; E cached flow, NUTS rerun).
+  **Cost: ≤35 GPU-min.** **Status: awaiting rigor-grader approval of v4.**
 
 - **Run: GATE I — identity-flow wrapper ≡ vanilla MAMS on the demo lens** (flow-preconditioning
   plan `docs/plans/flow-preconditioned-mams.md` §5.1; script

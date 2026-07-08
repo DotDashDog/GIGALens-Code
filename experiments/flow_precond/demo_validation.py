@@ -68,15 +68,22 @@ NUTS_RESULTS = 300        # same kept-draw budget as MAMS arms
 # Phase A (plan §4.2/§4.4): reverse-KL, 128 draws/step. Phase B: forward-KL on MAMS
 # samples from the GATE I run (demo posterior; exercises the code path -- on the demo
 # there is no secondary mode for it to add, so B should change little).
-# v3: range widened 6->35 after measuring max|T^-1(z)| = 31.4 on demo posterior draws
-# (plan §6 "widen if not"); bins scaled 8->48 to keep per-bin resolution ~constant.
-SPLINE_CFG = dict(num_layers=6, num_bins=48, spline_range=35.0, hidden_dims=(64, 64))
+# v4 (one-shot config, user-approved): FIXED range 6 + trainable per-dim scale layer
+# replaces v3's data-derived range 35. exp(s) absorbs scale corrections by gradient
+# descent (flows.py test: sd-30 direction through a +-6 box), so no posterior samples
+# are needed to size the box. v3 (range 35, no scale) remains in the record as the
+# data-derived alternative.
+SPLINE_CFG = dict(num_layers=6, num_bins=8, spline_range=6.0, hidden_dims=(64, 64),
+                  trainable_scale=True)
 # Flow-MAMS arms get the same adaptation budget NUTS gets (1000 warmup): v2 showed
 # 300 burnin from identity mass cannot learn residual flow-imperfection scales.
 FLOW_MAMS_BURNIN = 1000
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
-PHASE_A_LR = 1e-3
+# lr 3e-3 (was 1e-3): s must travel log(scale-mismatch) ~ 2 nats on the demo; adam
+# travel ~ lr*steps, so 1e-3 x 3000 was marginal. 5e-3 measured stable, 2e-2 not
+# (flows.py one-shot test) -- 3e-3 leaves x4 headroom on both sides.
+PHASE_A_LR = 3e-3
 PHASE_B_STEPS = 1000
 PHASE_B_LR = 1e-4
 # NumPyro NeuTra preset (numpyro AutoIAFNormal + examples/neutra.py defaults):
@@ -375,7 +382,9 @@ def main():
 
     sp_init, sp_make = flows.make_whitened_spline_flow(
         k_spline, dim, jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril), **SPLINE_CFG)
-    sp_key = f"r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
+    sp_key = (f"r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
+              f"ts{int(SPLINE_CFG.get('trainable_scale', False))}"
+              f"lr{PHASE_A_LR:g}")
 
     t0 = time.perf_counter()
     sp_params_a, sp_hist = train_flow(
