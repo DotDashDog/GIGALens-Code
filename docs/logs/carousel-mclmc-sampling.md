@@ -523,7 +523,8 @@ multimodality, conditioning, or the NFW profile.
   viability relative to NeuTra-NUTS here), and NO further burnin escalation happens on the
   demo without an explicit human decision. E expected to repeat its v2 pass.
   **Cost: ≤35 GPU-min** (flows retrain at new arch; MAP/SVI cached; B/C burnin ×3.3).
-  **Status: awaiting rigor-grader approval of v3.**
+  **Status: v3 approved 2026-07-08 (rigor-grader, fourth round; all outcome branches
+  pre-committed); rerun authorized at ≤35 GPU-min.**
 
 - **Run: GATE I — identity-flow wrapper ≡ vanilla MAMS on the demo lens** (flow-preconditioning
   plan `docs/plans/flow-preconditioned-mams.md` §5.1; script
@@ -632,6 +633,37 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (demo validation v3 RAN — flow-MAMS VALIDATED on demo; 2 predictions failed,
+  both informative)** `proposed (UNCERTIFIED)`. Observed vs predicted, per pre-registered gate:
+  **(9) ARM B (flow-MAMS, Phase-A spline, range 35) FULL PASS** — health R̂ 1.009, worst mean
+  dev 1.68σ (<4), sd ratios [0.94, 1.03], min bulk-ESS **1256** vs vanilla arm A's 412 at
+  equal kept draws (3.0× ESS; wall-clock ESS/s ≈ parity on this easy system — the geometry
+  win is expected to matter on hard targets, not here). The MAMS × nonzero-flow link is now
+  validated at demo scale. **(2'') ARM E repeat pass** (R̂ 1.005, worst 2.24σ; divergence
+  gate FAILED again: 5/2400 — persistent curvature flag, weigh before carousel NeuTra use).
+  **(6) ARM D diverged as predicted** (faithful NeuTra; mechanism archived). **(1)/(5) flow +
+  Phase-B-trains gates PASS** (neg-ELBO tail −76.6 ≤ −70.98; fkl −83.0→−91.1).
+  **PREDICTION (8) FAILED — informative:** Phase-A-only PASSED the pullback-scale gate
+  (sd [0.99, 1.24], |mean|max 0.21). With range 35, reverse-KL learned the scales fine on
+  this unimodal target ⇒ the v2 attribution "mode-seeking kept SVI underdispersion" was
+  WRONG in its mechanism — the ±6 range clip was binding for Phase A too. CORRECTION to the
+  v2 entry recorded here. Scope: this does NOT bear on the carousel §4.4 pocket claim
+  (mode-dropping of a separate 14σ mode is a different mechanism from same-basin scale
+  learning; the demo has no second mode to drop) — the carousel GATE F A/B remains the test.
+  **PREDICTION (2') FAILED for ARM C — negative finding about Phase B on unimodal targets:**
+  the A+B flow passed pullback-scale (sd [1.13, 1.46]) but arm C failed health (R̂ 1.076,
+  min-ESS 232) and was 7.5× slower than arm B (1306 s vs 174 s) with width ratios to 1.18.
+  Reading: forward-KL refinement on 2400 correlated MAMS draws (ESS~400) degraded an
+  already-good flow (train fkl kept improving — consistent with overfitting the finite
+  sample and roughening the pullback geometry). On the demo Phase B had nothing to fix;
+  its intended value (pocket coverage) is untestable here. Implication for carousel: run the
+  pre-registered A-only vs A+B GATE F exactly as planned, but treat Phase B as
+  needing-evidence, not presumed-better; consider more/less-correlated training data and
+  early stopping if it fails there too. Per v3 pre-commitment, no demo re-runs of arm C
+  without an explicit human decision. Budget-carried cross-check: NOT triggered (pullback
+  gate (7) passed). Cost: ~0.6 GPU-h. Artifacts: demo_validation_out/* (summary JSON, arrays,
+  traces_worst_param.png, agreement.png, flow_losses.png), branch flow-precond-mams.
 
 - **2026-07-08 (demo validation v2 RAN — mixed; B/C failure DIAGNOSED as range-clipped flow
   + under-adaptation, not a bug)** `proposed (UNCERTIFIED)`. Observed vs predicted:
