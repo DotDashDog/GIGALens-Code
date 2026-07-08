@@ -1271,7 +1271,8 @@ class Pipeline:
         # Order from richest to leanest posterior; pick the last entry whose
         # stage class has its own ``to_posterior`` override. Bridges and
         # other stages without a view are skipped.
-        scores = {"HMCStage": 2, "MCLMCStage": 2, "MAMSStage": 2, "SVIStage": 1, "MAPStage": 0}
+        scores = {"HMCStage": 2, "MCLMCStage": 2, "MAMSStage": 2, "FlowMAMSStage": 2,
+                  "SVIStage": 1, "MAPStage": 0}
         best, best_score = None, -1
         for s in self.stages:
             if s.instance_name not in self.results:
@@ -1910,6 +1911,474 @@ class MAMSStage(InferenceStage):
         return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
 
 
+# ---------------------------------------------------------------------------
+# Normalizing-flow preconditioning (NeuTra-style): FlowStage + FlowMAMSStage.
+#
+# Implements docs/plans/flow-preconditioned-mams.md §5.2 (FlowStage: train a
+# diffeomorphism T: u -> z so T#N(0,I) approximates the posterior) and §5.3
+# (run MAMS UNCHANGED in u-space on the pulled-back target, then decode z=T(u)).
+# The building blocks are pure-jax and float64:
+#   - gigalens_research.inference.flows : flow families + reverse/forward-KL losses
+#   - gigalens_research.inference.flow_precond : TransformedProbModel / FlowModelSeq
+#     / make_latent_qz (the u-space wrapper MAMS_JIT actually touches).
+# ---------------------------------------------------------------------------
+
+
+def _default_flow_optimizer() -> "optax.GradientTransformation":
+    # Match SVIStage's optimizer: the whitened-spline flow is IDENTITY-initialized
+    # at the SVI solution (flows.py: zero final conditioner layer + unit-slope
+    # bins), so it only has to learn small residual curvature -- the same gentle
+    # adabelief(1e-4) that trained the affine surrogate is the natural default.
+    return optax.adabelief(1e-4, b1=0.95, b2=0.99)
+
+
+_DEFAULT_FLOW_OPTIMIZER_ID = "adabelief_1e-4_b1_0.95_b2_0.99"
+
+
+class TrainedFlow:
+    """The ``flow`` artifact produced by :class:`FlowStage`.
+
+    Carries the built flows.py bijector (``.bijector`` -- a T: u -> z map with
+    ``forward`` / ``inverse`` / ``forward_log_det_jacobian(event_ndims=1)``, ready
+    to hand to ``TransformedProbModel``) plus a ``parameters`` dict of *numpy*
+    arrays + config so :func:`stable_hash` fingerprints it CONTENT-BASED and
+    STABLY across processes. A bare flows.py bijector is not a registered pytree,
+    so ``stable_hash`` would fall back to ``repr()`` (a memory address) and the
+    cache key would change every process -- exactly the resume-breaking bug that
+    commit 80ea7eb fixed for callables. Exposing ``.parameters`` routes the hash
+    through the TFP-distribution branch of ``_feed`` instead (stable).
+    """
+
+    def __init__(self, bijector, *, params_flat, whiten_loc, whiten_scale_tril,
+                 flow_type, arch, dim):
+        self.bijector = bijector
+        # Hashed by stable_hash via the ``.parameters``-dict branch of _feed.
+        self.parameters = {
+            "flow_type": str(flow_type),
+            "arch": dict(arch),
+            "dim": int(dim),
+            "params_flat": np.asarray(params_flat),
+            "whiten_loc": np.asarray(whiten_loc),
+            "whiten_scale_tril": np.asarray(whiten_scale_tril),
+        }
+
+    # Delegate the bijector interface so the object can be used directly wherever
+    # a flows.py bijector is expected (TransformedProbModel only needs these).
+    def forward(self, u):
+        return self.bijector.forward(u)
+
+    def inverse(self, z):
+        return self.bijector.inverse(z)
+
+    def forward_log_det_jacobian(self, u, event_ndims=1):
+        return self.bijector.forward_log_det_jacobian(u, event_ndims=event_ndims)
+
+    def inverse_log_det_jacobian(self, z, event_ndims=1):
+        return self.bijector.inverse_log_det_jacobian(z, event_ndims=event_ndims)
+
+
+def train_flow_phase_a(make_bijector, init_params, target_log_prob_fn, *,
+                       dim, n_draws, num_steps, optimizer, seed):
+    """Phase A (= NeuTra): reverse-KL / ELBO training of the flow against the
+    z-space target ``target_log_prob_fn`` (=> ``prob_model.log_prob(z)[0]`` pulled
+    back through T). Loss = ``neg_elbo_loss`` (mean over draws of ``log q - log p``,
+    i.e. -ELBO, LOWER better) -- IDENTICAL sign+scale to ModellingSequence.SVI's
+    ``neg_elbo`` (jax/inference.py:283, ``mean(qz.log_prob(z) - prob_model.log_prob(z)[0])``),
+    so the returned history is directly comparable to ``SVIStage.svi_loss_hist``.
+
+    Jitted optax scan, mirroring the SVIStage loop style. Returns
+    ``(params, loss_hist np.ndarray)``.
+    """
+    from gigalens_research.inference.flows import neg_elbo_loss
+    from jax import random as jr
+
+    def loss_fn(params, key):
+        return neg_elbo_loss(params, make_bijector, target_log_prob_fn,
+                             key, n_draws, dim)
+
+    value_and_grad = jax.value_and_grad(loss_fn)
+    opt_state = optimizer.init(init_params)
+
+    def step(carry, key):
+        params, opt_state = carry
+        loss, grads = value_and_grad(params, key)
+        updates, opt_state = optimizer.update(grads, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    keys = jr.split(jr.PRNGKey(int(seed)), int(num_steps))
+    (params, _), losses = jax.lax.scan(jax.jit(step), (init_params, opt_state), keys)
+    return params, np.asarray(losses)
+
+
+def train_flow_phase_b(make_bijector, params, samples_z, *,
+                       num_steps, optimizer, subsample, seed):
+    """Phase B (the one deliberate deviation from vanilla NeuTra, plan §4):
+    forward-KL / maximum-likelihood refinement on REAL MCMC draws ``samples_z``
+    (shape ``(N, dim)``), so the flow keeps mass on the secondary pocket that
+    reverse-KL (mode-seeking) would zero out. Loss = ``forward_kl_loss`` (negative
+    mean log-density the flow assigns to the draws; LOWER better). Requires the
+    flow INVERSE T^{-1} (exact & cheap for the coupling flow). Returns
+    ``(params, loss_hist np.ndarray)``.
+    """
+    from gigalens_research.inference.flows import forward_kl_loss
+    from jax import random as jr
+
+    samples_z = jnp.asarray(samples_z)
+    n_total = int(samples_z.shape[0])
+    subsample = int(min(subsample, n_total))
+
+    def loss_fn(p, batch):
+        return forward_kl_loss(p, make_bijector, batch)
+
+    value_and_grad = jax.value_and_grad(loss_fn)
+    opt_state = optimizer.init(params)
+
+    def step(carry, key):
+        p, opt_state = carry
+        idx = jr.choice(key, n_total, (subsample,), replace=False)
+        loss, grads = value_and_grad(p, samples_z[idx])
+        updates, opt_state = optimizer.update(grads, opt_state, p)
+        p = optax.apply_updates(p, updates)
+        return (p, opt_state), loss
+
+    keys = jr.split(jr.PRNGKey(int(seed) + 1), int(num_steps))
+    (params, _), losses = jax.lax.scan(jax.jit(step), (params, opt_state), keys)
+    return params, np.asarray(losses)
+
+
+class FlowStage(InferenceStage):
+    """Train a normalizing flow T: u -> z that preconditions the posterior
+    (plan §5.2). ``requires=("z_best","qz")`` -- ``qz`` supplies the affine
+    whitening init (the flow starts EXACTLY at the SVI solution and learns only
+    residual curvature); ``z_best`` is carried for provenance/staleness. Produces
+    ``flow_params`` (trained pytree), ``flow_loss_hist`` (dict of per-phase
+    histories) and the ``flow`` artifact (a :class:`TrainedFlow`, rebuilt from the
+    saved params in :meth:`derive_artifacts`).
+
+    Staleness: because ``z_best`` and ``qz`` are in ``requires``, the pipeline's
+    input-hash machinery folds the upstream artifact hashes into this stage's
+    input hash -- so re-running MAP/SVI (which changes ``qz``/``z_best``) forces
+    FlowStage to re-train, and the downstream ``flow``-consuming sampler to re-run
+    (plan §6 flow-staleness). Verified: see the module's validation notes.
+    """
+
+    name: ClassVar[str] = "flow"
+    schema_version: ClassVar[int] = 1
+    requires: ClassVar[Tuple[str, ...]] = ("z_best", "qz")
+    produces: ClassVar[Tuple[str, ...]] = ("flow_params", "flow_loss_hist", "flow")
+
+    def __init__(
+        self,
+        *,
+        flow_type: str = "whitened_spline",
+        # whitened_spline architecture (plan §4: 6-8 layers, 8-16 bins, +-6 range,
+        # [64,64] conditioners); numpyro_iaf uses num_flows / hidden_dims.
+        num_layers: int = 6,
+        num_bins: int = 8,
+        spline_range: float = 6.0,
+        hidden_dims: Tuple[int, ...] = (64, 64),
+        num_flows: int = 6,
+        # Phase A (reverse-KL / ELBO).
+        phase_a_n_draws: int = 128,
+        phase_a_num_steps: int = 3000,
+        phase_a_optimizer_factory: Optional[Callable[[], "optax.GradientTransformation"]] = None,
+        phase_a_optimizer_id: str = _DEFAULT_FLOW_OPTIMIZER_ID,
+        # Phase B (forward-KL on real MCMC draws; disabled by default -- it is an
+        # A/B deliverable, not the safe default).
+        phase_b_enabled: bool = False,
+        phase_b_samples_path: Optional[str] = None,
+        phase_b_samples_key: str = "samples_z",
+        phase_b_num_steps: int = 1000,
+        phase_b_subsample: int = 256,
+        phase_b_optimizer_factory: Optional[Callable[[], "optax.GradientTransformation"]] = None,
+        phase_b_optimizer_id: str = _DEFAULT_FLOW_OPTIMIZER_ID,
+        elbo_report_n_draws: int = 2048,
+        name: Optional[str] = None,
+        seed: Optional[int] = None,
+    ):
+        super().__init__(name=name, seed=seed)
+        if flow_type not in ("whitened_spline", "numpyro_iaf"):
+            raise ValueError(
+                f"FlowStage: unknown flow_type {flow_type!r} "
+                "(expected 'whitened_spline' or 'numpyro_iaf')."
+            )
+        self.flow_type = str(flow_type)
+        self.num_layers = int(num_layers)
+        self.num_bins = int(num_bins)
+        self.spline_range = float(spline_range)
+        self.hidden_dims = tuple(int(h) for h in hidden_dims)
+        self.num_flows = int(num_flows)
+        self.phase_a_n_draws = int(phase_a_n_draws)
+        self.phase_a_num_steps = int(phase_a_num_steps)
+        self._phase_a_optimizer_factory = phase_a_optimizer_factory or _default_flow_optimizer
+        self.phase_a_optimizer_id = str(phase_a_optimizer_id)
+        self.phase_b_enabled = bool(phase_b_enabled)
+        self.phase_b_samples_path = None if phase_b_samples_path is None else str(phase_b_samples_path)
+        self.phase_b_samples_key = str(phase_b_samples_key)
+        self.phase_b_num_steps = int(phase_b_num_steps)
+        self.phase_b_subsample = int(phase_b_subsample)
+        self._phase_b_optimizer_factory = phase_b_optimizer_factory or _default_flow_optimizer
+        self.phase_b_optimizer_id = str(phase_b_optimizer_id)
+        self.elbo_report_n_draws = int(elbo_report_n_draws)
+        if self.phase_b_enabled and self.phase_b_samples_path is None:
+            # Model input missing => raise, never default (operating card rule 6).
+            raise ValueError(
+                "FlowStage: phase_b_enabled=True but phase_b_samples_path is None. "
+                "Point it at an arrays.npz holding real MCMC z-draws under key "
+                f"{self.phase_b_samples_key!r} (e.g. "
+                "experiments/sim_carousel/messy_tests/dpie/mclmc/arrays.npz)."
+            )
+
+    def config_hash_data(self):
+        # All architecture + training hyperparameters (optimizers by stable id
+        # string, not the unhashable factory closure -- mirrors SVIStage).
+        arch = self._arch()
+        return {
+            "flow_type": self.flow_type,
+            "arch": arch,
+            "phase_a": {
+                "n_draws": self.phase_a_n_draws,
+                "num_steps": self.phase_a_num_steps,
+                "optimizer_id": self.phase_a_optimizer_id,
+            },
+            "phase_b": {
+                "enabled": self.phase_b_enabled,
+                "samples_path": self.phase_b_samples_path,
+                "samples_key": self.phase_b_samples_key,
+                "num_steps": self.phase_b_num_steps,
+                "subsample": self.phase_b_subsample,
+                "optimizer_id": self.phase_b_optimizer_id,
+            },
+            "elbo_report_n_draws": self.elbo_report_n_draws,
+        }
+
+    def _arch(self) -> Dict[str, Any]:
+        if self.flow_type == "whitened_spline":
+            return {
+                "num_layers": self.num_layers,
+                "num_bins": self.num_bins,
+                "spline_range": self.spline_range,
+                "hidden_dims": list(self.hidden_dims),
+            }
+        return {"num_flows": self.num_flows, "hidden_dims": list(self.hidden_dims)}
+
+    def _build_flow(self, dim, qz_loc, qz_scale_tril, key):
+        """Rebuild ``(init_params, make_bijector)`` for this stage's config.
+
+        Shared by ``run`` (fresh init) and ``derive_artifacts`` (reconstruct the
+        param-pytree TEMPLATE so the saved flat vector can be unravelled). The
+        whitening constants ``qz_loc`` / ``qz_scale_tril`` are baked into the
+        whitened-spline bijector (not the trained params), so they are saved and
+        replayed here.
+        """
+        from gigalens_research.inference.flows import (
+            make_whitened_spline_flow, make_numpyro_iaf_flow)
+        if self.flow_type == "whitened_spline":
+            return make_whitened_spline_flow(
+                key, dim,
+                qz_loc=jnp.asarray(qz_loc), qz_scale_tril=jnp.asarray(qz_scale_tril),
+                num_layers=self.num_layers, num_bins=self.num_bins,
+                spline_range=self.spline_range, hidden_dims=self.hidden_dims,
+            )
+        # numpyro_iaf: base N(0,I) -> z directly (no affine whitening in this
+        # family; the qz whitening arrays are still saved for provenance but the
+        # IAF learns the location/scale itself -- whitened_spline is the plan's
+        # recommended default for exactly this reason).
+        return make_numpyro_iaf_flow(
+            key, dim, num_flows=self.num_flows, hidden_dims=list(self.hidden_dims))
+
+    def run(self, ctx, artifacts, seed):
+        from jax import random as jr
+        from jax.flatten_util import ravel_pytree
+        from gigalens_research.inference.flows import neg_elbo_loss
+
+        t0 = time.perf_counter()
+        qz = artifacts["qz"]
+        qz_loc = np.asarray(qz.loc)
+        qz_scale_tril = np.asarray(qz.scale_tril)
+        dim = int(qz_loc.shape[-1])
+
+        init_params, make_bijector = self._build_flow(
+            dim, qz_loc, qz_scale_tril, jr.PRNGKey(int(seed)))
+
+        # ELBO target: exactly the SVIStage/SVI loss with the flow family --
+        # the z-space posterior log-density (Jacobian is added inside the loss).
+        def target_log_prob_fn(z):
+            return ctx.model_seq.prob_model.log_prob(z)[0]
+
+        # --- Phase A (reverse-KL / ELBO) ---
+        params, loss_a = train_flow_phase_a(
+            make_bijector, init_params, target_log_prob_fn,
+            dim=dim, n_draws=self.phase_a_n_draws,
+            num_steps=self.phase_a_num_steps,
+            optimizer=self._phase_a_optimizer_factory(),
+            seed=int(seed),
+        )
+
+        # --- Phase B (forward-KL on real draws), optional ---
+        loss_b = np.asarray([], dtype=np.float64)
+        if self.phase_b_enabled:
+            npz = np.load(self.phase_b_samples_path)
+            if self.phase_b_samples_key not in npz:
+                raise KeyError(
+                    f"FlowStage phase B: {self.phase_b_samples_path!r} has no key "
+                    f"{self.phase_b_samples_key!r}; found {list(npz.keys())}.")
+            raw = np.asarray(npz[self.phase_b_samples_key])
+            samples_z = raw.reshape(-1, raw.shape[-1])
+            if samples_z.shape[-1] != dim:
+                raise ValueError(
+                    f"FlowStage phase B: samples dim {samples_z.shape[-1]} != model "
+                    f"dim {dim}. Wrong file/model?")
+            params, loss_b = train_flow_phase_b(
+                make_bijector, params, samples_z,
+                num_steps=self.phase_b_num_steps,
+                optimizer=self._phase_b_optimizer_factory(),
+                subsample=self.phase_b_subsample, seed=int(seed),
+            )
+
+        # --- Large-sample -ELBO estimate for the summary (SVIStage sign) ---
+        neg_elbo_final = float(neg_elbo_loss(
+            params, make_bijector, target_log_prob_fn,
+            jr.PRNGKey(int(seed) + 7), self.elbo_report_n_draws, dim))
+
+        flat, _ = ravel_pytree(params)
+        flat = np.asarray(flat)
+
+        metadata = {
+            "wall_time_s": time.perf_counter() - t0,
+            "flow_type": self.flow_type,
+            "dim": dim,
+            # --- JSON summary (persisted to manifest.json) ---
+            "phase_a_num_steps": self.phase_a_num_steps,
+            "phase_a_final_loss": float(loss_a[-1]) if loss_a.size else None,
+            "phase_a_initial_loss": float(loss_a[0]) if loss_a.size else None,
+            "phase_b_enabled": self.phase_b_enabled,
+            "phase_b_final_loss": float(loss_b[-1]) if loss_b.size else None,
+            "neg_elbo_final": neg_elbo_final,
+            "elbo_report_n_draws": self.elbo_report_n_draws,
+            # Sign convention, stated so GATE F(a) is unambiguous:
+            "elbo_sign_convention": (
+                "neg_elbo_final and phase_a_final_loss are -ELBO = mean over draws "
+                "of (log q - log p); LOWER is better; identical sign & scale to "
+                "SVIStage.metadata['final_loss'] (ModellingSequence.SVI neg_elbo). "
+                "GATE F(a): flow neg_elbo_final should be <= the SVI run's final_loss "
+                "(the flow strictly generalizes the affine family)."),
+        }
+        return StageResult(
+            arrays={
+                "flow_params_flat": flat,
+                "whiten_loc": qz_loc,
+                "whiten_scale_tril": qz_scale_tril,
+                "flow_loss_phase_a": np.asarray(loss_a),
+                "flow_loss_phase_b": np.asarray(loss_b),
+                "dim": np.asarray(dim),
+            },
+            metadata=metadata,
+        )
+
+    def _make_trained_flow(self, arrays):
+        from jax.flatten_util import ravel_pytree
+        from jax import random as jr
+        dim = int(np.asarray(arrays["dim"]))
+        qz_loc = np.asarray(arrays["whiten_loc"])
+        qz_scale_tril = np.asarray(arrays["whiten_scale_tril"])
+        init_params, make_bijector = self._build_flow(
+            dim, qz_loc, qz_scale_tril, jr.PRNGKey(0))
+        _, unravel = ravel_pytree(init_params)
+        params = unravel(jnp.asarray(arrays["flow_params_flat"]))
+        bijector = make_bijector(params)
+        flow = TrainedFlow(
+            bijector, params_flat=np.asarray(arrays["flow_params_flat"]),
+            whiten_loc=qz_loc, whiten_scale_tril=qz_scale_tril,
+            flow_type=self.flow_type, arch=self._arch(), dim=dim)
+        return params, flow
+
+    def derive_artifacts(self, arrays):
+        params, flow = self._make_trained_flow(arrays)
+        return {
+            "flow_params": params,
+            "flow_loss_hist": {
+                "phase_a": np.asarray(arrays.get("flow_loss_phase_a")),
+                "phase_b": np.asarray(arrays.get("flow_loss_phase_b")),
+            },
+            "flow": flow,
+        }
+
+
+class FlowMAMSStage(MAMSStage):
+    """MAMS run in the flow's LATENT (u) space (plan §5.3): the NeuTra pattern.
+
+    Wiring choice (documented): a thin ``MAMSStage`` SUBCLASS rather than a
+    ``BridgeStage``. MAMSStage's contract reads exactly two things from the stage
+    context -- ``ctx.model_seq`` (for ``model_seq.prob_model.log_prob``) and the
+    ``qz`` artifact (chain init + initial inverse mass matrix + Welford mean
+    reference). So we leave the entire MAMSStage body UNTOUCHED and, in ``run``,
+    hand ``super().run`` a shallow-substituted context + artifact bag:
+
+      * ``ctx.model_seq`` -> ``FlowModelSeq(TransformedProbModel(pm, flow))`` so the
+        sampler targets the pulled-back density ``log p(T(u)) + log|det J_T(u)|``;
+      * ``qz`` -> ``make_latent_qz(dim)`` = N(0, I). Its ``covariance()`` = IDENTITY
+        becomes the initial inverse mass matrix (the flow whitens by construction);
+        do NOT feed the z-space qz covariance. ``sample`` gives base draws (= flow
+        draws once pushed through T); ``mean`` = 0 is the whitened SVI reference.
+
+    A BridgeStage was rejected: it can rewrite ``qz`` but cannot swap the model the
+    sampler renders through, and it does not run a sampler -- so the flow model
+    would have to be smuggled in some other way, defeating the point. Subclassing
+    keeps all of MAMSStage's tuning/diagnostics/manifest logic verbatim.
+
+    HARD REQUIREMENT (plan §6, the C-8 flow-era trap): what we SAVE as ``samples_z``
+    is the DECODED ``z = T(u)`` (same (chains, steps, dim) layout & column order as
+    vanilla MAMSStage, so every downstream per-parameter diagnostic works unchanged),
+    and the RAW ``u`` draws are saved SEPARATELY as ``samples_u`` for debugging only.
+    Never compute per-parameter R-hat/ESS/occupancy on ``u``.
+    """
+
+    name: ClassVar[str] = "flow_mams"
+    requires: ClassVar[Tuple[str, ...]] = ("qz", "flow")
+    produces: ClassVar[Tuple[str, ...]] = ("samples_z", "samples_u")
+
+    def run(self, ctx, artifacts, seed):
+        from gigalens_research.inference.flow_precond import (
+            TransformedProbModel, FlowModelSeq, make_latent_qz)
+
+        flow = artifacts["flow"]
+        bijector = getattr(flow, "bijector", flow)  # TrainedFlow or bare bijector
+        pm = ctx.model_seq.prob_model
+        tpm = TransformedProbModel(pm, bijector)
+        wrapped_seq = FlowModelSeq(ctx.model_seq, tpm)
+
+        dim = int(np.asarray(artifacts["qz"].loc).shape[-1])
+        qz_u = make_latent_qz(dim)  # N(0,I): covariance()=I => identity inverse mass
+
+        new_ctx = dataclasses.replace(ctx, model_seq=wrapped_seq, prob_model=tpm)
+        new_artifacts = dict(artifacts)
+        new_artifacts["qz"] = qz_u
+
+        # Reuse the ENTIRE MAMSStage body (tuning, diagnostics, metadata). It
+        # returns samples in u-space (it sampled the wrapped model).
+        result = super().run(new_ctx, new_artifacts, seed)
+
+        # --- Decode: published samples_z := z = T(u); raw u kept as samples_u ---
+        u = np.asarray(result.arrays["samples_z"])
+        z = np.asarray(bijector.forward(jnp.asarray(u)))
+        result.arrays["samples_z"] = z
+        result.arrays["samples_u"] = u
+        result.metadata["samples_space"] = (
+            "samples_z = z = T(u): DECODED through the flow, same column order as "
+            "vanilla MAMSStage. Raw latent draws are in samples_u (debug only -- do "
+            "NOT compute per-parameter diagnostics on u; u-columns are NOT parameters).")
+
+        # Debug diagnostics duplicate the draws as 'samples_z' (u-space here);
+        # decode them too and keep the raw u alongside, to honor the same rule.
+        if result.diagnostics and "samples_z" in result.diagnostics:
+            u_d = np.asarray(result.diagnostics["samples_z"])
+            result.diagnostics["samples_u"] = u_d
+            result.diagnostics["samples_z"] = np.asarray(bijector.forward(jnp.asarray(u_d)))
+        return result
+
+
 # Sentinel distinguishing "user didn't pass this kwarg" (use the preset value)
 # from "user explicitly passed None" (e.g. ``p2_resample_at_chunk=None`` to
 # force the resampler off from an otherwise-cold preset). Plain ``None``
@@ -2179,7 +2648,7 @@ def register_stage(cls: type) -> type:
 
 
 for _cls in (MAPStage, SVIStage, HessianSurrogateStage, HMCStage, MCLMCStage,
-             MAMSStage, LAPSStage, BridgeStage):
+             MAMSStage, FlowStage, FlowMAMSStage, LAPSStage, BridgeStage):
     register_stage(_cls)
 
 
