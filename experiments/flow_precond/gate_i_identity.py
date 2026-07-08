@@ -129,9 +129,21 @@ def build_model_and_fit():
     print("MAP done. best_lp:", np.asarray(best_lp).max(), "best red-chi2:",
           np.asarray(best_chisq).min())
 
+    # n_vi=128 (dpie SVI config), not compare_runs' 1000: n_vi=1000 OOMs a 40GB
+    # A100 (24.7GiB alloc failure, 2026-07-08). GATE I only needs qz as an identical
+    # seed for both runs, not a tight surrogate.
     opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-    qz, loss_hist = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500)
+    qz, loss_hist = model_seq.SVI(best, opt, n_vi=128, num_steps=1500)
     print("SVI done. final loss:", np.asarray(loss_hist)[-1])
+
+    # Rebuild qz from host arrays, exactly as the pipeline's SVIStage does when it
+    # reconstructs from saved qz_loc/qz_scale_tril: the distribution returned by
+    # model_seq.SVI carries Explicit device sharding on its arrays, and MAMS closes
+    # over qz.covariance() inside shard_map, which new JAX rejects
+    # ("Closing over inputs ... sharded on Explicit axes", 2026-07-08).
+    qz_loc = np.asarray(qz.loc)
+    qz_scale_tril = np.asarray(qz.scale.to_dense())
+    qz = tfd.MultivariateNormalTriL(jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril))
     return model_seq, prob_model, qz
 
 
