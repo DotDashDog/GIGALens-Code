@@ -17,7 +17,96 @@ coverage / Tier 3 vs-HMC, thresholds below). Tests:
 
 ## Certified claims
 
-_None yet._
+### C-T1 — DC-T1 battery outcome (grader pass: CERTIFY-RECOMMENDED 2026-07-08; awaiting human validation)
+
+Scope for all three: single seed/system; GL2 EPL+Shear+Sérsic² (d=22), systems 0–9 of
+100SystemsStandard80px; warm-seeded-HMC reference (shared-basin caveat); pooled coverage
+canary-only.
+
+1. **COLD preset does not transfer.** The certified prior-init + chunk-13 straggler-resampling
+   cold preset fails on 10/10 standard GL2 systems: resample skips with 1 survivor /
+   127 stragglers on all 10, and ≤3/128 chains reach the HMC basin even by END of Phase 2
+   (vs ~31 needed at the guard); on sys_00 the lone "survivor" sits ~4,590 logp below the HMC
+   median — the least-lost straggler, not an in-basin chain. The failure is **upstream of the
+   resample machinery** (no cut/timing/guard retune closes a ~10× survivor gap with zero
+   in-basin members): prior-start Phase-1/2 dynamics do not transport chains into the basin
+   within the certified 300+248 budget. Pre-registered cause hypothesis ("certified mechanisms
+   are geometry-class properties, not demo-lens properties") is **FALSIFIED**. The negative is
+   robust to seed by margin (10 independent systems × 128 chains, ~4,600-logp out-of-basin
+   margins), though not proven universal from single seeds. *Certified negative result.*
+2. **WARM preset does not transfer as-is; certification scope reopened.** On 7/10 systems the
+   warm preset reproduces the same-system HMC posterior at certified grade (offsets
+   0.08–0.19σ, width ratios [0.91, 1.10], cores 1.0, 0 bad-logp chains) and recovers truth.
+   But 2/10 (sys_07: 16/128 chains; sys_08: 1/128) show a low-rate parked-chain leak — chains
+   stalled 400–6,100 logp below the HMC median (negligible-mass parked chains, NOT competitive
+   secondary modes; truth still recovered: warm max|z| 1.29/1.79 ≈ HMC's 1.44/1.79). Per the
+   pre-registered falsifier ("any warm-arm failure reopens certification scope"), the register
+   records: **does not transfer cleanly**. NOT certified: the 12.5% leak rate (single seed;
+   3-seed follow-up required) and the proposed survivor-cut warm post-run guard (retrospective
+   17/17 count only; must be run in-loop before any efficacy claim).
+3. **HMC reference gate (link c).** All 10 references pass: max R̂ ≤ 1.047, min ESS ≥ 793
+   (worst = sys_00). Tier-2 pooled coverage: HMC 0.62/0.94, warm 0.60/0.94 (in band); cold
+   0.94/0.99 = over-coverage WARN, correctly read as prior-sprawl inflation swallowing truth.
+
+---
+
+## Results — DC-T1 battery (2026-07-08, UNCERTIFIED pending grader; single seed)
+
+Executed per the approved design: 10/10 systems ran all five stages OK (HMC reference gate
+passed on all 10: max R̂ ≤ 1.047, min ESS ≥ 793). Artifacts: campaign + analysis on scratch
+(`/pscratch/sd/l/linusu/laps_transfer/{laps_transfer_v1,analysis_v1}`); key tables/corners
+committed under `experiments/laps_transfer/results/`. Corners for all 10 systems visually
+reviewed (light-corner gating step done). What the corners establish: the cold sprawl is
+DIFFUSE full-prior scatter on every system — no discrete mirror blobs — supporting
+"never transported into basin" over light-swap secondary modes (the gating question). The
+warm sys_07/08 satellites (up to ~22σ) are NOT visible in the three-way overlays — they are
+masked by the cold sprawl setting the axis scales — and were detected by the numeric
+per-chain box-core/logp checks, not the plots (grader F5: the numbers, not the corner, carry
+that detection).
+
+**Observed vs predicted (the honest comparison the checkpoint demands):**
+
+- **Cold arm — predicted ≥8/10 pass, survivors ∈ ~[30,70]: observed 0/10 pass, survivors = 1
+  on ALL 10 systems.** Prediction badly missed ⇒ the cause hypothesis ("certified mechanisms
+  are properties of the posterior-geometry class, not the demo lens") is **FALSIFIED**. The
+  failure mode is NOT the demo mixture (39–46% core): on every system, essentially the whole
+  ensemble (125–128 of 128 chains) ended Phase 2 below median(HMC logp) − 24.3 — e.g. on
+  sys_00 the single best prior-start chain was still ~4,590 logp below the basin at resample
+  time. The resampler guard correctly refused to fire (10/10 skips at the 1-survivor cut);
+  no cut/timing/guard retune could rescue an ensemble with zero in-basin members, so the
+  failure is UPSTREAM of the resample machinery: prior-start Phase-1/2 dynamics do not
+  transport chains into the basin within the certified 300+248 budget on these systems. The
+  demo lens (where 40% of chains found the basin by chunk 13) is the atypical case, not the
+  rule. Mixture-blind metrics fired as expected (offsets 15–940σ, widths 2.3–2079×); cold
+  pooled truth "coverage" 0.936 is the over-dispersion swallowing truth (Tier-2 over-coverage
+  WARN fired as designed).
+- **Warm arm — predicted 10/10 pass: observed 7 clean + 1 WARN + 2 FAIL.** Clean systems are
+  demo-certified-grade (offsets 0.08–0.19σ, widths [0.91, 1.10], cores 1.0, 0 bad-logp).
+  sys_04: WARN-marginal (offset 0.449σ, width-min 0.735) — canary band, no FAIL. **sys_07:
+  FAIL — 16/128 chains (12.5%) parked at logp −292…−929 vs HMC median +111.5**, deviating up
+  to 22σ in source-light coordinates; **sys_08: FAIL — 1/128 chain at logp −6,126 vs +15.6.**
+  These are NOT equal-logp secondary modes (logp deficits of 400–6,000 ⇒ negligible posterior
+  mass): they are the same plateau-parking family as the cold failure, seeded from qz —
+  i.e. the warm validity class has a low-rate straggler leak that the demo lens did not show.
+  All satellites sit far below the sampler's own survivor cut, so they are cheaply detectable
+  post-hoc.
+- **Tier 2 pooled truth coverage (canary):** HMC 0.62/0.94 (1σ/2σ), warm 0.60/0.94 — inside
+  bands; cold 0.94/0.99 — over-coverage WARN (see above).
+
+**Reading (graded; see Certified claims):** certified-cold does not transfer on standard GL2
+systems (10/10; the negative is robust by MARGIN — ~10× survivor gap, ~4,600-logp
+out-of-basin distances, replicated over 10 independent systems — not by an unprovable
+universal over seeds); certified-warm does NOT transfer as-is (pre-registered falsifier:
+any warm failure reopens scope) — 7/10 certified-grade, 2/10 with a parked-chain leak.
+PROPOSAL (uncertified): wire the existing survivor cut as a WARM-arm post-run check/filter
+(flag-gated); retrospectively it would have flagged 17/17 satellite chains across sys_07+08,
+but it has not been run in-loop. Open: why the demo lens's prior-start
+in-basin fraction (~40% by chunk 13) is atypical — candidate explanatory variable: prior-to-
+posterior logp distance / basin volume, measurable cheaply across systems. 3-seed follow-up
+is warranted for the warm satellite RATE (is 12.5% on sys_07 stable?), not for cold.
+
+**DC-T1 checkpoint: CLEARED** (run executed; outcome logged; predictions compared at
+magnitude level — cold hypothesis falsified, warm partially falsified).
 
 ---
 
