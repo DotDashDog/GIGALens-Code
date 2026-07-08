@@ -525,7 +525,8 @@ multimodality, conditioning, or the NFW profile.
   **Cost: ≤35 GPU-min** (flows retrain at new arch; MAP/SVI cached; B/C burnin ×3.3).
   Status: v3 approved 2026-07-08 (rigor-grader, fourth round); v3 RAN — arm B FULL PASS
   (flow-MAMS validated at demo scale, 3.0× vanilla ESS), arm E repeat pass, predictions
-  (8) and (2') failed informatively (see v3 Log entry). **AMENDED v4 (2026-07-08,
+  (8) and (2') failed informatively, B-vs-C width gate failed non-interpretably (see v3
+  Log entry). **AMENDED v4 (2026-07-08,
   user-approved one-shot architecture; re-approval required):**
   (v4.i) Spline config: range 35/48 bins (data-derived) → **fixed range 6 / 8 bins +
   trainable per-dim scale layer** (`trainable_scale=True`; flows.py `DiagScale`,
@@ -541,9 +542,19 @@ multimodality, conditioning, or the NFW profile.
   approved the one-shot-architecture revalidation plan (2026-07-08), which includes C′.
   (v4.iii) Pre-registered predictions: (10) pullback-scale gate PASSES for the A-only
   one-shot flow (the flows.py unit test is the same mechanism at harder mismatch);
-  (11) arm B′ passes health + agreement (as v3 arm B did with the data-derived range —
-  if B′ fails where B passed, the scale layer traded correctness for convenience ⇒ diagnose
-  before carousel use); (12) arm C′ (Phase B, full-batch fkl on 2400 correlated draws):
+  (11) arm B′ passes health + agreement (as v3 arm B did with the data-derived range).
+  FALSIFIER + pre-registered ablation ladder: if B′ fails where B passed, the failure
+  attributes to the ONE-SHOT CONFIG AS A PACKAGE (four factors moved at once: range 35→6,
+  bins 48→8, +DiagScale, lr 1e-3→3e-3 — the lr hits the couplings too); diagnose in this
+  order, cheapest discriminator first, ONE pass each: (i) retrain Phase A at lr 1e-3
+  (isolates the moved knob), (ii) compare against the retained v3 r35b48 caches (isolates
+  range/bins vs scale layer). No other iteration before a diagnosis is recorded. A B′ PASS
+  is unconfounded (all four factors simultaneously acceptable).
+  lr fallback (pre-registered): if the FLOW gate fails at lr 3e-3, retrain ONCE at lr 1e-3
+  (or 1e-3 × 10000 steps) before drawing any architecture conclusion; no further lr
+  iteration. Headroom as measured: stable at 5e-3 (1.7× above 3e-3), unstable at 2e-2,
+  onset unmeasured in (5e-3, 2e-2).
+  (12) arm C′ (Phase B, full-batch fkl on 2400 correlated draws):
   health outcome RECORDED either way; a repeat health-fail ⇒ Phase-B-as-implemented
   overfits regardless of architecture, and the carousel Phase B design must add
   subsampling/early-stopping BEFORE GATE F rather than after a failure there. D/E
@@ -662,8 +673,9 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   both informative)** `proposed (UNCERTIFIED)`. Observed vs predicted, per pre-registered gate:
   **(9) ARM B (flow-MAMS, Phase-A spline, range 35) FULL PASS** — health R̂ 1.009, worst mean
   dev 1.68σ (<4), sd ratios [0.94, 1.03], min bulk-ESS **1256** vs vanilla arm A's 412 at
-  equal kept draws (3.0× ESS; wall-clock ESS/s ≈ parity on this easy system — the geometry
-  win is expected to matter on hard targets, not here). The MAMS × nonzero-flow link is now
+  equal kept draws (3.0× ESS; wall-clock: 7.2 ESS/s (B, incl. its 1000-step burnin) vs 8.4
+  ESS/s (A, 300 burnin) — vanilla ~15% better on this easy system; the geometry win is
+  expected to matter on hard targets, not here). The MAMS × nonzero-flow link is now
   validated at demo scale. **(2'') ARM E repeat pass** (R̂ 1.005, worst 2.24σ; divergence
   gate FAILED again: 5/2400 — persistent curvature flag, weigh before carousel NeuTra use).
   **(6) ARM D diverged as predicted** (faithful NeuTra; mechanism archived). **(1)/(5) flow +
@@ -686,8 +698,16 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   needing-evidence, not presumed-better; consider more/less-correlated training data and
   early stopping if it fails there too. Per v3 pre-commitment, no demo re-runs of arm C
   without an explicit human decision. Budget-carried cross-check: NOT triggered (pullback
-  gate (7) passed). Cost: ~0.6 GPU-h. Artifacts: demo_validation_out/* (summary JSON, arrays,
-  traces_worst_param.png, agreement.png, flow_losses.png), branch flow-precond-mams.
+  gate (7) passed). **Pre-registered B-vs-C width gate (prediction 3): FAILED**
+  (`bc_width_gate.pass_=false`, n_fail=2, ratios to 1.19) — NON-INTERPRETABLE because arm C
+  failed health (same rule as agreement gates); recorded, not dropped. **Corner overlays
+  vs true HMC:** flow-MAMS (arm B), vanilla MAMS (arm A), and the 72k-draw HMC reference
+  (`experiments/laps_validation/handoff/hmc_ref/hmc_mass.npy`, produced by the handoff
+  `hmc_reference.py` demo-lens run) coincide at 68/95% on all 8 mass params —
+  `demo_validation_out/corner_mass_chunk{1,2}.png` (two 4×4 chunks per legibility rule).
+  Cost: ~0.6 GPU-h. Artifacts: demo_validation_out/* (summary JSON, arrays,
+  traces_worst_param.png, agreement.png, flow_losses.png, corner chunks), branch
+  flow-precond-mams.
 
 - **2026-07-08 (demo validation v2 RAN — mixed; B/C failure DIAGNOSED as range-clipped flow
   + under-adaptation, not a bug)** `proposed (UNCERTIFIED)`. Observed vs predicted:
