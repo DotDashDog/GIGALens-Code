@@ -127,6 +127,23 @@ _None yet._
 
 ## Log (newest first)
 
+- **2026-07-08 (launch + smoke, sys_00)** — Battery launched per approved DC-T1 on one
+  interactive 4×A100-80GB node (harness @ 8a56b40; sys_00 sequential smoke, then systems
+  1–9 as two concurrent 2-GPU shards). sys_00 (26 min wall, 23.2 GB peak; HMC healthy:
+  R̂max 1.047, ESSmin 793): **warm arm PASSES** (offset max 0.115σ, widths [0.94, 1.06],
+  core 1.0/1.0, 0 bad-logp chains — demo-certified-grade agreement); **cold arm FAILS,
+  new failure mode**: resample correctly SKIPPED at chunk 13 with **1 survivor / 127
+  stragglers** (cut −5492.6), and at end of Phase 2 **all 128 chains** sat below
+  median(HMC logp) −881.2 minus 24.3. The best prior-start chain was ~4590 logp below the
+  basin at resample time — the ensemble never *found* the basin, unlike the demo lens
+  (39–46% in-basin by chunk 13, mixture phenomenology). Offsets 244σ / widths up to 279×
+  are the mixture-blind metrics correctly firing on a fully-lost ensemble. UNCERTIFIED
+  observation; per-system results for 1–9 pending. Harness fix during battery: the
+  offline analyzer's z_scores initially failed — latent 2-tuple unpack of
+  `_site_to_unique` in `posterior.grouped_free_x`; superseded by merging the user's own
+  fix (9279df4, home checkout, part of merge d2f64a2). In-flight runs unaffected
+  (sampler arrays hash-cached under 8a56b40; analysis is offline under merged code).
+
 - **2026-07-08 (later)** — Grader pass 1 on DC-T1: NEEDS-MORE, two findings, both fixed with
   zero GPU: (1) rms-only core was mixture-blind to low-dim light-swap excursions and
   mislabelled as the certified definition → added per-param L∞ box core as a second
