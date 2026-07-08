@@ -3,7 +3,7 @@
 Why MCLMC mixes slowly / fails to converge on the `experiments/sim_carousel`
 multi-plane lens, and what is / is not the cause.
 
-**Last updated:** 2026-06-26
+**Last updated:** 2026-07-06
 
 > One log per research area (see `../../AGENTS.md` → *The record*). Mode B (one agent
 > proposes, the human grades). **Every claim below is `proposed (UNCERTIFIED)`** — the
@@ -382,7 +382,139 @@ multimodality, conditioning, or the NFW profile.
 
 ---
 
+### C-21 — Catastrophic MCLMC energy-error (ξ) spikes on the NEW complex carousel are a QUANTIZED 2-D lattice in the EPL_Lf perturber's (theta_E, gamma); the global step-size suppression is downstream of a few dozen such events
+
+- **Status:** `proposed (UNCERTIFIED)` — awaiting grader inspection of `batchA_diag/` artifacts.
+- **Scope:** NEW complex carousel, **NFW_ELLIPSE_SLOPE** parameterization, run
+  `experiments/sim_carousel/messy_tests/just_map/mclmc` (8 chains, 10k burn-in + 10k results,
+  seed 42, max R̂ 1.027, min bulk-ESS 482). Covers the *carrier* of the ξ spikes; does **not**
+  yet establish the *mechanism* (aliasing vs physical caustic — Test 1/3 below pending).
+- **Evidence / artifact:** `experiments/sim_carousel/messy_tests/just_map/batchA_diag/` P1–P8;
+  analysis scripts under this job's tmp (to be promoted).
+  - Tuner is globally suppressed: tuned `eps=0.1255` identical to 1e-17 across all 8 chains.
+    Results-phase `max(ξ)=2.75e8`, `frac(ξ>10)=0.0065`. **Top-8 burn-in steps carry 74% and
+    top-80 carry 99.8% of Σξ**; `mean(ξ)/mean(ξ|ξ<10)=3.7e4` ⇒ a few dozen events dominate the
+    energy-error variance the tune3 adaptation targets, forcing `eps` down for all 80k steps.
+  - Spikes are diffuse in the worst-ESS coords (source/lens **positions**) and in the whitened
+    eigenbasis, sit **mid-marginal** (not at prior walls — exonerates the ellipticity bounds),
+    are **forward-moving** (not reflections), and the inverse mass matrix is frozen in the
+    results phase ⇒ NOT a 1-D funnel / curved-valley / init / rotating-metric disease.
+  - Spikes **are** quantized: a 2-D **lattice** in EPL_Lf `(theta_E, gamma)` **only** (the other
+    EPL is clean; ellipticity/centers diffuse). γ(z) comb centers −5.040/−4.851/−4.663/−4.455,
+    spacing ≈0.189 (near-perfectly periodic).
+  - Source read of `gigalens/.../mass/epl.py`: the only `niter`-dependent part (the angular
+    recurrence) depends on ellipticity `f=(1−q)/(1+q)` and `t=γ−1` but **not on theta_E**; the
+    observed banding is in theta_E (present) and ellipticity (absent) — the *opposite* pattern.
+    ⇒ series truncation is excluded; the carrier is the radial `(b/R)^{γ−2}` / critical-curve
+    geometry, which depends on theta_E (via `b`) and γ and can alias against the render grid.
+- **Doubt report (mandatory):**
+  (i) *Endpoint-blind.* All localization uses the trajectory endpoint; a stiff region met
+  *mid-trajectory* (leapfrog L≈29) is fully consistent and not yet proven the generator — the
+  Test-1 dial-scan removes this by probing the likelihood directly.
+  (ii) *Aliasing vs physical caustic unresolved.* The lattice is consistent with an
+  un-supersampled (`supersample=1`) pixel-aliasing comb (sys60 disease-(i) analog at pixel
+  pitch) OR a real caustic crossing bright pixels; Test 1 (supersample collapse) discriminates.
+  (iii) `conv_precision="float32"` not yet excluded as a contributor (Test 3 float64 arm).
+  (iv) Single seed; the Gaussian-clone (Batch C) that would size the shape-limited ESS floor is
+  not yet run — the ESS/eps numbers are one realization.
+- **Proposed by / on:** Claude (Batch A) · 2026-07-06   ·   **Grader:** _pending_
+- **CORRECTION (2026-07-06, C-8 trap):** Batch A within-component parameter NAMES were wrong — I labeled z-columns in `_unique` *insertion* order, but the sampler uses **sorted-key** (JAX-tree-flatten) order (confirmed empirically by a per-column perturbation test through `pm.bij.forward`; map in `z_names_TRUE.json`). Column *indices* and all numbers are unaffected; only names within each component were permuted. Corrected identifications: **the ξ lattice is in EPL_Lf.center_x / center_y (perturber POSITION), NOT (theta_E, gamma)**; the slowest/widest direction (softest eig, loading 0.998; min bulk-ESS 482) is **src9.e2 (Sérsic source ellipticity)**, not a center; the worst-ESS subspace is a mix of weakly-identified source-shape (src9 e1/e2), source-shapelet centres, and mass shape/ellipticity — the Batch A 'positions dominate' phrasing is withdrawn. At the max-ξ draw EPL_Lf.e1=0.4977 (pinned at the +0.5 prior wall) and the perturber sits ~3σ off its center-x prior. Corrected plots: batchA_diag/P10_EPL_Lf_CORRECTED.png, P11_position_lattice.png.
+
+---
+
+## Design checkpoints (criteria awaiting approval)
+
+- **Run: Test 4 — conv_precision=float64 dial-scan arm** (rerun the EPL_Lf center_x dial-scan at
+  ss∈{1,5} with conv_precision float32 vs float64, niter=50, other 30 params frozen at the max-ξ draw).
+  **Cause hypothesis:** the proliferating likelihood teeth in the perturber's position are *physical*
+  near-singular caustic structure, NOT float32-convolution rounding roughness. **Prediction:** at matched
+  ss, float64 leaves the comb ~unchanged (prominence ratio f64/f32 ∈ [0.5,2]). **Falsifier:** float64
+  *collapses* the teeth (ratio < 0.3) ⇒ it was float32 numerics. **Metric+threshold:** gradnorm comb
+  p99.5/median and max, f32 vs f64 at the same ss; physical if f64/f32 ∈ [0.5,2], numerics if < 0.3
+  (deterministic float64-vs-float32 render, no sampling noise). **Blind spot:** float64 conv still uses
+  the same pixel grid — separates float32 *rounding* from real structure, not physical-caustic from
+  grid-discretization of a true singularity. **Cost:** ~10–15 GPU-min. **Status:** RAN 2026-07-06
+  (human-approved).
+- **Run: Test 2 — spike localization** (at the max-ξ draw, per-pixel sensitivity d(model)/d(center_x) via
+  jvp, model/data/residual, both bands). **Cause hypothesis:** the stiffness is localized on the small
+  elliptical perturber's caustic/critical region clipping a bright image feature. **Prediction:** |∂model/∂
+  center_x| concentrates on a compact region near the perturber / a bright arc, not diffuse.
+  **Falsifier:** sensitivity spread broadly and unrelated to the perturber. **Metric:** sensitivity map +
+  fraction of |sensitivity| in the top-1% pixels. **Blind spot:** localizes where the *model* moves, a
+  proxy for the caustic. **Cost:** a few GPU-min. **Status:** RAN 2026-07-06 (human-approved).
+
+Before a consequential run, the producer logs a checkpoint here and stops for grading
+(structural rule 3). Clears once launched — then log observed vs. predicted magnitude.
+
+- **Run: Test 1 — 2-D `(theta_E, gamma)` likelihood + gradient-norm dial-scan of EPL_Lf around a
+  spike lattice cell, at `supersample ∈ {1,3,5}` × `niter ∈ {50,200}`** (comb-collapse
+  discriminator; other 30 params frozen at the global-max-ξ draw; reuse
+  `experiments/why_hard_to_sample/t12_flank_crossing.py` where possible).
+  **Cause hypothesis:** the catastrophic stiffness at the EPL_Lf `(theta_E, γ)` lattice is an
+  *aliasing artifact* — the perturber's near-singular radial factor `(b/R)^{γ−2}` / critical
+  curve, rendered on a `supersample=1` (0.2″) grid, produces a comb as the feature crosses pixel
+  centres when theta_E/γ vary. (Numerics/render term, not physics.)
+  **Prediction (direction + magnitude):** the gradient-norm comb teeth **collapse** as
+  supersample↑ — peak-to-trough(PtT) drops ≥1 order of magnitude ss1→ss3 and ≥2 orders ss1→ss5
+  (calibrated from the sys60 analog, T12: ×1400 over ss2→ss4). `niter` 50→200 changes PtT by
+  <2× (theta_E-in-band argument).
+  **Falsifier:** teeth persist (PtT(ss5)/PtT(ss1) > 0.5) under supersampling — then it is NOT
+  pixel aliasing (⇒ physical caustic if the teeth track the critical curve on bright pixels, or
+  the series if instead PtT collapses under `niter`↑, contradicting the source read).
+  **Metric + derived threshold:** PtT ratio of `‖∇_z logL‖` along a fine γ cut through ≥3 comb
+  teeth. Aliasing confirmed if `PtT(ss5)/PtT(ss1) ≤ 0.1`; series excluded if
+  `PtT(niter200)/PtT(niter50) ∈ [0.5, 2]`. These are ratios of a **deterministic** float64
+  quantity (render reproducibility ~1e-6 rel), so ≥10× collapse is far outside numerical noise;
+  the ≥10× bar is the conservative floor of the sys60 comb collapse.
+  **Blind spot:** a 1-D γ-cut PtT is blind to teeth that move in the *other* coordinate (mitigate
+  with the 2-D map) and to structure finer than the scan step (use step ≤0.2× the per-pixel
+  equivalent in theta_E/γ); it cannot say whether a *residual* collapsed comb still matters for
+  sampling (that is Test 3).
+  **Expected plot:** at ss1, `‖∇logL‖` vs γ = sharp periodic teeth at the measured 0.189 spacing;
+  at ss3/ss5 they flatten into a smooth envelope. Falsifier: teeth survive at ss5.
+  **Cost:** moderate GPU — fine 1-D γ + 1-D theta_E scans (~200 pts) + a 60×60 2-D map, each ×6
+  configs; ss5 renders 1500². ~10–20 GPU-min (A100). **Status: RAN 2026-07-06 (forward-only logp scan, FD gradient).**
+  **OBSERVED vs PREDICTED:** predicted comb *collapse* ≥10× under supersampling (aliasing). Observed the OPPOSITE — teeth *proliferate* with supersampling (ss1 mostly smooth + a few sharp teeth; ss3/ss5 a dense forest, peak heights ~constant ~1e4–6e4); prominence ss5/ss1=0.48; **niter 50→200 ratio = 1.000**. ⇒ **pixel-aliasing FALSIFIED and series FALSIFIED.** Hypothesis failed on the aliasing prediction (magnitude+direction), correct that niter is irrelevant. Artifacts: batchA_diag/P9_dialscan_comb.png, test1_dialscan.npz. See 2026-07-06 log entry.
+
+- **Run: Test 3 — short causal MCLMC rerun at `supersample=3`** (8 chains, ~2k burn-in + 2k
+  results, seed 42; watch the ξ tail and tuned `eps`). *Pre-registration only — not yet
+  authorized to launch.*
+  **Cause hypothesis:** the few dozen aliasing teeth generate the catastrophic-ξ events that
+  dominate the tuner's energy-error variance and suppress `eps` globally (C-21); removing the
+  aliasing (ss=3) removes the catastrophic tail and lets the tuner recover `eps`.
+  **Prediction (direction + magnitude):** `max(ξ)` drops below 1e3 and `frac(ξ>10)` toward clone
+  level; tuned `eps` recovers from 0.1255 by ~one order into ~1.0–1.5 (from `eps ∝ Var^{1/4..1/6}`
+  and the measured 3.7e4 variance domination ⇒ ×8–14); min-ESS rises.
+  **Falsifier:** ss=3 leaves `max(ξ) ≫ 1e3` and `eps < 0.3` ⇒ aliasing is not the carrier
+  (physical caustic / other). Partial miss: tail shrinks but `eps` barely moves ⇒ the tail was
+  not the `eps` driver (would contradict the C-21 variance-domination cut).
+  **Metric + derived threshold:** tuned `eps` (results-phase `step_size`) and `max(ξ)` from the
+  rerun `diagnostics.npz`. Recovered if `eps ≥ 0.8` (conservative vs the clone-era healthy
+  eps~1.0–1.2, mirrors the Route-A eps-recovery causal test) **and** `max(ξ) < 1e3`.
+  **Blind spot:** `eps` recovery confirms the tuner-tax link but is blind to whether higher
+  render fidelity *changes the posterior* (must check marginal identity — the sys60
+  "ss2-on-accurate-data is fast but biased" caveat); and ss=3 may be insufficient (need ss=5),
+  so a null at ss=3 does not prove aliasing absent.
+  **Expected plot:** ξ trace with catastrophic spikes gone (`max<1e3`); `eps` trajectory settling
+  ≥0.8; per-param ESS bars lifting. **Cost:** one short GPU run, ~3–4× the ss=1 wall (~10–15 min
+  on a node). **Status:** awaiting approval (pre-registration only).
+
+---
+
 ## Log (newest first)
+
+- **2026-07-06 (Test 4 + Test 2)** — **Catastrophic ξ = PHYSICAL localized caustic stiffness; numerics fully excluded.** `proposed (UNCERTIFIED)`. Test 4 (EPL_Lf.center_x dial-scan, conv_precision float32 vs float64 at ss1 and ss5): **f64/f32 comb ratio = 1.001** at both ss ⇒ the teeth are NOT float32-convolution roughness. Test 2 (per-pixel |∂model/∂center_x| via jvp at the max-ξ draw): sensitivity is highly localized — **top-1% of pixels carry 92% (band0) / 95% (band1)** — and in band0 it **traces the bright lensed arcs, peaking right at the perturber** (peak px→(-15.0,-4.6) vs perturber (-14.78,-4.48)). Synthesis: the small (θ_E≈1.07), maximally-elliptical (e1≈0.50, pinned at the +0.5 wall) EPL_Lf perturber sits among the lensed arcs; its position near-singularly controls those arc pixels (a critical-curve/caustic effect), producing the sharp likelihood teeth that at ss=1 the sampler occasionally hits → the catastrophic ξ that suppress eps globally. Ruled OUT across Tests 1/4: pixel-aliasing, EPL series, float32 numerics. **Fix is NOT render fidelity / conv precision / a variance-stabilizing reparam (this is not a smooth funnel).** Likely levers: regularize the perturber (cap ellipticity below the wall / add a core / question whether the component is justified) or sampler robustness. This unifies the user's two symptoms (ellipticity-at-bounds + ξ spikes) into one cause. Artifacts (on $SCRATCH, home quota full): /pscratch/sd/l/linusu/carousel_diag/{P12_f64_vs_f32_comb,P13_localize_band0_shapelets,P13_localize_band1_sersic}.png, test_f64_loc.npz. NOT yet done: cond(G) of the lstsq Gram at spike vs calm (lstsq-conditioning sub-check).
+- **2026-07-06 (later)** — **Test 1 dial-scan RAN + Batch A labeling CORRECTED.** `proposed (UNCERTIFIED)`. (a) C-8 trap caught: Batch A names were insertion-order; true map is sorted-key (`z_names_TRUE.json`, perturbation-verified). The ξ lattice is in **EPL_Lf position (center_x,center_y)**, not (theta_E,gamma). (b) Test 1 (EPL_Lf position dial-scan, supersample{1,3,5}×niter{50,200}, other 30 params frozen at the max-ξ draw; faithful rebuild reproduces run red_chi2=1.1608): **teeth do NOT collapse under supersampling — they proliferate**; **niter has zero effect**. ⇒ pixel-aliasing and the EPL series both FALSIFIED. The perturber (small θ_E≈1.07, e1 at the +0.5 wall) produces near-singular caustic structure in the likelihood-vs-position that finer grids resolve as sharper; at the run's ss=1 it is mostly blurred with a few sharp teeth = the catastrophic ξ events. **Implication: raising supersampling is NOT a fix (would expose more teeth) — Test 3's premise is falsified in advance.** Remaining discriminator (cheap): rerun the SAME dial-scan at conv_precision=float64 to separate physical-caustic from float32-conv roughness that worsens with pixel count. Artifacts: batchA_diag/P9–P11, test1_dialscan.npz.
+- **2026-07-06** — **Batch A diagnosis of the NEW complex-carousel run (`messy_tests/just_map`);
+  EPL_Lf ξ-lattice found.** `proposed (UNCERTIFIED)` → see **C-21** and the two Design
+  checkpoints (Test 1/3). Zero-GPU reads on the saved `diagnostics.npz`: confirmed the user's
+  global-`eps`-suppression hypothesis quantitatively (top-8 burn-in steps = 74% of Σξ; `eps`
+  pinned 0.1255) and localized the catastrophic ξ spikes to a **quantized 2-D lattice in the
+  EPL_Lf perturber's (theta_E, γ)** (γ comb spacing ≈0.189; the other EPL clean). Ruled out the
+  1-D funnel / prior-wall / reflection / init / rotating-metric stories and the `niter` angular
+  series (theta_E absent from it yet bands). Leading hypothesis: `supersample=1` pixel-aliasing
+  comb from the under-resolved perturber (sys60 disease-(i) analog). Artifacts:
+  `experiments/sim_carousel/messy_tests/just_map/batchA_diag/` P1–P8.
 
 - **2026-07-02** — **C-8 open item (2) partially resolved: the full 32-param case's cached
   `names.npy` IS reversed.** `proposed (UNCERTIFIED)`. Evidence: (a)
