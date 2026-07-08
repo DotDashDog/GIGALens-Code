@@ -424,6 +424,35 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: GATE I — identity-flow wrapper ≡ vanilla MAMS on the demo lens** (flow-preconditioning
+  plan `docs/plans/flow-preconditioned-mams.md` §5.1; script
+  `experiments/flow_precond/gate_i_identity.py`, branch `flow-precond-mams`). Demo lens
+  (22 params, validated vs HMC in `laps_validation/handoff`), MAP→SVI→two MAMS runs
+  (8 chains, 300 burnin + 300 results, seed 0): vanilla `MAMS_JIT(model_seq, qz)` vs the same
+  through `TransformedProbModel(pm, tfb.Identity())` + `FlowModelSeq`.
+  **Cause hypothesis:** the wrapper only adds `lp + fldj` with `fldj ≡ 0.0` and an identity
+  `forward()`, so the pulled-back target is the *same computation*; MAMS consumes only
+  `prob_model.log_prob` (mams.py:58) and the identical `qz` (:73/:79/:91).
+  **Prediction (direction + magnitude):** result samples **bit-identical**
+  (`np.array_equal`, max|Δ| = 0.0 exactly; IEEE x+0.0 = x).
+  **Falsifier:** ANY nonzero element fails the gate. Diagnosis is two-tier (the two graphs
+  compile as separate jaxprs): a max|Δ| at the ULP floor with unstructured scatter points at
+  XLA FP-scheduling of the extra (zero) add — diagnose compiler determinism (compare lowered
+  HLOs) before touching the wrapper; a structured or large Δ (dtype cast, broadcasting,
+  tracing difference) ⇒ fix the wrapper. In neither case relax to a tolerance or to
+  "statistically indistinguishable" without diagnosing why bit-identity failed.
+  **Metric + derived threshold:** `np.array_equal` on the (8, 300, 22) result-sample arrays
+  (dim = demo `num_free_params` = 22, printed at runtime) — exact by construction, hence
+  derived, not tuned. **Blind spot:** exercises only the `log_prob` path at identity; says
+  nothing about nonzero-Jacobian correctness (to be covered by autodiff-slogdet unit tests in
+  `inference/tests/test_flows.py` — **pending**, being written; a hard blocker for any
+  nonzero-flow run) or about latent-`qz` plumbing (§5.3, gated later). A green GATE I
+  validates only the no-op-at-identity property, nothing more. **Cost:** ~5–10 GPU-min
+  (MAP+SVI+2 short MAMS). **Status:** graded REVISE 2026-07-08 (rigor-grader; 4 doc/diagnostic
+  fixes, no design change) → fixes applied → **approved 2026-07-08 (rigor-grader
+  re-inspection); run authorized at stated cost (~5–10 GPU-min); pass discharges
+  no-op-at-identity only.** Human approves carousel-scale runs.
+
 - **Run: Test 4 — conv_precision=float64 dial-scan arm** (rerun the EPL_Lf center_x dial-scan at
   ss∈{1,5} with conv_precision float32 vs float64, niter=50, other 30 params frozen at the max-ξ draw).
   **Cause hypothesis:** the proliferating likelihood teeth in the perturber's position are *physical*
