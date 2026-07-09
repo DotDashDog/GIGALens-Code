@@ -435,20 +435,33 @@ multimodality, conditioning, or the NFW profile.
   ≈ 1.9 (from sd² ≈ p(1−p)/ESS at p = 0.096); pocket-column rank-normalized split-R̂ =
   1.184; worst-param τ ≈ 3600. (The earlier draft's "sd ≈ 0.42" and "most chains never
   switch" were WRONG — corrected against the arrays before human review.)
-  **Test arm:** MAMS in u-space through the Fv4 A+B flow (demo-validated
-  TransformedProbModel + MAMS plumbing, GATE I bit-identity heritage), 64 chains, budget
-  matched to the baseline: kept steps = 1000, burnin = the baseline manifest's ACTUAL
-  value (pinned pre-run, unit = kept steps); gradient evaluations and wall time recorded
-  for BOTH arms so any residual mismatch is visible. All W1–W3 diagnostics computed on
+  **Test arm (HUMAN-AMENDED 2026-07-08, verbatim: "Yeah, 8x4000 is a good idea. That's my
+  only modification to the test. Go ahead!" — basis: user's testing experience that 8
+  chains behave ≈ as well as 64 on this posterior at ~4× the speed):** MAMS in u-space
+  through the Fv4 A+B flow (demo-validated TransformedProbModel + MAMS plumbing, GATE I
+  bit-identity heritage), **8 chains × 4000 kept steps** (per-chain length 4× the
+  baseline's — mixing is a per-chain-length phenomenon, so this strengthens the W1/W2
+  statistics at ≈ the wall of the originally-planned 64×1000), burnin = the baseline's
+  actual adaptation length = **2000 steps** (read from diagnostics.npz array shapes; the
+  mams run stored (64, 2000) adaptation traces + (64, 1000) kept). Per-chain criteria
+  NORMALIZED per-1000-kept-steps for baseline comparability. Gradient evaluations and
+  wall time recorded for the test arm; the baseline's results-phase gradient count and
+  wall are UNRECOVERABLE from its stored diagnostics (adaptation-phase only) ⇒ the
+  pre-committed fallback normalization activates: W4 compares ESS/kept-step (per-1000),
+  with the test arm's ESS/wall and flow-eval wall fraction reported alongside (baseline
+  wall unknown — recorded as a limitation, not silently dropped). All W1–W3 diagnostics computed on
   DECODED z (= T(u)), never raw u (C-8 descendant); occupancy column is z[:,6] post-decode.
   **Pre-registered win conditions (thresholds DERIVED, not rounded):**
   (W1, THE sharp instrument — between-basin mixing; PREDICTION with direction+magnitude:
   the Fv4 flow maps both basins into the base bulk — pocket pullbacks max|u| = 4.11 — so
-  u-space MAMS should transit freely; predicted occupancy-ESS ≥ 20/chain, i.e. ≥ 10× the
-  baseline's 1.9): (W1a) per-chain occupancy sd ≤ 0.066 = sqrt(p(1−p)/20) at p = 0.096
-  (baseline 0.214 = 3.2× worse; this is an ESS_occ ≥ 20/chain bar, stated as such);
-  (W1b) median switches/chain ≥ 60 (5× baseline's 12) AND min ≥ 12 (every chain ≥ the
-  baseline's median); (W1c) occupancy-indicator R̂ ≤ 1.05, defined as PLAIN split-R̂ on
+  u-space MAMS should transit freely; predicted occupancy-ESS ≥ 20 per chain per 1000
+  kept, i.e. ≥ 10× the baseline's 1.9): (W1a) occupancy-ESS ≥ 20/chain/1000-kept — at
+  8×4000 this means per-chain-occupancy sd ≤ sqrt(p(1−p)/80) ≈ 0.033 at p = 0.096
+  (raw sd threshold rescales with chain length; the per-1000 ESS bar is the invariant;
+  baseline: 1.9); (W1b) switches per chain per 1000 kept: median ≥ 60 (5× baseline's 12)
+  AND min ≥ 12 (every chain ≥ the baseline's median) — at 4000 kept: median ≥ 240,
+  min ≥ 48 raw; NOTE the 8-chain median/min are coarser order statistics than the
+  64-chain versions (recorded); (W1c) occupancy-indicator R̂ ≤ 1.05, defined as PLAIN split-R̂ on
   the binary indicator (rank-normalization is a no-op on binary data); baseline =
   **1.719** (the continuous pocket-column rank-R̂ 1.184 is a different, milder metric,
   reported separately above) — the indicator R̂ is the sharpest single diagnostic in this
