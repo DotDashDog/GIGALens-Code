@@ -787,6 +787,32 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-08 (carousel GATE Fv2 RAN — fixed box ±16/24 FAILS; one-shot fixed-box premise
+  FALSIFIED per pre-commitment; HUMAN ESCALATION)** `proposed (UNCERTIFIED)`.
+  Observed vs re-registered: **(F1′) pass** — A-only pocket ratio −406 (still fails the
+  pocket gate as predicted; more extreme than ±6's −108.8). **(F3′) BOTH PASS** — A-only
+  ELBO 291427.0 ± 0.1 (= SVI−26, in the derived band; nesting argument confirmed live:
+  step-0 loss 291453.7 = SVI), A+B 291433.8 ± 5.5 ≤ SVI (Phase B no longer breaks the ELBO
+  — real improvement over ±6). **(F2′) FAILED** — A+B pocket ratio −403, essentially
+  unchanged from A-only. **(F4′) FAILED for both** — main-basin pullbacks now reach |u| ≈
+  41 (vs 22 at ±6), pocket pullbacks 37.5 ≫ box 16; predicted |T⁻¹(z_pocket)| ≲ 10 was
+  WRONG by 4×. **Mechanism (from exp_s):** trained exp(s) ∈ [0.75, 13.5] — SMALLER than at
+  ±6 ([1.1, 34.6]). The sizing arithmetic assumed s → main-basin sd; but s is trained by
+  reverse-KL, which sets it to fit the BULK and is indifferent to regions it assigns ~0
+  mass. The mode-seeking pathology RECURSES AT THE SCALE LEVEL: a containment parameter
+  trained by an objective that ignores the tails cannot contain them, for ANY fixed box.
+  This explains both GATE F failures and elevates the plan-§6 data-derived range (set by
+  DATA quantiles — containment by measurement, not by ELBO; v3-validated on the demo) from
+  fallback to necessity. **Pre-committed outcomes now in force:** (i) F2′ failed with
+  pocket pullbacks OUT of box ⇒ the subsampling/early-stopping retry does NOT apply; the
+  pre-registered negative finding stands ⇒ HUMAN ESCALATION before any benchmark. (ii)
+  Premise-level pre-commitment: no third widening — the one-shot fixed-box premise is
+  FALSIFIED; the data-derived-range path becomes the method, pending human concurrence.
+  The ±16/24 demo re-validation is moot (config dead). Cost: Fv2 ≈ 1.1 GPU-h (45-min
+  TIMEOUT with Phase A banked + 20-min completion; overran the approved ≤45 GPU-min —
+  Phase-A step time at 24 bins ~2× estimate; recorded). Cumulative ≈ 4.5 GPU-h.
+  Artifacts: carousel_gate_f_out/* (r16b24 caches, summary, losses).
+
 - **2026-07-08 (carousel GATE F RAN — F1 CONFIRMED, F2/F3/F4 FAIL with structural
   diagnosis; retry premise falsified)** `proposed (UNCERTIFIED)`. Observed vs predicted:
   **(F1) CONFIRMED precisely** — A-only pocket ratio **−108.8 nats** (predicted ≈ −100s):
