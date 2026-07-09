@@ -56,11 +56,13 @@ import demo_validation as dv  # reuse the demo-validated train_flow loop
 dv.OUT_DIR = OUT_DIR          # redirect its flow caches here
 
 SEED = 0
-# Fv2: box +-16 / 24 bins (method-level FIXED default; +-6 structurally cannot
-# contain the carousel's post-scale geometry -- see the GATE F Log entry: dynamic
-# range <= 9.2, pocket offset <= 4.2 main-sd units, so +-16 holds with ~1.7x margin).
-SPLINE_CFG = dict(num_layers=6, num_bins=24, spline_range=16.0, hidden_dims=(64, 64),
-                  trainable_scale=True)
+# Fv3: DATA-DERIVED range/bins (plan-S6 path; v3-validated on the demo), computed
+# in main() from the whitened MAMS64 draws: range = ceil(1.1 * max|w|) so ALL
+# Phase-B training data is in-box by construction; bins scale with range to keep
+# the demo-v3 knot density (48 knots / range 35), capped at 512. trainable_scale
+# is OFF: the Fv2 lesson is that a containment parameter trained by reverse-KL
+# fits the bulk and abandons the tails -- containment must come from measurement.
+SPLINE_BASE = dict(num_layers=6, hidden_dims=(64, 64), trainable_scale=False)
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
 PHASE_A_LR = 3e-3
@@ -92,6 +94,14 @@ def main():
     basin = np.load(BASIN)
     zP, zM = jnp.asarray(basin["zP"]), jnp.asarray(basin["zM"])
 
+    # Data-derived range/bins (pre-registered rule; printed for the record)
+    w_all = np.linalg.solve(qz_scale_tril, (z_mams - qz_loc).T).T
+    spline_range = float(np.ceil(1.1 * np.abs(w_all).max()))
+    num_bins = int(min(512, np.ceil(spline_range * 48.0 / 35.0)))
+    SPLINE_CFG = dict(SPLINE_BASE, num_bins=num_bins, spline_range=spline_range)
+    print(f"DATA-DERIVED: max|w| = {np.abs(w_all).max():.1f} -> range {spline_range}, "
+          f"bins {num_bins}")
+
     model_card = {
         "script": os.path.abspath(__file__),
         "jax": jax.__version__, "devices": [str(d) for d in jax.devices()],
@@ -109,7 +119,7 @@ def main():
     sp_init, sp_make = flows.make_whitened_spline_flow(
         key, dim, jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril), **SPLINE_CFG)
     sp_key = (f"car_r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
-              f"ts1lr{PHASE_A_LR:g}")
+              f"ts0lr{PHASE_A_LR:g}")
 
     t0 = time.perf_counter()
     params_a, hist_a = dv.train_flow(
@@ -123,7 +133,8 @@ def main():
         f"AB_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 12,
         phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR,
-        n_chunks=8)  # fkl gradient accumulated over 8x8000-sample chunks (exact)
+        n_chunks=32)  # fkl gradient accumulated over 32x2000-sample chunks (exact;
+                      # ~500-bin spline intermediates need the smaller chunks)
     t_b = time.perf_counter() - t0
 
     summary = {"model_card": model_card, "timings_s": dict(phase_a=t_a, phase_b=t_b),

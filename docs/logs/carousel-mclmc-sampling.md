@@ -424,6 +424,44 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE Fv3 — data-derived range/bins (plan-§6 path, v3-validated recipe)**
+  (script `carousel_gate_f.py`, same gates/apparatus as F/Fv2; commit follows this entry).
+  HUMAN CONCURRENCE obtained 2026-07-08 after the pre-committed Fv2 escalation, verbatim:
+  **"Okay, sounds good. Go ahead with the data-derived range/bins, since we should get a
+  working version sampling the carousel before we start paring down and going for
+  efficiency."** — priority is a WORKING carousel sampler; efficiency later.
+  **Config (derivation rule pre-registered, computed+printed in-run):** range =
+  ceil(1.1 × max|w|) over the whitened MAMS64 draws = **357** (all Phase-B data in-box BY
+  CONSTRUCTION); bins = ceil(range × 48/35) capped at 512 = **490** (keeps demo-v3 knot
+  density); trainable_scale **OFF** — the Fv2 lesson elevated to design rule: containment
+  comes from measurement, never from an ELBO-trained parameter. Phase A/B budgets
+  unchanged (3000×128 reverse-KL, lr 3e-3, 4 chunks; 1000-step full-batch fkl in 32×2000
+  chunks — exact). Cache key car_r357b490ts0lr0.003.
+  **Predictions:** (G1) A-only fails the pocket gate (mode-dropping is objective-level —
+  both boxes proved it; ≈ −100s or worse); (G2) **A+B PASSES the pocket gate** (≥ −8;
+  ≈ +5.4 if well-covering): fkl now has spline capacity everywhere its data lives — this
+  is the configuration the whole chain argues for; (G3) ELBO gate: both ≤ SVI. Weaker than
+  F3′'s "≤ SVI−20": 490 uniform-init knots over ±357 give the bulk only ~1.5-whitened-unit
+  initial knot spacing (core dims sd 1.7) — knot positions are trainable but optimization
+  quality at this ratio is unknown; PRE-COMMITTED intermediate reading: (SVI−20, SVI] =
+  optimization-quality finding, not method failure, no post-hoc reclassification. (G4)
+  pullback-scale gate = the REAL capacity question: whitened per-dim sd spans 1.7–50.2, so
+  whitening requires up to ~50× per-dim compression learned by fkl through knot
+  allocation. Required: A+B main-basin sd ∈ [0.5, 2], |mean| ≤ 1. A-only recorded,
+  predicted to FAIL sd (reverse-KL never sees the ridge tails).
+  **Falsifiers + pre-committed responses:** G2 fails (with data in-box by construction) ⇒
+  genuine fkl fit problem ⇒ the re-armed ONE retry applies (subsampling/early-stopping);
+  still fails ⇒ negative finding + human escalation. G4 fails while G2 passes ⇒ flow
+  covers the pocket but cannot whiten the ridge ⇒ PARTIAL win — escalate to human with
+  the u-space-geometry evidence for a benchmark go/no-go (u-space MAMS may still beat
+  z-space even unwhitened). G3 A-only fails ⇒ lr fallback (ONE retrain at 1e-3) — carried
+  over. **Blind spots:** (a) knot-allocation dynamics unmeasured at 490 bins (loss plots
+  will show); (b) pocket gate still 2-point; (c) demo cross-validation of THIS recipe =
+  v3 demo arm B (range 35/bins 48, passed) — the recipe, not the constants, is what
+  transfers; no new demo run needed. **Cost: ≤ 90 GPU-min** (Phase A ~60 measured-based,
+  render-dominated; Phase B ~20 at 32 chunks; gates ~5).
+  **Status: awaiting rigor-grader approval of Fv3.**
+
 - **Run: carousel GATE F — one-shot flow training + pocket-coverage A/B** (plan §5.2/§4.4;
   script `experiments/flow_precond/carousel_gate_f.py`, branch `flow-precond-mams`; model
   via `carousel_model.py`, identity-verified to 0.01 nats against basin_slice records).
