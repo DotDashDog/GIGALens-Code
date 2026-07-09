@@ -469,7 +469,9 @@ multimodality, conditioning, or the NFW profile.
   ratio ∈ [0.59, 1.03] (grader), i.e. pooled inflation is bounded and in the conservative
   extent-shrinking direction; the residual exposure is base-shape mismatch, O(1) and
   exactly what in-box splines fix. **Cost: ≤ 90 GPU-min**, pilot-gated as before.
-  **Status: awaiting rigor-grader approval of Fv4.**
+  **Status: Fv4 approved 2026-07-08 (rigor-grader, second round; derivation numbers
+  independently reproduced; step-0=SVI prediction error caught and re-registered
+  pre-launch); run authorized at ≤90 GPU-min, pilot-gated.**
 
 - **Run: carousel GATE Fv3 — data-derived range/bins (plan-§6 path, v3-validated recipe)**
   (script `carousel_gate_f.py`, same gates/apparatus as F/Fv2; commit follows this entry).
