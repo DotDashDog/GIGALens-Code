@@ -424,6 +424,49 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel BENCHMARK (§5.4) — flow-MAMS vs vanilla MAMS** (HUMAN approval required
+  by standing pre-commitment; grader pre-review first). **Question:** does preconditioning
+  MAMS with the Fv4 A+B flow (car_std_r10b14ts0lr0.003 — pocket ratio +1.0, pullback sd
+  0.96–1.01, ELBO SVI−21) fix the carousel's between-basin mixing failure?
+  **Baseline (no new GPU):** the existing MAMS64 run (64×1000; per-chain pocket occupancy
+  spans [0.001, 0.951] — the chains are basin-SEGREGATED, i.e. the baseline demonstrably
+  does not mix between basins at this budget; worst-param τ ≈ 3600).
+  **Test arm:** MAMS in u-space through the Fv4 A+B flow (demo-validated
+  TransformedProbModel + MAMS plumbing, GATE I bit-identity heritage), 64 chains, budget
+  matched to the baseline (1000 kept steps + the mams-stage default burnin; assumption
+  about the baseline's burnin recorded at run time from its manifest).
+  **Pre-registered win conditions:** (W1, THE sharp instrument — between-basin mixing)
+  per-chain occupancy spread collapses: sd of per-chain pocket occupancies ≤ 0.15
+  (baseline ≈ 0.42) AND ≥ 90% of chains visit BOTH basins (baseline: most chains never
+  switch); pocket-column R̂ ≤ 1.05 (baseline: far above). (W2, plausibility band —
+  RE-DERIVED as pre-committed after the occupancy finding) pooled occupancy ∈ [2%, 15%]:
+  the plan-§5.4 [2%, 8%] band presumed truth ≈ 5%, but estimators now span 4.6–9.6%
+  (Laplace 5.4, MAMS8 4.6, MAMS64 9.6 with ~2× chain-segregation uncertainty) — the
+  widened band covers the estimator spread; W1 carries the scientific weight, W2 only
+  guards against gross occupancy pathology. (W3, health) R̂ ≤ 1.02 all params, bulk-ESS
+  reported (no hard floor pre-committed — the baseline itself would fail any serious ESS
+  floor on the pocket dim; direction: flow arm ≥ baseline). (W4, efficiency) min
+  bulk-ESS per gradient evaluation ≥ 3× baseline (the plan's efficiency goal, expected to
+  show on THIS target unlike the easy demo where it was ≈ parity).
+  **Falsifiers + pre-committed readings:** W1 fails ⇒ the flow preconditions geometry but
+  MAMS still cannot cross in u-space ⇒ NEGATIVE finding for the flow-MAMS mechanism on
+  multimodal targets (the flow itself remains validated by GATE Fv4); no retuning
+  iteration without a new checkpoint. W1 passes but W2 fails ⇒ mixing works, occupancy
+  disagrees with all estimators ⇒ escalate: possible genuine measurement of the pocket
+  mass (the MH-exact flow-MAMS estimate would supersede the segregated baselines) —
+  requires human review before any claim. W4 fails while W1 passes ⇒ mixing win at
+  efficiency cost — report both, no reclassification. **Known adverse signal (carried per
+  standing condition):** demo v3 arm C (A+B flow, SAMPLED) failed health at demo scale
+  (R̂ 1.076, ESS 232) — argument for difference, not proof: that flow was the
+  unstandardized range-35 config with poor conditioning; the Fv4 flow's near-perfect
+  pullback (sd 0.96–1.01 vs demo arm C's unmeasured-but-poor geometry) is exactly the
+  property that failure implicated. The human should weigh this explicitly.
+  **Cost: ≤ 4 GPU-h**, pilot-gated (time 20 steps post-compile, project, abort >4 h).
+  **Also offered for certification alongside this decision:** (i) the F1 mode-dropping
+  result (−108.8/−406/−16.4 across three architectures); (ii) the R·lr spline-instability
+  mechanism (diagnosis entry); (iii) the Fv4 gate results.
+  **Status: awaiting grader pre-review, then HUMAN decision.**
+
 - **Run: carousel GATE Fv4 — frozen measured scale + data-derived box (diagnosis-grounded
   revision of Fv3)** (script `carousel_gate_f.py`; supersedes Fv3 after its pilot abort;
   same gates, budgets, Phase-B data, and pilot-with-abort as Fv3 unless stated).
