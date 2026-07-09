@@ -448,7 +448,11 @@ multimodality, conditioning, or the NFW profile.
   baseline's 1.9): (W1a) per-chain occupancy sd ≤ 0.066 = sqrt(p(1−p)/20) at p = 0.096
   (baseline 0.214 = 3.2× worse; this is an ESS_occ ≥ 20/chain bar, stated as such);
   (W1b) median switches/chain ≥ 60 (5× baseline's 12) AND min ≥ 12 (every chain ≥ the
-  baseline's median); (W1c) occupancy-indicator rank R̂ ≤ 1.05 (baseline 1.184).
+  baseline's median); (W1c) occupancy-indicator R̂ ≤ 1.05, defined as PLAIN split-R̂ on
+  the binary indicator (rank-normalization is a no-op on binary data); baseline =
+  **1.719** (the continuous pocket-column rank-R̂ 1.184 is a different, milder metric,
+  reported separately above) — the indicator R̂ is the sharpest single diagnostic in this
+  packet.
   (W2, plausibility band — RE-DERIVED as pre-committed) pooled occupancy ∈ [2%, 15%]:
   the plan-§5.4 [2%, 8%] presumed truth ≈ 5%; estimators span 4.6–9.6% (Laplace 5.4,
   MAMS8 4.6, MAMS64 9.6 at ~2× uncertainty) — band covers the spread; W1 carries the
@@ -474,9 +478,9 @@ multimodality, conditioning, or the NFW profile.
   iteration without a new checkpoint. W1 passes but W2 fails ⇒ mixing works, occupancy
   disagrees with all estimators ⇒ escalate to human with the PRE-REGISTERED evidence
   standard for "genuine measurement of the pocket mass" (note: BOTH arms are MH-exact in
-  law — exactness is not the discriminator, CONVERGENCE is): occupancy-indicator R̂ ≤ 1.02
-  across the 64 flow chains AND first-half/second-half pooled occupancy agreement within
-  1.5 percentage points AND explicit comparison against the Laplace proxy (5.4%); a
+  law — exactness is not the discriminator, CONVERGENCE is): occupancy-indicator R̂ ≤ 1.02 (plain split-R̂ on
+  the indicator, as in W1c) across the 64 flow chains AND first-half/second-half pooled
+  occupancy agreement within 1.5 percentage points AND explicit comparison against the Laplace proxy (5.4%); a
   converged mixing sampler's estimate legitimately supersedes segregated chains' — but
   only with that evidence; human review before any claim regardless. W4 fails while W1 passes ⇒ mixing win at
   efficiency cost — report both, no reclassification. **Known adverse signal (carried per
