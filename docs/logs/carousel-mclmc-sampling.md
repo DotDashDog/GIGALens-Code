@@ -445,22 +445,52 @@ multimodality, conditioning, or the NFW profile.
   **Predictions:** ratio reaches +5.43 ± 2 (mechanism: mass is already right; 2× local
   resolution + 4× fkl steps lets forward-KL concentrate it); ELBO ≈ SVI−21 ± few
   (unchanged — bulk already fit); pullback gate still passes (sd [0.5,2]).
+  **Tolerance derivation (grader item):** ±2 ⇔ trap depth ≤ e² ≈ 7.4×; attempt-2 scaling
+  (depth ≈ 84 → 14.6 switches/1000) implies depth ≲ 20 suffices for the W1b 60/1000 bar
+  under linear exit-rate scaling (UNCERTIFIED), so the band carries ~3× margin.
   **Falsifiers + pre-committed responses:** ratio < +3.43 after A1+A3 ⇒ A2 fallback,
-  ONE pass (ratio-anchoring auxiliary loss λ(log q(zP) − log q(zM) − 5.43)², λ chosen so
-  the anchor term is O(1) of the fkl loss at init, pullback+ELBO gates re-checked to
-  catch 2-point warping; the user is WARY of pre-determined posterior information — A2
-  uses only two likelihood evaluations, recorded as such, and is the LAST flow-side
-  lever); A2 also fails ⇒ the escalation is spent: pre-registered NEGATIVE result for
-  flow-MAMS on this target, budget moves per plan §5.4 (many-chain scaling), human
-  informed. ELBO or pullback REGRESSES under A3 (28 bins hurt the bulk) ⇒ evaluate
-  jointly, no silent knob iteration. **Training parallelism (human-directed):** Phase-A
+  ONE pass (ratio-anchoring auxiliary loss λ(log q(zP) − log q(zM) − 5.43)²; λ pinned by
+  RULE: λ = |fkl loss at A2 start| / (ratio at A2 start − 5.43)², i.e. anchor term =
+  fkl magnitude at init, both recorded; the user is WARY of pre-determined posterior
+  information — A2 uses only two likelihood evaluations, recorded as such, the LAST
+  flow-side lever). **ANY A2 pass additionally requires INDEPENDENT pocket-wide checks
+  (grader item — the anchored gate is A2's own objective, not a test):** (i) flow-sample
+  pocket mass (64k draws, fixed seed) ∈ [5%, 13%] (band = estimator spread 4.6–9.6% with
+  margin; note the Fv4 mass estimate 8.7% carries ±0.5pp seed sensitivity — grader
+  recomputed 8.3%); (ii) sd of (lp − log q) over 512 random pocket draws ≤ 2 nats (all
+  pocket draws are held out w.r.t. the 2-point anchor); plus the usual ELBO + pullback
+  re-checks. **High-side falsifier (grader item):** ratio > +7.43 after A1+A3 ⇒ read as
+  Phase-B OVERFIT to the ~6.1k correlated pocket draws (A1's known risk; no held-out fkl
+  monitoring exists) ⇒ evaluate jointly with ELBO/pullback and ESCALATE TO THE HUMAN —
+  no auto-lever. **Mechanism-falsification reading (grader item):** ratio unchanged
+  (≈ +1) after A1+A3 ⇒ the RESOLUTION mechanism is FALSIFIED and recorded as such,
+  independent of A2's subsequent outcome; ratio materially improved but short ⇒
+  mechanism supported, capacity short. A2 also fails ⇒ the escalation is spent:
+  pre-registered NEGATIVE result for flow-MAMS on this target, budget moves per plan
+  §5.4 (many-chain scaling), human informed. ELBO or pullback REGRESSES under A3
+  (28 bins hurt the bulk) ⇒ evaluate jointly, no silent knob iteration.
+  **Named alternative (grader):** the fkl target is the EMPIRICAL 64k-draw distribution
+  (~6.1k correlated, chain-segregated pocket draws, ~2× occupancy uncertainty) — if the
+  data's own pocket density profile is off, no resolution reaches +5.43 and a miss is
+  data-limited, not capacity-limited; the A2 branch covers the consequence but the cause
+  would need new data, not new knobs. **Training parallelism (human-directed):** Phase-A
   chunks and Phase-B chunk-rounds are data-parallel across all visible GPUs (GSPMD
   vmap-over-sharded-chunks inside the existing scan; verified on 4 virtual CPU devices
   to match the sequential path to 9e-16; per-device memory = the validated per-chunk
   footprint; stream matches the sequential chunked path — recorded). Expected wall:
   Phase A ~10–12 min (was 40), Phase B ~6–8 min at 4× steps (was 6 at 1×), gates ~3.
-  **Cost: ≤ 45 min wall on a 4-GPU node (≤ 3 GPU-h), Slurm-capped at 60 min; no pilot
-  (per amendment v2).** If the tightened gate passes: the RE-BENCHMARK (same design as
+  **Cost: ≤ 45 min wall on a 4-GPU node (≤ 3 GPU-h), Slurm-capped at 60 min. The gate-F
+  timing pilot is SKIPPED (GATE_F_SKIP_PILOT=1 in the launch command — the in-script
+  90-min pilot budget is stale vs the 45-min wall; grader item).** Deviation note
+  (grader): plan-§5.4's ladder wording "double layers/bins" is instantiated as BINS ONLY
+  (mechanism-grounded: resolution, not depth; human-directed). n_devices recorded in the
+  model card (trained values are device-count-dependent, amendment-v2 precedent); the
+  GSPMD equivalence test is committed at
+  experiments/flow_precond/instability_diagnosis/gspmd_equiv_test.py (grader reproduced
+  1.1e-16 independently). Phase-B 28-bin chunk footprint ≈ 2× the validated 14-bin one
+  (~5 GiB est. per 8000-row chunk — in budget on A100-40; per-device memory under GSPMD
+  is inferred from code semantics, not measured — a fast OOM inside the Slurm cap is the
+  bounded worst case). If the tightened gate passes: the RE-BENCHMARK (same design as
   attempt 2, new flow) returns to the human for explicit go.
   **Status: awaiting rigor-grader approval of Fv5.**
 

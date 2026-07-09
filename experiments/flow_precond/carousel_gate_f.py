@@ -129,6 +129,7 @@ def main():
     model_card = {
         "script": os.path.abspath(__file__),
         "jax": jax.__version__, "devices": [str(d) for d in jax.devices()],
+        "n_devices": len(jax.devices()),  # trained values are device-count-dependent
         "x64": bool(jax.config.jax_enable_x64), "dim": dim,
         "spline": {**SPLINE_CFG, "phase_a": [PHASE_A_STEPS, PHASE_A_DRAWS, PHASE_A_LR],
                    "phase_b": [PHASE_B_STEPS, PHASE_B_LR, "mams64"]},
@@ -192,8 +193,10 @@ def main():
         f"AB_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 12,
         phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR,
-        n_chunks=8)  # fkl gradient accumulated over 8x8000-sample chunks (exact;
-                     # 14-bin spline tensors are below the validated 24-bin footprint)
+        n_chunks=8)  # fkl gradient over 8x8000-sample chunks (exact); at 28 bins the
+                     # per-chunk footprint is ~2x the validated 14-bin one (~5 GiB est.
+                     # by scaling the measured 490-bin/2000-row 21 GiB) -- in budget on
+                     # A100-40; sharded across devices, one chunk per device per round
     t_b = time.perf_counter() - t0
 
     summary = {"model_card": model_card, "timings_s": dict(phase_a=t_a, phase_b=t_b),
