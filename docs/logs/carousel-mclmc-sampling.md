@@ -482,7 +482,11 @@ multimodality, conditioning, or the NFW profile.
   0 renders) + gates ~4 ⇒ **≈ 25 min wall, Slurm-capped 45 min on 4 GPUs** — falsifier
   branch (ii) (reach step 4000) is safely inside the cap. GPU-h not the constraint per
   the human; wall is.**
-  **Status: awaiting rigor-grader approval of Fv6.**
+  **Status: Fv6 approved 2026-07-09 (rigor-grader, second round; ES test executed by
+  grader, sacct telemetry independently confirmed). Launch: 4 GPUs, GATE_F_SKIP_PILOT=1,
+  45-min cap. Grader's watch point: the first ES check (step 0) exercises es_eval on
+  mesh-annotated mid-training params on real hardware for the first time — surfaces
+  within minutes if it fails.**
 
 - **Run: carousel GATE Fv5 — the plan-§5.4 ladder's ONE architecture escalation
   (human-directed 2026-07-09: "I'd like to try A1 and A3, with A2 as a fallback if that
