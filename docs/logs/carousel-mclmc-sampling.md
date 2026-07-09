@@ -455,10 +455,25 @@ multimodality, conditioning, or the NFW profile.
   covers the pocket but cannot whiten the ridge ⇒ PARTIAL win — escalate to human with
   the u-space-geometry evidence for a benchmark go/no-go (u-space MAMS may still beat
   z-space even unwhitened). G3 A-only fails ⇒ lr fallback (ONE retrain at 1e-3) — carried
-  over. **Blind spots:** (a) knot-allocation dynamics unmeasured at 490 bins (loss plots
+  over. G1 WRONG (A-only passes the pocket gate — newly plausible at range 357 where
+  reverse-KL draws have more room to wander) ⇒ GATE F's carried-over response: investigate
+  the mechanism before any claim. G3 fails ONLY for A+B ⇒ Fv2's carried-over response:
+  evaluate as Phase-B evidence jointly with G2/G4, no lr iteration.
+  PRE-COMMITTED TIMING PILOT (after two consecutive budget overruns): before the main run,
+  time 4-vs-8-step pilot pairs for Phase A and Phase B at 490 bins (compile cancels in the
+  difference), project the total, and ABORT + re-checkpoint if the projection exceeds
+  90 min — the budget is a gate, not a hope. Rationale: the Phase-B tensors scale with
+  spline pcount (71→1469, ~21×) and Phase B is render-free, so "render-dominated" does not
+  cover it; Phase-A step time also grew an unexplained 2× at 8→24 bins. **Blind spots:** (a) knot-allocation dynamics unmeasured at 490 bins (loss plots
   will show); (b) pocket gate still 2-point; (c) demo cross-validation of THIS recipe =
-  v3 demo arm B (range 35/bins 48, passed) — the recipe, not the constants, is what
-  transfers; no new demo run needed. **Cost: ≤ 90 GPU-min** (Phase A ~60 measured-based,
+  v3 demo arm B (range 35/bins 48, passed; the derivation rule instantiated on the demo
+  reproduces exactly that config) — the recipe, not the constants, is what transfers; no
+  new demo run needed for GATE Fv3 (flow gates only). CAVEAT carried visibly to the
+  benchmark checkpoint: the A+B-SAMPLING side of this recipe holds a standing demo-scale
+  negative signal — demo v3 arm C (A+B flow, sampled) FAILED health (R̂ 1.076, ESS 232) —
+  and the §5.4 benchmark samples with the A+B flow; the human benchmark decision must
+  weigh that signal (this is the surviving residue of the Fv2 demo-re-validation
+  obligation). **Cost: ≤ 90 GPU-min** (Phase A ~60 measured-based,
   render-dominated; Phase B ~20 at 32 chunks; gates ~5).
   **Status: awaiting rigor-grader approval of Fv3.**
 

@@ -119,7 +119,42 @@ def main():
     sp_init, sp_make = flows.make_whitened_spline_flow(
         key, dim, jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril), **SPLINE_CFG)
     sp_key = (f"car_r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
-              f"ts0lr{PHASE_A_LR:g}")
+              f"ts{int(SPLINE_CFG.get('trainable_scale', False))}lr{PHASE_A_LR:g}")
+
+    # Containment of the gate points (out-of-sample record; grader recommendation)
+    for nm, zz in (("zP", zP), ("zM", zM)):
+        wg = np.linalg.solve(qz_scale_tril, (np.asarray(zz) - qz_loc))
+        print(f"containment: max|w({nm})| = {np.abs(wg).max():.1f} "
+              f"(range {spline_range})")
+
+    # PRE-COMMITTED TIMING PILOT (grader item 2): measure per-step cost at this
+    # bin count post-compile via two short runs (compile time cancels in the
+    # difference); ABORT + re-checkpoint if the projected total exceeds 90 min.
+    if os.environ.get("GATE_F_SKIP_PILOT") != "1":
+        def timed(tag, **kw):
+            t = time.perf_counter()
+            dv.train_flow(tag, sp_init, sp_make, lp_fn, dim, lr=PHASE_A_LR,
+                          seed=SEED + 99, **kw)
+            return time.perf_counter() - t
+        ta4 = timed(f"PILOTA4_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=4,
+                    n_chunks=4)
+        ta8 = timed(f"PILOTA8_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=8,
+                    n_chunks=4)
+        tb4 = timed(f"PILOTB4_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=0,
+                    n_chunks=32, phase_b_samples=z_mams, phase_b_steps=4,
+                    phase_b_lr=PHASE_B_LR)
+        tb8 = timed(f"PILOTB8_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=0,
+                    n_chunks=32, phase_b_samples=z_mams, phase_b_steps=8,
+                    phase_b_lr=PHASE_B_LR)
+        step_a_s = max(0.0, (ta8 - ta4) / 4)
+        step_b_s = max(0.0, (tb8 - tb4) / 4)
+        proj_min = (PHASE_A_STEPS * step_a_s + PHASE_B_STEPS * step_b_s) / 60 + 10
+        print(f"PILOT: step_a {step_a_s:.2f}s, step_b {step_b_s:.2f}s, "
+              f"projected total {proj_min:.0f} min (budget 90)")
+        if proj_min > 90:
+            print("PILOT ABORT: projection exceeds the approved budget; "
+                  "re-checkpoint required.")
+            sys.exit(2)
 
     t0 = time.perf_counter()
     params_a, hist_a = dv.train_flow(
@@ -146,11 +181,17 @@ def main():
                              diverged=bool(hist_ab.get("diverged"))),
                }}
 
-    def log_q(make, params, z):
+    def log_q(make, params, z, chunk=500):
+        # chunked: 490-bin conditioner outputs are ~800MB/layer at 4000 rows
         bij = make(params)
-        u = bij.inverse(z)
-        ildj = bij.inverse_log_det_jacobian(z, event_ndims=1)
-        return np.asarray(flows._std_normal_logprob(u) + ildj), np.asarray(u)
+        lqs, us = [], []
+        for i in range(0, z.shape[0], chunk):
+            zc = z[i:i + chunk]
+            u = bij.inverse(zc)
+            ildj = bij.inverse_log_det_jacobian(zc, event_ndims=1)
+            lqs.append(np.asarray(flows._std_normal_logprob(u) + ildj))
+            us.append(np.asarray(u))
+        return np.concatenate(lqs), np.concatenate(us)
 
     batched_lp = jax.vmap(lp_fn)
 
