@@ -1161,6 +1161,33 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-09 (carousel GATE Fv6 RAN — ES machinery worked; the TRAJECTORY has no good
+  stopping point; coupled-dynamics assumption FALSIFIED; human escalation)**
+  `proposed (UNCERTIFIED)`. ES trace (read before branch selection, per the
+  pre-registered instruction): step 0 metric 291433.1 / ratio −23.6; step 250 metric
+  **+144 nats above best** / ratio +0.07; step 500 metric +105 / ratio +1.6 → two
+  consecutive floor violations → stop at 500, reverted to best = STEP 0 (the A-only
+  flow; its gates fail as at Fv5, recorded). Joined with Fv5's endpoint (step 4000:
+  ELBO +35, ratio +13.9), the full Phase-B trajectory at 28 bins / lr 1e-4 is:
+  a LARGE IMMEDIATE bulk-damage transient (+144 by step 250, while the ratio has moved
+  only 0.07 of the needed ~5.4), then slow non-monotone bulk recovery (+105 → +35)
+  co-occurring with ratio overshoot (+1.6 → +13.9). **No stoppable checkpoint on this
+  trajectory has both healthy ELBO and in-band ratio — the Fv6 prediction's
+  coupled-dynamics assumption (damage and coverage move together) is FALSIFIED: damage
+  LEADS, coverage LAGS.** Branch reading: closest to (iv) (bulk-destructive from ~step 0)
+  with the trace's added structure; branch (i)'s condition also technically fires
+  (ratio < +3.43 at the stop) and arms the carried A2 allowance, but A2 anchors the
+  RATIO and does nothing about the leading damage transient — mechanistically
+  unpromising on this evidence (recorded, not exercised). Pre-committed route: HUMAN
+  ESCALATION, no auto-lever. Suspects for the transient (named, untested): fresh-adam
+  fkl kick at lr 1e-4 through 28-bin couplings (a warmup/smaller-lr schedule would
+  discriminate transient-artifact vs intrinsic); or fkl's target (the empirical 64k
+  draws) genuinely pulling the bulk away from the posterior bulk (the data-limited
+  alternative). Attempt 1 crashed at the step-250 ES check (mid-training mesh-annotated
+  params — the grader's named watch point; unshard fix committed; ~0.7 GPU-h). Fv6
+  total ≈ 2.4 GPU-h; cumulative ≈ 20. Artifacts: es_trace in the AB_es250x4000 cache,
+  gate_f_summary.json (gates of the reverted flow), gate_fv6b.log.
+
 - **2026-07-09 (carousel GATE Fv5 RAN — HIGH-SIDE falsifier fired: resolution mechanism
   SUPPORTED, Phase-B 4000 steps OVERFIT; pre-committed human escalation)**
   `proposed (UNCERTIFIED)`. Observed vs re-registered, A+B flow at 28 bins:

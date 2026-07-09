@@ -3,9 +3,12 @@
     "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_f.py",
     "jax": "0.10.0.dev20260709",
     "devices": [
-      "cuda:0"
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3"
     ],
-    "n_devices": 1,
+    "n_devices": 4,
     "x64": true,
     "dim": 33,
     "spline": {
@@ -36,8 +39,8 @@
     "seed": 0
   },
   "timings_s": {
-    "phase_a": 0.6705471989698708,
-    "phase_b": 3.612357623060234
+    "phase_a": 0.7825281170080416,
+    "phase_b": 191.84591952999472
   },
   "training": {
     "A": {
@@ -45,7 +48,7 @@
       "diverged": false
     },
     "B": {
-      "steps": 4000,
+      "steps": 500,
       "diverged": false
     }
   },
@@ -74,24 +77,24 @@
     },
     "A_plus_B": {
       "status": "OK",
-      "elbo_direct": 291488.39094787603,
-      "elbo_direct_sd": 7.88350995131312,
-      "elbo_gate_pass": false,
-      "pocket_log_ratio": 13.890441302140005,
-      "pocket_gate_pass": true,
+      "elbo_direct": 291432.57185047184,
+      "elbo_direct_sd": 0.2563454196872114,
+      "elbo_gate_pass": true,
+      "pocket_log_ratio": -23.632921571801944,
+      "pocket_gate_pass": false,
       "ratio_gate_pass": false,
       "pullback_main_sd": [
-        0.9070430774628532,
-        1.020925153424468
+        0.9472037865122422,
+        5.754334543069343
       ],
-      "pullback_main_maxabsmean": 0.33046833109243734,
-      "pullback_scale_pass": true,
+      "pullback_main_maxabsmean": 7.497396145134994,
+      "pullback_scale_pass": false,
       "pullback_pocket_sd": [
-        0.7569367276518477,
-        1.0821839709771863
+        0.8378490623038285,
+        5.050413536292249
       ],
-      "pullback_pocket_maxabs": 5.027380418488943,
-      "max_abs_u_main": 5.022959156958493,
+      "pullback_pocket_maxabs": 9.920094918751062,
+      "max_abs_u_main": 9.873757633760903,
       "exp_s_range": null
     }
   }
