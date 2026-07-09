@@ -1,0 +1,200 @@
+{
+  "grid": {
+    "delta_pix": 0.2,
+    "num_pix": 300,
+    "supersample": 1
+  },
+  "likelihood_precision": "dtype('float64')",
+  "linear_amplitudes": {
+    "n_basis": 119,
+    "physical_regularization": null,
+    "solved_by_lstsq": true
+  },
+  "noise": {
+    "err_map_median": 0.5771458039968473,
+    "err_map_min": 0.4518064849533329,
+    "err_map_shape": [
+      300,
+      300
+    ],
+    "kind": "fixed error_map (scene)",
+    "n_bands": 3,
+    "note": "summary is band 0; per-band detail in scene.datasets",
+    "prob_model": "ProbModel"
+  },
+  "profiles": {
+    "lens_light": [],
+    "lens_mass": [
+      {
+        "name": "NFW_ELLIPSE_SLOPE",
+        "type": "NFW_ELLIPSE_SLOPE"
+      },
+      {
+        "name": "dPIE",
+        "type": "DPIE"
+      },
+      {
+        "name": "EPL",
+        "niter": 18,
+        "type": "EPL"
+      },
+      {
+        "name": "dPIE",
+        "type": "DPIE"
+      },
+      {
+        "name": "SHEAR",
+        "type": "Shear"
+      }
+    ],
+    "source_light": [
+      {
+        "cosmo_sample": true,
+        "depth": 45,
+        "n_layers": 45,
+        "n_max": 8,
+        "name": "SHAPELETS",
+        "type": "Shapelets"
+      },
+      {
+        "cosmo_sample": true,
+        "depth": 45,
+        "n_layers": 45,
+        "n_max": 8,
+        "name": "SHAPELETS",
+        "type": "Shapelets"
+      },
+      {
+        "cosmo_sample": true,
+        "depth": 28,
+        "n_layers": 28,
+        "n_max": 6,
+        "name": "SHAPELETS",
+        "type": "Shapelets"
+      },
+      {
+        "cosmo_sample": true,
+        "depth": 1,
+        "name": "SERSIC_ELLIPSE",
+        "type": "SersicEllipse"
+      }
+    ]
+  },
+  "psf": {
+    "present": true,
+    "sha1": "d092384ad5d2",
+    "shape": [
+      19,
+      19
+    ],
+    "sum": 1.0000000000000002
+  },
+  "scene": {
+    "amplitude_mode": "lstsq",
+    "datasets": [
+      {
+        "band": 0,
+        "err_map_median": 0.5771458039968473,
+        "grid": {
+          "delta_pix": 0.2,
+          "num_pix": 300
+        },
+        "psf": {
+          "present": true,
+          "sha1": "d092384ad5d2",
+          "shape": [
+            19,
+            19
+          ],
+          "sum": 1.0000000000000002
+        },
+        "sees": [
+          "Shapelets"
+        ]
+      },
+      {
+        "band": 1,
+        "err_map_median": 0.8149522491503014,
+        "grid": {
+          "delta_pix": 0.2,
+          "num_pix": 300
+        },
+        "psf": {
+          "present": true,
+          "sha1": "fbeed11ab2ec",
+          "shape": [
+            19,
+            19
+          ],
+          "sum": 1.0
+        },
+        "sees": [
+          "Shapelets",
+          "Shapelets"
+        ]
+      },
+      {
+        "band": 2,
+        "err_map_median": 1.4832336052922637,
+        "grid": {
+          "delta_pix": 0.2,
+          "num_pix": 300
+        },
+        "psf": {
+          "present": true,
+          "sha1": "223f998b2bed",
+          "shape": [
+            19,
+            19
+          ],
+          "sum": 1.0
+        },
+        "sees": [
+          "SersicEllipse"
+        ]
+      }
+    ],
+    "planes": [
+      {
+        "n_light": 0,
+        "n_mass": 5,
+        "plane": 0,
+        "redshift": 0.49
+      },
+      {
+        "n_light": 1,
+        "n_mass": 0,
+        "plane": 1,
+        "redshift": 1.166
+      },
+      {
+        "n_light": 2,
+        "n_mass": 0,
+        "plane": 2,
+        "redshift": 1.432
+      },
+      {
+        "n_light": 1,
+        "n_mass": 0,
+        "plane": 3,
+        "redshift": 1.506
+      }
+    ],
+    "sees": [
+      [
+        "Shapelets"
+      ],
+      [
+        "Shapelets",
+        "Shapelets"
+      ],
+      [
+        "SersicEllipse"
+      ]
+    ],
+    "trace_mode": "deflection_ratio"
+  },
+  "warnings": [
+    "119 linear amplitudes solved by lstsq with NO physical regularization (numerical jitter only). High-order bases can fit noise or place flux in the lensing null space (unphysical source structure)."
+  ]
+}

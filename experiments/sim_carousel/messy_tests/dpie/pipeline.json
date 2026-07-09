@@ -18,11 +18,11 @@
     },
     {
       "class": "MAMSStage",
-      "input_hash": "21c09975245379cd",
+      "input_hash": "f640a5db8128aad3",
       "stage": "mams",
       "status": "ran",
-      "wall_time_s": 1305.4149883850478
+      "wall_time_s": 5286.049653814058
     }
   ],
-  "timestamp": "2026-07-08T15:08:32.694311+00:00"
+  "timestamp": "2026-07-08T17:17:57.020318+00:00"
 }

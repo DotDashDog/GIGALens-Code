@@ -1,0 +1,30 @@
+{
+  "arrays": [
+    "chisq_hist",
+    "lp_hist",
+    "z_best"
+  ],
+  "class": "MAPStage",
+  "config": {
+    "n_samples": 128,
+    "num_steps": 2000,
+    "optimizer_id": "adabelief_1e-2_b1_0.95_b2_0.99_nesterov",
+    "pbar_interval": 5
+  },
+  "diagnostics": [],
+  "diagnostics_config": {},
+  "input_hash": "d9ac34d38d4d05e5",
+  "metadata": {
+    "best_chisq": 1.148182863187924,
+    "best_lp": -521149.3527310094,
+    "best_step": 1928,
+    "n_samples": 128,
+    "num_steps": 2000,
+    "wall_time_s": 835.2013764539734
+  },
+  "schema_version": 1,
+  "seed": 42,
+  "stage": "map",
+  "timestamp": "2026-07-09T19:22:26.958518+00:00",
+  "upstream_hashes": {}
+}

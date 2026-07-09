@@ -33,19 +33,19 @@
     "num_burnin_steps": 10000,
     "num_results": 10000
   },
-  "input_hash": "e8bbf7b88f9b5752",
+  "input_hash": "6a0e01927e600fd3",
   "metadata": {
     "debug": true,
-    "n_params": 33,
+    "n_params": 43,
     "num_chains": 8,
     "num_steps": 10000,
-    "wall_time_s": 746.4427373969229
+    "wall_time_s": 943.796820668038
   },
   "schema_version": 1,
   "seed": 42,
   "stage": "mclmc",
-  "timestamp": "2026-07-07T23:39:16.512284+00:00",
+  "timestamp": "2026-07-09T18:29:40.087061+00:00",
   "upstream_hashes": {
-    "qz": "d1713019a31fae87"
+    "qz": "15c99dda809afdfb"
   }
 }
