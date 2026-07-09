@@ -420,13 +420,14 @@ multimodality, conditioning, or the NFW profile.
 - **Proposed by / on:** Claude (Batch A) · 2026-07-06   ·   **Grader:** _pending_
 - **CORRECTION (2026-07-06, C-8 trap):** Batch A within-component parameter NAMES were wrong — I labeled z-columns in `_unique` *insertion* order, but the sampler uses **sorted-key** (JAX-tree-flatten) order (confirmed empirically by a per-column perturbation test through `pm.bij.forward`; map in `z_names_TRUE.json`). Column *indices* and all numbers are unaffected; only names within each component were permuted. Corrected identifications: **the ξ lattice is in EPL_Lf.center_x / center_y (perturber POSITION), NOT (theta_E, gamma)**; the slowest/widest direction (softest eig, loading 0.998; min bulk-ESS 482) is **src9.e2 (Sérsic source ellipticity)**, not a center; the worst-ESS subspace is a mix of weakly-identified source-shape (src9 e1/e2), source-shapelet centres, and mass shape/ellipticity — the Batch A 'positions dominate' phrasing is withdrawn. At the max-ξ draw EPL_Lf.e1=0.4977 (pinned at the +0.5 prior wall) and the perturber sits ~3σ off its center-x prior. Corrected plots: batchA_diag/P10_EPL_Lf_CORRECTED.png, P11_position_lattice.png.
 
-### C-22 — GATE L: the carousel's main basin is NOT Laplace-approximable (negative curvature at best reachable point), Laplace evidence weights under-count the pocket 18×, cross-mode Laplace/t jump acceptance ≈ 0, and 1024-start multistart MAP finds the pocket 0 times (and the main peak only 2 times) — mode-enumeration + local-Gaussian jump designs are structurally out; annealing family indicated as mainline
+### C-22 — GATE L: the carousel's main basin is NOT Laplace-approximable at any point reachable by production-scale polish (3 negative Hessian eigenvalues at −1.3e-3·λ_max at the best reachable point; nat-grad 1898 after 3000 whitened steps; independent 1024×4000 production MAP tops out 20.6 nats lower; true-mode PSD status UNTESTED — the stationary point was never reached); pipeline-realistic Laplace evidence weights under-count the pocket 18×; cross-mode Laplace/t jump acceptance ≈ 0 at ANY weight (oracle included); 1024-start multistart MAP finds the pocket 0 times and the main in-basin band 2 times — mode-enumeration + local-Gaussian jump designs are structurally out FOR THIS POSTERIOR; annealing family indicated as mainline (pre-committed M3-falsifier routing; human decision pending)
 
-- **Status:** `proposed (UNCERTIFIED)` — grader (rigor-grader) result-pass pending; design pre-approved rd-3.
+- **Status:** `proposed (UNCERTIFIED)` — grader result-pass rd-4 CERTIFY-RECOMMENDED (as amended); design pre-approved rd-3; human certification pending.
 - **Scope:** Link 1 of the jump-mixture pipeline chain only; the two KNOWN modes of the dPIE carousel; this prior; equilibrium-state acceptance; single seed (0); MAP = production config (AdaBelief 1e-2, 4000 steps).
 - **Evidence:** `experiments/flow_precond/carousel_gate_l_out/` (summary JSON, npz, 4 pre-registered PNGs); Log entry "2026-07-09 (carousel GATE L RAN…)"; pre-registered checkpoint "GATE L" with 3 grader rounds.
 - **Key numbers:** main H: 3 negative eigs, λ_min = −1.3e-3·λ_max (5 orders above noise), nat-grad 1898 after 3000 polish steps; KL(emp‖Laplace) 157 (main) / 69 (pocket) nats; w̃_P = 0.0052 vs truth 0.0957; cross-mode ᾱ = 0/1024 in all four pass-eligible cells; P3 translation 0.10%/0.035% (inside its pre-registered volume-ratio band — mechanism confirmed); M3 final: 0 pocket / 2 main / 1022 stragglers.
-- **Blind spots (named):** third-mode risk unobservable here; pocket Σ_emp rests on chain-segregated draws (benchmark robustness check agrees); acceptance measured at equilibrium states, not within a running sampler; the 5.4%-vs-0.52% Laplace-weight discrepancy with the prior record is UNRESOLVED.
+- **Blind spots (named):** third-mode risk unobservable here; pocket Σ_emp rests on chain-segregated draws (benchmark robustness check agrees); acceptance measured at equilibrium states, not within a running sampler; every mode-local measurement is anchored at points produced by THIS polish apparatus from these basin medians (seed-family dependence unobserved); the "18×" is a property of the pipeline-realistic construction (non-stationary anchor + 3 floored axes inflating Σ_M's log-det), not of "Laplace weights" in the abstract.
+- **Register caveat (grader rd-4):** the prior-record "Laplace pocket-mass proxy 5.4%" is NO LONGER a usable anchor — GATE L's pipeline-realistic construction gives 0.52% (10× apart; provenance of the old number not reconstructed); NEITHER is validated. Any future Laplace-mass claim must re-derive from scratch.
 
 ---
 
@@ -1400,8 +1401,23 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   **Decision-matrix routing (pre-committed, "all fail" branch):** report to human with
   options (b) flow-as-proposal / (c) annealing mainline; NO auto-lever. With M3 = 0
   ALSO firing, the annealing family is the indicated mainline (flow-as-proposal's
-  mode-seeding depends on the same broken enumeration link). Scope: Link 1 only; two
-  known modes; this lens/prior; equilibrium-state acceptance; single seed.
+  mode-seeding depends on the same broken enumeration link — post-hoc rationale,
+  flagged as such by the grader). Scope: Link 1 only; two known modes; this
+  lens/prior; equilibrium-state acceptance; M3 chunk seeds 0–7 (amendment), not
+  literally "seed 0 throughout". **Grader result-pass additions (rd 4,
+  CERTIFY-RECOMMENDED):** npz recount — 574/1024 M3 finals end pocket-side of the
+  INDICATOR but fail the lp band; median final lp = −328,558 (~37k nats below the
+  peaks, below the m3 plot's y-window) — the enumeration failure is
+  wandering-without-descent, not wrong-basin capture. KL-driver decomposition
+  (pocket): ≈55 of 69 nats from the three heavy directions (4.5–8.1×) + ≈13 from the
+  5.1σ offset. Robustness: at the prior-record weight (w̃_P=0.054, pass line 3.7%)
+  the cross cells still fail by ~6 orders; oracle-weight cells fail identically — no
+  conclusion depends on which weight is right. M3 wall 68 min vs ~26 estimated
+  (recompile per chunk; inside the 90-min cap). (Record repair: commit 89cf321's
+  insertion accidentally clobbered the following Fv6 entry's header line; restored
+  verbatim here.)
+
+- **2026-07-09 (carousel GATE Fv6 RAN — ES machinery worked; the TRAJECTORY has no good
   stopping point; coupled-dynamics assumption FALSIFIED; human escalation)**
   `proposed (UNCERTIFIED)`. ES trace (read before branch selection, per the
   pre-registered instruction): step 0 metric 291433.1 / ratio −23.6; step 250 metric
