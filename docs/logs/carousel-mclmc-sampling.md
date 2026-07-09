@@ -492,7 +492,12 @@ multimodality, conditioning, or the NFW profile.
   is inferred from code semantics, not measured — a fast OOM inside the Slurm cap is the
   bounded worst case). If the tightened gate passes: the RE-BENCHMARK (same design as
   attempt 2, new flow) returns to the human for explicit go.
-  **Status: awaiting rigor-grader approval of Fv5.**
+  **Status: Fv5 approved 2026-07-09 (rigor-grader, second round; all eight revision items
+  verified in the artifacts; equivalence test reproduced by grader). Launch authorized:
+  4-GPU node, GATE_F_SKIP_PILOT=1, Slurm-capped 60 min. Scope: flow training + gates only;
+  A2 exercisable ONCE under the recorded guardrails; re-benchmark = human go; a gate pass
+  is NOT a benchmark prediction beyond the recorded uncertified ~3×-margin scaling
+  argument.**
 
 - **Run: carousel BENCHMARK (§5.4) — flow-MAMS vs vanilla MAMS** (HUMAN approval required
   by standing pre-commitment; grader pre-review first). **Question:** does preconditioning
