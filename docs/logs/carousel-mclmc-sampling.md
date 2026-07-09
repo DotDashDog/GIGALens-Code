@@ -494,7 +494,9 @@ multimodality, conditioning, or the NFW profile.
   **Also offered for certification alongside this decision:** (i) the F1 mode-dropping
   result (−108.8/−406/−16.4 across three architectures); (ii) the R·lr spline-instability
   mechanism (diagnosis entry); (iii) the Fv4 gate results.
-  **Status: awaiting grader pre-review, then HUMAN decision.**
+  **Status: grader pre-review PASSED 2026-07-08 (three rounds; baseline claims
+  independently recomputed and corrected, W1 rebuilt against measured reality, W1c
+  estimator fixed); AWAITING HUMAN DECISION.**
 
 - **Run: carousel GATE Fv4 — frozen measured scale + data-derived box (diagnosis-grounded
   revision of Fv3)** (script `carousel_gate_f.py`; supersedes Fv3 after its pilot abort;
