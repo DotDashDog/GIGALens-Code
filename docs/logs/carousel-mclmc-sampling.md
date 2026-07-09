@@ -1014,6 +1014,41 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-09 (carousel BENCHMARK ATTEMPT 2 RAN — ALL SIX WIN CONDITIONS FAIL; the
+  pre-registered NEGATIVE finding stands)** `proposed (UNCERTIFIED)`. Clean run: 4 GPUs
+  (2 chains/device), 51 min wall (≈3.4 GPU-h), kernel cap results-phase binding = 0.0
+  (burnin 0.0025) ⇒ the pre-committed W1/W4-fail readings apply as written; flow identity
+  check passed on GPU; flow overhead 2.8% of a gradient eval (plan's <5% criterion met —
+  the one bright number). **Observed vs predicted:** predicted occupancy-ESS ≥ 20/chain/
+  1000 (≥10× baseline); observed **0.84 — WORSE than the baseline's 1.9, direction
+  reversed.** (W1a fail). W1b: median switches 14.6/1000 (vs required 60; baseline 12);
+  min 0 — one chain never switched. W1c: indicator R̂ 1.412 (vs ≤1.05; baseline 1.719).
+  W2: pooled occupancy **0.365** — far outside [0.02, 0.15] and above every estimator.
+  W3: max R̂ 1.370 (chains under-converged); min bulk-ESS 126.6 vs baseline 3814.9.
+  W4: ESS/kept-step ratio 0.066 — flow-MAMS is 15× LESS efficient per step (avg n_k ≈ 20
+  vs baseline ≈13, and much lower ESS). PLOTS FIRST (pocket_traces.png): 7/8 chains
+  transit visibly MORE freely than baseline chains but DWELL in the pocket 2–4× too long
+  (per-chain occupancies 0.15–0.44); chain 8 sat in the pocket ALL 4000 steps with
+  near-zero movement (occ = 1.000 — a stuck/degenerate chain driving the min-switch,
+  R̂, and ESS failures on top of the systematic over-dwell).
+  **Mechanism hypothesis (UNCERTIFIED, quantitatively consistent):** flow-MAMS is exact
+  in law regardless of flow quality, but the Fv4 flow's pocket-density smoothing deficit
+  — gate ratio +1.0 observed vs +5.43 ideal, i.e. q underweights the pocket by ≈4.4 nats
+  — makes the u-space pullback target OVERDENSE by e^4.4 ≈ 80× at the pocket image: the
+  flow turned the pocket from hard-to-reach (z-space) into easy-to-reach but
+  hard-to-leave (u-space trap). Predicted-mechanism falsification: "both basins in the
+  base bulk ⇒ free transit" is FALSIFIED — proximity in u is not sufficient; DENSITY-
+  RATIO fidelity (Phase-B quality) sets the trap depth. The 0.365 occupancy is
+  transient over-dwell of under-converged chains, not a mass measurement (W2-fail branch
+  evidence standard not met: indicator R̂ 1.41 ≫ 1.02, half-split 14.0pp ≫ 1.5pp).
+  **Pre-committed consequences:** the NEGATIVE finding for the flow-MAMS mechanism on
+  this multimodal target stands (the flow itself remains validated by GATE Fv4);
+  NO retuning iteration without a new checkpoint; the plan-§5.4 ladder's next rung
+  (ONE grader-gated architecture escalation) is available but NOT exercised without
+  human direction. Cost: 3.4 GPU-h; cumulative ≈ 13 GPU-h. Artifacts:
+  carousel_benchmark_out/{benchmark_summary.json, benchmark_arrays.npz, pocket_traces.png,
+  per_chain_occupancy.png}.
+
 - **2026-07-08 (carousel GATE Fv4 RAN — ALL FOUR GATES AS PRE-REGISTERED; first working
   carousel flow)** `proposed (UNCERTIFIED)`. Observed vs re-registered predictions:
   **(G1) pass** — A-only pocket ratio −16.4 (< −8, fails the gate as predicted; third and

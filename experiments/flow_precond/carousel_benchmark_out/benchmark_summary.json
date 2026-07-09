@@ -1,0 +1,194 @@
+{
+  "model_card": {
+    "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_benchmark.py",
+    "jax": "0.10.0.dev20260709",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3"
+    ],
+    "n_devices": 4,
+    "n_chains": 8,
+    "burnin": 2000,
+    "results": 4000,
+    "max_num_integration_steps": 60,
+    "flow": "flow_AB_car_std_r10b14ts0lr0.003.npz",
+    "seed": 0,
+    "pocket_ratio_check": 1.0029454473769874
+  },
+  "wall_s": 3080.2190346299903,
+  "decode_s": 3.1242659960407764,
+  "overhead": {
+    "grad_eval_u_s": 0.05330608460353688,
+    "grad_eval_z_s": 0.05179337529698387,
+    "flow_fraction": 0.028377798103232616
+  },
+  "grad_counts": {
+    "total": 833088,
+    "results_phase": 639560,
+    "per_kept_step_mean": 19.98625
+  },
+  "traj_capped_fraction": {
+    "overall": 0.0008333333333333334,
+    "burnin": 0.0025,
+    "results": 0.0
+  },
+  "flow_arm": {
+    "occ": {
+      "pooled_occupancy": 0.36509375,
+      "per_chain_occ": [
+        0.435,
+        0.165,
+        0.2025,
+        0.35875,
+        0.1985,
+        0.41025,
+        0.15075,
+        1.0
+      ],
+      "per_chain_occ_sd": 0.26226015642570927,
+      "ess_occ_per_chain": 3.3701510691602103,
+      "ess_occ_per_1000": 0.8425377672900526,
+      "switches_per_1000": {
+        "median": 14.625,
+        "min": 0.0,
+        "max": 24.5
+      },
+      "indicator_split_rhat": 1.412462803651435,
+      "half_split_occ": [
+        0.2950625,
+        0.435125
+      ],
+      "half_split_agreement_pp": 14.006249999999998
+    },
+    "max_rhat": 1.3698227551819155,
+    "min_ess": 126.62147733404935,
+    "min_ess_per_1000_chain_steps": 3.956921166689042
+  },
+  "baseline": {
+    "occ": {
+      "pooled_occupancy": 0.095734375,
+      "per_chain_occ": [
+        0.009,
+        0.007,
+        0.377,
+        0.026,
+        0.01,
+        0.006,
+        0.881,
+        0.002,
+        0.343,
+        0.003,
+        0.007,
+        0.016,
+        0.002,
+        0.009,
+        0.001,
+        0.005,
+        0.004,
+        0.006,
+        0.005,
+        0.004,
+        0.007,
+        0.001,
+        0.008,
+        0.2,
+        0.402,
+        0.004,
+        0.043,
+        0.003,
+        0.232,
+        0.01,
+        0.379,
+        0.007,
+        0.012,
+        0.124,
+        0.002,
+        0.026,
+        0.017,
+        0.01,
+        0.029,
+        0.049,
+        0.003,
+        0.011,
+        0.006,
+        0.008,
+        0.005,
+        0.752,
+        0.014,
+        0.004,
+        0.739,
+        0.188,
+        0.005,
+        0.004,
+        0.01,
+        0.013,
+        0.023,
+        0.003,
+        0.012,
+        0.007,
+        0.016,
+        0.951,
+        0.029,
+        0.025,
+        0.009,
+        0.002
+      ],
+      "per_chain_occ_sd": 0.21383991107452174,
+      "ess_occ_per_chain": 1.8931559808709106,
+      "ess_occ_per_1000": 1.8931559808709106,
+      "switches_per_1000": {
+        "median": 12.0,
+        "min": 2.0,
+        "max": 66.0
+      },
+      "indicator_split_rhat": 1.718701606142155,
+      "half_split_occ": [
+        0.065125,
+        0.12634375
+      ],
+      "half_split_agreement_pp": 6.121875
+    },
+    "max_rhat": 1.2338548276110797,
+    "min_ess": 3814.9237316238678,
+    "min_ess_per_1000_chain_steps": 59.608183306622934
+  },
+  "gates": {
+    "W1a": {
+      "value": 0.8425377672900526,
+      "threshold": 20,
+      "pass_": false
+    },
+    "W1b": {
+      "median": 14.625,
+      "min": 0.0,
+      "pass_": false
+    },
+    "W1c": {
+      "value": 1.412462803651435,
+      "threshold": 1.05,
+      "baseline": 1.718701606142155,
+      "pass_": false
+    },
+    "W2": {
+      "value": 0.36509375,
+      "pass_": false
+    },
+    "W3": {
+      "max_rhat": 1.3698227551819155,
+      "pass_": false,
+      "ess_direction_ok": false
+    },
+    "W4": {
+      "ratio": 0.0663821802173494,
+      "threshold": 3.0,
+      "pass_": false
+    }
+  },
+  "evidence_standard": {
+    "indicator_rhat": 1.412462803651435,
+    "half_split_pp": 14.006249999999998,
+    "laplace_proxy": 0.054
+  }
+}
