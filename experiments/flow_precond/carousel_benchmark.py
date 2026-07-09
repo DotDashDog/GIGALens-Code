@@ -161,12 +161,42 @@ def main():
             print("PILOT ABORT: projection exceeds budget; re-checkpoint required.")
             sys.exit(2)
 
+    # MANDATORY overhead report (checkpoint deviation (iii)): flow-eval fraction
+    # of a gradient evaluation, measured post-compile on a matched batch.
+    ub = jnp.asarray(np.random.default_rng(1).normal(size=(N_CHAINS, dim)) * 0.5)
+    zb = jnp.asarray(z_mams[:N_CHAINS, 0])
+    wrapped_pm = wrapped.prob_model
+    lp_u = jax.jit(jax.vmap(jax.value_and_grad(lambda uu: wrapped_pm.log_prob(uu)[0])))
+    lp_z = jax.jit(jax.vmap(jax.value_and_grad(lambda zz: prob_model.log_prob(zz)[0])))
+    jax.block_until_ready(lp_u(ub)); jax.block_until_ready(lp_z(zb))  # compile
     t0 = time.perf_counter()
-    u = np.asarray(MAMS_JIT(wrapped, qz_u, n_hmc=N_CHAINS,
-                            num_burnin_steps=NUM_BURNIN, num_results=NUM_RESULTS,
-                            seed=SEED, progress_bar=False))
+    for _ in range(10):
+        jax.block_until_ready(lp_u(ub))
+    t_u = (time.perf_counter() - t0) / 10
+    t0 = time.perf_counter()
+    for _ in range(10):
+        jax.block_until_ready(lp_z(zb))
+    t_z = (time.perf_counter() - t0) / 10
+    overhead = dict(grad_eval_u_s=t_u, grad_eval_z_s=t_z,
+                    flow_fraction=max(0.0, (t_u - t_z) / t_u) if t_u > 0 else None)
+    print("OVERHEAD:", json.dumps(overhead))
+
+    t0 = time.perf_counter()
+    hist = MAMS_JIT(wrapped, qz_u, n_hmc=N_CHAINS,
+                    num_burnin_steps=NUM_BURNIN, num_results=NUM_RESULTS,
+                    seed=SEED, progress_bar=False, debug_output=True)
     wall = time.perf_counter() - t0
-    print(f"flow-MAMS done in {wall:.0f}s")
+    u = np.asarray(hist.position[:, -NUM_RESULTS:, :])
+    nis = np.asarray(hist.num_integration_steps)
+    if nis.ndim == 2 and nis.shape[1] >= NUM_RESULTS:
+        grad_counts = dict(total=int(nis.sum()),
+                           results_phase=int(nis[:, -NUM_RESULTS:].sum()),
+                           per_kept_step_mean=float(nis[:, -NUM_RESULTS:].mean()))
+    else:  # history shorter than expected: record what exists, flag it
+        grad_counts = dict(total=int(nis.sum()), results_phase=None,
+                           note=f"nis shape {nis.shape} < NUM_RESULTS; "
+                                "results-phase count not separable")
+    print(f"flow-MAMS done in {wall:.0f}s; gradient evals:", json.dumps(grad_counts))
 
     t0 = time.perf_counter()
     z = decode_batch(prob_model, bij, u)
@@ -186,6 +216,7 @@ def main():
 
     summary = dict(
         model_card=model_card, wall_s=wall, decode_s=decode_s,
+        overhead=overhead, grad_counts=grad_counts,
         flow_arm=dict(occ=occ_flow, max_rhat=float(rhat_f.max()),
                       min_ess=float(ess_f.min()),
                       min_ess_per_1000_chain_steps=float(ess_f_per1000.min())),
