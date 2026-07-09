@@ -73,8 +73,12 @@ SPLINE_BASE = dict(num_layers=6, hidden_dims=(64, 64), trainable_scale=False)
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
 PHASE_A_LR = 3e-3
-PHASE_B_STEPS = 1000
+PHASE_B_STEPS = 4000   # Fv5 (A1): 4x -- fkl was still descending at 1000
 PHASE_B_LR = 1e-4
+# Fv5 tightened pocket gate: the flow must MATCH the known density ratio
+# lp(zP)-lp(zM) = +5.43 within +-2 nats (trap-depth <= e^2 ~ 7x), not merely
+# clear the -8 coverage floor. Pre-registered in the Fv5 checkpoint.
+RATIO_GATE_TARGET, RATIO_GATE_TOL = 5.43, 2.0
 
 DPIE = os.path.join(HERE, "..", "sim_carousel", "messy_tests", "dpie")
 BASIN = "/pscratch/sd/l/linusu/carousel_diag/basin_slice/basin_slice.npz"
@@ -108,6 +112,12 @@ def main():
     w_std = w_all / sd_w
     spline_range = float(np.ceil(1.1 * np.abs(w_std).max()))
     num_bins = int(min(512, np.ceil(spline_range * 48.0 / 35.0)))
+    # Fv5 (ladder escalation, human-directed A3): DOUBLE the knot density over the
+    # demo-v3 rule. Benchmark attempt 2 localized the failure to pocket density
+    # spreading (mass 8.7% ~ right, peak density ~80x low); the pocket tail sits
+    # at ||w||_inf <= 8.82, i.e. in the OUTERMOST cells of the 14-bin grid
+    # (spacing 1.43 vs pocket extent ~2-3 cells) -- resolution, not containment.
+    num_bins *= 2
     SPLINE_CFG = dict(SPLINE_BASE, num_bins=num_bins, spline_range=spline_range)
     print(f"DATA-DERIVED: sd_w [{sd_w.min():.2f}, {sd_w.max():.2f}]; "
           f"max|w_std| = {np.abs(w_std).max():.2f} -> range {spline_range}, "
@@ -248,6 +258,8 @@ def main():
             elbo_gate_pass=bool(tail <= SVI_FINAL_LOSS),
             pocket_log_ratio=pocket_ratio,
             pocket_gate_pass=bool(pocket_ratio >= -8.0),
+            ratio_gate_pass=bool(abs(pocket_ratio - RATIO_GATE_TARGET)
+                                 <= RATIO_GATE_TOL),
             pullback_main_sd=[float(sd.min()), float(sd.max())],
             pullback_main_maxabsmean=float(mu.max()),
             pullback_scale_pass=bool((sd >= 0.5).all() and (sd <= 2.0).all()

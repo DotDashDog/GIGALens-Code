@@ -424,6 +424,46 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE Fv5 — the plan-§5.4 ladder's ONE architecture escalation
+  (human-directed 2026-07-09: "I'd like to try A1 and A3, with A2 as a fallback if that
+  doesn't work"; also "Don't worry too much about GPU hours... I'm more concerned about
+  wall-clock time. Go ahead!")** (script `carousel_gate_f.py`, same apparatus as Fv4).
+  **Target mechanism (from benchmark attempt 2 + corner diagnosis):** the Fv4 flow's
+  pocket MASS is right (8.7% vs 9.6% training data) but its peak DENSITY is ~80× low
+  (+1.0 vs +5.43) — density spreading, localized to resolution: the pocket sits at
+  ‖w‖∞ ≤ 8.82, in the OUTERMOST cells of the 14-bin grid (spacing 1.43 vs pocket extent
+  ~2–3 cells), where uniform-init knots are coarsest. The user's corner reading concurs
+  ("covers the main mode very well... doesn't extend completely over the second mode").
+  **Changes (A1+A3):** (A3) num_bins = 2× the demo-v3 rule → 28 (spacing 0.71; pocket
+  gets ~4–6 cells); layers/range/lr unchanged (R·lr still 0.03 — bins exonerated for
+  stability by the CPU diagnosis); (A1) Phase B 1000 → 4000 steps (fkl slope at stop was
+  −0.0028 nats/step, still descending). Cache key car_std_r10b28ts0lr0.003.
+  **TIGHTENED pocket gate (pre-registered):** the escalation PASSES only if the gate
+  ratio matches the KNOWN truth: |ratio − 5.43| ≤ 2 (trap depth ≤ e² ≈ 7×); the old −8
+  coverage floor is reported but no longer sufficient. All other Fv4 gates (ELBO ≤ SVI,
+  pullback-scale) must hold as before.
+  **Predictions:** ratio reaches +5.43 ± 2 (mechanism: mass is already right; 2× local
+  resolution + 4× fkl steps lets forward-KL concentrate it); ELBO ≈ SVI−21 ± few
+  (unchanged — bulk already fit); pullback gate still passes (sd [0.5,2]).
+  **Falsifiers + pre-committed responses:** ratio < +3.43 after A1+A3 ⇒ A2 fallback,
+  ONE pass (ratio-anchoring auxiliary loss λ(log q(zP) − log q(zM) − 5.43)², λ chosen so
+  the anchor term is O(1) of the fkl loss at init, pullback+ELBO gates re-checked to
+  catch 2-point warping; the user is WARY of pre-determined posterior information — A2
+  uses only two likelihood evaluations, recorded as such, and is the LAST flow-side
+  lever); A2 also fails ⇒ the escalation is spent: pre-registered NEGATIVE result for
+  flow-MAMS on this target, budget moves per plan §5.4 (many-chain scaling), human
+  informed. ELBO or pullback REGRESSES under A3 (28 bins hurt the bulk) ⇒ evaluate
+  jointly, no silent knob iteration. **Training parallelism (human-directed):** Phase-A
+  chunks and Phase-B chunk-rounds are data-parallel across all visible GPUs (GSPMD
+  vmap-over-sharded-chunks inside the existing scan; verified on 4 virtual CPU devices
+  to match the sequential path to 9e-16; per-device memory = the validated per-chunk
+  footprint; stream matches the sequential chunked path — recorded). Expected wall:
+  Phase A ~10–12 min (was 40), Phase B ~6–8 min at 4× steps (was 6 at 1×), gates ~3.
+  **Cost: ≤ 45 min wall on a 4-GPU node (≤ 3 GPU-h), Slurm-capped at 60 min; no pilot
+  (per amendment v2).** If the tightened gate passes: the RE-BENCHMARK (same design as
+  attempt 2, new flow) returns to the human for explicit go.
+  **Status: awaiting rigor-grader approval of Fv5.**
+
 - **Run: carousel BENCHMARK (§5.4) — flow-MAMS vs vanilla MAMS** (HUMAN approval required
   by standing pre-commitment; grader pre-review first). **Question:** does preconditioning
   MAMS with the Fv4 A+B flow (car_std_r10b14ts0lr0.003 — pocket ratio +1.0, pullback sd

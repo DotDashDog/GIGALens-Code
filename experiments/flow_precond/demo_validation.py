@@ -246,7 +246,41 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
     assert n_draws % n_chunks == 0
     chunk_draws = n_draws // n_chunks
 
-    if n_chunks == 1:
+    # Data-parallel path: shard the gradient-accumulation chunks across all
+    # visible devices (each device scans its share, gradients psum'd) -- the
+    # SAME chunked estimator, wall divided by n_devices. Values differ from the
+    # sequential path only by float reduction order (recorded, like the MAMS
+    # device-count dependence). Activates only when it divides evenly.
+    n_devices = len(jax.devices())
+    shard_chunks = n_devices > 1 and n_chunks % n_devices == 0
+    if shard_chunks:
+        from jax.sharding import NamedSharding, PartitionSpec as _P
+        _mesh = jax.make_mesh((n_devices,), ('dev',), axis_types=(jax.sharding.AxisType.Auto,))
+        _dev_sharding = NamedSharding(_mesh, _P('dev'))
+        rounds_a = n_chunks // n_devices
+
+    if shard_chunks:
+        @jax.jit
+        def step_a(params, opt_state, key):
+            keys = jax.random.split(key, n_chunks).reshape(rounds_a, n_devices)
+
+            def chunk_lg(k):
+                return jax.value_and_grad(flows.neg_elbo_loss)(
+                    params, make_bij, batched_lp, k, chunk_draws, dim)
+
+            def body(carry, ks):
+                cl, cg = carry
+                ks = jax.lax.with_sharding_constraint(ks, _dev_sharding)
+                ls, gs = jax.vmap(chunk_lg)(ks)
+                return (cl + ls.sum() / n_chunks,
+                        jax.tree_util.tree_map(
+                            lambda a, b: a + b.sum(0) / n_chunks, cg, gs)), None
+
+            zero_g = jax.tree_util.tree_map(jnp.zeros_like, params)
+            (loss, g), _ = jax.lax.scan(body, (jnp.zeros(()), zero_g), keys)
+            updates, opt_state = opt.update(g, opt_state, params)
+            return optax.apply_updates(params, updates), opt_state, loss
+    elif n_chunks == 1:
         # Original path, kept bit-identical (no key split) so demo runs/caches
         # keep their exact random stream.
         @jax.jit
@@ -309,22 +343,52 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
         chunks_b = max(1, n_chunks)
         while n_b % chunks_b:
             chunks_b += 1  # equal chunks required for exact equivalence
-        zs_c = zs.reshape(chunks_b, n_b // chunks_b, zs.shape[-1])
+        # Data-parallel across devices when chunk count divides (same
+        # estimator; float reduction-order differences only -- see step_a note).
+        shard_b = n_devices > 1 and chunks_b % n_devices == 0
+        if shard_b:
+            from jax.sharding import NamedSharding, PartitionSpec as _P
+            _mesh_b = jax.make_mesh((n_devices,), ('dev',), axis_types=(jax.sharding.AxisType.Auto,))
+            _dev_sh_b = NamedSharding(_mesh_b, _P('dev'))
+            rounds_b = chunks_b // n_devices
+            zs_c = zs.reshape(rounds_b, n_devices, n_b // chunks_b, zs.shape[-1])
+        else:
+            zs_c = zs.reshape(chunks_b, n_b // chunks_b, zs.shape[-1])
 
-        @jax.jit
-        def step_b(params, opt_state):
-            def body(carry, z_chunk):
-                cl, cg = carry
-                l, g = jax.value_and_grad(flows.forward_kl_loss)(
-                    params, make_bij, z_chunk)
-                return (cl + l / chunks_b,
-                        jax.tree_util.tree_map(
-                            lambda a, b: a + b / chunks_b, cg, g)), None
+        if shard_b:
+            @jax.jit
+            def step_b(params, opt_state):
+                def chunk_lg(z_chunk):
+                    return jax.value_and_grad(flows.forward_kl_loss)(
+                        params, make_bij, z_chunk)
 
-            zero_g = jax.tree_util.tree_map(jnp.zeros_like, params)
-            (loss, g), _ = jax.lax.scan(body, (jnp.zeros(()), zero_g), zs_c)
-            updates, opt_state = opt_b.update(g, opt_state, params)
-            return optax.apply_updates(params, updates), opt_state, loss
+                def body(carry, z_round):
+                    cl, cg = carry
+                    z_round = jax.lax.with_sharding_constraint(z_round, _dev_sh_b)
+                    ls, gs = jax.vmap(chunk_lg)(z_round)
+                    return (cl + ls.sum() / chunks_b,
+                            jax.tree_util.tree_map(
+                                lambda a, b: a + b.sum(0) / chunks_b, cg, gs)), None
+
+                zero_g = jax.tree_util.tree_map(jnp.zeros_like, params)
+                (loss, g), _ = jax.lax.scan(body, (jnp.zeros(()), zero_g), zs_c)
+                updates, opt_state = opt_b.update(g, opt_state, params)
+                return optax.apply_updates(params, updates), opt_state, loss
+        else:
+            @jax.jit
+            def step_b(params, opt_state):
+                def body(carry, z_chunk):
+                    cl, cg = carry
+                    l, g = jax.value_and_grad(flows.forward_kl_loss)(
+                        params, make_bij, z_chunk)
+                    return (cl + l / chunks_b,
+                            jax.tree_util.tree_map(
+                                lambda a, b: a + b / chunks_b, cg, g)), None
+
+                zero_g = jax.tree_util.tree_map(jnp.zeros_like, params)
+                (loss, g), _ = jax.lax.scan(body, (jnp.zeros(()), zero_g), zs_c)
+                updates, opt_state = opt_b.update(g, opt_state, params)
+                return optax.apply_updates(params, updates), opt_state, loss
 
         opt_state = opt_b.init(params)
         hist_b = []
