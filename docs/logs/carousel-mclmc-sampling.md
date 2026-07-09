@@ -844,6 +844,20 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-08 (carousel GATE Fv3 PILOT FIRED — run aborted pre-budget; two findings)**
+  `proposed (UNCERTIFIED)`. The pre-committed timing pilot caught both problems at
+  ~2 GPU-min: (1) **Phase-B OOM at the approved 32 chunks** (21 GiB per 2000-row chunk —
+  490-bin spline internals ~20× the 24-bin footprint; would need ~256 chunks, ballooning
+  step time); (2) **Phase-A optimization INSTABILITY at 490 bins**: step-0 loss 291453.5
+  (identity-init nesting still exact) but +5938 nats after 4 steps, +7370 after 8 —
+  monotone INCREASE at the same lr that was stable at 8/24 bins. The Fv3 blind spot (a)
+  ("knot-allocation dynamics unmeasured at 490 bins — loss plots will show") materialized
+  immediately. Config numbers as pre-registered (range 357, bins 490; zP/zM containment
+  180.3/177.4 in-box, matching the grader's independent values). No gates evaluated — this
+  is a pilot-stage infeasibility, not a G1–G4 result; the pre-committed abort +
+  re-checkpoint path is in force. Cost ≈ 0.1 GPU-h. Next: CPU diagnosis of the instability
+  (flow-only, render-free), then a revised checkpoint (Fv4).
+
 - **2026-07-08 (carousel GATE Fv2 RAN — fixed box ±16/24 FAILS; one-shot fixed-box premise
   FALSIFIED per pre-commitment; HUMAN ESCALATION)** `proposed (UNCERTIFIED)`.
   Observed vs re-registered: **(F1′) pass** — A-only pocket ratio −406 (still fails the
