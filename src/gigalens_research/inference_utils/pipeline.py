@@ -64,6 +64,8 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 
+from gigalens_research.paths import resolve_out_dir
+
 
 # ---------------------------------------------------------------------------
 # Hashing utilities
@@ -971,6 +973,10 @@ class Pipeline:
         ----------
         out_dir : str or None
             Directory to persist stage results into. ``None`` disables disk I/O.
+            A *relative* path is resolved under the results root
+            (``$GIGALENS_RESULTS_ROOT`` or ``$PSCRATCH/gigalens``; see
+            :func:`gigalens_research.paths.results_root`); an absolute path is
+            used verbatim.
         resume : bool or 'strict'
             - ``True``: load each stage from disk iff its input hash matches;
               otherwise (re)run it. Default.
@@ -1008,6 +1014,7 @@ class Pipeline:
 
         self._validate_dag(set(artifacts))
 
+        out_dir = resolve_out_dir(out_dir)
         if out_dir is not None:
             os.makedirs(out_dir, exist_ok=True)
         ctx_hash = self.ctx.hash()
