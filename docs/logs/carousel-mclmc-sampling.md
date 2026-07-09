@@ -428,40 +428,65 @@ multimodality, conditioning, or the NFW profile.
   by standing pre-commitment; grader pre-review first). **Question:** does preconditioning
   MAMS with the Fv4 A+B flow (car_std_r10b14ts0lr0.003 — pocket ratio +1.0, pullback sd
   0.96–1.01, ELBO SVI−21) fix the carousel's between-basin mixing failure?
-  **Baseline (no new GPU):** the existing MAMS64 run (64×1000; per-chain pocket occupancy
-  spans [0.001, 0.951] — the chains are basin-SEGREGATED, i.e. the baseline demonstrably
-  does not mix between basins at this budget; worst-param τ ≈ 3600).
+  **Baseline (no new GPU), MEASURED (grader-corrected, coordinator-verified):** the
+  existing MAMS64 run (64×1000): per-chain pocket occupancy spans [0.001, 0.951] with
+  sd = 0.214; ALL 64 chains visit both basins (median 12 switches/chain, min 2) — the
+  failure is NOT absent transits but DWELL DISEQUILIBRIUM: implied per-chain occupancy-ESS
+  ≈ 1.9 (from sd² ≈ p(1−p)/ESS at p = 0.096); pocket-column rank-normalized split-R̂ =
+  1.184; worst-param τ ≈ 3600. (The earlier draft's "sd ≈ 0.42" and "most chains never
+  switch" were WRONG — corrected against the arrays before human review.)
   **Test arm:** MAMS in u-space through the Fv4 A+B flow (demo-validated
   TransformedProbModel + MAMS plumbing, GATE I bit-identity heritage), 64 chains, budget
-  matched to the baseline (1000 kept steps + the mams-stage default burnin; assumption
-  about the baseline's burnin recorded at run time from its manifest).
-  **Pre-registered win conditions:** (W1, THE sharp instrument — between-basin mixing)
-  per-chain occupancy spread collapses: sd of per-chain pocket occupancies ≤ 0.15
-  (baseline ≈ 0.42) AND ≥ 90% of chains visit BOTH basins (baseline: most chains never
-  switch); pocket-column R̂ ≤ 1.05 (baseline: far above). (W2, plausibility band —
-  RE-DERIVED as pre-committed after the occupancy finding) pooled occupancy ∈ [2%, 15%]:
-  the plan-§5.4 [2%, 8%] band presumed truth ≈ 5%, but estimators now span 4.6–9.6%
-  (Laplace 5.4, MAMS8 4.6, MAMS64 9.6 with ~2× chain-segregation uncertainty) — the
-  widened band covers the estimator spread; W1 carries the scientific weight, W2 only
-  guards against gross occupancy pathology. (W3, health) R̂ ≤ 1.02 all params, bulk-ESS
-  reported (no hard floor pre-committed — the baseline itself would fail any serious ESS
-  floor on the pocket dim; direction: flow arm ≥ baseline). (W4, efficiency) min
-  bulk-ESS per gradient evaluation ≥ 3× baseline (the plan's efficiency goal, expected to
-  show on THIS target unlike the easy demo where it was ≈ parity).
+  matched to the baseline: kept steps = 1000, burnin = the baseline manifest's ACTUAL
+  value (pinned pre-run, unit = kept steps); gradient evaluations and wall time recorded
+  for BOTH arms so any residual mismatch is visible. All W1–W3 diagnostics computed on
+  DECODED z (= T(u)), never raw u (C-8 descendant); occupancy column is z[:,6] post-decode.
+  **Pre-registered win conditions (thresholds DERIVED, not rounded):**
+  (W1, THE sharp instrument — between-basin mixing; PREDICTION with direction+magnitude:
+  the Fv4 flow maps both basins into the base bulk — pocket pullbacks max|u| = 4.11 — so
+  u-space MAMS should transit freely; predicted occupancy-ESS ≥ 20/chain, i.e. ≥ 10× the
+  baseline's 1.9): (W1a) per-chain occupancy sd ≤ 0.066 = sqrt(p(1−p)/20) at p = 0.096
+  (baseline 0.214 = 3.2× worse; this is an ESS_occ ≥ 20/chain bar, stated as such);
+  (W1b) median switches/chain ≥ 60 (5× baseline's 12) AND min ≥ 12 (every chain ≥ the
+  baseline's median); (W1c) occupancy-indicator rank R̂ ≤ 1.05 (baseline 1.184).
+  (W2, plausibility band — RE-DERIVED as pre-committed) pooled occupancy ∈ [2%, 15%]:
+  the plan-§5.4 [2%, 8%] presumed truth ≈ 5%; estimators span 4.6–9.6% (Laplace 5.4,
+  MAMS8 4.6, MAMS64 9.6 at ~2× uncertainty) — band covers the spread; W1 carries the
+  scientific weight. (W3, health) R̂ ≤ 1.02 all params on decoded z; bulk-ESS reported,
+  direction flow ≥ baseline (no absolute floor: the baseline's pocket-dim ESS is itself
+  the failure under test — a fixed floor would be arbitrary). (W4, efficiency) min
+  bulk-ESS per GRADIENT EVALUATION ≥ 3× baseline; gradient counts taken from each run's
+  MAMS diagnostics (steps × trajectory lengths); PRE-COMMITTED fallback if the baseline's
+  count is unrecoverable from its manifest: normalize by ESS/kept-step AND ESS/wall-s
+  (same hardware class, noted) — chosen NOW, not post-hoc.
+  **Plan-§5.4 deviations, enumerated (each else silent):** (i) ESS threshold 5×→3× —
+  first multimodal target; 5× was calibrated on unimodal expectations; (ii) normalization
+  ESS/wall-s → ESS/gradient — isolates kernel efficiency from implementation overhead;
+  CAVEAT: this hides flow-eval cost, so (iii) the plan's "flow overhead < 5% of step
+  cost" criterion is carried as a MANDATORY REPORT (flow-eval fraction of wall, both
+  arms), not a gate — overhead optimization is the human's stated "paring down later"
+  phase; (iv) the plan's escalation ladder is CARRIED verbatim: ESS gain < 2× ⇒ escalate
+  architecture ONCE (grader-gated); still < 2× ⇒ pre-registered negative result, budget
+  moves to many-chain scaling.
   **Falsifiers + pre-committed readings:** W1 fails ⇒ the flow preconditions geometry but
   MAMS still cannot cross in u-space ⇒ NEGATIVE finding for the flow-MAMS mechanism on
   multimodal targets (the flow itself remains validated by GATE Fv4); no retuning
   iteration without a new checkpoint. W1 passes but W2 fails ⇒ mixing works, occupancy
-  disagrees with all estimators ⇒ escalate: possible genuine measurement of the pocket
-  mass (the MH-exact flow-MAMS estimate would supersede the segregated baselines) —
-  requires human review before any claim. W4 fails while W1 passes ⇒ mixing win at
+  disagrees with all estimators ⇒ escalate to human with the PRE-REGISTERED evidence
+  standard for "genuine measurement of the pocket mass" (note: BOTH arms are MH-exact in
+  law — exactness is not the discriminator, CONVERGENCE is): occupancy-indicator R̂ ≤ 1.02
+  across the 64 flow chains AND first-half/second-half pooled occupancy agreement within
+  1.5 percentage points AND explicit comparison against the Laplace proxy (5.4%); a
+  converged mixing sampler's estimate legitimately supersedes segregated chains' — but
+  only with that evidence; human review before any claim regardless. W4 fails while W1 passes ⇒ mixing win at
   efficiency cost — report both, no reclassification. **Known adverse signal (carried per
   standing condition):** demo v3 arm C (A+B flow, SAMPLED) failed health at demo scale
   (R̂ 1.076, ESS 232) — argument for difference, not proof: that flow was the
   unstandardized range-35 config with poor conditioning; the Fv4 flow's near-perfect
   pullback (sd 0.96–1.01 vs demo arm C's unmeasured-but-poor geometry) is exactly the
   property that failure implicated. The human should weigh this explicitly.
-  **Cost: ≤ 4 GPU-h**, pilot-gated (time 20 steps post-compile, project, abort >4 h).
+  **Cost: ≤ 4 GPU-h**, pilot-gated (time 20 steps post-compile, project, abort >4 h);
+  cumulative project spend to date ≈ 5.6 GPU-h.
   **Also offered for certification alongside this decision:** (i) the F1 mode-dropping
   result (−108.8/−406/−16.4 across three architectures); (ii) the R·lr spline-instability
   mechanism (diagnosis entry); (iii) the Fv4 gate results.
