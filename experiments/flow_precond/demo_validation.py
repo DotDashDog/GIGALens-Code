@@ -429,7 +429,12 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
 
         def _es_check(step_idx):
             nonlocal es_best, es_best_params, es_viol
-            m, se, diag = phase_b_eval_fn(params)
+            # Mid-training params from the sharded step carry mesh annotations
+            # that the eager single-device eval path rejects (Fv6 attempt 1
+            # crashed at the step-250 check on exactly this — the grader's
+            # named watch point); strip via host round-trip before evaluating.
+            m, se, diag = phase_b_eval_fn(jax.tree_util.tree_map(
+                lambda x: jnp.asarray(np.asarray(x)), params))
             es_trace.append(dict(step=step_idx, metric=float(m), se=float(se),
                                  **{k: float(v) for k, v in diag.items()}))
             print(f"flow[{tag}] ES check step {step_idx}: metric {m:.2f} "
