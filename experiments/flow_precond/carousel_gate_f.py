@@ -112,6 +112,9 @@ def main():
     print(f"DATA-DERIVED: sd_w [{sd_w.min():.2f}, {sd_w.max():.2f}]; "
           f"max|w_std| = {np.abs(w_std).max():.2f} -> range {spline_range}, "
           f"bins {num_bins}; R*lr = {spline_range * PHASE_A_LR:.3f}")
+    sd_main = w_all[~pocket_mask].std(0)
+    print(f"main/pooled sd ratio: [{(sd_main/sd_w).min():.2f}, "
+          f"{(sd_main/sd_w).max():.2f}]")
 
     model_card = {
         "script": os.path.abspath(__file__),

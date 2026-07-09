@@ -443,10 +443,19 @@ multimodality, conditioning, or the NFW profile.
   the regime where every real run to date trained stably (demo v3 0.035, v4 0.018,
   Fv2 0.048), and the flow-gate + loss plots will adjudicate.
   **Predictions:** (G1–G4 as Fv3, expectations updated) — G1 A-only fails pocket gate
-  (≈ −100s); G2 A+B PASSES (≥ −8; ≈ +5.4 if well-covering); G3 both ≤ SVI, and step-0 =
-  SVI exactly (identity-init nesting; note the frozen rescale changes the flow FAMILY but
-  identity-init still reproduces the SVI Gaussian exactly since diag(sd_w) is absorbed
-  invertibly — the nesting argument is intact); G4 the pullback-scale gate now tests
+  (≈ −100s); G2 A+B PASSES (≥ −8; ≈ +5.4 if well-covering); G3 both ≤ SVI — RE-REGISTERED (grader
+  correction): with L′ = L·diag(sd_w) the identity-init pushforward is the moment-matched
+  OVERDISPERSED Gaussian N(loc, L·diag(sd_w²)·Lᵀ), NOT the SVI Gaussian, so (i) step-0
+  loss will be ≫ SVI — EXPECTED, not a bug — and the step-0=SVI nesting check used in
+  F/Fv2/Fv3 is UNAVAILABLE in this family; (ii) "≤ SVI" is an ε-approximate FAMILY-CAPACITY
+  bound (couplings must LEARN the per-dim compression — ~2–3 knots/dim suffice in
+  principle) reached by optimization-from-afar, adjudicated by the loss plots; the
+  (SVI−20, SVI] intermediate reading carries; (iii) PRE-COMMITTED Phase-A hard-divergence
+  response (overdispersed base draws reach ~50-whitened-sd corners where lp/∇lp finiteness
+  is untested — arm-D leg-A precedent): if the train_flow divergence guard fires ⇒ ONE
+  retry at lr 1e-3; fires again ⇒ human escalation with the recorded traces, no further
+  improvisation. Containment is UNAFFECTED by the init change (data pullbacks at identity
+  are exactly w′, max 8.97 in-box); G4 the pullback-scale gate now tests
   SHAPE, not scale (per-dim sd handled by the frozen rescale): A+B required to pass;
   A-only recorded, sd plausibly in-band with |mean| the informative part. All falsifier
   branches and pre-committed responses CARRY OVER from Fv3 verbatim (G2-fail-in-box →
@@ -455,9 +464,11 @@ multimodality, conditioning, or the NFW profile.
   G3-only-A+B → Phase-B evidence; pilot projection > 90 min → abort + re-checkpoint).
   Blind spots carry over, plus: (d) sd_w estimated from 64k correlated draws
   (chain-segregated; the ~2× occupancy uncertainty propagates into sd_w of the pocket
-  dims — bounded effect: a 2× sd misestimate shifts extents 2×, still ≪ box with the
-  1.1 margin... measured max|w′| already includes both basins, so containment is by
-  construction regardless). **Cost: ≤ 90 GPU-min**, pilot-gated as before.
+  dims) — but range is derived from the SAME standardized data, so containment is
+  self-consistent regardless of sd_w estimation error; measured main-basin/pooled sd
+  ratio ∈ [0.59, 1.03] (grader), i.e. pooled inflation is bounded and in the conservative
+  extent-shrinking direction; the residual exposure is base-shape mismatch, O(1) and
+  exactly what in-box splines fix. **Cost: ≤ 90 GPU-min**, pilot-gated as before.
   **Status: awaiting rigor-grader approval of Fv4.**
 
 - **Run: carousel GATE Fv3 — data-derived range/bins (plan-§6 path, v3-validated recipe)**
@@ -897,7 +908,8 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   (demo v3 R35·1e-3=0.035 stable; v4 R6·3e-3=0.018 stable; Fv2 R16·3e-3=0.048 stable-ish;
   Fv3 R357·3e-3=1.07 unstable). Caveats recorded: diagonal target (mechanism is
   parameterization-side), pre-standardized runs test stability-near-optimum. Scripts/logs
-  in job tmp. Diagnosis only; no fixes applied.
+  archived in-repo at experiments/flow_precond/instability_diagnosis/. Diagnosis only; no
+  fixes applied.
 
 - **2026-07-08 (carousel GATE Fv3 PILOT FIRED — run aborted pre-budget; two findings)**
   `proposed (UNCERTIFIED)`. The pre-committed timing pilot caught both problems at
