@@ -424,6 +424,163 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE L — Laplace jump-proposal feasibility (3 offline diagnostics,
+  human-directed 2026-07-09 after the Fv6 escalation; strategic pivot candidate =
+  multistart MAP → per-mode Laplace surrogates → MAMS + MH independence-jump mixture).**
+  **Status: awaiting grader approval.** Script `experiments/flow_precond/carousel_gate_l.py`
+  (new), outputs `carousel_gate_l_out/`; seed 0 throughout; float64; carousel model via
+  `carousel_model.build()`; zM/zP = basin medians from
+  `/pscratch/sd/l/linusu/carousel_diag/basin_slice/basin_slice.npz`; MH-exact draws =
+  MAMS64 `experiments/sim_carousel/messy_tests/dpie/mams/arrays.npz` (64×1000×33, pocket
+  occupancy 9.57%, indicator z[6] > −22.35); benchmark 8×4000 u-space draws
+  (`carousel_benchmark_out/benchmark_arrays.npz`) reserved as a pocket-shape robustness
+  check ONLY (MH-exact in law ⇒ within-pocket conditional valid; occupancy trap-biased ⇒
+  never used for weights).
+  **Claim under test + classification.** Link 1 of the jump-mixture pipeline chain:
+  "local Laplace surrogates on this posterior are accurate enough that an MH
+  independence-jump mixture would mix the two modes within the user's 10k+10k budget."
+  M1 is a deterministic computation (curvature spectra at polished stationary points);
+  M2 is stochastic-estimator behaviour (MC acceptance with derivable MC error); M3 is a
+  finite-sample frequency estimate. Explicitly UNTESTED links, named now: interaction of
+  jumps with MCLMC adaptation; behaviour on other lenses/priors; missing-mode risk beyond
+  the two known modes. Passing GATE L licenses only a prototype design checkpoint, not
+  the pipeline claim.
+  **Cause hypothesis.** The flow program failed on cross-mode DENSITY CALIBRATION, which
+  the MH proposal role does not need (miscalibration costs acceptance ∝ e^−Δ, not
+  correctness). Laplace surrogates avoid SVI's ELBO variance-shrinkage mechanism (the
+  measured sd_w 1.7–50× miss); their distinct failure mode — curvature ≠ spread on
+  non-Gaussian shapes — is the thing M1/M2 measure. Prior evidence both ways: Laplace
+  pocket-mass proxy 5.4% vs truth 9.57% (0.57 nats — encouraging); sibling-config C-20
+  found the main basin is a CURVED RIDGE (791-nat straight-chord dip; 3/32 multistart
+  within 5 logp) — a mechanism for main-side Gaussian collapse (q_main(z) tiny at ridge
+  points enters cross-mode acceptance through the q(z)/q(z′) factor).
+  **M1 — polish + Hessian spectra.** Adam-polish zM, zP to local stationary points z*M,
+  z*P (lp ascent, ≤3000 steps, lr ladder 1e-3→1e-5 in whitened coords; record lp gain,
+  final natural-units gradient ‖Σ_L^{1/2}∇lp‖, pocket membership retained). Then
+  H = −∇²lp(z*) by forward-over-reverse (33 HVPs), symmetrize, eigendecompose.
+  PREDICTION: both Hessians PSD (λ_min > −1e-8·λ_max, the float64 eig noise scale with
+  ~1e2 margin); condition number 1e4–1e9 (lensing degeneracies); polish gain per point
+  ≈ d/2 ≈ 16 nats (median-of-basin → peak; predict 5–30). FALSIFIER: λ_min < −1e-6·λ_max
+  at a converged point (natural-grad < 0.5) ⇒ saddle/ridge at "mode" ⇒ Laplace-at-mode
+  unsound here.
+  **M2 — surrogate fidelity + MC jump acceptance (the decision measurement).**
+  (a) Split MAMS64 by indicator (≈57.9k main / 6.1k pocket); per-mode empirical moments
+  (μ_emp, Σ_emp); Laplace Σ_L = H⁻¹. Report KL(N_emp ‖ N_Laplace) in nats per mode +
+  per-direction scale ratios √(gen-eigvals(Σ_emp, Σ_L)) (worst direction). Heuristic
+  link (Jensen, stated as such; MC below is ground truth): within-mode independence
+  acceptance ᾱ ≳ e^−KL. (b) MC acceptance: mixture proposal q with components at z*M,
+  z*P, pipeline-realistic Laplace weights w̃_k ∝ exp(lp(z*_k) + ½ log det 2πΣ_k)
+  (recorded vs 5.4% proxy and 9.57% truth; oracle-weight variant as diagnostic only).
+  Three pre-registered proposal configs — P1 plain Gaussian Laplace; P2 armored:
+  multivariate-t df=5, scale ×1.5 (the point-and-go default candidate); P3 pure
+  translation jump z′ = z ± (z*P − z*M), symmetric pair (surrogate-free kernel; tests
+  whether the modes are local translates). For each: 1024 proposals against 1024 stored
+  equilibrium states per basin (subsample seed 0), α = min(1, exp(lp(z′) − lp(z) +
+  log q(z) − log q(z′))) (P3: symmetric, q-terms drop); report mean ᾱ per
+  (from-basin → to-basin) cell with binomial se. THRESHOLDS (derived from switch-count
+  arithmetic at jump-attempt-per-step, w_P ≈ 0.1, 10k kept: round trips ≈ 900·ᾱ;
+  W1a-class ESS_occ 200/10k needs ᾱ ≈ 20%; baseline-parity ESS_occ ≈ 19/10k needs
+  ᾱ ≈ 2%): ᾱ_cross ≥ 20% full health; 2–20% clear improvement over plain MAMS;
+  < 0.5% unworkable (≤ baseline). PREDICTIONS: pocket-side KL ≤ 3 nats and P2
+  ᾱ(main→pocket) ∈ [2%, 30%] (pocket is narrow — peak +5.43 nats, volume e^−7.7 —
+  hence most Gaussian); main-side KL 3–15 nats (curved-ridge prior); P3 ᾱ ~ 0.01–0.5%
+  (volume-ratio argument: translation of broad-basin states into a e^−7.7-smaller mode
+  lands outside support; central estimate e^−7.7 ≈ 0.05%). FALSIFIER for the direction:
+  P1 AND P2 cross-mode ᾱ < 0.5% in BOTH directions ⇒ Laplace-mixture jumps unworkable
+  on this posterior ⇒ escalate (flow-as-proposal or annealing mainline); P3 ≥ 2% with
+  P1/P2 failed ⇒ translation-kernel prototype instead.
+  **M3 — multistart enumeration probe.** 1024 prior-drawn starts through the existing
+  gigalens MAP machinery (settings recorded from the carousel notebook/manifest; seed 0).
+  Outcome: fraction with final z[6] > −22.35 AND lp ≥ lp(z*P) − 33 (typical-set
+  half-width 2·d/2 ≈ 33 nats below peak). PREDICTION (low confidence, blocking
+  assumption = unknown basin-of-attraction geometry under Adam from prior-width starts):
+  1–50 of 1024 find the pocket; sibling-config prior (3/32 near global) predicts a large
+  straggler fraction converging to neither peak — distribution recorded. FALSIFIER:
+  0/1024 ⇒ enumeration link broken at ≤1024-start budget ⇒ annealing family becomes
+  mainline for multimodal lenses regardless of M2.
+  **Metric blind spots (named).** M1: curvature at the peak cannot detect ridge
+  curvature / heavy tails at 2σ+ (exactly the C-20 warning) — covered by M2(a) empirical
+  comparison and M2(b) true-lp MC. M2: equilibrium-state acceptance ignores
+  adaptation-interaction (named untested link); pocket Σ_emp rests on chain-segregated
+  draws from few chains — robustness check vs benchmark pocket draws (11.7k). M3: this
+  prior/this lens only; finding the KNOWN pocket ≠ finding all modes.
+  **Expected appearance.** M1: log-eigenvalue spectra, both strictly positive with wide
+  spread. M2: scale-ratio scatter near 1 (pocket) / heavier main tail; acceptance
+  histograms with non-vanishing cross-mode cells if hypothesis holds; falsified ⇒
+  cross-mode cells hug 0 (< 5/1024 accepts). M3: final-lp vs z[6] scatter clustering at
+  the two peaks (+ straggler cloud); falsified ⇒ single cluster + stragglers.
+  **Cost.** Offline vs stored draws + ~5k fresh lp evals + 33×2 HVPs + one 1024-start
+  MAP: ≈ 20–30 min wall on 1 GPU of a 4-GPU interactive allocation (M3 sharded if
+  convenient); Slurm cap 60 min. No sampling runs.
+  **Decision matrix (pre-committed).** M2 pass (any cross ᾱ ≥ 2%) & M3 ≥ 1 ⇒ draft
+  jump-mixture MAMS prototype checkpoint. M2 pass & M3 = 0 ⇒ prototype retains research
+  value with oracle modes; pipeline claim demoted; annealing branch opens. M2 fail &
+  P3 ≥ 2% ⇒ translation-kernel prototype. All fail ⇒ report to human with options (b)
+  flow-as-proposal / (c) annealing mainline; no auto-lever.
+  **Grader revision items (round 1, 2026-07-09; all pre-registered before launch):**
+  (i) Σ_L eigenvalue-floor rule, DERIVED from "no proposal axis may exceed the measured
+  posterior extent": in H's eigenbasis, λ_H,i ← max(λ_H,i, 1/(4·λ_max(Σ_emp,mode))) —
+  i.e. no Σ_L axis sd may exceed 2× the longest empirical posterior axis of that mode
+  (Σ_emp from the MH-exact MAMS64 split; the eventual pipeline would substitute prior
+  widths — noted as an untested substitution). n_floored axes recorded; any floored
+  axis flags M1. Gray-zone reading pre-committed: λ_min ∈ [−1e-6, −1e-8]·λ_max ⇒ M1's
+  PSD PREDICTION fails (curvature indistinguishable from flat at float64 along ≥1 axis)
+  but the saddle FALSIFIER does not fire; Laplace proceeds only via the floor rule,
+  carrying the flag. A P1+P2 double-fail is read as "unworkable" ONLY after the M2(a)
+  per-direction scale ratios rule out a noise-inflated Σ_L axis as the cause.
+  (ii) M2(b) reports a chain-clustered se (per-source-chain mean ᾱ; se = sd of chain
+  means/√n_chains, n_chains recorded — pocket states come from few chains) alongside
+  the binomial se; DECISIONS route on the clustered se: a cell passes only if ᾱ ≥ 2%
+  AND ᾱ − 2·se_clust > 0.5% (distinguishable from the unworkable line); if ᾱ ≥ 2% but
+  the margin fails, the pre-committed reading is "insufficient state diversity — widen
+  states, do not route" (NEEDS-MORE-data, no matrix branch).
+  (iii) The M2(a) benchmark pocket-shape robustness check excludes stuck chains
+  (per-chain occupancy > 0.99; catches the documented frozen chain with occ 1.000 and
+  ~4k near-duplicate draws).
+  (iv) "M2 pass" = P1 or P2 ONLY, pipeline-realistic Laplace weights ONLY, cross-mode
+  cells (states-in-M → pocket component; states-in-P → main component); P3 and any
+  oracle-weight diagnostic never enter the pass criterion; ᾱ ∈ [0.5%, 2%) routes as
+  FAIL in the matrix.
+  (v) Polish-gain band restated from basin_slice records (grader derivation; the d/2
+  median-vs-mode argument was wrong for a Gaussian): expected gain ≈ (median-draw lp −
+  lp(z_med)) + d/2 ≈ 8.9 + 16.5 ≈ 25 nats (main) and ≈ 21 nats (pocket); a small
+  pocket gain is NOT anomalous.
+  (vi) M3 MAP settings pinned NOW: optax.adabelief(1e-2, b1=0.95, b2=0.99,
+  nesterov=True if supported) — the production MAPStage default factory; n_samples
+  1024, num_steps 4000 (manifest-matching), seed 0, start=None (prior draws),
+  output_type "all". Polish whitening matrix = SVI qz_scale_tril from
+  `messy_tests/dpie/svi/arrays.npz` (frozen; measurement coordinates only).
+  **Grader revision items (round 2, 2026-07-09):** (vii) polish best-iterate
+  off-by-one fixed (best_dw now stores the iterate whose lp is recorded; the final
+  iterate's lp is also assessed) — the grader caught that H/Σ_L/w̃/cutoffs were
+  anchored at a point provably not the one whose lp was reported. (viii) M3
+  classification recomputes lp at final_z (the production MAP "all" output pairs
+  post-update params with pre-update lp — one-step offset, recorded as
+  lp_recompute_vs_lib_max_abs; not patching the library for this gate). (ix) COST
+  amended: M3 pipeline-realistic 1024×4000 ≈ 26 min on 4 GPUs (manifest basis
+  128×4000 = 790 s), total ≈ 45 min wall, Slurm request 90 min. (x) The M2 ᾱ cutoffs
+  were derived at w̃_P ≈ 0.1 but w̃_P is a run OUTPUT (prior record suggests ~0.054):
+  decisions route on the per-step cross-jump rate w̃_P·ᾱ ≥ 19/9000 (parity) /
+  ≥ 200/9000 (W1a-class) — implemented as rescaling the 0.5%/2%/20% ᾱ lines by
+  0.1/w̃_P when the measured Laplace weight falls outside [0.05, 0.2]
+  (threshold_scale recorded). (xi) Matrix pins: "M3 ≥ 1" reads the FINAL-step counts
+  (best-step is diagnostic only); the P3 branch requires BOTH P3_MtoP and P3_PtoM
+  ≥ 2%; the oracle-weight acceptance variant IS implemented (logq-only recompute on
+  the same proposals; recorded per cell as oracle_weight_mean_alpha_diag, excluded
+  from all verdicts); the model card records smoke mode so a smoke-run summary can
+  never be mistaken for the measurement.
+  **Grader round 3 (2026-07-09): CERTIFY-RECOMMENDED, conditional.** All round-2
+  items verified in entry and script. Launch conditions: (1) plot-keys fix at the M2b
+  acceptance histogram (threshold_scale/cell_verdicts entries crashed the bar plot;
+  measurement unaffected — summaries and npz are written before the plot stage; the
+  cell_verdicts half predates round 3 and was missed by the grader in round 2) —
+  APPLIED, and the plot's threshold lines now scale by threshold_scale; (2)
+  GATE_L_SMOKE=1 completes end-to-end with all four PNGs before the real run. Reading
+  notes for the result grader: PtoM cells use the conservative scale; M1 natural-grad
+  uses floored Σ_L — read with n_floored; cond field meaningless if λ_min ≤ 0
+  (recompute from eig_min/eig_max). Scope unchanged: Link 1 only; two known modes;
+  this lens/prior; equilibrium-state acceptance.
+
 - **Run: carousel GATE Fv6 — Phase-B ELBO-early-stop (human-directed 2026-07-09 after the
   Fv5 high-side escalation; user's balance question answered and design adjusted
   accordingly: the stop rule and the pass gates use DISJOINT instruments).**
