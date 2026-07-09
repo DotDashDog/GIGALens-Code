@@ -893,6 +893,26 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-08 (carousel GATE Fv4 RAN — ALL FOUR GATES AS PRE-REGISTERED; first working
+  carousel flow)** `proposed (UNCERTIFIED)`. Observed vs re-registered predictions:
+  **(G1) pass** — A-only pocket ratio −16.4 (< −8, fails the gate as predicted; third and
+  softest confirmation of objective-level mode-dropping — the overdispersed base sees some
+  pocket mass but reverse-KL still under-weights it 17+ nats). **(G2) PASS** — A+B pocket
+  ratio **+1.00** ≥ −8: Phase B on the MH-exact draws RESTORED the pocket (expected ≈ +5.4
+  for perfect coverage; +1.0 = mild flow smoothing, decisively inside the gate).
+  **(G3) BOTH PASS** — A-only ELBO 291430.8 ± 0.1, A+B 291432.4 ± 6.7, both ≈ SVI−21
+  (inside the good band) — optimization-from-afar SUCCEEDED from the +180-nat
+  overdispersed init (step-0 291633.1 as re-registered; no divergence; pre-committed
+  hard-divergence branch never fired). **(G4) PASS for A+B** — main-basin pullback sd
+  [0.956, 1.011], |mean|max 0.095: near-perfect whitening; the fkl learned the ~50×
+  compression + shape through 14 in-box knots. A-only fails G4 as predicted (sd to 2.85,
+  |mean| to 4.75 — recorded). Diagnostics: everything in-box (A+B max|u| main 5.43, pocket
+  4.11). Pilot projected 13 min (its step_a diff hit timer noise — recorded; actuals:
+  Phase A 2381 s ≈ 40 min at 0.79 s/step, Phase B 372 s); total run ≈ 55 min ≤ 90 budget.
+  **The Fv4 A+B flow (car_std_r10b14ts0lr0.003) is the first flow that covers the pocket,
+  whitens the main basin, and beats the SVI ELBO — the §5.4 benchmark's preconditioner
+  candidate.** Cumulative ≈ 5.6 GPU-h. Artifacts: carousel_gate_f_out/*.
+
 - **2026-07-08 (CPU diagnosis of the 490-bin instability — mechanism: R·lr, not bins)**
   `proposed (UNCERTIFIED)`. Synthetic 33-dim diagonal Gaussian with the carousel's
   whitened sd profile (1.7–50), same flow/optimizer/loss, CPU, no renders. REPRODUCED:

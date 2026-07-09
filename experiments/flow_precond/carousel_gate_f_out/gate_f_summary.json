@@ -9,13 +9,13 @@
     "dim": 33,
     "spline": {
       "num_layers": 6,
-      "num_bins": 24,
-      "spline_range": 16.0,
       "hidden_dims": [
         64,
         64
       ],
-      "trainable_scale": true,
+      "trainable_scale": false,
+      "num_bins": 14,
+      "spline_range": 10.0,
       "phase_a": [
         3000,
         128,
@@ -35,8 +35,8 @@
     "seed": 0
   },
   "timings_s": {
-    "phase_a": 0.7549917179858312,
-    "phase_b": 582.7874342480209
+    "phase_a": 2381.448401505011,
+    "phase_b": 372.37444064603187
   },
   "training": {
     "A": {
@@ -51,51 +51,45 @@
   "gates": {
     "A_only": {
       "status": "OK",
-      "elbo_direct": 291427.0188421054,
-      "elbo_direct_sd": 0.11736281668188414,
+      "elbo_direct": 291430.82192558696,
+      "elbo_direct_sd": 0.12916634211358174,
       "elbo_gate_pass": true,
-      "pocket_log_ratio": -406.0060439475299,
+      "pocket_log_ratio": -16.389745575703813,
       "pocket_gate_pass": false,
       "pullback_main_sd": [
-        1.0636440532277762,
-        6.627901289659083
+        1.2641978943335508,
+        2.8527427969858072
       ],
-      "pullback_main_maxabsmean": 14.29350154813828,
+      "pullback_main_maxabsmean": 4.754881071824915,
       "pullback_scale_pass": false,
       "pullback_pocket_sd": [
-        1.2008292799333056,
-        8.238452171851204
+        1.0580643706439603,
+        2.632303798812587
       ],
-      "pullback_pocket_maxabs": 40.98908482883455,
-      "max_abs_u_main": 41.77019295317964,
-      "exp_s_range": [
-        0.7514617895457569,
-        13.46049336135919
-      ]
+      "pullback_pocket_maxabs": 8.679261281806193,
+      "max_abs_u_main": 8.498693552440939,
+      "exp_s_range": null
     },
     "A_plus_B": {
       "status": "OK",
-      "elbo_direct": 291433.7553743244,
-      "elbo_direct_sd": 5.549086654090191,
+      "elbo_direct": 291432.37184837775,
+      "elbo_direct_sd": 6.738716529306948,
       "elbo_gate_pass": true,
-      "pocket_log_ratio": -403.0626109559233,
-      "pocket_gate_pass": false,
+      "pocket_log_ratio": 1.0029454473769874,
+      "pocket_gate_pass": true,
       "pullback_main_sd": [
-        0.965099593743719,
-        5.9775382365254215
+        0.9557466965561956,
+        1.0115070292229373
       ],
-      "pullback_main_maxabsmean": 2.0588058985155424,
-      "pullback_scale_pass": false,
+      "pullback_main_maxabsmean": 0.09505791800207841,
+      "pullback_scale_pass": true,
       "pullback_pocket_sd": [
-        0.9492887029044342,
-        10.765189051594318
+        0.7448002691426792,
+        1.0267222626927506
       ],
-      "pullback_pocket_maxabs": 37.46026389969763,
-      "max_abs_u_main": 38.56383285172622,
-      "exp_s_range": [
-        0.7544170124039388,
-        13.82274657795006
-      ]
+      "pullback_pocket_maxabs": 4.110607692898142,
+      "max_abs_u_main": 5.4318951453421365,
+      "exp_s_range": null
     }
   }
 }
