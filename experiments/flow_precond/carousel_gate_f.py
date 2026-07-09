@@ -1,9 +1,14 @@
 #!/usr/bin/env python
-"""Carousel GATE F (plan §5.2): train one-shot flows on carousel-dPIE, gate them.
+"""Carousel GATE F (plan §5.2, Fv4 config): train flows on carousel-dPIE, gate them.
 
-Trains Phase-A-only and Phase-A+B one-shot flows (fixed range 6 + trainable
-DiagScale — the demo-validated v4 architecture, nothing data-derived) on the
-33-param carousel posterior, then evaluates the pre-registered gates:
+Config lineage (all pre-registered; see the log's checkpoint entries): GATE F
+fixed box ±6 + trainable scale FAILED (structural); Fv2 fixed ±16/24 FAILED
+(mode-seeking recurses at the scale level); Fv3 data-derived range 357/490
+ABORTED by the timing pilot (Phase-B OOM + R·lr optimization instability).
+Fv4 (current): FROZEN measured per-dim scale composed into the whitening +
+data-derived range/bins on the standardized coords (see SPLINE_BASE comment).
+Trains Phase-A-only and Phase-A+B flows, then evaluates the pre-registered
+gates:
 
   GATE F(a)  ELBO: neg-ELBO tail (mean last 100) <= SVI final loss 291453.1
              (family nesting; same sign convention as SVIStage, verified).
@@ -56,12 +61,14 @@ import demo_validation as dv  # reuse the demo-validated train_flow loop
 dv.OUT_DIR = OUT_DIR          # redirect its flow caches here
 
 SEED = 0
-# Fv3: DATA-DERIVED range/bins (plan-S6 path; v3-validated on the demo), computed
-# in main() from the whitened MAMS64 draws: range = ceil(1.1 * max|w|) so ALL
-# Phase-B training data is in-box by construction; bins scale with range to keep
-# the demo-v3 knot density (48 knots / range 35), capped at 512. trainable_scale
-# is OFF: the Fv2 lesson is that a containment parameter trained by reverse-KL
-# fits the bulk and abandons the tails -- containment must come from measurement.
+# Fv4: FROZEN MEASURED per-dim scale + data-derived range/bins on the
+# standardized coords. The whitening passed to the flow is L' = L @ diag(sd_w),
+# with sd_w measured from the whitened MAMS64 draws -- containment by
+# measurement (Fv2 lesson: never ELBO-trained), and it shrinks the needed box
+# to the DYNAMIC RANGE (~9), which the CPU diagnosis showed is required for
+# optimization stability: the knot decoder amplifies adam's coherent first-step
+# logit kick by O(range), so the knob is R*lr (<= 0.035 measured stable; range
+# 357 at lr 3e-3 = 1.07 blew up in 10 steps, bins exonerated).
 SPLINE_BASE = dict(num_layers=6, hidden_dims=(64, 64), trainable_scale=False)
 PHASE_A_STEPS = 3000
 PHASE_A_DRAWS = 128
@@ -94,13 +101,17 @@ def main():
     basin = np.load(BASIN)
     zP, zM = jnp.asarray(basin["zP"]), jnp.asarray(basin["zM"])
 
-    # Data-derived range/bins (pre-registered rule; printed for the record)
+    # Data-derived frozen scale + range/bins (pre-registered rule; printed)
     w_all = np.linalg.solve(qz_scale_tril, (z_mams - qz_loc).T).T
-    spline_range = float(np.ceil(1.1 * np.abs(w_all).max()))
+    sd_w = w_all.std(0)
+    qz_scale_tril = qz_scale_tril @ np.diag(sd_w)  # frozen measured rescale
+    w_std = w_all / sd_w
+    spline_range = float(np.ceil(1.1 * np.abs(w_std).max()))
     num_bins = int(min(512, np.ceil(spline_range * 48.0 / 35.0)))
     SPLINE_CFG = dict(SPLINE_BASE, num_bins=num_bins, spline_range=spline_range)
-    print(f"DATA-DERIVED: max|w| = {np.abs(w_all).max():.1f} -> range {spline_range}, "
-          f"bins {num_bins}")
+    print(f"DATA-DERIVED: sd_w [{sd_w.min():.2f}, {sd_w.max():.2f}]; "
+          f"max|w_std| = {np.abs(w_std).max():.2f} -> range {spline_range}, "
+          f"bins {num_bins}; R*lr = {spline_range * PHASE_A_LR:.3f}")
 
     model_card = {
         "script": os.path.abspath(__file__),
@@ -118,7 +129,7 @@ def main():
     key = jax.random.key(SEED + 10)
     sp_init, sp_make = flows.make_whitened_spline_flow(
         key, dim, jnp.asarray(qz_loc), jnp.asarray(qz_scale_tril), **SPLINE_CFG)
-    sp_key = (f"car_r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
+    sp_key = (f"car_std_r{int(SPLINE_CFG['spline_range'])}b{SPLINE_CFG['num_bins']}"
               f"ts{int(SPLINE_CFG.get('trainable_scale', False))}lr{PHASE_A_LR:g}")
 
     # Containment of the gate points (out-of-sample record; grader recommendation)
@@ -141,10 +152,10 @@ def main():
         ta8 = timed(f"PILOTA8_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=8,
                     n_chunks=4)
         tb4 = timed(f"PILOTB4_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=0,
-                    n_chunks=32, phase_b_samples=z_mams, phase_b_steps=4,
+                    n_chunks=8, phase_b_samples=z_mams, phase_b_steps=4,
                     phase_b_lr=PHASE_B_LR)
         tb8 = timed(f"PILOTB8_{sp_key}", n_draws=PHASE_A_DRAWS, num_steps=0,
-                    n_chunks=32, phase_b_samples=z_mams, phase_b_steps=8,
+                    n_chunks=8, phase_b_samples=z_mams, phase_b_steps=8,
                     phase_b_lr=PHASE_B_LR)
         step_a_s = max(0.0, (ta8 - ta4) / 4)
         step_b_s = max(0.0, (tb8 - tb4) / 4)
@@ -168,8 +179,8 @@ def main():
         f"AB_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 12,
         phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR,
-        n_chunks=32)  # fkl gradient accumulated over 32x2000-sample chunks (exact;
-                      # ~500-bin spline intermediates need the smaller chunks)
+        n_chunks=8)  # fkl gradient accumulated over 8x8000-sample chunks (exact;
+                     # 14-bin spline tensors are below the validated 24-bin footprint)
     t_b = time.perf_counter() - t0
 
     summary = {"model_card": model_card, "timings_s": dict(phase_a=t_a, phase_b=t_b),

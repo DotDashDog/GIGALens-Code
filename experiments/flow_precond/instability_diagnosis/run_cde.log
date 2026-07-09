@@ -1,0 +1,75 @@
+
+========================================================================
+CONFIG c: bins=48 range=357.0 lr=0.003 prestd=False
+  step    0: loss=       57.8646  eval=     57.6677 (-fldj=     0.000 -lp=   104.550) max|z|=4.4
+  step   10: loss=      992.9928  eval=    920.9564 (-fldj=    11.504 -lp=   956.334) max|z|=273.6
+  step   20: loss=      824.8014  eval=    847.0564 (-fldj=    30.359 -lp=   863.579) max|z|=299.1
+  step   30: loss=      532.8117  eval=    470.1088 (-fldj=    73.999 -lp=   442.992) max|z|=336.4
+  step   40: loss=      368.2077  eval=    405.7926 (-fldj=    97.497 -lp=   355.178) max|z|=339.9
+  step   50: loss=      400.4896  eval=    321.0509 (-fldj=   108.252 -lp=   259.681) max|z|=338.1
+  step   60: loss=      305.1389  eval=    275.9626 (-fldj=   109.395 -lp=   213.450) max|z|=335.8
+  step   70: loss=      233.0009  eval=    243.6113 (-fldj=   107.954 -lp=   182.540) max|z|=331.1
+  step   80: loss=      222.1836  eval=    229.0264 (-fldj=   109.045 -lp=   166.863) max|z|=300.5
+  step   90: loss=      203.6100  eval=    208.5692 (-fldj=   110.457 -lp=   144.995) max|z|=258.3
+  step  100: loss=      190.3732  eval=    198.6885 (-fldj=   109.671 -lp=   135.900) max|z|=299.0
+  step  110: loss=      260.7235  eval=    284.3168 (-fldj=   109.493 -lp=   221.706) max|z|=301.9
+  step  120: loss=      231.0584  eval=    230.8687 (-fldj=   114.474 -lp=   163.277) max|z|=284.9
+  step  130: loss=      209.0752  eval=    210.8087 (-fldj=   111.619 -lp=   146.072) max|z|=270.9
+  step  140: loss=      196.8310  eval=    199.6448 (-fldj=   109.248 -lp=   137.279) max|z|=233.2
+  step  150: loss=      190.2567  eval=    191.9560 (-fldj=   109.647 -lp=   129.191) max|z|=207.7
+  step  160: loss=      195.9617  eval=    196.6918 (-fldj=   108.392 -lp=   135.182) max|z|=236.3
+  step  170: loss=      188.5024  eval=    187.7947 (-fldj=   106.489 -lp=   128.188) max|z|=197.9
+  step  180: loss=      410.0312  eval=    223.4215 (-fldj=   108.640 -lp=   161.664) max|z|=288.8
+  step  190: loss=      196.5753  eval=    197.1074 (-fldj=   105.796 -lp=   138.194) max|z|=246.7
+  final (200 steps): loss=      246.4611  eval=    246.0372 max|z|=270.0  [97s]
+  summary: loss[0]=57.86 min=57.86 last=246.46 #increases=84/199
+
+========================================================================
+CONFIG d: bins=16 range=11.0 lr=0.003 prestd=True
+  step    0: loss=       -0.0000  eval=     -0.0000 (-fldj=   -73.304 -lp=   120.186) max|z|=159.9
+  step   10: loss=        4.0837  eval=      4.0568 (-fldj=   -69.766 -lp=   120.705) max|z|=170.1
+  step   20: loss=        2.6619  eval=      3.0012 (-fldj=   -69.225 -lp=   119.109) max|z|=175.9
+  step   30: loss=        1.9303  eval=      1.9333 (-fldj=   -70.823 -lp=   119.639) max|z|=182.5
+  step   40: loss=        1.6899  eval=      1.7493 (-fldj=   -72.003 -lp=   120.634) max|z|=180.2
+  step   50: loss=        1.3286  eval=      1.3322 (-fldj=   -72.310 -lp=   120.525) max|z|=160.6
+  step   60: loss=        1.4705  eval=      1.2396 (-fldj=   -72.140 -lp=   120.262) max|z|=173.5
+  step   70: loss=        0.7804  eval=      0.8751 (-fldj=   -72.147 -lp=   119.905) max|z|=157.5
+  step   80: loss=        0.6868  eval=      0.6396 (-fldj=   -72.480 -lp=   120.002) max|z|=162.0
+  step   90: loss=        0.5852  eval=      0.5768 (-fldj=   -72.823 -lp=   120.282) max|z|=168.9
+  step  100: loss=        0.5192  eval=      0.4048 (-fldj=   -72.957 -lp=   120.244) max|z|=161.1
+  step  110: loss=        0.4043  eval=      0.4913 (-fldj=   -72.954 -lp=   120.327) max|z|=161.5
+  step  120: loss=        0.3390  eval=      0.4364 (-fldj=   -72.865 -lp=   120.184) max|z|=158.4
+  step  130: loss=        0.4601  eval=      0.4130 (-fldj=   -72.853 -lp=   120.148) max|z|=162.3
+  step  140: loss=        0.3586  eval=      0.2991 (-fldj=   -72.873 -lp=   120.054) max|z|=157.9
+  step  150: loss=        0.4218  eval=      0.3276 (-fldj=   -73.071 -lp=   120.280) max|z|=169.6
+  step  160: loss=        0.4238  eval=      0.3694 (-fldj=   -73.044 -lp=   120.296) max|z|=159.6
+  step  170: loss=        0.3015  eval=      0.2911 (-fldj=   -73.030 -lp=   120.203) max|z|=157.7
+  step  180: loss=        0.2941  eval=      0.2911 (-fldj=   -73.178 -lp=   120.351) max|z|=163.4
+  step  190: loss=        0.3107  eval=      0.3497 (-fldj=   -72.995 -lp=   120.227) max|z|=155.1
+  final (200 steps): loss=        0.3093  eval=      0.2793 max|z|=166.5  [32s]
+  summary: loss[0]=-0.00 min=-0.00 last=0.31 #increases=87/199
+
+========================================================================
+CONFIG e: bins=48 range=11.0 lr=0.003 prestd=True
+  step    0: loss=       -0.0000  eval=     -0.0000 (-fldj=   -73.304 -lp=   120.186) max|z|=159.9
+  step   10: loss=        4.5153  eval=      4.8110 (-fldj=   -69.853 -lp=   121.547) max|z|=159.1
+  step   20: loss=        3.1753  eval=      3.6322 (-fldj=   -69.017 -lp=   119.531) max|z|=177.4
+  step   30: loss=        2.8975  eval=      2.9083 (-fldj=   -69.626 -lp=   119.417) max|z|=171.5
+  step   40: loss=        2.0745  eval=      2.1987 (-fldj=   -70.867 -lp=   119.948) max|z|=163.0
+  step   50: loss=        1.8275  eval=      1.6700 (-fldj=   -71.765 -lp=   120.317) max|z|=175.0
+  step   60: loss=        1.7510  eval=      1.3813 (-fldj=   -71.991 -lp=   120.254) max|z|=157.7
+  step   70: loss=        0.8549  eval=      1.2275 (-fldj=   -71.968 -lp=   120.077) max|z|=152.5
+  step   80: loss=        1.0368  eval=      0.8122 (-fldj=   -72.307 -lp=   120.002) max|z|=170.5
+  step   90: loss=        0.8003  eval=      0.8770 (-fldj=   -72.570 -lp=   120.330) max|z|=163.1
+  step  100: loss=        0.6353  eval=      0.6011 (-fldj=   -72.740 -lp=   120.223) max|z|=164.1
+  step  110: loss=        0.6607  eval=      0.7112 (-fldj=   -72.825 -lp=   120.418) max|z|=159.6
+  step  120: loss=        0.5947  eval=      0.5519 (-fldj=   -72.784 -lp=   120.219) max|z|=159.3
+  step  130: loss=        0.6256  eval=      0.5765 (-fldj=   -72.735 -lp=   120.194) max|z|=162.7
+  step  140: loss=        0.3577  eval=      0.4217 (-fldj=   -72.713 -lp=   120.017) max|z|=162.6
+  step  150: loss=        0.4522  eval=      0.4572 (-fldj=   -72.891 -lp=   120.230) max|z|=170.6
+  step  160: loss=        0.6256  eval=      0.4748 (-fldj=   -72.898 -lp=   120.255) max|z|=162.9
+  step  170: loss=        0.4250  eval=      0.3842 (-fldj=   -72.889 -lp=   120.156) max|z|=155.8
+  step  180: loss=        0.3425  eval=      0.3734 (-fldj=   -73.003 -lp=   120.258) max|z|=168.6
+  step  190: loss=        0.3992  eval=      0.4509 (-fldj=   -72.988 -lp=   120.321) max|z|=157.9
+  final (200 steps): loss=        0.3664  eval=      0.3123 max|z|=160.6  [77s]
+  summary: loss[0]=-0.00 min=-0.00 last=0.37 #increases=94/199

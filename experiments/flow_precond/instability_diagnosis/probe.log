@@ -1,0 +1,22 @@
+=== P1: displacement from ONE adam step (lr 3e-3), by (range, bins) ===
+R= 357.0 K= 490: loss    57.615 ->  2549.106  max|dz|= 125.424 mean|dz|= 33.7224  dz/R=0.3513
+R= 357.0 K=  48: loss    57.615 ->  2696.426  max|dz|= 122.560 mean|dz|= 39.5709  dz/R=0.3433
+R= 357.0 K=  16: loss    57.615 ->  2672.607  max|dz|= 128.512 mean|dz|= 42.4490  dz/R=0.3600
+R=  89.0 K= 490: loss    57.615 ->   188.331  max|dz|=  29.150 mean|dz|=  6.2978  dz/R=0.3275
+R=  89.0 K= 122: loss    57.615 ->   192.042  max|dz|=  31.212 mean|dz|=  6.3415  dz/R=0.3507
+R=  11.0 K= 490: loss    57.615 ->    54.701  max|dz|=   2.720 mean|dz|=  0.2442  dz/R=0.2473
+R=  11.0 K=  16: loss    57.615 ->    54.964  max|dz|=   2.811 mean|dz|=  0.3067  dz/R=0.2555
+R=   6.0 K=   8: loss    57.615 ->    54.703  max|dz|=   1.261 mean|dz|=  0.1719  dz/R=0.2102
+
+=== P2: group decomposition of first step, R=357 K=490 ===
+full step: loss 57.615 -> 2549.106, max|dz|=125.424
+group bias_hit    : loss ->    57.055  max|dz|=  0.1177 mean|dz|= 0.03153
+group bias_unused : loss ->    81.860  max|dz|=  6.3081 mean|dz|= 1.54313
+group bias_slope  : loss ->    57.590  max|dz|=  0.0021 mean|dz|= 0.00115
+group finalW      : loss ->  2557.301  max|dz|=120.1189 mean|dz|=33.72215
+group hidden      : loss ->    57.615  max|dz|=  0.0000 mean|dz|= 0.00000
+
+=== P2b: coherence of bias update (rh logits), coupling0, dim with largest sd ===
+dim 0 (sd=  1.7): rh update: frac|u|>0.9lr=1.00, sum(update)=+0.0120, sum(left half)=+0.7350, sum(hit)=+0.0090, sum(unused)=+0.0030
+dim 16 (sd=  9.2): rh update: frac|u|>0.9lr=1.00, sum(update)=-1.4460, sum(left half)=-0.7230, sum(hit)=-0.0030, sum(unused)=-1.4430
+dim 32 (sd= 50.0): rh update: frac|u|>0.9lr=1.00, sum(update)=-1.4460, sum(left half)=-0.7230, sum(hit)=-0.0030, sum(unused)=-1.4430

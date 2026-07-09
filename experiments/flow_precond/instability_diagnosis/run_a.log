@@ -1,0 +1,42 @@
+
+========================================================================
+CONFIG a: bins=490 range=357.0 lr=0.003 prestd=False
+  --- grad norms step 0 ---
+  coupling0: L0: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L1: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L2: |gW|=3.390e+00 |gb|=3.505e+00 max|gW|=8.381e-02
+  coupling1: L0: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L1: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L2: |gW|=2.619e+00 |gb|=3.339e+00 max|gW|=8.538e-02
+  coupling2: L0: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L1: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L2: |gW|=3.203e+00 |gb|=3.505e+00 max|gW|=9.871e-02
+  coupling3: L0: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L1: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L2: |gW|=2.598e+00 |gb|=3.339e+00 max|gW|=8.624e-02
+  coupling4: L0: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L1: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L2: |gW|=3.711e+00 |gb|=3.505e+00 max|gW|=8.311e-02
+  coupling5: L0: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L1: |gW|=0.000e+00 |gb|=0.000e+00 max|gW|=0.000e+00 | L2: |gW|=2.554e+00 |gb|=3.339e+00 max|gW|=7.330e-02
+  hit-bin window: bins [241,249] of 490 (9 hit, 481 unused)
+  grad wrt rw logits: mean|hit|=5.395e-02 mean|unused|=1.314e-03 max|unused|=9.570e-03
+  grad wrt rh logits: mean|hit|=5.395e-02 mean|unused|=1.314e-03 max|unused|=9.570e-03
+  grad wrt slope raw: mean|all|=7.805e-05
+  step    0: loss=       57.8646  eval=     57.6677 (-fldj=     0.000 -lp=   104.550) max|z|=4.4
+  step   10: loss=     1192.3559  eval=   1208.6120 (-fldj=    10.837 -lp=  1244.657) max|z|=219.6
+  --- grad norms step 10 ---
+  coupling0: L0: |gW|=1.624e+04 |gb|=3.857e+03 max|gW|=2.873e+03 | L1: |gW|=1.180e+04 |gb|=3.111e+03 max|gW|=8.545e+02 | L2: |gW|=4.737e+03 |gb|=1.481e+03 max|gW|=2.274e+01
+  coupling1: L0: |gW|=1.373e+04 |gb|=1.023e+02 max|gW|=2.888e+03 | L1: |gW|=3.987e+03 |gb|=4.108e+02 max|gW|=2.652e+02 | L2: |gW|=1.899e+03 |gb|=2.861e+02 max|gW|=6.964e+00
+  coupling2: L0: |gW|=5.536e+03 |gb|=2.355e+01 max|gW|=1.454e+03 | L1: |gW|=1.640e+03 |gb|=2.048e+02 max|gW|=1.150e+02 | L2: |gW|=8.393e+02 |gb|=1.635e+02 max|gW|=3.961e+00
+  coupling3: L0: |gW|=3.979e+03 |gb|=1.302e+01 max|gW|=7.638e+02 | L1: |gW|=2.056e+03 |gb|=1.746e+02 max|gW|=1.243e+02 | L2: |gW|=9.034e+02 |gb|=1.564e+02 max|gW|=3.904e+00
+  coupling4: L0: |gW|=3.830e+03 |gb|=8.327e+00 max|gW|=1.696e+03 | L1: |gW|=7.889e+02 |gb|=5.954e+01 max|gW|=5.281e+01 | L2: |gW|=4.521e+02 |gb|=7.889e+01 max|gW|=2.561e+00
+  coupling5: L0: |gW|=1.031e+03 |gb|=4.229e+00 max|gW|=1.583e+02 | L1: |gW|=4.012e+02 |gb|=6.590e+01 max|gW|=3.049e+01 | L2: |gW|=2.713e+02 |gb|=7.522e+01 max|gW|=2.112e+00
+  --- param drift after 10 steps (max|delta|) ---
+  coupling0: L0: dW=2.434e-02 db=1.766e-02 | L1: dW=2.472e-02 db=2.006e-02 | L2: dW=2.967e-02 db=2.685e-02
+  coupling1: L0: dW=2.253e-02 db=2.069e-02 | L1: dW=2.542e-02 db=2.060e-02 | L2: dW=2.972e-02 db=2.764e-02
+  coupling2: L0: dW=2.430e-02 db=2.519e-02 | L1: dW=2.268e-02 db=2.118e-02 | L2: dW=2.842e-02 db=2.995e-02
+  coupling3: L0: dW=2.410e-02 db=1.820e-02 | L1: dW=2.568e-02 db=2.630e-02 | L2: dW=2.928e-02 db=2.884e-02
+  coupling4: L0: dW=2.378e-02 db=2.283e-02 | L1: dW=2.539e-02 db=2.475e-02 | L2: dW=3.032e-02 db=2.978e-02
+  coupling5: L0: dW=2.269e-02 db=2.389e-02 | L1: dW=2.609e-02 db=2.672e-02 | L2: dW=3.269e-02 db=3.302e-02
+  step   20: loss=      899.6977  eval=    927.4607 (-fldj=    26.346 -lp=   947.997) max|z|=280.7
+  step   30: loss=      621.8178  eval=    625.2472 (-fldj=    58.737 -lp=   613.392) max|z|=317.4
+  step   40: loss=      420.1956  eval=    391.4463 (-fldj=    80.733 -lp=   357.596) max|z|=318.2
+  step   50: loss=      299.3088  eval=    295.9236 (-fldj=    91.235 -lp=   251.571) max|z|=330.0
+  step   60: loss=      233.9809  eval=    236.6729 (-fldj=    98.858 -lp=   184.698) max|z|=303.6
+  step   70: loss=      214.9724  eval=    233.1661 (-fldj=    99.524 -lp=   180.525) max|z|=300.1
+  step   80: loss=      237.7678  eval=    236.3792 (-fldj=    98.008 -lp=   185.254) max|z|=290.2
+  step   90: loss=      213.0179  eval=    210.9392 (-fldj=    97.956 -lp=   159.865) max|z|=271.1
+  step  100: loss=      212.3143  eval=    207.5581 (-fldj=   102.258 -lp=   152.183) max|z|=238.6
+  step  110: loss=      195.9955  eval=    213.2765 (-fldj=    99.593 -lp=   160.565) max|z|=259.4
+  step  120: loss=      282.5766  eval=    275.2174 (-fldj=   102.544 -lp=   219.555) max|z|=274.7
+  step  130: loss=      226.7470  eval=    234.5278 (-fldj=   102.051 -lp=   179.359) max|z|=271.7

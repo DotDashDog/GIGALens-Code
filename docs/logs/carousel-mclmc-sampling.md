@@ -424,6 +424,42 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE Fv4 — frozen measured scale + data-derived box (diagnosis-grounded
+  revision of Fv3)** (script `carousel_gate_f.py`; supersedes Fv3 after its pilot abort;
+  same gates, budgets, Phase-B data, and pilot-with-abort as Fv3 unless stated).
+  **Config:** whitening L′ = L_SVI · diag(sd_w) with sd_w = per-dim sd of the whitened
+  MAMS64 draws, FROZEN (measured, never ELBO-trained — the Fv2 rule; sd_w ∈ [1.70, 50.25]);
+  on the standardized coords the pre-registered rules give range = ceil(1.1 × max|w′|)
+  = **10**, bins = ceil(range × 48/35) = **14**; R·lr = 10 × 3e-3 = **0.03**, inside the
+  CPU-measured stable regime (≤ 0.035; the diagnosis Log entry has the mechanism: knot
+  decoder amplifies adam's coherent first-step logit kick by O(R), bins exonerated).
+  Containment: all Phase-B data in-box by construction (max|w′| = 8.97 ≤ 10);
+  zP/zM at 5.24/4.31. Phase-B chunks back to 8 (14-bin tensors < the validated 24-bin
+  footprint). Cache key car_std_r10b14ts0lr0.003. CPU-grid evidence for THIS regime:
+  synthetic r11b16 at lr 3e-3 stable (diagnosis run (d)) — CAVEAT: the pre-standardized
+  synthetic init was exactly optimal, so (d)/(e) test stability-near-optimum, not
+  convergence-from-afar (the real situation; a +4-nat step-10 transient from the same
+  mechanism appeared even there). Convergence support comes from R·lr = 0.03 sitting in
+  the regime where every real run to date trained stably (demo v3 0.035, v4 0.018,
+  Fv2 0.048), and the flow-gate + loss plots will adjudicate.
+  **Predictions:** (G1–G4 as Fv3, expectations updated) — G1 A-only fails pocket gate
+  (≈ −100s); G2 A+B PASSES (≥ −8; ≈ +5.4 if well-covering); G3 both ≤ SVI, and step-0 =
+  SVI exactly (identity-init nesting; note the frozen rescale changes the flow FAMILY but
+  identity-init still reproduces the SVI Gaussian exactly since diag(sd_w) is absorbed
+  invertibly — the nesting argument is intact); G4 the pullback-scale gate now tests
+  SHAPE, not scale (per-dim sd handled by the frozen rescale): A+B required to pass;
+  A-only recorded, sd plausibly in-band with |mean| the informative part. All falsifier
+  branches and pre-committed responses CARRY OVER from Fv3 verbatim (G2-fail-in-box →
+  ONE subsample/early-stop retry then human escalation; G4-fail-while-G2-passes → partial
+  win, human go/no-go; G1-wrong → investigate mechanism; G3-A-only → lr fallback;
+  G3-only-A+B → Phase-B evidence; pilot projection > 90 min → abort + re-checkpoint).
+  Blind spots carry over, plus: (d) sd_w estimated from 64k correlated draws
+  (chain-segregated; the ~2× occupancy uncertainty propagates into sd_w of the pocket
+  dims — bounded effect: a 2× sd misestimate shifts extents 2×, still ≪ box with the
+  1.1 margin... measured max|w′| already includes both basins, so containment is by
+  construction regardless). **Cost: ≤ 90 GPU-min**, pilot-gated as before.
+  **Status: awaiting rigor-grader approval of Fv4.**
+
 - **Run: carousel GATE Fv3 — data-derived range/bins (plan-§6 path, v3-validated recipe)**
   (script `carousel_gate_f.py`, same gates/apparatus as F/Fv2; commit follows this entry).
   HUMAN CONCURRENCE obtained 2026-07-08 after the pre-committed Fv2 escalation, verbatim:
@@ -843,6 +879,25 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-08 (CPU diagnosis of the 490-bin instability — mechanism: R·lr, not bins)**
+  `proposed (UNCERTIFIED)`. Synthetic 33-dim diagonal Gaussian with the carousel's
+  whitened sd profile (1.7–50), same flow/optimizer/loss, CPU, no renders. REPRODUCED:
+  range 357 blows up at lr 3e-3 within 10 steps regardless of bins (490 AND 48 —
+  **bin count exonerated**); stable at lr 1e-4; range 11 stable at 3e-3 (bins 16 and 48).
+  LOCALIZED (param-group probes): the zero-init final conditioner layer's first adam step
+  is rank-1-coherent (grad W_ij = h_i·ḡ_j), shifting ALL width/height logits by
+  ~lr·Σ|h| ≈ 30–60·lr; the softmax → ×2R → cumsum knot decoder converts any coherent
+  logit shift into knot displacement with gain O(R) — measured one-step output kick
+  ≈ 0.35·R, BIN-COUNT INDEPENDENT. At R=357 that is ~125 whitened units against target
+  sds ≤ 50: lp explodes, adam keeps stepping at fixed per-coordinate rate, settles in a
+  noisy equilibrium far above init. Never-hit-bin softmax coupling confirmed but
+  secondary; box-edge terms ruled out. **Stability knob: R·lr** (measured: 1.07
+  catastrophic, 0.036 marginal, ≤0.035 stable) — retro-consistent with EVERY prior run
+  (demo v3 R35·1e-3=0.035 stable; v4 R6·3e-3=0.018 stable; Fv2 R16·3e-3=0.048 stable-ish;
+  Fv3 R357·3e-3=1.07 unstable). Caveats recorded: diagonal target (mechanism is
+  parameterization-side), pre-standardized runs test stability-near-optimum. Scripts/logs
+  in job tmp. Diagnosis only; no fixes applied.
 
 - **2026-07-08 (carousel GATE Fv3 PILOT FIRED — run aborted pre-budget; two findings)**
   `proposed (UNCERTIFIED)`. The pre-committed timing pilot caught both problems at
