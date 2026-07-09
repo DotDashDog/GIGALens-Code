@@ -433,6 +433,10 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
     if hist_b is not None:
         save["hist_b"] = np.asarray(hist_b)
     np.savez(cache, **save)
+    # Strip mesh-sharding annotations from trained params: single-device
+    # downstream jits reject them ("device assignment 1 != mesh 4", Fv5
+    # attempt 2 crashed in the gate stage on exactly this).
+    params = jax.tree_util.tree_map(lambda x: jnp.asarray(np.asarray(x)), params)
     return params, {"a": np.asarray(hist_a),
                     "b": np.asarray(hist_b) if hist_b is not None else None,
                     "diverged": diverged}
