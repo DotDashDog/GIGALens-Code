@@ -475,7 +475,11 @@ multimodality, conditioning, or the NFW profile.
   weigh that signal (this is the surviving residue of the Fv2 demo-re-validation
   obligation). **Cost: ≤ 90 GPU-min** (Phase A ~60 measured-based,
   render-dominated; Phase B ~20 at 32 chunks; gates ~5).
-  **Status: awaiting rigor-grader approval of Fv3.**
+  **Status: Fv3 approved 2026-07-08 (rigor-grader, second round; all derivation numbers
+  independently reproduced); launch authorized at ≤90 GPU-min with the timing pilot's
+  projection as a hard in-run gate. Operational note (grader): on any RESUMED run either
+  set GATE_F_SKIP_PILOT=1 or delete the PILOT* caches — cached pilot legs would print a
+  bogus projection.**
 
 - **Run: carousel GATE F — one-shot flow training + pocket-coverage A/B** (plan §5.2/§4.4;
   script `experiments/flow_precond/carousel_gate_f.py`, branch `flow-precond-mams`; model
