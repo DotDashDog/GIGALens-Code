@@ -497,7 +497,15 @@ multimodality, conditioning, or the NFW profile.
   4-GPU node, GATE_F_SKIP_PILOT=1, Slurm-capped 60 min. Scope: flow training + gates only;
   A2 exercisable ONCE under the recorded guardrails; re-benchmark = human go; a gate pass
   is NOT a benchmark prediction beyond the recorded uncertified ~3×-margin scaling
-  argument.**
+  argument.** ATTEMPT 1 (2026-07-09) CRASHED pre-training: XLA collective Rendezvous
+  deadlock + abort (AwaitAndLogIfStuck) at the first Phase-A step on 4 real GPUs — the
+  GSPMD auto-sharding variant; the CPU virtual-device test structurally cannot exercise
+  NCCL (recorded caveat proved out). Environmental fix, same estimator: parallel branches
+  rewritten to the MANUAL shard_map pattern proven on this cluster by the MAMS kernel
+  (renderer inside shard_map, psum over the device axis — ran the full 4-GPU benchmark);
+  equivalence test re-run as committed: PASS, identical values (8.9e-16 / 5.6e-17).
+  Cost of attempt ≈ 1.3 GPU-h (deadlock+abort ~20 min × 4). Relaunch with fail-fast log
+  watch.
 
 - **Run: carousel BENCHMARK (§5.4) — flow-MAMS vs vanilla MAMS** (HUMAN approval required
   by standing pre-commitment; grader pre-review first). **Question:** does preconditioning
