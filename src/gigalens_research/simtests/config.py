@@ -49,6 +49,8 @@ import itertools
 import os
 from typing import Any, Dict, List, Optional
 
+from gigalens_research.paths import resolve_out_dir
+
 try:
     import yaml as _yaml
     _YAML_AVAILABLE = True
@@ -128,8 +130,11 @@ class CampaignSpec:
         d = dict(d)
         name = d["name"]
         seed = int(d.get("seed", 0))
-        output_dir = os.path.expanduser(
-            str(d.get("output_dir", f"~/GIGALens-Code/simtests_results/{name}"))
+        # Default lands under the results root (scratch on NERSC); an explicit
+        # ``output_dir:`` in the YAML still wins and, if absolute, is used
+        # verbatim. See gigalens_research.paths.resolve_out_dir.
+        output_dir = resolve_out_dir(
+            d.get("output_dir", os.path.join("simtests_results", name))
         )
         dataset = DatasetSpec.from_dict(d["dataset"])
         inference = InferenceSpec.from_dict(d["inference"])
