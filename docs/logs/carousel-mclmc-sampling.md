@@ -1097,6 +1097,30 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-09 (carousel GATE Fv5 RAN — HIGH-SIDE falsifier fired: resolution mechanism
+  SUPPORTED, Phase-B 4000 steps OVERFIT; pre-committed human escalation)**
+  `proposed (UNCERTIFIED)`. Observed vs re-registered, A+B flow at 28 bins:
+  **pocket ratio +13.89** vs target band [+3.43, +7.43] — the ratio moved +1.0 → +13.9,
+  so per the pre-committed mechanism-falsification reading the RESOLUTION mechanism is
+  SUPPORTED (capacity was binding at 14 bins) — but training overshot: **A+B ELBO
+  291488.4 ± 7.9 FAILS the gate** (SVI+35; Fv4's A+B was SVI−21) while train-fkl
+  improved (−88.78 vs −87.93) — textbook overfit to the ~6.1k correlated pocket draws,
+  exactly the named A1 risk (no held-out fkl monitoring). Pullback-scale still passes for
+  A+B (sd [0.907, 1.021]; |mean| crept 0.095 → 0.33). A-only at 28 bins: ELBO fine
+  (291432.6), pocket −23.6 (28 bins let reverse-KL carve the pocket out MORE than 14),
+  pullback fails (recorded). Physical reading of +13.9: the trap is now INVERTED — q
+  OVERWEIGHTS the pocket by ~8.5 nats relative to truth (u-space pocket image ~e^8.5
+  UNDER-dense ⇒ chains would rarely enter), AND the bulk fit is broken; this flow is not
+  benchmark-eligible on two counts. **Pre-committed route: high-side ⇒ evaluate jointly
+  (done above) ⇒ ESCALATE TO THE HUMAN, no auto-lever; the A2 branch does NOT apply
+  (it was armed for ratio < +3.43).** Process notes: 4-GPU shard_map training WORKED
+  (Phase A 686 s ≈ 11.4 min vs 40 single-GPU; attempt 1 = NCCL rendezvous deadlock of the
+  GSPMD variant, 1.3 GPU-h; attempt 2 trained but crashed at the gate stage on leaked
+  mesh annotations — fixed, gates re-run from caches). CACHE-KEY GAP found: the flow tag
+  encodes lr but NOT phase_b_steps — any Phase-B-length variant needs the tag extended
+  or it silently reuses the 4000-step cache. Fv5 cost ≈ 2.8 GPU-h; cumulative ≈ 17.
+  Artifacts: carousel_gate_f_out/* (r10b28 caches, updated summary).
+
 - **2026-07-09 (carousel BENCHMARK ATTEMPT 2 RAN — ALL SIX WIN CONDITIONS FAIL; the
   pre-registered NEGATIVE finding stands)** `proposed (UNCERTIFIED)`. Clean run: 4 GPUs
   (2 chains/device), 51 min wall (≈3.4 GPU-h), kernel cap results-phase binding = 0.0
