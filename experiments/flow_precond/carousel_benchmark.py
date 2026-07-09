@@ -178,8 +178,13 @@ def main():
                     seed=SEED, progress_bar=False, debug_output=True,
                     max_num_integration_steps=60)
     wall = time.perf_counter() - t0
-    capped_frac = float(np.asarray(hist.traj_capped).mean())
-    print(f"trajectory-cap binding fraction: {capped_frac:.4f}")
+    tc = np.asarray(hist.traj_capped)
+    capped_frac = dict(overall=float(tc.mean()),
+                       burnin=float(tc[:, :-NUM_RESULTS].mean())
+                       if tc.ndim == 2 and tc.shape[1] > NUM_RESULTS else None,
+                       results=float(tc[:, -NUM_RESULTS:].mean())
+                       if tc.ndim == 2 and tc.shape[1] >= NUM_RESULTS else None)
+    print(f"trajectory-cap binding fraction: {json.dumps(capped_frac)}")
     u = np.asarray(hist.position[:, -NUM_RESULTS:, :])
     nis = np.asarray(hist.num_integration_steps)
     if nis.ndim == 2 and nis.shape[1] >= NUM_RESULTS:

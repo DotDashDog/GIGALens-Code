@@ -488,7 +488,14 @@ multimodality, conditioning, or the NFW profile.
   **Falsifiers + pre-committed readings:** W1 fails ⇒ the flow preconditions geometry but
   MAMS still cannot cross in u-space ⇒ NEGATIVE finding for the flow-MAMS mechanism on
   multimodal targets (the flow itself remains validated by GATE Fv4); no retuning
-  iteration without a new checkpoint. W1 passes but W2 fails ⇒ mixing works, occupancy
+  iteration without a new checkpoint. CAP CAVEAT (pre-committed, amendment v2): the
+  W1-fail and W4-fail readings apply as written ONLY if the results-phase trajectory-cap
+  binding fraction ≈ 0; a fail with a materially binding cap has an alternative
+  explanation (truncated trajectories) ⇒ diagnose before attribution, no
+  reclassification. A W4 PASS under a binding cap remains valid (conservative
+  direction). Expected: ≈ 0 (baseline max n = 38 — from its stored ADAPTATION-phase
+  traces; results-phase n is implied by the frozen final L/ε — vs cap 60). The script
+  reports the capped fraction split burnin vs results. W1 passes but W2 fails ⇒ mixing works, occupancy
   disagrees with all estimators ⇒ escalate to human with the PRE-REGISTERED evidence
   standard for "genuine measurement of the pocket mass" (note: BOTH arms are MH-exact in
   law — exactness is not the discriminator, CONVERGENCE is): occupancy-indicator R̂ ≤ 1.02 (plain split-R̂ on
