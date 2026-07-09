@@ -426,11 +426,20 @@ try:
 except TypeError:
     m3_opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
 t0 = time.time()
-map_samples, map_lps, map_chisqs = model_seq.MAP(
-    m3_opt, n_samples=M3_N, num_steps=M3_STEPS, seed=SEED,
-    output_type="all", pbar_interval=0)
-map_samples = np.asarray(map_samples)   # (n, steps, dim)
-map_lps = np.asarray(map_lps)           # (n, steps)
+# Executed as sequential 128-start chunks (the production manifest's proven scale;
+# 1024x4000 with output_type="all" OOMs at XLA compile) with per-chunk seeds
+# SEED..SEED+7 -- still 1024 independent prior-drawn starts. Recorded amendment.
+M3_CHUNK = min(128, M3_N)
+_samps, _lps = [], []
+for ci in range(M3_N // M3_CHUNK):
+    s, l, _ = model_seq.MAP(m3_opt, n_samples=M3_CHUNK, num_steps=M3_STEPS,
+                            seed=SEED + ci, output_type="all", pbar_interval=0)
+    _samps.append(np.asarray(s))
+    _lps.append(np.asarray(l))
+    print(f"[M3] chunk {ci}: best lp {np.nanmax(_lps[-1]):.3f} "
+          f"({time.time()-t0:.0f}s elapsed)", flush=True)
+map_samples = np.concatenate(_samps)    # (n, steps, dim)
+map_lps = np.concatenate(_lps)          # (n, steps)
 m3_wall = time.time() - t0
 
 final_z = map_samples[:, -1]
@@ -453,7 +462,8 @@ def classify(z, lp):
 pk_f, mn_f = classify(final_z, final_lp)
 pk_b, mn_b = classify(best_z, best_lp)
 summary["M3"] = dict(
-    wall_s=m3_wall, n=M3_N, steps=M3_STEPS,
+    wall_s=m3_wall, n=M3_N, steps=M3_STEPS, chunk=M3_CHUNK,
+    chunk_seeds=list(range(SEED, SEED + M3_N // M3_CHUNK)),
     n_nan_final=int(np.isnan(final_lp).sum()),
     lp_recompute_vs_lib_max_abs=float(np.nanmax(np.abs(final_lp - final_lp_lib))),
     final=dict(pocket=int(pk_f.sum()), main=int(mn_f.sum()),
