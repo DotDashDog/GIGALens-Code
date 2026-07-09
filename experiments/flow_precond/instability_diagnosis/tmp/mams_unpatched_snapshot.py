@@ -51,8 +51,7 @@ from threading import Lock
 def MAMS_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
           target_acceptance=0.9, init_L=None, init_step_size=None,
           frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
-          progress_bar=False, seed=0, debug_output=False, regularize_mass_matrix=False,
-          max_num_integration_steps=60):
+          progress_bar=False, seed=0, debug_output=False, regularize_mass_matrix=False):
     # Scene-only: the ProbModel owns batch-flexible per-dataset SceneSimulators, so
     # log_prob(z) renders through them directly -- no separately-built simulator.
     def log_prob(z):
@@ -100,7 +99,6 @@ def MAMS_JIT(model_seq, qz, n_hmc=16, num_burnin_steps=1000, num_results=2000,
         svi_mass_matrix_weight=10.0 * n_chains,
         windowed_mass_matrix=True,
         regularize_mass_matrix=regularize_mass_matrix,
-        max_num_integration_steps=max_num_integration_steps,
         progress_bar=progress_bar,
     )
 
@@ -133,7 +131,6 @@ def full_mams_with_adapt_sharded(
     svi_mass_matrix_weight=20.,
     windowed_mass_matrix=True,
     regularize_mass_matrix=False,
-    max_num_integration_steps=60,
     progress_bar=False,
 ):
     """Sharded MAMS tuning + sampling, mirroring `full_mclmc_with_adapt_sharded`.
@@ -156,28 +153,6 @@ def full_mams_with_adapt_sharded(
     n_k (number of integration steps) is a SHARED Halton draw computed once per step
     from the cross-chain-mean step size and the global L, so the fori_loop trip count
     is identical across all chains -- no ragged trajectories under shard_map.
-
-    `max_num_integration_steps` (N_MAX, default 60) hard-bounds n_k. Without it,
-    a dual-averaging step-size collapse mid-transient (or an eps frozen too small
-    at the end of a too-short burnin -- mode 0 runs NO controllers) makes
-    n = L/eps explode and a single transition can cost ~1e8+ gradient evals.
-    Following TFP's GradientBasedTrajectoryLengthAdaptation (the `max_leapfrog_steps=30`
-    used by gigalens-old HMC) and blackjax's chees_adaptation, the cap is applied to
-    the *pre-jitter* trajectory quantities, in two places:
-
-      * the Halton MEAN is clamped: avg_n <= N_MAX/2, so the quasi-uniform jitter
-        family (mean avg_n, support ~[1, 2*avg_n-1]) is preserved intact -- realized
-        n_k <= N_MAX-1 -- instead of truncating post-jitter draws onto an atom at
-        the cap (which would kill the anti-cycling coverage and bias the mean);
-      * the L update is clamped to N_MAX/2 * mean step size (anti-windup, the
-        analog of TFP's `_clip_max_trajectory_length`), so the installed L is
-        always realizable and the Hist L trace stays honest.
-
-    The loop is self-correcting when the cap binds during tuning: capped (shorter)
-    trajectories have higher MH acceptance, dual averaging then grows the step size,
-    and avg_n = L/eps falls back under the cap. `Hist.traj_capped` records, per step,
-    whether the avg_n clamp was binding (mean it for a capped fraction).
-    When the cap never binds the sampler is bit-identical to the uncapped kernel.
     """
     num_devices = len(jax.devices())
     num_chains = (num_chains // num_devices) * num_devices
@@ -187,14 +162,6 @@ def full_mams_with_adapt_sharded(
 
     dim = state_init.position.shape[-1]
     decay_rate = (num_effective_samples - 1.0) / (num_effective_samples + 1.0)
-
-    # Trajectory-length cap: clamp the Halton MEAN at N_MAX/2 so the realized
-    # post-jitter draw (support ~[1, 2*mean-1]) never exceeds N_MAX. Python float
-    # so jnp.minimum stays weakly typed (no dtype change when the cap is inactive).
-    max_num_integration_steps = int(max_num_integration_steps)
-    if max_num_integration_steps < 2:
-        raise ValueError("max_num_integration_steps must be >= 2")
-    half_max_n = 0.5 * max_num_integration_steps
 
     welford_init_fn, _, welford_cov = welford_algorithm(is_diagonal_matrix=False)
 
@@ -288,12 +255,9 @@ def full_mams_with_adapt_sharded(
 
     # --- Batched scan body: explicit batch dim, collectives only use 'device'. ---
 
-    # NOTE: `traj_capped` is appended LAST so existing consumers that unpack or
-    # index the earlier fields keep working (all known consumers use attributes).
     Hist = namedtuple("hist", [
         "position", "step_size", "L", "inverse_mass_matrix", "nonan", "acceptance_rate",
         "is_accepted", "num_integration_steps", "energy_change_raw", "kernel_nonan", "step_norm",
-        "traj_capped",
     ])
 
     l_buffer_start = L_adaptation_step - num_steps3
@@ -319,19 +283,9 @@ def full_mams_with_adapt_sharded(
                 local_ss_sum = jnp.sum(step_sizes)
                 global_ss_sum = jax.lax.psum(local_ss_sum, axis_name='device')
                 mean_ss = global_ss_sum / (chains_per_device * jax.lax.axis_size('device'))
-                avg_n_raw = jnp.maximum(params.L / mean_ss, 1.0)
-                # Pre-jitter cap (see docstring): clamp the Halton mean, keeping
-                # the jitter distribution's shape/mean intact; the post-jitter
-                # minimum below is a belt-and-braces guard that is unreachable
-                # while the mean clamp is active (rint(0.5 + h*rescale(N/2)) <= N-1).
-                avg_n = jnp.minimum(avg_n_raw, half_max_n)
-                # >= (not >): after the L anti-windup clamp installs
-                # L = (N_MAX/2) * mean_ss, avg_n_raw sits exactly AT the bound;
-                # that pinned state is semantically capped and must stay visible.
-                traj_capped = avg_n_raw >= half_max_n
-                num_integration_steps = jnp.minimum(
-                    jnp.maximum(halton_trajectory_length(i, avg_n), 1),
-                    max_num_integration_steps,
+                avg_n = jnp.maximum(params.L / mean_ss, 1.0)
+                num_integration_steps = jnp.maximum(
+                    halton_trajectory_length(i, avg_n), 1
                 ).astype(jnp.int32)
 
             def per_chain(prev_state, rng_key, nan_key, step_size, adapt_state):
@@ -467,13 +421,7 @@ def full_mams_with_adapt_sharded(
                     local_min_ess = jnp.min(per_chain_ess)
                     global_min_ess = jax.lax.pmin(local_min_ess, axis_name='device')
                     L_new = Lfactor * params.L * num_steps3 / global_min_ess
-                    L_new = jnp.minimum(L_new, params.L * L_max_ratio)
-                    # Anti-windup (TFP `_clip_max_trajectory_length` analog):
-                    # never install an L whose average trajectory would exceed
-                    # the integration-step cap at the current (final, synced)
-                    # step size. Prevents a capped, low-ESS tune3 from pushing
-                    # L into unrealizable territory.
-                    return jnp.minimum(L_new, half_max_n * mean_ss)
+                    return jnp.minimum(L_new, params.L * L_max_ratio)
 
             new_L = jax.lax.cond(
                 i == L_adaptation_step,
@@ -495,7 +443,6 @@ def full_mams_with_adapt_sharded(
                 energy_change_raw=energy_changes_raw,
                 kernel_nonan=kernel_nonans,
                 step_norm=step_norms,
-                traj_capped=jnp.broadcast_to(traj_capped, new_step_sizes.shape),
             )
             return (new_states, params, new_step_sizes, new_adapt_states, welford_state, l_stage_bufs), h
 

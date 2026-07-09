@@ -509,7 +509,34 @@ multimodality, conditioning, or the NFW profile.
   mechanism (diagnosis entry); (iii) the Fv4 gate results.
   **Status: grader pre-review PASSED 2026-07-08 (three rounds; baseline claims
   independently recomputed and corrected, W1 rebuilt against measured reality, W1c
-  estimator fixed); AWAITING HUMAN DECISION.**
+  estimator fixed); human APPROVED 2026-07-08 with the 8×4000 amendment.**
+  **ATTEMPT 1 (2026-07-08/09) FAILED — full 4 GPU-h allocation burned, no science:**
+  the in-run timing pilot's second leg (20+20 steps) hung ~3.6 h until the Slurm wall
+  limit (first leg completed in 149.6 s incl. compile; flow identity check PASSED on GPU,
+  1.0029454473771153 vs recorded ...69874). Mechanism hypothesis (UNCERTIFIED, later
+  supported by kernel analysis): truncated adaptation schedules can strand step_size
+  mid-transient and n = L/ε is UNBOUNDED in the kernel (only a floor). Design lesson:
+  short-burnin MAMS pilots are structurally unsound — the pilot meant to protect the
+  budget consumed it. A separate 25-min false start (245-min salloc vs 240-min QOS cap)
+  cost 0 GPU-h. Cumulative ≈ 9.6 GPU-h.
+  **AMENDMENT v2 (2026-07-09, prepared at human direction; grader re-confirmation
+  pending):** (i) in-run pilot REMOVED (budget bounded by the Slurm wall limit instead);
+  (ii) kernel trajectory-length cap `max_num_integration_steps=60` added to MAMS_JIT at
+  the human's direction ("HMC has a similar rule... 60ish steps"), mirroring TFP's
+  GradientBasedTrajectoryLengthAdaptation clip (= gigalens-old HMC's max_leapfrog_steps=30
+  precedent): Halton MEAN clamped at N_MAX/2 pre-jitter (jitter family preserved) + L
+  anti-windup clamp (L ≤ N_MAX/2·mean ε) + Hist.traj_capped diagnostic; CPU tests:
+  bit-identical when not binding (healthy 200+200, all Hist fields tobytes()-equal;
+  baseline p99 n=37, max 38 vs cap 60 ⇒ never binds when healthy), hang class bounded
+  (5.8 s vs ~5-day projection), controller self-correcting (capped fraction → 0 during
+  tuning, no L windup); one falsifier revision honestly recorded (>= vs > on the capped
+  flag, mams_cap_notes.md §4). (iii) Run SHARDED across 4 GPUs (2 chains/device;
+  shard-map path verified on 4 virtual CPU devices: mesh auto-discovery, 8%4=0 exact,
+  psum-shared mass matrix; distribution gates pass). RECORDED: the sample stream is
+  DEVICE-COUNT-DEPENDENT (reduction order chaos-amplifies through adaptation) — the
+  4-GPU run is a different, equally-valid realization; device count recorded in the
+  model card alongside seed. (iv) Expected wall ~30-45 min on 4 GPUs; allocation capped
+  at 60 min ⇒ worst case 4 GPU-h charge, expected ~2-3.
 
 - **Run: carousel GATE Fv4 — frozen measured scale + data-derived box (diagnosis-grounded
   revision of Fv3)** (script `carousel_gate_f.py`; supersedes Fv3 after its pilot abort;

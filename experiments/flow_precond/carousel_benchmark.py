@@ -138,7 +138,9 @@ def main():
 
     model_card = dict(script=os.path.abspath(__file__), jax=jax.__version__,
                       devices=[str(d) for d in jax.devices()],
+                      n_devices=len(jax.devices()),  # sample stream depends on it
                       n_chains=N_CHAINS, burnin=NUM_BURNIN, results=NUM_RESULTS,
+                      max_num_integration_steps=60,
                       flow=os.path.basename(FLOW_CACHE), seed=SEED,
                       pocket_ratio_check=pocket_ratio)
     print("MODEL CARD:", json.dumps(model_card, indent=2))
@@ -173,8 +175,11 @@ def main():
     t0 = time.perf_counter()
     hist = MAMS_JIT(wrapped, qz_u, n_hmc=N_CHAINS,
                     num_burnin_steps=NUM_BURNIN, num_results=NUM_RESULTS,
-                    seed=SEED, progress_bar=False, debug_output=True)
+                    seed=SEED, progress_bar=False, debug_output=True,
+                    max_num_integration_steps=60)
     wall = time.perf_counter() - t0
+    capped_frac = float(np.asarray(hist.traj_capped).mean())
+    print(f"trajectory-cap binding fraction: {capped_frac:.4f}")
     u = np.asarray(hist.position[:, -NUM_RESULTS:, :])
     nis = np.asarray(hist.num_integration_steps)
     if nis.ndim == 2 and nis.shape[1] >= NUM_RESULTS:
@@ -206,6 +211,7 @@ def main():
     summary = dict(
         model_card=model_card, wall_s=wall, decode_s=decode_s,
         overhead=overhead, grad_counts=grad_counts,
+        traj_capped_fraction=capped_frac,
         flow_arm=dict(occ=occ_flow, max_rhat=float(rhat_f.max()),
                       min_ess=float(ess_f.min()),
                       min_ess_per_1000_chain_steps=float(ess_f_per1000.min())),
