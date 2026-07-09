@@ -143,23 +143,12 @@ def main():
                       pocket_ratio_check=pocket_ratio)
     print("MODEL CARD:", json.dumps(model_card, indent=2))
 
-    # PRE-COMMITTED TIMING PILOT: two short runs, difference cancels compile.
-    if os.environ.get("BENCH_SKIP_PILOT") != "1":
-        def timed(nb, nr):
-            t = time.perf_counter()
-            np.asarray(MAMS_JIT(wrapped, qz_u, n_hmc=N_CHAINS,
-                                num_burnin_steps=nb, num_results=nr,
-                                seed=SEED + 99, progress_bar=False))
-            return time.perf_counter() - t
-        t1 = timed(10, 10)
-        t2 = timed(20, 20)
-        per_step = max(0.0, (t2 - t1) / 20)
-        proj_h = (NUM_BURNIN + NUM_RESULTS) * per_step / 3600 + 0.2
-        print(f"PILOT: {per_step:.3f} s/step, projected {proj_h:.2f} h "
-              f"(budget {BUDGET_H})")
-        if proj_h > BUDGET_H:
-            print("PILOT ABORT: projection exceeds budget; re-checkpoint required.")
-            sys.exit(2)
+    # NO in-run timing pilot. The 2026-07-08 attempt showed short-burnin MAMS
+    # pilots are structurally unsound: adaptation gets a truncated schedule,
+    # can strand step_size mid-transient, and n = L/eps explodes (a 20+20-step
+    # pilot hung ~3.6 h and burned the whole allocation). Budget is bounded by
+    # (i) the Slurm allocation wall limit and (ii) the kernel's trajectory-
+    # length cap (max_num_integration_steps), not by a projection.
 
     # MANDATORY overhead report (checkpoint deviation (iii)): flow-eval fraction
     # of a gradient evaluation, measured post-compile on a matched batch.
