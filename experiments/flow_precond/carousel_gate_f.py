@@ -210,7 +210,8 @@ def main():
                 dict(ratio_diag=float(lq[0] - lq[1])))
 
     params_ab, hist_ab = dv.train_flow(
-        f"AB_es250_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
+        f"AB_es250x{PHASE_B_STEPS}blr{PHASE_B_LR:g}_{sp_key}", params_a,
+        sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 12,
         phase_b_eval_fn=es_eval, phase_b_eval_every=250,
         phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR,

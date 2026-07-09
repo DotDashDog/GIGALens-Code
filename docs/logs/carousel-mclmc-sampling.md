@@ -431,8 +431,11 @@ multimodality, conditioning, or the NFW profile.
   **Design:** rerun Phase B (28 bins, lr 1e-4, max 4000 steps) from the cached Phase-A
   flow with EARLY STOPPING ON THE DIRECT ELBO: every 250 steps evaluate the 5×128-draw
   neg-ELBO with FIXED keys (common random numbers; measured fixed-key resolution ~0.3
-  nats vs ±8 across-key); STOP at the last checkpoint before the ELBO worsens by > 2
-  MC-sd from its running best (patience 1); keep the best-ELBO checkpoint's params.
+  nats vs ±8 across-key); STOP (grader-revised rule) on TWO CONSECUTIVE checks where
+  metric − running-best > max(2·se, 4.0 nats) — the floor is derived from this stack's
+  observed benign optimizer transients (~+4 nats) vs the CRN estimator's 2·se ≈ 0.23
+  nats at healthy params (hair-trigger) and ≈ 7 nats at damaged params (desensitized);
+  patience 2 costs ≤ 250 extra steps. REVERT to the best-ELBO checkpoint's params.
   Rationale (user's concern, addressed): ELBO is mode-seeking — blind to pocket
   UNDER-coverage — so it is NEVER asked to certify coverage; it detects the two observed
   Phase-B failure modes (bulk damage; gross over-weighting, which KL(q‖p) charges in
@@ -460,9 +463,25 @@ multimodality, conditioning, or the NFW profile.
   independence check fails ⇒ warping-style pathology without the anchor ⇒ human
   escalation with artifacts; (iv) ELBO never recovers to ≤ SVI at any checkpoint ⇒
   Phase B at 28 bins is bulk-destructive from step ~0 ⇒ joint evaluation, human
-  escalation. **Cost: ≤ 25 min wall single GPU (Phase A cached; Phase B ≤ 4000 steps +
-  16 ELBO checks ≈ 80 renders' worth + gates), Slurm-capped 45 min. GPU-h no longer the
-  constraint per the human; wall is.**
+  escalation; (v — grader item) stop fires (or run completes) with the BEST checkpoint's
+  ratio > +7.43 while its ELBO is healthy ⇒ same reading as (ii): data-profile suspect,
+  human escalation, no auto-lever. A2 note: branch (i) re-arms the SAME single A2
+  allowance carried unspent from Fv5 (whose high-side branch excluded it) — a carry-over,
+  not a reset. PRE-REGISTERED INSTRUCTION (grader's transit-granularity warning): the
+  ratio-diagnostic trace is read BEFORE choosing any branch — if the ratio transits the
+  band entirely between two 250-step checks while ELBO stays flat, the finding is that
+  250-step granularity cannot resolve the transit, and no branch is entered on a
+  mischaracterized endpoint. Winner's-curse note (grader): the stop selects the min-ELBO
+  checkpoint of ~16, and the ELBO gate then tests the selected flow — bias bounded by the
+  across-key se (~3 nats), stop/gate evaluations use different key families, vs 21 nats
+  of gate headroom: acceptable, recorded.
+  **Cost (measured basis, grader item):** Fv5 attempt-2 telemetry — 24.5 min total on
+  4 GPUs INCLUDING compile (~8), Phase A (11.4), and the full 4000-step Phase B (≈4–5) —
+  so Fv6 on 4 GPUs with Phase A cached: compile ~8 + Phase B ≤ 5 + 16 ES checks (each
+  5×128 = 640 forward renders; ≈ 8 min total; the ratio diagnostic is spline-only,
+  0 renders) + gates ~4 ⇒ **≈ 25 min wall, Slurm-capped 45 min on 4 GPUs** — falsifier
+  branch (ii) (reach step 4000) is safely inside the cap. GPU-h not the constraint per
+  the human; wall is.**
   **Status: awaiting rigor-grader approval of Fv6.**
 
 - **Run: carousel GATE Fv5 — the plan-§5.4 ladder's ONE architecture escalation

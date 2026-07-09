@@ -203,6 +203,45 @@ in the 2026-07-09 log entry. Live artifacts:
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **(2026-07-09) Direct-χ² lstsq + rfft2 convolution — equivalence & speedup gates
+  (implementation of C-8 targets 1–2; user-approved direction, in-session).**
+  **Classification:** two deterministic-identity claims (exact-math refactors), each
+  with a stochastic timing claim on top. Code in gigalens worktree `lstsq-fast`
+  (branch off linusu-dev-merge @ 4b8db1d); validation
+  `wip/validate_fast_lstsq.py` there; results recorded here.
+  - **Change 1 (direct-χ²):** χ²(c) = ‖Y‖² − 2cᵀ(XᵀY) + cᵀ(XᵀX)c with the
+    UNREGULARIZED gram in the quadratic — an algebraic identity in the solved c
+    (c itself still comes from the regularized solve, unchanged), equal to the
+    pixel-space χ² of the reconstructed image for any c (mask ∈ {0,1} ⇒ mask² =
+    mask). Cause hypothesis for speed: removes the second basis traversal (image
+    = Σ ret·c) from the VJP — the dominant backward bucket (C-7/C-8) — plus the
+    full-size model-image intermediates.
+    Equivalence prediction: rel|Δχ²| ~1e-12 (f64 reassociation over ~4e4-term
+    sums, ε√N ≈ 2e-14, headroom for cancellation); **falsifier: rel > 1e-8 on any
+    of 8 prior draws (anchor AND one n_max=30 cell for conditioning) ⇒ bug, not
+    shippable.** grad(log_prob) max rel err ≤ 1e-6 (predict ~1e-10).
+    Speedup prediction: anchor grad total −15–35%; **falsifier: < 5% ⇒ the
+    second-traversal model of the backward is wrong — stop, re-profile, don't
+    ship complexity.**
+  - **Change 2 (rfft2 + 5-smooth padded sizes; kernel FFT left to XLA
+    constant-folding):** identical linear-convolution values (extra zero-padding
+    beyond the linear length does not alter the cropped 'same' region); real FFTs
+    halve FFT work/bytes. Equivalence prediction: conv out & grad rel ≤ 1e-13
+    (f64; different FFT algorithm); **falsifier: rel > 1e-10 or any NaN in the
+    VJP (the historical rfft-VJP-bug rationale) ⇒ revert to full-complex.**
+    Speedup prediction: basis+conv+pool stage 1.2–1.6×, grad total −8–20%;
+    falsifier: < 3% ⇒ conv share overestimated (keep only if exact, zero-cost).
+  - **Combined:** ≥ 1.25× anchor grad; measure 2×2 variant matrix
+    {complex-fft, rfft} × {image-χ², direct-χ²} at the anchor + the winning
+    variant at (30,ss2) and (30,ss4,vela); XLA peak memory per variant (predict
+    direct-χ² cuts peak ≥ 15%; informs C-9/remat). Blind spots: (i) equivalence
+    at prior draws doesn't probe pathological gram conditioning beyond the
+    n_max=30 cell; (ii) stage differencing impurity as before; (iii) library
+    validation tests (`gigalens/tests/validation`) must also pass — regression
+    gate, not just the new-path gate.
+  - Metric/timing conventions and contention rule as Phase 2. Cost: ~10–20
+    GPU-min, login A100. **Status: awaiting approval (rigor-grader).**
+
 - **(2026-07-09) Slow-regime profiling matrix (Phase 2)** — extend Phase 0/1 to the
   user's actual slow regimes: high n_max (30/40), ss=4, 300-px cutouts, 2 datasets,
   MAP-scale batch. Purpose: rank the candidate speedup targets (direct-χ² lstsq VJP,
