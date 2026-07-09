@@ -424,6 +424,47 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE Fv6 — Phase-B ELBO-early-stop (human-directed 2026-07-09 after the
+  Fv5 high-side escalation; user's balance question answered and design adjusted
+  accordingly: the stop rule and the pass gates use DISJOINT instruments).**
+  (script `carousel_gate_f.py`; Phase A reused from the r10b28 cache — no retrain.)
+  **Design:** rerun Phase B (28 bins, lr 1e-4, max 4000 steps) from the cached Phase-A
+  flow with EARLY STOPPING ON THE DIRECT ELBO: every 250 steps evaluate the 5×128-draw
+  neg-ELBO with FIXED keys (common random numbers; measured fixed-key resolution ~0.3
+  nats vs ±8 across-key); STOP at the last checkpoint before the ELBO worsens by > 2
+  MC-sd from its running best (patience 1); keep the best-ELBO checkpoint's params.
+  Rationale (user's concern, addressed): ELBO is mode-seeking — blind to pocket
+  UNDER-coverage — so it is NEVER asked to certify coverage; it detects the two observed
+  Phase-B failure modes (bulk damage; gross over-weighting, which KL(q‖p) charges in
+  proportion to misplaced mass) while being ≈ flat along legitimate fkl progress.
+  Coverage is judged ONLY by the unchanged gates: ratio ∈ [+3.43, +7.43] (known truth
+  +5.43), pocket-mass band [5%, 13%], held-out sd(lp − log q) ≤ 2 nats over 512 pocket
+  draws, pullback-scale. The stop rule never sees any gate statistic (no self-grading);
+  the RATIO TRAJECTORY is recorded every 250 steps (2 renders/check) as a DIAGNOSTIC
+  ONLY, pre-registered as excluded from the stop decision.
+  **Cache-tag fix (pre-registered):** the flow tag now encodes the Phase-B schedule
+  (e.g. AB_es250 suffix) — the Fv5 log entry recorded that phase_b_steps was absent from
+  the key and would silently reuse the 4000-step cache.
+  **Predictions:** the ELBO trace stays ≈ flat (within 2 sd of Fv4's SVI−21 level) for
+  an initial stretch and then degrades — the stop fires BEFORE step 4000 (Fv5 proved
+  degradation by then); at the stopped checkpoint the ratio lies IN the band (mechanism:
+  at 28 bins the ratio provably transits +1 → +13.9, and overfit damage and ratio
+  overshoot were coupled in Fv5, so stopping at bulk-health should land mid-transit).
+  **Falsifiers + pre-committed readings:** (i) stop fires but ratio still < +3.43 ⇒
+  capacity/coverage progress is slower than bulk damage ⇒ the A2 anchor branch becomes
+  available (its original arming condition, one pass, all recorded guardrails); (ii)
+  ELBO stays healthy to 4000 AND ratio > +7.43 ⇒ overfit ruled out ⇒ prime suspect =
+  the TRAINING DATA's pocket profile (chain-segregated 9.6% occupancy, ~2× uncertainty;
+  the named data-limited alternative) ⇒ NEGATIVE finding for fkl-on-this-data, human
+  escalation — new data, not new knobs; (iii) stop fires in-band on ratio but an
+  independence check fails ⇒ warping-style pathology without the anchor ⇒ human
+  escalation with artifacts; (iv) ELBO never recovers to ≤ SVI at any checkpoint ⇒
+  Phase B at 28 bins is bulk-destructive from step ~0 ⇒ joint evaluation, human
+  escalation. **Cost: ≤ 25 min wall single GPU (Phase A cached; Phase B ≤ 4000 steps +
+  16 ELBO checks ≈ 80 renders' worth + gates), Slurm-capped 45 min. GPU-h no longer the
+  constraint per the human; wall is.**
+  **Status: awaiting rigor-grader approval of Fv6.**
+
 - **Run: carousel GATE Fv5 — the plan-§5.4 ladder's ONE architecture escalation
   (human-directed 2026-07-09: "I'd like to try A1 and A3, with A2 as a fallback if that
   doesn't work"; also "Don't worry too much about GPU hours... I'm more concerned about

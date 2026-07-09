@@ -189,9 +189,30 @@ def main():
     t_a = time.perf_counter() - t0
 
     t0 = time.perf_counter()
+    # Fv6: ELBO early stopping (external metric; pre-registered). Fixed keys
+    # (common random numbers) so the trace resolves ~0.3-nat changes; the ratio
+    # is computed as a DIAGNOSTIC ONLY -- never used in the stop decision.
+    batched_lp_es = jax.vmap(lp_fn)
+
+    def es_eval(params):
+        vals = []
+        for i in range(5):
+            ks = jax.random.split(jax.random.key(5000 + i), 4)
+            vals.append(float(np.mean([float(flows.neg_elbo_loss(
+                params, sp_make, batched_lp_es, k, PHASE_A_DRAWS // 4, dim))
+                for k in ks])))
+        bij_es = sp_make(params)
+        u_pm = bij_es.inverse(jnp.stack([zP, zM]))
+        lq = np.asarray(flows._std_normal_logprob(u_pm)
+                        + bij_es.inverse_log_det_jacobian(
+                            jnp.stack([zP, zM]), event_ndims=1))
+        return (float(np.mean(vals)), float(np.std(vals) / np.sqrt(5)),
+                dict(ratio_diag=float(lq[0] - lq[1])))
+
     params_ab, hist_ab = dv.train_flow(
-        f"AB_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
+        f"AB_es250_{sp_key}", params_a, sp_make, lp_fn, dim, n_draws=PHASE_A_DRAWS,
         num_steps=0, lr=PHASE_A_LR, seed=SEED + 12,
+        phase_b_eval_fn=es_eval, phase_b_eval_every=250,
         phase_b_samples=z_mams, phase_b_steps=PHASE_B_STEPS, phase_b_lr=PHASE_B_LR,
         n_chunks=8)  # fkl gradient over 8x8000-sample chunks (exact); at 28 bins the
                      # per-chunk footprint is ~2x the validated 14-bin one (~5 GiB est.

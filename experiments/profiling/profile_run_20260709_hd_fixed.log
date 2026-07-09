@@ -1,0 +1,9 @@
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/profiling/profile_slow_regimes.py:93: DeprecationWarning: ZBijector.forward received a list/tuple — the retired list(z.T) / list-of-columns convention. Pass the flat z array of shape (..., 17) instead. Adapting for now; this will become an error.
+  x = model.bijector.forward(list(z_vec.T))
+device: cuda:0
+
+== H-D dataset scaling (anchor config) ==
+  npix=200 ss=2 n_max=15 niter=18 nds=1 depth=137 | basis+conv+pool    4.08  defl    0.36  gram    1.00  red  -0.01  bwd    6.21 | grad    11.64 ms (min 9.56, GFLOP 56, peakMB 744)
+  npix=200 ss=2 n_max=15 niter=18 nds=2 depth=137 | basis+conv+pool    4.04  defl    0.35  gram    1.04  red   1.08  bwd    8.89 | grad    15.39 ms (min 15.21, GFLOP 84, peakMB 929)
+
+results written to experiments/profiling/results_slow_regimes_hd_fixed.json

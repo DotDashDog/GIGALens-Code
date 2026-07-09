@@ -1,0 +1,48 @@
+{
+  "device": "cuda:0",
+  "jax": "0.10.0.dev20260709",
+  "parts": {
+    "datasets": [
+      {
+        "num_pix": 200,
+        "ss": 2,
+        "n_max": 15,
+        "niter": 18,
+        "n_datasets": 1,
+        "depth": 137,
+        "basis_conv_pool": 4.081403516465798,
+        "deflection": 0.36472550709731877,
+        "gram_solve": 0.9966454526875168,
+        "reduction": -0.008755974704399705,
+        "backward": 6.210485473275185,
+        "fwd_total": 5.434018501546234,
+        "grad_total": 11.644503974821419,
+        "grad_min": 9.55559901194647,
+        "grad_gflop": 56.268443648,
+        "grad_gb": 5.9983232,
+        "xla_peak_mb": 743.536944,
+        "contention": 0.21860533915910316
+      },
+      {
+        "num_pix": 200,
+        "ss": 2,
+        "n_max": 15,
+        "niter": 18,
+        "n_datasets": 2,
+        "depth": 137,
+        "basis_conv_pool": 4.036285477923229,
+        "deflection": 0.35155602381564677,
+        "gram_solve": 1.038138521835208,
+        "reduction": 1.076033484423533,
+        "backward": 8.88643498183228,
+        "fwd_total": 6.502013507997617,
+        "grad_total": 15.388448489829898,
+        "grad_min": 15.212180034723133,
+        "grad_gflop": 84.479410176,
+        "grad_gb": 9.402723328,
+        "xla_peak_mb": 929.096752,
+        "contention": 0.011587323756648742
+      }
+    ]
+  }
+}

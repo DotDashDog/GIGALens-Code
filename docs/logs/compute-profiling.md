@@ -3,7 +3,7 @@
 Profiling the scene-API likelihood gradient (the MCLMC inner loop) to find and
 reduce compute cost, for the canonical single-plane shapelet/sersiclet fits.
 
-**Last updated:** 2026-06-24
+**Last updated:** 2026-07-09
 
 > One log per rough research area (see `../../AGENTS.md` → *The record*). Durable source
 > of truth; agent memory is not. Update after any substantive step.
@@ -16,7 +16,9 @@ Phase 0 (static FLOP/byte model) and Phase 1 (device-timing breakdown) are **don
 on Perlmutter A100-40GB (JAX 0.10, container `jax-2026-04-13`). They reranked the
 bottlenecks vs. the prior guess. A first float32-basis ablation ran end-to-end
 (grad agreement strong; adaptation comparison **inconclusive** pending a seed
-control). Live artifacts:
+control). **Phase 2 (slow-regime matrix: n_max 30/40, ss=4, 300px, 2 datasets,
+MAP-scale bs) is done 2026-07-09** → C-8/C-9/C-10 and the revised target ranking
+in the 2026-07-09 log entry. Live artifacts:
 - harness: `gigalens/wip/profile_scene_likelihood.py` (Phase 0/1)
 - ablation: `GIGALens-Code/experiments/basis_precision_ablation.py`
 - knob: `SimulatorConfig.basis_precision` (gigalens `simulator.py` + `scene_simulator.py`);
@@ -26,6 +28,59 @@ control). Live artifacts:
 ---
 
 ## Claims register
+
+### C-8 — Slow-regime ranking: the supersampled per-component pipeline (basis+conv+pool,
+### fwd + VJP) dominates every slow config; gram stays subdominant even at n_max=40
+- **Status:** `proposed (UNCERTIFIED)` — Phase-2 matrix, 2026-07-09 (A100-40GB login node,
+  niter=18 per user directive; artifacts `experiments/profiling/results_slow_regimes.json`,
+  `profile_run_20260709.log`; driver `profile_slow_regimes.py`).
+- **H-A outcome (depth scaling): CONFIRMED.** grad n_max=30 / anchor = 33.56/10.26 =
+  **3.27×** (pre-registered band [2.7, 4.5], linear prediction 3.6×); n_max=40 = 63.91/10.26
+  = **6.23×** (predicted ≈6.3×). GFLOP/component flat at 0.41–0.42 over n_max 15→40;
+  gram+solve stage ≤ **12%** of grad even at depth 862 (7.56/63.91 ms). The depth² gram
+  does NOT re-enter ⇒ mask-gather / gram-side levers stay LOW priority.
+- **H-B outcome (ss scaling): prediction MISSED (middle zone, pre-registered rule).**
+  ss=4/ss=2 at n_max=15 = 42.66/10.26 = **4.16×** (confirm band was 2.5–3.5; falsifier >5);
+  at n_max=30: 148.35/33.56 = **4.42×**. Mechanism review: the ss-scaled stages are ~95%
+  of the niter=18 anchor cost, not the ~75% inferred from June's niter=50 shares — the
+  prediction under-counted the ss-scaled share; the ss² mechanism itself is supported
+  (ratio ≈ 4). Practical: supersampling multiplies nearly the whole eval; vela regime
+  (30, ss4, 200px) costs **148 ms/grad eval**.
+- **H-C outcome (EPL loop VJP): not falsified; magnitude at niter=18 is 10–20%.**
+  grad vs niter {5,18,50} = 8.83/9.76/14.40 ms median (mins 8.79/9.60/11.58; the niter=50
+  cell had 24% median-vs-min contention — use mins there). Swing 5→50 = 2.8–5.6 ms ≫ the
+  0.5 ms falsifier. Slope 0.06–0.12 ms/iter ⇒ niter-sensitive part at the June niter=50
+  config ≈ 3–6 ms, consistent with C-7's 3.0 ms bucket being mostly the fori_loop VJP;
+  at the user's niter=18 it is **~1–2 ms of a ~10 ms grad (10–20%)** ⇒ EPL unroll is a
+  moderate, cheap target, no longer a top one.
+- **Anchor note:** at niter=18 the backward is **~46%** of grad (4.77/10.26), vs 65% at
+  June's EPL(50); basis+conv+pool forward alone is **40%**. Together with their VJP twins
+  the supersampled per-component pipeline is ~70–85% of every slow config.
+
+### C-9 — MAP batch throughput is memory-capped (~790 MB/sample at 200px ss2 n_max15 f64);
+### batching buys 1.5–2.9× utilization before OOM
+- **Status:** `proposed (UNCERTIFIED)` — H-E cells, same artifacts.
+- Per-sample grad: 200px: 13.6 (bs=1) → 9.1 ms (bs=8, **1.49×**), **OOM at bs=32**
+  (XLA-static peak 24.9 GB); 80px: 4.77 → 1.67 ms (bs=32, **2.86×**), OOM at bs=128
+  (18.5 GB). Peak memory ~linear in bs (≈787 MB/sample at 200px, ≈147 MB at 80px).
+  Direction of H-E confirmed (bs=1 underutilizes); the binding constraint for MAP-scale
+  throughput is VJP residency ⇒ remat / residency-reducing changes (direct-χ²) are
+  promoted; batching alone caps at ~1.5–3×.
+
+### C-10 — XLA already CSE-shares the trace+basis across identical-grid datasets;
+### the incremental cost of a second band is ~0.5–0.6× one eval
+- **Status:** `proposed (UNCERTIFIED)` — H-D rerun with independent per-dataset noise
+  (first attempt used byte-identical twin datasets: 2-ds min == 1-ds min, pure CSE
+  artifact, recorded as a measurement-validity lesson; fixed driver seeds dataset k with
+  seed+1000k; artifact `results_slow_regimes_hd_fixed.json`, `profile_run_20260709_hd_fixed.log`).
+- 2 datasets / 1 dataset = **1.59×** (min-time; medians contended 22%) and XLA GFLOP
+  84/56 = **1.50×**: with shared grid + shared light params the deflection trace and
+  basis render are identical subgraphs and the compiler shares them; only the per-dataset
+  weighting/gram/solve/reduction replicate. The pre-registered ≤1.5× falsifier fires (at
+  threshold) ⇒ **deprioritize multi-dataset trace-sharing restructuring** for
+  identical-grid bands; scope: same grid, same PSF, sees=all — different WCS/pixel scales
+  would break the sharing.
+
 
 ### C-1 — The lstsq gram/solve is NOT a bottleneck; basis-gen + its VJP dominate
 - **Status:** `proposed (UNCERTIFIED)` — awaiting human grading of the numbers.
@@ -253,7 +308,13 @@ control). Live artifacts:
     C-7 niter record + restate H-C at niter=50; bs-cell metric median-of-10).
     All 4 applied above, plus the user's mid-grading directive to run the matrix
     at niter=18 (recorded in the "EPL niter" bullet). **Launched 2026-07-09** on
-    the login-node A100-40GB (idle at launch).
+    the login-node A100-40GB (idle at launch). **CLEARED 2026-07-09:** ran same
+    day (~15 min + H-D rerun); outcomes recorded as C-8/C-9/C-10 (H-A confirmed;
+    H-B missed high per the middle-zone rule, mechanism reviewed; H-C not
+    falsified, magnitude restated at niter=18; H-D falsified-at-threshold after
+    the CSE-artifact fix; H-E direction confirmed, memory-capped). Contention:
+    anchor 0.7% ⇒ login GPU acceptable; niter=50 / H-D medians contended 22–38%
+    ⇒ min-times used there, as pre-registered.
 
 - **(cleared 2026-06-24) Seed control for C-4** — ran, confirmed the prediction (float64
   L spread 64% ≫ the float32-vs-float64 mean gap of 2.9%). See C-4.
@@ -267,6 +328,21 @@ control). Live artifacts:
 
 ## Log (newest first)
 
+- **2026-07-09** — Phase-2 slow-regime matrix ran (pre-registered above; rigor-grader
+  NEEDS-MORE fixes applied pre-launch; matrix at niter=18 per user). Outcomes → C-8
+  (per-component supersampled pipeline dominates; gram ≤12% even at n_max=40 — H-A
+  confirmed, H-B missed high with mechanism reviewed, H-C magnitude at niter=18 is
+  10–20%), C-9 (MAP batching memory-capped, ~790 MB/sample at 200px; 1.5–2.9×
+  utilization headroom), C-10 (XLA CSE already shares trace+basis across identical-grid
+  datasets; 2nd band costs ~0.5–0.6×; first H-D attempt invalidated by byte-identical
+  twin datasets — lesson: never profile duplicated constants). Revised target ranking
+  for implementation: (1) direct-χ² lstsq (kills the second basis traversal + full-image
+  reconstruction; also cuts VJP residency), (2) rfft2 + precomputed/pooled kernel FFT
+  (conv+pool share of the dominant stage), (3) remat for MAP/ELBO batch throughput,
+  (4) EPL unroll (~10–20% at niter=18), (5) adaptive supersampling (structural; the
+  only ~4× lever for ss=4 vela), (6) mask gather + multi-dataset restructuring
+  deprioritized (C-8/C-10). Artifacts: `experiments/profiling/profile_slow_regimes.py`,
+  `results_slow_regimes*.json`, `profile_run_20260709*.log`.
 - **2026-06-24 (latest)** — ss=2 basis-precision timing (C-6): float32 basis gives only
   1.00× (ss=1) / 1.04× (ss=2) on the basis+conv+pool stage and 1.01×/1.09× on the full grad.
   The basis stage is dominated by the (already-float32) conv + pooling, so f32 basis arithmetic

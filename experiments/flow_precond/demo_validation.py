@@ -207,7 +207,7 @@ def build_model_and_fit():
 # --------------------------------------------------------------------------- #
 def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr,
                seed, phase_b_samples=None, phase_b_steps=0, phase_b_lr=1e-4,
-               n_chunks=1):
+               n_chunks=1, phase_b_eval_fn=None, phase_b_eval_every=250):
     """Phase A reverse-KL (+ optional Phase B forward-KL). Returns (params, hists).
 
     `tag` must encode the architecture/training config (cache key) -- caches carry
@@ -230,6 +230,8 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
                   f"flow[{tag}] loaded from cache; no Phase A steps")
             return params, {"a": ha,
                             "b": c["hist_b"] if "hist_b" in c.files else None,
+                            "es": (json.loads(str(c["es_trace_json"]))
+                                   if "es_trace_json" in c.files else None),
                             "diverged": bool(c["diverged"]) if "diverged" in c.files
                             else False}
 
@@ -343,6 +345,7 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
           + (f"{hist_a[-1]:.2f}" if hist_a else "n/a (0 steps)"))
 
     hist_b = None
+    es_trace = []
     if phase_b_samples is not None and phase_b_steps > 0 and not diverged:
         zs = jnp.asarray(phase_b_samples)
         opt_b = optax.adam(phase_b_lr)
@@ -412,6 +415,27 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
 
         opt_state = opt_b.init(params)
         hist_b = []
+        # Optional early stopping on an EXTERNAL metric (Fv6): eval_fn(params)
+        # -> (metric, se, diag_dict); lower metric is better; stop (patience 1,
+        # revert to best) when metric - best > 2*se. diag_dict is recorded in
+        # es_trace but NEVER used in the decision (pre-registered).
+        es_best, es_best_params, es_stopped = None, None, False
+
+        def _es_check(step_idx):
+            nonlocal es_best, es_best_params, es_stopped
+            m, se, diag = phase_b_eval_fn(params)
+            es_trace.append(dict(step=step_idx, metric=float(m), se=float(se),
+                                 **{k: float(v) for k, v in diag.items()}))
+            print(f"flow[{tag}] ES check step {step_idx}: metric {m:.2f} "
+                  f"(se {se:.2f}) diag {diag}")
+            if es_best is None or m < es_best:
+                es_best, es_best_params = m, params
+            elif m - es_best > 2 * se:
+                es_stopped = True
+            return es_stopped
+
+        if phase_b_eval_fn is not None:
+            _es_check(0)
         for i in range(phase_b_steps):
             prev = params
             params, opt_state, loss = step_b(params, opt_state)
@@ -421,6 +445,13 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
                       "last finite params and stopping.")
                 params, diverged = prev, True
                 break
+            if (phase_b_eval_fn is not None and phase_b_eval_every
+                    and (i + 1) % phase_b_eval_every == 0):
+                if _es_check(i + 1):
+                    print(f"flow[{tag}] Phase B EARLY-STOPPED at step {i + 1}; "
+                          "reverting to best-metric checkpoint.")
+                    params = es_best_params
+                    break
             if i % 200 == 0:
                 print(f"flow[{tag}] B step {i}: {hist_b[-1]:.4f}")
         if hist_b and np.isfinite(hist_b[-1]):
@@ -432,6 +463,8 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
     save["diverged"] = np.asarray(diverged)
     if hist_b is not None:
         save["hist_b"] = np.asarray(hist_b)
+        if es_trace:
+            save["es_trace_json"] = np.asarray(json.dumps(es_trace))
     np.savez(cache, **save)
     # Strip mesh-sharding annotations from trained params: single-device
     # downstream jits reject them ("device assignment 1 != mesh 4", Fv5
@@ -439,6 +472,8 @@ def train_flow(tag, init_params, make_bij, lp_fn, dim, *, n_draws, num_steps, lr
     params = jax.tree_util.tree_map(lambda x: jnp.asarray(np.asarray(x)), params)
     return params, {"a": np.asarray(hist_a),
                     "b": np.asarray(hist_b) if hist_b is not None else None,
+                    "es": es_trace if (phase_b_samples is not None
+                                       and phase_b_steps > 0) else None,
                     "diverged": diverged}
 
 

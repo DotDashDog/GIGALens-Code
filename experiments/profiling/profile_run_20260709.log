@@ -1,0 +1,41 @@
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/profiling/profile_slow_regimes.py:93: DeprecationWarning: ZBijector.forward received a list/tuple — the retired list(z.T) / list-of-columns convention. Pass the flat z array of shape (..., 17) instead. Adapting for now; this will become an error.
+  x = model.bijector.forward(list(z_vec.T))
+W0709 10:32:04.472137 1448929 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 23.26GiB (rounded to 24973463296)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0709 10:32:04.473234 1448929 bfc_allocator.cc:513] ___________________________________________________________________________________________________*
+W0709 10:32:49.322584 1448929 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 17.24GiB (rounded to 18514342400)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0709 10:32:49.323832 1448929 bfc_allocator.cc:513] ___________________________________________________________________________________________________*
+device: cuda:0
+
+== H-A/H-B stage matrix (bs=1 grad decomposition) ==
+  npix=200 ss=2 n_max=15 niter=18 nds=1 depth=137 | basis+conv+pool    4.13  defl    0.26  gram    1.08  red   0.01  bwd    4.77 | grad    10.26 ms (min 10.19, GFLOP 56, peakMB 744)
+  npix=200 ss=2 n_max=30 niter=18 nds=1 depth=497 | basis+conv+pool   10.51  defl    3.33  gram    0.07  red  -0.03  bwd   19.69 | grad    33.56 ms (min 33.33, GFLOP 211, peakMB 2442)
+  npix=200 ss=2 n_max=40 niter=18 nds=1 depth=862 | basis+conv+pool   18.10  defl    0.25  gram    7.56  red   0.21  bwd   37.80 | grad    63.91 ms (min 63.34, GFLOP 363, peakMB 4109)
+  npix=200 ss=4 n_max=15 niter=18 nds=1 depth=137 | basis+conv+pool   18.46  defl    0.72  gram    0.59  red  -1.12  bwd   24.01 | grad    42.66 ms (min 42.35, GFLOP 285, peakMB 3135)
+  npix=200 ss=4 n_max=30 niter=18 nds=1 depth=497 | basis+conv+pool   60.42  defl    0.68  gram    3.16  red   0.05  bwd   84.03 | grad   148.35 ms (min 147.58, GFLOP 1059, peakMB 10105)
+  npix=300 ss=2 n_max=15 niter=18 nds=1 depth=137 | basis+conv+pool    7.47  defl   -0.54  gram    0.95  red   2.62  bwd    9.67 | grad    20.18 ms (min 20.06, GFLOP 150, peakMB 1619)
+  npix=300 ss=2 n_max=30 niter=18 nds=1 depth=497 | basis+conv+pool   21.97  defl    0.47  gram    5.94  red  -0.14  bwd   42.99 | grad    71.23 ms (min 71.04, GFLOP 546, peakMB 5285)
+
+== H-C niter sweep (anchor config) ==
+  npix=200 ss=2 n_max=15 niter= 5 nds=1 depth=137 | basis+conv+pool    4.12  defl    0.07  gram    1.06  red   0.03  bwd    3.55 | grad     8.83 ms (min 8.79, GFLOP 56, peakMB 677)
+  npix=200 ss=2 n_max=15 niter=18 nds=1 depth=137 | basis+conv+pool    4.20  defl    0.19  gram    1.10  red  -0.02  bwd    4.29 | grad     9.76 ms (min 9.60, GFLOP 56, peakMB 744)
+  npix=200 ss=2 n_max=15 niter=50 nds=1 depth=137 | basis+conv+pool    4.04  defl    0.75  gram    1.09  red   0.01  bwd    8.50 | grad    14.40 ms (min 11.58, GFLOP 56, peakMB 907)
+
+== H-D dataset scaling (anchor config) ==
+  npix=200 ss=2 n_max=15 niter=18 nds=1 depth=137 | basis+conv+pool    4.06  defl    0.32  gram    0.83  red   0.25  bwd    4.36 | grad     9.82 ms (min 9.62, GFLOP 56, peakMB 744)
+  npix=200 ss=2 n_max=15 niter=18 nds=2 depth=137 | basis+conv+pool    4.07  defl    0.37  gram    1.00  red  -0.27  bwd    8.18 | grad    13.34 ms (min 9.65, GFLOP 56, peakMB 784)
+
+== H-E MAP-scale batch sweep ==
+  npix=200 ss=2 n_max=15 bs=    1 | grad     13.61 ms  per-sample   13.612 ms  xla-peak       744 MB
+  npix=200 ss=2 n_max=15 bs=    8 | grad     73.03 ms  per-sample    9.129 ms  xla-peak      6296 MB
+  npix=200 ss=2 n_max=15 bs=   32 | RUN FAILED (xla-peak 24973 MB): RESOURCE_EXHAUSTED: Out of memory while trying to allocate 23.26GiB.
+  npix= 80 ss=2 n_max=15 bs=    1 | grad      4.77 ms  per-sample    4.768 ms  xla-peak       138 MB
+  npix= 80 ss=2 n_max=15 bs=   32 | grad     53.37 ms  per-sample    1.668 ms  xla-peak      4688 MB
+  npix= 80 ss=2 n_max=15 bs=  128 | RUN FAILED (xla-peak 18514 MB): RESOURCE_EXHAUSTED: Out of memory while trying to allocate 17.24GiB.
+
+results written to experiments/profiling/results_slow_regimes.json

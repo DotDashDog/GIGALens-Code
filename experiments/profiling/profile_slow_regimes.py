@@ -95,14 +95,16 @@ def build_problem(num_pix=200, supersample=2, n_max=15, delta_pix=0.05,
     stacked = np.asarray(sim0.lstsq_simulate(
         params, jnp.zeros((num_pix, num_pix)), jnp.ones((num_pix, num_pix)),
         return_stacked=True))
-    image = stacked.sum(axis=-1).squeeze().astype(np.float64)
-    rng = np.random.default_rng(seed)
-    err = np.sqrt(bg_rms ** 2 + np.clip(image, 0, None) / exp_time)
-    image = image + rng.normal(size=image.shape) * err
-
-    datasets = [Dataset(image, cfg, background_rms=bg_rms, exp_time=exp_time,
-                        sees="all")
-                for _ in range(n_datasets)]
+    clean = stacked.sum(axis=-1).squeeze().astype(np.float64)
+    err = np.sqrt(bg_rms ** 2 + np.clip(clean, 0, None) / exp_time)
+    # Each dataset gets an INDEPENDENT noise realization: byte-identical twin
+    # datasets let XLA CSE merge the per-dataset graphs (first H-D attempt showed
+    # 2-dataset min time == 1-dataset min time), which real multi-band data cannot.
+    datasets = [
+        Dataset(clean + np.random.default_rng(seed + 1000 * k).normal(
+                    size=clean.shape) * err,
+                cfg, background_rms=bg_rms, exp_time=exp_time, sees="all")
+        for k in range(n_datasets)]
     prob = ProbModel(model, datasets if n_datasets > 1 else datasets[0],
                      mode="lstsq")
     return model, prob, cfg, z_vec, params
