@@ -470,7 +470,13 @@ multimodality, conditioning, or the NFW profile.
   CERTIFY-RECOMMENDED to LAUNCH @328fb32 — fixes verified item-by-item against the
   committed diff, nothing beyond declared scope; ADJUDICATION conditional on the
   cross-arm pt1 scorer being committed + diff-audited BEFORE results enter the
-  record (standing amendment-xi rule); one-arm-underpowered route added. LAUNCHING.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
+  record (standing amendment-xi rule); one-arm-underpowered route added. LAUNCHED + RAN
+  2026-07-11 (PARTIAL); result in Log ("GATE PT-1 RAN, PARTIAL"): L2/W-2 PASS
+  non-vacuous (no kernel bias > ~0.19; tail collapsed 11-20% -> 1.4-2.8%); L1/W-1a
+  FAIL (F-1: SVI composition ~3.5x transport cost, under-equilibrated — metric-fix
+  menu to next checkpoint); L3 NOT SCORED (allocation clip, MAMS wall 5.5x estimate
+  from pooled-cov seeding; C3b/C4b rerun amendment pre-registered in the entry:
+  SVI-cov seeding + measured per-step probe sizing). Awaiting result-grader pass.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
   small diff-audited extensions: `--arm B5` production-init variant + `GATE_PT0_DEVAR`
   env) and NEW `experiments/flow_precond/carousel_gate_pt1_mams.py` (thin wrapper
   around the production `gigalens_research.inference.mams.MAMS_JIT` with a qz-adapter
@@ -1990,6 +1996,66 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-11 (carousel GATE PT-1 RAN, PARTIAL — L2 kernel-bias probe PASSES with the
+  mechanism demonstrably modulated; L1 production composition fires F-1 (SVI metric =
+  ~3.5× transport cost, under-equilibrated at budget — slow, not dead); L3 MH-exact
+  bracket LOST to allocation clip (MAMS wall 5.5×+ the manifest-derived estimate);
+  PROPOSED (UNCERTIFIED)):** job 55798988, scripts @328fb32, scorer @0ea87c5
+  (audit-certified pre-unblinding), outputs `*_pt1*` + `pt1_score.json`.
+  **L2 / W-2 (C2, DEVAR 5e-5, seed 21) — PASS, non-vacuous:** shift vs P1/P2 pooled =
+  +0.0658 = 1.17σ (null holds; pinned wording: NO kernel bias > ~0.19 occupancy units
+  detected — the 0.10-exclusion is robust to discretization at production EEVPD);
+  the above-2e-3 EEVPD tail collapsed 11–20% → 1.4–2.8% per rung (pooled 0.022,
+  max-rung 0.028 < 0.08 ⇒ NOT the vacuous-probe zone: the lever modulated the
+  mechanism); scaled-band medians 3.4–4.3e-5 ✓; C2's own m = 0.4546 ± 0.0495 —
+  ABOVE the P1/P2 value, i.e. the tighter-step arm moved the weight UP, not down
+  (direction note: if unadjusted-kernel bias were suppressing the pocket, tightening
+  would raise occupancy — consistent with ≈0.4 being if anything a floor; C2 window
+  drift +0.083 still rising, so this is suggestive, not scored). Cold split-R̂ 1.096
+  (budget-limited zone, W-b5-style reading).
+  **L1 / W-1a (C1, B5 production: SVI cov metric + SVI-draw inits, seed 20) — FAIL,
+  F-1 reading with trajectory nuance:** pocket RTs 117 < 175 AND window occupancy
+  0.2204 ± 0.0491, below (0.32, 0.49) by more than the ±0.05 near-edge margin;
+  EEVPD medians in band (health fine; two rungs' inline mean-check flags reflect the
+  known tail). The traces show LATE ACCELERATION (cold occ 0.06 @900 → 0.31 @1350):
+  the SVI-metric composition discovers and drains but at ~3.5× transport cost
+  (RT_total 616 vs P3/P4's 1294/1343), and 1500 rounds is insufficient to
+  equilibrate. Pre-registered routing: production pipeline needs a metric fix —
+  decision menu for the NEXT checkpoint: inflate SVI cov, cheap pooled-metric
+  pre-pass, or longer burn-in. W-1b interim (250–750): FAIL on all three clauses
+  (occ 0.110, est. window RTs 39 < 60, window EEVPD medians out — early adaptation)
+  ⇒ the efficiency frontier needs ≥ full budget FOR THIS COMPOSITION (the PT-0b
+  pooled-metric composition was already band-consistent at its interim; frontier
+  data point recorded as composition-dependent).
+  **L3 (C3/C4 MH-exact MAMS brackets, seeds 22/23) — NOT SCORED: allocation clip.**
+  Both arms ran >3.9 h against a 44-min manifest-derived estimate and were killed at
+  the wall with NO salvage (MAMS_JIT has no incremental saves — known exposure,
+  accepted at design time, realized). Post-mortem (mundane, evidence-backed): the
+  wall estimate came from the PIPELINE manifest (SVI-cov mass-matrix seeding, ~7
+  grads/step avg); the C3/C4 adapter seeded the mass matrix with the POOLED
+  empirical covariance — a much wider metric that drives dual-averaged trajectories
+  toward the max_num_integration_steps=60 cap ⇒ ~5× more grads/step. The human's
+  standing MAMS-cost warning was priced for the budget but not for the seeding
+  change. LESSONS (recorded): (i) never size a MAMS run from another config's
+  manifest — measure a ~5-min per-step probe first; (ii) the bracket adapter should
+  seed with the PRODUCTION SVI covariance (adaptation re-learns the mass matrix in
+  its windowed phase regardless; only the INITS need to be pool mixtures).
+  **L3 RERUN AMENDMENT (pre-registered here, grader review with the result pass):**
+  C3b/C4b identical to C3/C4 EXCEPT PoolQZ.covariance() returns the SVI covariance
+  and .mean() the SVI loc (production-like seeding; pool-mixture inits unchanged —
+  the bracket instrument is the INIT, not the seed metric); preceded by a mandatory
+  ~5-min measured per-step probe (64 chains, 100+100 steps) whose s/step SIZES the
+  run and is recorded in the model card; budget stays 2000+4000 (power floor
+  unchanged); abort-and-report if the probe implies > 3 h/arm. All W-3 clauses,
+  the pinned estimator, zones, and seeds 22/23 carry over verbatim.
+  **Costs:** C1/C2 1500 rounds in 11,754 s each (7.84 s/round — matches PT-0b);
+  C3/C4 ≈ 7.8 h GPU lost to the clip; total gate ≈ 15.5 GPU·h.
+  **Scope:** L2's pass is at its pinned precision ONLY (bias > ~0.19 excluded; the
+  ±0.05-scale question remains for the L3 rerun); L1's F-1 is composition-specific
+  (the C-24 sampler itself is untouched by it); nothing here upgrades or downgrades
+  C-24's ≈0.40 (kernel-consistent; now also discretization-robust at the 0.19
+  level).
 
 - **2026-07-11 (carousel GATE PT-0b RAN — PT-MCLMC TRANSPORT CERTIFICATION PASSED on
   the dPIE carousel: pocket round trips 350–428 per arm (PT-0: zero; floor: 10), all

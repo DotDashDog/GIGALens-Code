@@ -1,0 +1,4 @@
+[2026-07-11T20:03:30.340] error: *** STEP 55798988.3 ON nid001028 CANCELLED AT 2026-07-11T20:03:30 DUE TO TIME LIMIT ***
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: error: nid001028: task 0: Terminated
+srun: Terminating StepId=55798988.3
