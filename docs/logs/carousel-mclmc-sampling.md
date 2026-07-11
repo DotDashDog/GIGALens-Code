@@ -441,6 +441,139 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-0b — short-ladder power-path PT-MCLMC transport certification
+  on the dPIE carousel (routed continuation of GATE PT-0; C-23's three measured knobs
+  applied).**
+  **Status: grader rd-1 NEEDS-MORE (2026-07-11) — 4 blocking + 4 advisory, ALL APPLIED
+  in-place (ss_max justification corrected to artifact values 0.54–0.84 with W-b3/F-b3
+  reframed as ladder-health, cap fix MOOTED by the short ladder; every outcome zone
+  routed incl. F-b5 ≻ F-b2 precedence and the restored PT-0 flux-limited/2–3σ
+  readings; W-b2 statistics pinned incl. the POWER clause se_comb ≤ 0.06 and
+  adjudication-only-if-CI-excludes-a-candidate; extension committed + diff audit
+  recorded below; IAT 11.4–45.6, ā = 0.53 erfc provenance, rung-0 leakage 25.6/62.6%
+  cited, wall margin noted). Grader verified by recomputation: ladder knots + 4.4708-nat
+  cost integral, K* derivation, RT/flip/discovery arithmetic, 7.78 s/round. Awaiting
+  rd-2 re-grade on amended text.** Same script `experiments/flow_precond/carousel_gate_pt0.py`
+  (audited lineage; PT-0b config via the recorded env overrides + one small extension:
+  a power-path all-main arm `B4` and env overrides for K/NSYS/ROUNDS/ss_max — extension
+  audited by diff before launch); outputs tagged `_pt0b` via GATE_PT0_TAG_SUFFIX; fresh
+  4 h allocation, 4 arms on 4 GPUs in parallel.
+  **Claim under test + classification.** Stochastic-estimator behaviour; the SINGLE link
+  this run tests: with the three PT-0-measured knob fixes applied (ladder spacing, swap
+  cadence vs IAT, ss cap), power-path PT-MCLMC achieves label transport, cold-rung
+  basin mixing, and TWO-SIDED occupancy bracketing on the dPIE carousel within a
+  ~16.5k-step/chain budget. Explicitly UNTESTED: absolute weight truth (only bracketing
+  + reproducibility); within-basin ESS certification; efficiency frontier; other
+  lenses; the likelihood path (deprioritized per C-23).
+  **Cause hypothesis.** PT-0's zero label transport was caused by (i) K = 10 ≪ IAT(u)
+  (swap-back), (ii) ~2 nats/pair average spacing with end-concentration, (iii) ss_max
+  cap binding at hot rungs — NOT by basin-mass starvation (profile flat) or cross-basin
+  rejection (cross ≈ same). Fixing (i)–(iii) at FIXED kernel and swap machinery should
+  restore transport at the rate of the revised flux model.
+  **Config (all values derived from PT-0 measurements):** power path; ladder = the
+  equal-cost R = 6 knots over β ∈ [0.3594, 1] from `ladder_design_power.json` restricted
+  to the measured crossing-capable range: **[0.3594, 0.4388, 0.5373, 0.6598, 0.8116,
+  1.0]** (0.894 nats/pair ⇒ predicted adjacent acceptance ≈ 0.53 via the erfc(s/2)
+  Gaussian swap model — provenance: that model reproduces B1's measured pair
+  acceptances from measured pair costs, e.g. cold pair 1.87 nats → 0.186 predicted vs
+  0.189 measured; β_min = 0.3594 is the
+  coldest Arm-A grid point with directly measured class leakage, and leakage at β = 0.6
+  was already 17.6/36.7% per 1500 steps, and rung-0's OWN measured leakage at
+  β = 0.3594 is 25.6/62.6% per 1500 steps (grader advisory 7 — the β = 0.6 figure is
+  the conservative one) ⇒ rung-0 kernel crossing is the discovery channel); K = 10
+  (near the wall-optimum K* ≈ √IAT given round-cost ∝ (K+1) and swap-back factor
+  f ≈ K/(K+IAT); IAT at the retained rungs = 11.4–45.6 steps, so f ≈ 0.18–0.47 — no
+  longer ≪ 1); NSYS = 16 ladders/arm (96-wide fused, the measured 7.8
+  s/round width class); ROUNDS = 1500 (16.5k kernel steps/chain ≈ the 10k+10k reference
+  scale; wall 1500 × 7.78 s ≈ 3.25 h/arm, inside a 4 h allocation with startup); ss_max
+  = 5.0 (ARTIFACT-CORRECTED per grader rd-1: adapted steps at β ≥ 0.36 sat at
+  0.54–0.84 — the earlier "~0.05" was ss_init, a memory-for-artifact substitution —
+  so cap 5.0 is ≈6–9× headroom; NOTE the short ladder MOOTS rather than TESTS the
+  cap-binding mechanism (iii), since PT-0's sub-band EEVPD lived at β ≤ 0.19 which
+  this ladder excludes; handle_nans still shrinks the cap on NaN). Arms: **P1** power/balanced seed 10; **P2**
+  power/balanced seed 11 (seed replica); **P3** power/ALL-MAIN seed 12 (production
+  bad-MAP scenario — new arm type B4: every rung from main pool; discovery must come
+  from rung-0 kernel crossing); **P4** power/all-main seed 13 (replica). Init pools,
+  metric (pooled MAMS64 cov, positions only), indicator, instrumentation: unchanged
+  from PT-0.
+  **Predictions (direction + magnitude, from the revised flux model with PT-0-measured
+  inputs; the model itself is UNDER TEST via W-b1).** Adjacent-pair acceptance ā ≈ 0.53
+  (erfc model, provenance above; W-b3's [0.25, 0.65] band brackets both this and the
+  design-band 0.41). Label transport: per-walker round-trip time ≈ 2R²/(ā·f) with
+  f ≈ K/(K+IAT_pooled), f ∈ 0.18–0.47 ⇒ 289–848 rounds/walker ⇒ with 96 walkers/arm ⇒
+  **≈ 170–500 total round trips per arm in 1500 rounds (point prediction ≈ 300);
+  pocket-classified ≈ 30–120** (pocket fraction between the 0.1-anchor and the 0.3–0.4
+  open-finding readings). Cold-rung basin flips: PT-0's B1 cold pair acc 0.189 gave
+  19–77 flips/system/900 rounds (npz-confirmed) ⇒ at acc ≈ 0.53 and 1500 rounds
+  predict **≈ 90–360 flips/system**. Discovery (P3/P4): at rung-0's own measured
+  crossing rate (25.6%/1500 steps at β = 0.3594), 16 systems ⇒ first pocket
+  discoveries within ~40–100 rounds, cold-rung arrivals by ~200–500.
+  **Win conditions (derived; statistics PINNED per grader rd-1).** (W-b1, transport +
+  model coherence) pocket-classified round trips per balanced arm ≥ 10 (floor =
+  detection at Poisson 3σ above the PT-0-measured 0) AND total round trips within ×/÷4
+  of the 300/arm point prediction. ROUTED ZONES: pocket RTs ∈ [1, 9] with the total-RT
+  clause passing ⇒ the PT-0-amendment-(i) reading (mechanism confirmed, FLUX-LIMITED;
+  derived ROUNDS scaling for the next gate, no free rerun); total RTs in the (×4, ×10]
+  annulus ⇒ flux model MARGINAL — report, no scale-up; outside ×/÷10 ⇒ F-b4.
+  (W-b2, THE product test — two-sided bracketing; formulas pinned) per arm: m_a =
+  mean over 16 systems of the per-system last-500-round cold-rung occupancy mean;
+  sd_a = across-system sd (ddof=1); se_a = sd_a/4; se_comb = √(se_P1P2² + se_P3P4²)
+  with each pair pooled (32 systems). CLAUSES: (agreement) |m_balanced − m_allmain| ≤
+  2·se_comb; (movement) each arm-pair moved ≥ 3·se_pair from its init (0.5 / 0.0) —
+  precedence note below; (POWER) se_comb ≤ 0.06, DERIVED: adjudicating 0.1-vs-0.35
+  needs a CI half-width < 0.125 ⇒ 2·se_comb ≤ 0.125; if agreement holds but
+  se_comb > 0.06 the verdict is "bracket CONSISTENT but UNDERPOWERED — NOT a pass"
+  (routes to a longer run, powered by the measured se scaling). Pocket-weight
+  adjudication ONLY if the pooled bracket CI (weighted mean ± 2·se_comb) EXCLUDES one
+  of the two candidate readings (0.1 / 0.35); else "bracket passed, weight NOT
+  adjudicated" — pre-committed wording. (2σ, 3σ] agreement zone ⇒ "not demonstrated at
+  pilot precision" — fails W-b2, does NOT fire F-b2 (restored from PT-0 grading).
+  (W-b3, ladder health — NOTE per grader: the short ladder MOOTS the cap-fix test;
+  this clause validates SPACING + rung health, not mechanism (iii)) EEVPD ∈
+  [1e-4, 2e-3] at every rung (median, last 500 rounds); all 5 pair acceptances ∈
+  [0.25, 0.65] (prediction 0.53 erfc / 0.41 design band); NaN reverts = 0.
+  (W-b4, reproducibility) seed replicas agree: |m_P1 − m_P2| ≤ 2·√(se_P1² + se_P2²),
+  same for P3/P4. (W-b5, health-2) cold-rung indicator split-R̂ across 16 systems ≤
+  1.05 per arm; (1.05, 1.2] with W-b1 passing ⇒ budget-limited mixing (report
+  occupancy-ESS), not failure — pre-committed. ALL-PASS ROUTING: draft GATE PT-1
+  (production-config certification + efficiency accounting + cross-method
+  unbiasedness); NO auto-scale-up inside PT-0b.
+  **Falsifiers (with precedence).** F-b1: pocket round trips = 0 again in ANY balanced
+  arm ⇒ the swap-back/spacing mechanism story is WRONG or incomplete ⇒ STOP, report to
+  human (no auto-lever; C-23's remedial content is then falsified). F-b5 (discovery)
+  — TAKES PRECEDENCE OVER F-b2: NO pocket-classified state EVER appears at any rung of
+  P3/P4 in 1500 rounds ⇒ β_min = 0.3594 insufficient for discovery-from-main ⇒ ladder
+  must extend hotter (recorded; NOT a transport failure); in that configuration the
+  all-main arms' occupancy trivially disagrees with balanced — F-b2 MUST NOT fire and
+  W-b2 is UNSCOREABLE (pre-committed). F-b2: bracketing disagreement > 3σ WITH P3/P4
+  discovery having occurred (hysteresis) ⇒ no unbiasedness claim; pocket weight stays
+  open; report. F-b3: EEVPD below band at rung 0 despite ss_max = 5 — reachable only
+  where PT-0 was already in-band, so a firing implicates the pooled-metric/PT context,
+  NOT the (mooted) cap mechanism — open finding. F-b4: total RTs outside ×/÷10 of the
+  300/arm prediction ⇒ flux model wrong even with measured inputs.
+  **Metric blind spots.** (i) Bracketing agreement is blind to both arms converging to
+  the same wrong value via a shared systematic (unadjusted-kernel bias; named in PT-0;
+  cross-method adjudication deferred to a later gate). (ii) Round trips certify label
+  transport, not within-basin ESS. (iii) The z[6] halfspace remains blind to any third
+  mode. (iv) IAT_pooled ≈ 30 is an assumption bridging confined→pooled metrics — W-b1's
+  wide ×/÷4 band absorbs it, and its failure is informative (F-b4).
+  **Pre-committed plot appearances.** Worms: pocket-colored bands should now TRAVERSE
+  hot↔cold repeatedly in balanced arms (vs PT-0's rung-local churn); all-main worms
+  should show pocket color first appearing at rung 0 then propagating cold. Cold-occ
+  traces: P1/P2 falling from 0.5 and P3/P4 rising from 0.0 into a COMMON band (the
+  band's level answers the weight question); F-b2 ⇒ plateaus at different levels.
+  EEVPD traces: flat in-band at all 6 rungs (F-b3 ⇒ rung-0 trace below band). Pair-acc
+  bars: 5 bars in [0.25, 0.65], same ≈ cross.
+  **Cost estimate.** 1 × 4 h interactive node (4 × A100, -A m5362): smoke (full-shape,
+  R = 6 × 16, ~10 min incl. compile) then 4 arms × 1500 rounds × 7.8 s ≈ 3.3 h in
+  parallel (one arm per GPU) + ~15 min startup/compile per process ⇒ ≈ 3.7 h wall,
+  ≈ 15 GPU·h. Incremental saves every 100 rounds; if the allocation clips the tail,
+  the op-7 realized-rounds scaling applies (pre-committed here too).
+  **Process notes.** Env overrides (GATE_PT0_BETAS_B, GATE_PT0_K_B, GATE_PT0_NSYS_B,
+  GATE_PT0_ROUNDS_B, GATE_PT0_SSMAX, GATE_PT0_TAG_SUFFIX=_pt0b) recorded in each model
+  card; the B4 arm-type + env-override extension is diff-audited before launch; seeds
+  10–13; W-2-statistic machinery (round_trips_pocket) unchanged from the audited code.**
+
 - **Run: carousel GATE PT-0 — tempering-path diagnosis + instrumented PT-MCLMC pilot on
   the dPIE carousel (opening gate of the 2026-07-10 long-horizon engagement: efficient
   accurate sampler for multimodal lensing posteriors; MCLMC kernel per human directive;

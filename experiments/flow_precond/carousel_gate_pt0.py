@@ -85,7 +85,8 @@ U_REL_TOL = 1e-6                    # RELATIVE u-recovery gate (audit fixes 2+3)
                                     # max |u - u_direct| / (1 + |u_direct|)
 MIN_CLASS_N = 50                    # Arm A: min retained samples per (beta, class)
                                     # cell; below -> E missing, Delta truncated (fix 4)
-ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2)   # checkpoint seeds
+ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3)  # checkpoint seeds
+                # (PT-0b arms override via GATE_PT0_SEED_B, e.g. seeds 10-13)
 # Arm A
 BETAS_A = np.geomspace(0.01, 1.0, 10)
 NCH_A = 16                          # chains per basin group
@@ -246,14 +247,17 @@ def adapt_one(prev_state, next_state, info, step_size, adapt_state, nan_key,
     return state, new_step, (time_, x_avg, ss_max), jnp.square(info.energy_change), success
 
 
-def fresh_adapt(nch):
-    return (jnp.zeros(nch), jnp.zeros(nch), jnp.full(nch, SS_MAX0))
+def fresh_adapt(nch, ss_max=SS_MAX0):
+    """Initial adapt state; ss_max is the initial step-size cap consumed by
+    handle_nans (0.8x shrink on NaN) and adapt_one's min(new_step, ss_max).
+    PT-0b overrides it for B arms via GATE_PT0_SSMAX (control stays 1.0)."""
+    return (jnp.zeros(nch), jnp.zeros(nch), jnp.full(nch, ss_max))
 
 
-def fresh_adapt2(n_rungs, nch):
+def fresh_adapt2(n_rungs, nch, ss_max=SS_MAX0):
     """(R, NSYS)-shaped adapt state for the fused round runner."""
     return (jnp.zeros((n_rungs, nch)), jnp.zeros((n_rungs, nch)),
-            jnp.full((n_rungs, nch), SS_MAX0))
+            jnp.full((n_rungs, nch), ss_max))
 
 
 def make_runner_a(tf, path_kind, beta, invmasses, n_steps):
@@ -810,12 +814,13 @@ def run_pt(tag, seed, spec):
        f"init occ per rung = "
        f"{np.round(indicator(pos).mean(axis=1), 2).tolist()}")
 
+    ss_max0 = float(spec.get("ss_max", SS_MAX0))   # B arms may override (PT-0b)
     if fused:
         steps_all = jnp.full((R, NSYS), SS_INIT)
-        adapt_all = fresh_adapt2(R, NSYS)
+        adapt_all = fresh_adapt2(R, NSYS, ss_max0)
     else:
         steps = [jnp.full(NSYS, SS_INIT) for _ in range(R)]
-        adapt = [fresh_adapt(NSYS) for _ in range(R)]
+        adapt = [fresh_adapt(NSYS, ss_max0) for _ in range(R)]
     wid = np.tile(np.arange(R)[:, None], (1, NSYS))     # walker ids
     # wflag [walker_id, sys] (audit fix 1): 0 neutral, 1 tagged-hot,
     # 2 down-traversed arriving MAIN-classified, 3 down-traversed arriving
@@ -1113,10 +1118,11 @@ def run_equiv_check(tag, seed, spec, n_rounds=3):
 
     pos_l = np.array(spec["init_pos"], dtype=np.float64)
     pos_f = pos_l.copy()
+    ss_max0 = float(spec.get("ss_max", SS_MAX0))
     steps_l = [jnp.full(NSYS, SS_INIT) for _ in range(R)]
-    adapt_l = [fresh_adapt(NSYS) for _ in range(R)]
+    adapt_l = [fresh_adapt(NSYS, ss_max0) for _ in range(R)]
     steps_f = jnp.full((R, NSYS), SS_INIT)
-    adapt_f = fresh_adapt2(R, NSYS)
+    adapt_f = fresh_adapt2(R, NSYS, ss_max0)
     key = jax.random.key(seed)
     logd_l = np.zeros((R, NSYS))
     rows = []
@@ -1158,10 +1164,29 @@ def run_equiv_check(tag, seed, spec, n_rounds=3):
 
 
 def run_arm_b(arm, tag, equiv=False):
-    """dPIE PT arms B1/B2/B3: build the target spec and route through run_pt."""
+    """dPIE PT arms B1/B2/B3/B4: build the target spec and route through run_pt.
+    B4 (PT-0b extension) = POWER path, ALL-MAIN init at every rung/system, no
+    prior draws anywhere; otherwise identical to B1's spec."""
     seed = ARM_SEED[arm]
-    path_kind = "power" if arm == "B1" else "lik"
+    seed_source = "ARM_SEED default"
+    env_seed = os.environ.get("GATE_PT0_SEED_B", "").strip()
+    if env_seed:   # PT-0b arms run seeds 10-13 per the checkpoint
+        seed = int(env_seed)
+        seed_source = f"env override GATE_PT0_SEED_B={env_seed}"
+    path_kind = "power" if arm in ("B1", "B4") else "lik"
     rng = np.random.default_rng(seed)
+
+    # PT-0b env overrides (B arms ONLY; control/Arm A never read these).
+    def _env_num(name, default, cast):
+        v = os.environ.get(name, "").strip()
+        if v:
+            return cast(v), f"env override {name}={v}"
+        return default, "default"
+
+    k_b, k_src = _env_num("GATE_PT0_K_B", K_B, int)
+    nsys, nsys_src = _env_num("GATE_PT0_NSYS_B", NSYS_B, int)
+    rounds, rounds_src = _env_num("GATE_PT0_ROUNDS_B", ROUNDS_B, int)
+    ss_max, ssmax_src = _env_num("GATE_PT0_SSMAX", SS_MAX0, float)
     # B-arm ladder override for the PT-0b continuation (mid-run finding: the
     # geometric ladder is disconnected on the likelihood path -- hottest-pair
     # swap acc 0.000, coldest 0.008-0.048 in B2 -- so continuation runs pass a
@@ -1187,16 +1212,16 @@ def run_arm_b(arm, tag, equiv=False):
         idx = rng.integers(0, len(pool), size=n)
         return pool[idx] + JITTER * rng.standard_normal((n, DIM))
 
-    pos = np.zeros((R, NSYS_B, DIM))
+    pos = np.zeros((R, nsys, DIM))
     for r in range(R):
-        if arm == "B3":
-            pos[r] = draw_pool(M["pool_M"], NSYS_B)
+        if arm in ("B3", "B4"):   # ALL-MAIN init (B4: power path, no prior)
+            pos[r] = draw_pool(M["pool_M"], nsys)
         else:
-            pick_p = rng.random(NSYS_B) < 0.5
-            zm, zp = draw_pool(M["pool_M"], NSYS_B), draw_pool(M["pool_P"], NSYS_B)
+            pick_p = rng.random(nsys) < 0.5
+            zm, zp = draw_pool(M["pool_M"], nsys), draw_pool(M["pool_P"], nsys)
             pos[r] = np.where(pick_p[:, None], zp, zm)
-    if arm in ("B2", "B3"):   # hot rung from PRIOR on the likelihood arms
-        pos[0] = prior_z_samples(NSYS_B, seed + 777)
+    if arm in ("B2", "B3"):   # hot rung from PRIOR on the likelihood arms only
+        pos[0] = prior_z_samples(nsys, seed + 777)
 
     if path_kind == "power":
         u_from = lambda logd, p: logd / betas[:, None]
@@ -1210,25 +1235,30 @@ def run_arm_b(arm, tag, equiv=False):
         def u_direct(pf):
             return M["lp_batch"](pf) - np.asarray(M["lpri_b"](jnp.asarray(pf)))
 
-    card = dict(arm=tag, path=path_kind, seed=seed, swap_seed=seed + 10_000,
+    card = dict(arm=tag, path=path_kind, seed=seed, seed_source=seed_source,
+                swap_seed=seed + 10_000,
                 prior_init_seed=seed + 777 if arm in ("B2", "B3") else None,
                 smoke=SMOKE, script=os.path.abspath(__file__), jax=jax.__version__,
                 devices=[str(d) for d in jax.devices()],
                 x64=bool(jax.config.jax_enable_x64), dim=DIM,
-                R=R, NSYS=NSYS_B, K=K_B, ROUNDS=ROUNDS_B, thin=THIN_B,
+                R=R, NSYS=nsys, K=k_b, ROUNDS=rounds, thin=THIN_B,
                 betas=betas.tolist(), betas_source=betas_source,
-                L=L_MCLMC, ss_init=SS_INIT, devar=DEVAR,
+                L=L_MCLMC, ss_init=SS_INIT, ss_max=ss_max, devar=DEVAR,
+                env_overrides=dict(K=k_src, NSYS=nsys_src, ROUNDS=rounds_src,
+                                   ss_max=ssmax_src),
                 metric="pooled MAMS64 empirical cov, all rungs (positions only)",
                 mams64=MAMS_NPZ, pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
                 init={"B1": "all rungs Bernoulli(0.5) main/pocket pool",
                       "B2": "rungs 1..R-1 Bernoulli(0.5); rung 0 prior draws",
-                      "B3": "all main pool; rung 0 prior draws"}[arm],
+                      "B3": "all main pool; rung 0 prior draws",
+                      "B4": "ALL rungs/systems main pool (power; no prior draws)",
+                      }[arm],
                 u_def="log_prob = logdensity/beta" if path_kind == "power"
                       else "log_like = (logdensity - log_prior)/beta",
                 harness="run_pt (shared with Arm-0 control, amendment ii)",
                 sep_check_max_abs=M["sep_max"])
-    spec = dict(dim=DIM, L=L_MCLMC, betas=betas, NSYS=NSYS_B, K=K_B,
-                ROUNDS=ROUNDS_B, inv_mass=M["cov_pool"],
+    spec = dict(dim=DIM, L=L_MCLMC, betas=betas, NSYS=nsys, K=k_b,
+                ROUNDS=rounds, inv_mass=M["cov_pool"], ss_max=ss_max,
                 make_tf=lambda b: make_tempered(path_kind, b),
                 u_from=u_from, u_direct=u_direct,
                 indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
@@ -1270,7 +1300,7 @@ def run_control(tag, equiv=False):
                        " modes +/-5, weights 0.7/0.3, equal covariance",
                 R=CTRL_R, NSYS=CTRL_NSYS, K=CTRL_K, ROUNDS=CTRL_ROUNDS,
                 burn=CTRL_BURN, thin=THIN_B, betas=betas.tolist(),
-                L=math.sqrt(CTRL_D), ss_init=SS_INIT, devar=DEVAR,
+                L=math.sqrt(CTRL_D), ss_init=SS_INIT, ss_max=SS_MAX0, devar=DEVAR,
                 metric="identity", indicator="z[0] > 0 (occ_+, +mode weight 0.70)",
                 init="all rungs all systems in wrong (-5) basin (N(0,1) spread)",
                 u_def="log_prob = logdensity/beta (power path)",
@@ -1340,7 +1370,7 @@ def main():
     ap = argparse.ArgumentParser(description="GATE PT-0 (one arm per process)")
     ap.add_argument("--arm", required=True,
                     choices=["smoke", "control", "A_power", "A_lik",
-                             "B1", "B2", "B3"])
+                             "B1", "B2", "B3", "B4"])
     ap.add_argument("--equiv-check", action="store_true",
                     help="fused-vs-legacy runner equivalence guard: 3 rounds, "
                          "both implementations, identical inits/keys, SMOKE "
@@ -1364,8 +1394,8 @@ def main():
         return f"{arm}_smoke" if SMOKE else arm
 
     if equiv:
-        if args.arm not in ("control", "B1", "B2", "B3"):
-            ap.error("--equiv-check requires a PT arm (control/B1/B2/B3)")
+        if args.arm not in ("control", "B1", "B2", "B3", "B4"):
+            ap.error("--equiv-check requires a PT arm (control/B1/B2/B3/B4)")
         if args.arm == "control":
             run_control(tag_of("control"), equiv=True)
         else:
@@ -1376,7 +1406,7 @@ def main():
         run_control(tag_of("control"))          # Arm 0 first (amendment ii)
         run_arm_a("power", tag_of("A_power"))
         run_arm_a("lik", tag_of("A_lik"))
-        for arm in ("B1", "B2", "B3"):
+        for arm in ("B1", "B2", "B3", "B4"):
             run_arm_b(arm, tag_of(arm))
     elif args.arm == "control":
         run_control(tag_of("control"))
