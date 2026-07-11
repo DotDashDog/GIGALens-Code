@@ -358,6 +358,7 @@ multimodality, conditioning, or the NFW profile.
 - **Gates (CPU):** A discovery — tempered burn-in occ 0→0.51 easy / 0→0.58 curved, vanilla 0 (PASS); comparable-mass WEIGHT — one-shot FREEZES OUT (~0.51 vs 0.70, cold ensemble quantizes at k/n) → PT fixes it **0.6986±0.0122** (PASS). B tiny-drain — one-shot unreliable for 1e-3 (freeze-out) → PT drains **1e-3→0.00125±0.00017, 1e-5→0.0** (PASS — the KEY differentiator; every ensemble move PINS at ~1/n, C-16). C unbiased cold — invariance-from-truth, moments/KS pass. D curved barrier — crosses where affine DE got 0 round-trips (PASS, budget-limited ~0.55 vs 0.6). E cost — tempered burn-in adds NO sampling-time replicas; PT is R× replicas.
 - **Mechanism split:** for the CAROUSEL (secondary ~1e-5, a discovery problem), tempered BURN-IN alone gives discovery + drains the 1e-5 mode to ~0 with NO replica multiplier. PT is the robust tool when modes are COMPARABLE-mass / near-1/n (R× cost). Unlike the ensemble hops, tempering crosses curved barriers via MCLMC's GRADIENT flow on the flattened target (follows the ridge) ⇒ mechanism is NOT the chord-off-ridge that defeated affine moves AND not the KDE-off-ridge that froze SA (C-17) ⇒ MORE likely to transfer to the real carousel.
 - **CRITICAL caveat (C-17 cautionary tale):** the CPU win MUST be GPU-validated on the real carousel before belief — SA also won on CPU and froze on GPU. Plus: GATE-1 curvature 1.85% (slightly milder than carousel 0.6%); single-seed PT. Code `tempering/{tempered_mclmc,parallel_tempering,curved_discovery,pt_weight,pt_drain,tiny_drain,drill_*}.py`.
+- **ADDENDUM 2026-07-10 (archaeology — the PT leg's GPU validation was RUN and FAILED, unlogged):** three GPU PT runs on the real minimal carousel (2026-06-28, `carousel_pt.py`, no design checkpoint, never logged) all show ZERO cold-rung cross-basin transport in 90 rounds — cold occ pinned at init (0.000/0.500/0.000 vs truth ≈1.0) despite healthy AVERAGE swap acceptance (0.38–0.72) and hot-rung kernel crossing. The C-18 PT drain claim currently holds ONLY on CPU toys; on the real MINIMAL carousel the naive geometric power-path (p^β) PT did NOT transport. HUMAN CONTEXT (2026-07-10): the minimal carousel is a more pathological target (1e-5 secondary) than the dPIE production case (~10:1 modes) and the June-28 implementation was by a less capable agent — the failure is NOT read as evidence against PT on the dPIE target. See Log 2026-07-10 archaeology entry.
 
 ### C-19 — GPU carousel: tempering's DISCOVERY transfers (vanilla can't), but tempered-burn-in alone FREEZES OUT at ~0.6 occupancy (truth ~1.0) ⇒ full drain needs PT / adaptive tempering
 - **Status:** `proposed (UNCERTIFIED)`. Orchestrator GPU runs on the real minimal-carousel posterior, all-secondary init (the bad-MAP production scenario). `carousel_tempering.py` (fixed step, CONFOUNDED) → `carousel_tempering_adapt.py` (clean, uses the USER's `step_size_adapt` per-step).
@@ -432,6 +433,219 @@ multimodality, conditioning, or the NFW profile.
 ---
 
 ## Design checkpoints (criteria awaiting approval)
+
+- **Run: carousel GATE PT-0 — tempering-path diagnosis + instrumented PT-MCLMC pilot on
+  the dPIE carousel (opening gate of the 2026-07-10 long-horizon engagement: efficient
+  accurate sampler for multimodal lensing posteriors; MCLMC kernel per human directive;
+  PT first avenue, not locked in).**
+  **Status: grader NEEDS-MORE (rd-1, 2026-07-10) — 5 blocking amendments (W-2/gap-zone
+  routing; fresh-implementation known-answer controls incl. transport-rate calibration
+  of ā and R²/ā; shape-faithful smoke; confinement mechanism specified; GATE L header
+  repair) + 6 advisory; ALL ADOPTED in the amendment block at the end of this entry;
+  awaiting rd-2 verification.** Script `experiments/flow_precond/carousel_gate_pt0.py`
+  (new, written fresh — the June-28 PT implementation is NOT reused
+  per the human's provenance note — and independently code-audited before launch);
+  outputs `carousel_gate_pt0_out/`; float64; model via `carousel_model.build()` (D=33);
+  pocket indicator z[6] ('planes/0/mass/1/center_x') > −22.35; per-basin position pools =
+  MAMS64 draws split by indicator (POSITION/METRIC use only — per the 2026-07-10 human
+  directive, MAMS64 weights are NOT trusted and NO win condition scores against 9.57%);
+  frozen inverse-mass metrics: pooled MAMS64 empirical cov for ladders, per-basin cov for
+  confined profile runs. Seeds: Arm A = 0, Arm B1/B2/B3 = 0/1/2. SMOKE env var (reduced
+  config, 1 GPU, ~10 min) must pass before full launch. 1 interactive node, 4 GPUs.
+  **Claim under test + classification.** Stochastic-estimator behaviour, two chained
+  links. Link 1 (mechanism): the June-28 minimal-carousel PT failure and any dPIE PT
+  behaviour are governed by the per-rung equilibrium basin-mass profile of the tempering
+  PATH — power path p^β re-weights basin masses along the ladder (peak-height term)
+  while a likelihood-tempered path π·L^β anchors the hot end at the PRIOR's basin split;
+  replica transport flux is bottlenecked by the min-rung minority mass. Link 2 (transport
+  + drain): on a path whose measured min-rung pocket mass is workable, PT-MCLMC with
+  per-rung EEVPD adaptation achieves cross-basin round trips and drains an off-balance
+  init to the same cold occupancy from both sides, within a ~20k-step/chain pilot budget.
+  Explicitly UNTESTED links, named now: absolute unbiasedness against external truth (NO
+  trusted truth exists — MAMS64 weights are dead by human directive; only bracketing
+  agreement + mechanism coherence are claimed); production init realism beyond the
+  all-main arm; efficiency frontier; other lenses/priors; within-basin sampling quality
+  (= plain-MCLMC validity, C-2..C-7 territory).
+  **Cause hypothesis.** PT transport on multimodal targets fails not through pairwise
+  swap acceptance (June-28: healthy 0.38–0.72 average) but through the equilibrium
+  starvation of the minority basin at hot rungs: for the power path, log[w_P/w_M](β) ≈
+  β·Δlp* + ΔS with Δlp* = lp*P − lp*M = +8.50 (GATE L M1) and ΔS β-independent to
+  Gaussian order, so the pocket's relative mass shrinks by e^{(β−1)·8.50} toward hot —
+  ≈ e^{−8.4} ≈ 2×10⁻⁴ of its cold value at β = 0.01. A likelihood-tempered path replaces
+  the hot-end anchor with the prior's indicator split m_prior (measured in-run from
+  prior draws; expected O(0.1–0.5) — the prior does not know about basins), removing the
+  starvation. If Link 1 holds, the SAME PT machinery that failed June-28 should work on
+  the likelihood path and fail on the power path, with transport counts PREDICTED by the
+  measured profiles.
+  **Arm A — tempered-mass profile (2 GPUs, ~50–75 min).** For each path (power: u = logp;
+  likelihood: u = logL, requires log_prior + log_like = log_prob verified at build time
+  to ≤1e-6 — contingency if the API exposes no separable prior: implement logπ directly
+  from the prior bijector stack; the validation suite's LOG_PRIOR anchor says it exists),
+  measure the RELATIVE profile Δ(β) = log[w_P/w_M](β) − log[w_P/w_M](1) =
+  ∫_β^1 (E_{p_β'|M}[u] − E_{p_β'|P}[u]) dβ' by per-basin-confined tempered MCLMC at
+  β ∈ geomspace(0.01, 1, 10) (one 320-wide vmap per path: 10β × 2 basins × 16 chains;
+  3000 steps: 1500 equilibration discard + 1500 measure; per-chain EEVPD step adaptation,
+  per-basin frozen metric). Confinement is monitored (indicator flips per chain per
+  config recorded); configs with >10% leaked samples are flagged and the leaked samples
+  classified-and-reassigned, not silently dropped. The D/(2β) leading term of E[u]
+  CANCELS in the M−P difference (same D), so trapezoid bias on the geometric grid is
+  second-order; MC error target ≤2 nats on Δ (per-point se ≈ sd(u)/√ESS with sd(u) ≈
+  √(D/2)/β at the hot end — ESS ≥ ~150/config suffices; realized se reported with
+  chain-clustered errors, 16 chains as clusters). Internal-consistency check (validate
+  internals): at the hottest 1–2 rungs where confinement breaks (barrier off), direct
+  unconfined occupancy must agree with the TI-extrapolated relative profile + assumed
+  O(10%) cold anchor within 2× its se — disagreement is an open finding, not a pass.
+  **Arm A predictions (direction + magnitude).** Power path: Δ(β) falls MONOTONICALLY to
+  −8.4 nats at β = 0.01 (Gaussian model; GATE L says the basins are non-Gaussian — KL 157
+  nats main — so ±3 nats tolerance; the DIRECTION and ≥4-nat depth are the tested
+  content). Likelihood path: |Δ(β)| ≤ 2 nats across the ladder (hot anchor = prior split;
+  shallow interpolation), i.e., the two paths separate by ≥3 nats at the hot end.
+  **Arm A falsifier F-1:** the likelihood path ALSO shows ≤ −4 nats suppression somewhere
+  (both paths starve ⇒ Link 1's path-choice remedy is wrong; PT-as-planned out; routing
+  below). Secondary falsifier: power path measures FLAT (|Δ| ≤ 2 nats everywhere) — then
+  the June-28 failure cannot be entropic starvation on the dPIE analogue and the
+  bug-hypothesis gains weight (recorded; does not block Arm B, which runs regardless).
+  **Arm B — instrumented PT-MCLMC pilot (3 arms × 1 GPU each, ~100–120 min,
+  runs UNCONDITIONALLY per the human's provenance note).** Fresh implementation:
+  R = 12 rungs, β = geomspace(0.01, 1, 12) initial (refined to approximate
+  equal-Δβ·sd[u] spacing from Arm A's curves if Arm A completes first; refinement is an
+  in-gate amendment, recorded, not a re-approval); NSYS = 8 independent ladders per arm
+  (the reproducibility axis); K = 10 MCLMC steps/round; ROUNDS = 2000 (20k kernel
+  steps/chain ≈ the user's 10k+10k reference scale); 96 chains vmapped per arm; jitted
+  on-device even/odd adjacent swaps, log α = (β_i − β_j)(u(x_j) − u(x_i)) on the path's
+  u; per-(rung,chain) EEVPD step adaptation (adapt_one lineage, DEVAR 5e-4); momentum
+  refresh per round. Arms: B1 = power path, balanced init (cold rungs half main / half
+  pocket positions); B2 = likelihood path, balanced init; B3 = likelihood path, ALL-MAIN
+  init (the production bad-MAP scenario: pocket must be discovered via the hot/prior end;
+  hot rungs init from prior draws on the likelihood arms). Instrumentation (the June-28
+  lesson): CROSS-basin vs same-basin swap acceptance per pair (separately — the average
+  is a proven-misleading metric); replica basin-identity worm traces (rung × round);
+  pocket-label round-trip counter (hot↔cold); per-rung occupancy time series; per-rung
+  EEVPD; cold-rung indicator split-R̂ across the 8 ladders.
+  **Arm B thresholds (derived, not invented).** Transport-flux model: a replica label
+  random-walks R rungs with per-sweep move probability ā ⇒ round-trip time ≈ R²/ā
+  rounds; pocket-label current additionally suppressed by the profile bottleneck factor
+  e^{min Δ} = w_min/w_cold. Predicted pocket round trips per ladder = (ROUNDS·ā/R²) ×
+  (w_min/w_cold); at ROUNDS = 2000, R = 12, ā ≈ 0.5 (June-28 measured average): ≈ 6.9 ×
+  (w_min/w_cold). Likelihood path (|Δ| ≤ 2 ⇒ w_min/w_cold ≥ 0.135): ≥ ~0.9 per ladder,
+  ~7–55 total over 8 ladders. Power path (Δ ≈ −8.4): ≈ 1.5×10⁻³ per ladder ⇒ ~0 total.
+  (W-2, transport) likelihood-path balanced arm: ≥10 pocket round trips total AND median
+  ≥1 per ladder. (W-3, bracketing drain) B2 vs B3 final cold-rung occupancy (last 500
+  rounds, per-ladder means, n=8 each): |occ_B2 − occ_B3| ≤ 2·se_comb AND each arm moved
+  ≥3× its binomial se from its init value (0.5 and 0.0) — convergence from OPPOSITE
+  sides to a common value is the unbiasedness instrument replacing the dead MAMS64
+  anchor. (W-4, health) per-rung EEVPD ∈ [1e-4, 2e-3]; cold-rung indicator split-R̂ ≤
+  1.05 (8 ladders as chains, per arm); zero NaN chains. (W-5, mechanism coherence —
+  validate internals) observed pocket-label cold-arrival counts per path within ×/÷4 of
+  the Arm-A-profile prediction; >10× mismatch = mechanism model WRONG even if sampling
+  "looks good" (open finding, blocks scale-up). Absolute pocket occupancy: threshold NOT
+  derivable — no trusted truth exists (human directive); deliberately not scored.
+  **Arm B falsifiers.** F-2: likelihood-path profile viable BUT zero pocket round trips
+  (transport machinery/dynamics problem — mundane-first response: replica-trace
+  localization of where labels stall; ONE pre-authorized amendment probe = double K to
+  20 at halved ROUNDS on one GPU; no other knobs). F-3: B2 and B3 converge to occupancies
+  differing >3σ (hysteresis/hidden bias — blocks any scale-up claim). F-4: W-5 mismatch
+  >10× in either direction. F-1 (from Arm A): both paths starve.
+  **Metric blind spots (named).** (i) The z[6] halfspace indicator is blind to any THIRD
+  mode or within-basin substructure — everything here conditions on the two known basins.
+  (ii) Confined-TI expectations are biased if mid-β metastability fails asymmetrically
+  (leakage is monitored + reassigned, but strong leakage makes Δ(β) a lower-confidence
+  band there). (iii) W-3 agreement is blind to BOTH arms converging to the same WRONG
+  value through a shared systematic (e.g., unadjusted-kernel curvature bias, C-16);
+  flagged for cross-method (SMC or long-reference) adjudication at a later gate, not
+  resolvable inside PT-0. (iv) Round-trip counts do not certify within-basin ESS.
+  **Pre-committed plot appearances.** Arm A: Δ(β) vs β, two curves + error bands —
+  hypothesis holds ⇒ power curve dives monotonically ≥4 nats (to ≈ −8 ± 3 at β = 0.01)
+  while likelihood curve stays in a ±2-nat band; F-1 fires ⇒ both curves dive. Arm B
+  worm plot (rung index vs round, colored by basin identity): success ⇒ pocket-colored
+  worms repeatedly traverse hot↔cold on likelihood arms; F-2 ⇒ pocket worms pinned at
+  one end (the June-28 signature). Cold-occupancy traces: B2 falling and B3 rising to a
+  COMMON band; F-3 ⇒ plateaus at different levels. EEVPD-per-rung traces flat at 5e-4.
+  **Routing (pre-committed).** All of W-2..W-5 pass ⇒ draft GATE PT-1 (production-config
+  scale-up + efficiency accounting + cross-method unbiasedness check) — no auto-scale-up
+  inside PT-0. F-1 ⇒ tempering-path family on this posterior needs basin-mass
+  reweighting: pivot checkpoint choosing between per-basin TI mode-weight stitching (Arm
+  A's machinery already produces the estimator) and adaptive-weight ladders
+  (multicanonical on the indicator); PT-as-planned stops. F-2 ⇒ diagnostic-first (no
+  knob-turning beyond the ONE pre-authorized K probe). F-3/F-4 ⇒ report to human with
+  localization evidence; no auto-lever. Any wall overrun ⇒ arms are independently
+  checkpointed (per-arm incremental npz saves every ~100 rounds) and resumable.
+  **Cost estimate.** 1× interactive GPU node (4× A100-40G, -A m5362), single ~4 h
+  allocation ≈ 12–16 GPU·h: smoke ~10 min on 1 GPU; Arm A ≈ 50–75 min on 2 GPUs (one per
+  path; 320-wide vmap, 3000 steps, MCLMC ≈ 2 grad evals/step, scaled from the MAP-128
+  0.197 s/step measurement); Arm B ≈ 100–120 min, 3 arms on 3 GPUs (96-wide, 20k
+  steps/chain + jitted swap sync every 10 steps); slack for the B-ladder refinement
+  restart and the single pre-authorized F-2 probe. Wall-clock is the binding constraint
+  per the human; GPU-hours are not.
+  **GRADER AMENDMENTS (round 1, NEEDS-MORE 2026-07-10; 5 blocking + 6 advisory, all
+  adopted):**
+  (i) *W-2 reconciled with its own prediction + gap zones routed (BLOCKING).* W-2 is now:
+  PASS = ≥7 total pocket round trips over the 8 likelihood-balanced ladders (the derived
+  band's lower edge; the per-ladder median clause is DROPPED — at the band edge the
+  median sits on the 0/1 knife and tests nothing). Routed zones: 1–6 total WITH W-5
+  coherence ⇒ mechanism CONFIRMED, flux-limited — routing is a DERIVED ROUNDS scaling
+  for GATE PT-1 (ROUNDS × 10/observed-rate), not a free PT-0 rerun; 0 total ⇒ F-2. W-3
+  2σ–3σ zone ⇒ "W-3 not demonstrated at pilot precision" (fails W-3, does NOT fire F-3);
+  scale-up blocked pending derived-longer ROUNDS or redesign. Arm A power-path depth
+  measured in 2–4 nats ⇒ prediction MISSED in magnitude (hypothesis failure per
+  discipline) even with the right direction; W-5 adjudicates on the MEASURED profile.
+  Likelihood-path realized hot-end se > 2 nats ⇒ the |Δ| ≤ 2 test widens to
+  |Δ| ≤ 2 + se_realized and the path discrimination is flagged INCONCLUSIVE if the
+  widened band spans the −2.0 viability floor — no silent pass. (Viability refs
+  harmonized: floor Δ_min ≥ −2.0 nats ⟺ w_min/w_cold ≥ 0.135; unworkable ≤ −4.2 nats.)
+  (ii) *Known-answer + calibration control, Arm 0 (BLOCKING — severs the "fresh
+  implementation confirms the path story even if June-28 was just buggy" confound).*
+  Before any dPIE arm, the NEW harness code path must (0a) re-pass the CPU-era
+  Gaussian-mixture weight gate (D=10, modes ±5, weights 0.7/0.3, R=10
+  β=geomspace(0.03,1), NSYS=16, K=20, 3000 rounds, burn 600): cold occ₊ within
+  max(2·se, 0.025) of 0.70 (June-28 lineage passed 0.6986±0.0122); and (0b) calibrate
+  the transport constant on the same analytic target, whose tempered profile is EXACT
+  (equal-cov mixture ⇒ w₋(β) = 0.3^β/(0.3^β+0.7^β), benign): c_rw :=
+  observed-round-trips / (ROUNDS·ā_measured/R²), requiring ≥20 total round trips so
+  c_rw carries ≤~25% Poisson error. W-5's prediction then uses c_rw and the in-run
+  measured ā_B in place of the June-28 plug-ins (ā=0.5 and the naked R²/ā constant are
+  DEMOTED to a-priori estimates). Sanity band c_rw ∈ [0.1, 3]; outside ⇒ the random-walk
+  flux model itself is wrong ⇒ W-2/W-5 re-derived from c_rw before Arm B launches
+  (recorded as an in-gate amendment). Cost ≈ minutes (analytic target).
+  (iii) *Shape-faithful smoke (BLOCKING — the GATE L attempt-1 lesson).* The smoke must
+  compile and execute the FULL production shapes at reduced step counts: Arm A per-β
+  runner at full 32-wide (all 10 β compiles exercised), Arm B at full R=12 × NSYS=8
+  including the jitted swap sync and the incremental-npz save path; only steps/rounds
+  are reduced. Width-reduced smokes are insufficient.
+  (iv) *Confinement mechanism specified (BLOCKING).* There is NO barrier: "confined"
+  runs differ only in INIT (per-basin pools). Every retained sample is classified by
+  its CURRENT indicator value and pooled by class; the estimand is therefore the
+  halfspace-conditional expectation E_{p_β}[u | class] = d/dβ log Z_class(β) for the
+  fixed halfspace partition — well-defined at every β including where metastability
+  fails, with no in-run lever. Boundary-interaction rates (indicator flips per chain,
+  leak fraction per (β, init-basin)) are recorded per config; split-half stationarity
+  of E[u] within the measurement window is reported per config (advisory viii).
+  (v) *Record repair (BLOCKING):* the PT-0 insertion had clobbered the GATE L
+  design-checkpoint header line — restored verbatim above (same failure class as the
+  Fv6/89cf321 clobber; caught by grader before commit this time).
+  (vi) *Δlp★ provenance (ADVISORY):* the +8.50 rests on GATE L's NON-stationary main
+  anchor (nat-grad 1898, 3 negative eigenvalues; C-22) inside a basin with
+  KL(emp‖Laplace) = 157 nats — the −8.4-nat depth is a Gaussian-order estimate around
+  an unconverged anchor; if the true main peak is higher the real depth shrinks. Arm A's
+  MEASURED profile supersedes the model everywhere downstream (W-5 scores against the
+  measurement, never the model).
+  (vii) *Likelihood-path hot-end error budget (ADVISORY):* the sd(u) ≈ √(D/2)/β formula
+  is power-path-only; near β→0 the likelihood-path sd(logL) under ~the prior is not
+  derivable a priori at the ~1e5 evidence scale — the realized se is REPORTED per rung
+  and routed via (i)'s widened-band rule.
+  (viii) *Hot-rung stationarity evidence (ADVISORY):* the frozen cold-basin metric is
+  ~100× variance-mismatched at β = 0.01 on the power path; a split-half E[u] check over
+  the 1500-step measurement window is reported alongside Δ(β) per config.
+  (ix) *Anchor sourcing (ADVISORY):* the "assumed O(10%) cold anchor" in Arm A's
+  internal-consistency check is sourced to the human's "~10:1 modes" statement
+  (archaeology HUMAN CONTEXT), NOT to MAMS64, and never enters a pass/fail.
+  (x) *Scheduling honesty (ADVISORY):* Arm A (2 GPUs) + Arm B (3 arms) need 5 GPU-slots
+  on a 4-GPU node ⇒ partial serialization (realistic wall ≈ 3.5 h incl. smoke + Arm 0);
+  the pre-authorized F-2 probe realistically lands in a SECOND allocation via the
+  per-arm incremental checkpoint/resume path.
+  (xi) *Audit artifact (ADVISORY):* the independent code audit must leave a record —
+  auditor identity, commit hash audited, findings — in the Log before launch; an
+  unrecorded audit is indistinguishable from none.**
 
 - **Run: carousel GATE L — Laplace jump-proposal feasibility (3 offline diagnostics,
   human-directed 2026-07-09 after the Fv6 escalation; strategic pivot candidate =
@@ -1327,6 +1541,61 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-10 (RECORD ARCHAEOLOGY — three UNLOGGED GPU PT runs on the minimal carousel,
+  2026-06-28, all FAILED to transport; C-18's "PENDING GPU validation" was in fact answered
+  negatively for the naive form and never recorded):** found on disk while scoping the new
+  PT-MCLMC engagement: `de_mclmc_prototype/carousel_pt.py` (committed in WIP snapshot
+  4e9f212) + `pt_carousel.log` (R=10, β_min=0.02, all-secondary init),
+  `pt_carousel_balanced.log` (R=10, balanced 0.5 init), `pt_carousel_b005.log` (R=12,
+  β_min=0.005, all-secondary; the only one matching the committed script), and
+  `pt_carousel.npz` (main checkout, mtime Jun 28 16:12). Common config: NSYS=16
+  independent ladders, K=10 MCLMC steps/round, 90 rounds, per-(level,chain) EEVPD step
+  adaptation (faithful — per-round prints ≈5e-4), swap math verified-faithful to
+  `tempering/parallel_tempering.py` (which PASSED the CPU Gaussian-mixture weight gate,
+  0.6986 vs truth 0.70). **Result: the cold rung's occ(global) stayed pinned at its INIT
+  value for all 90 rounds in ALL THREE runs (0.000 / 0.500 / 0.000; truth ≈1.0) while
+  average adjacent-pair swap acceptance was healthy (0.38–0.72) and the hot rung showed
+  genuine kernel crossing (b005 hot occ 0.06–0.31).** The balanced run had not a single
+  cold-chain basin flip in ~45 sweeps × 16 systems (≥several hundred cross-basin cold-pair
+  attempts) ⇒ CROSS-basin swap acceptance ≲1e-2–1e-3 while same-basin ≈0.5 — **pairwise-
+  average swap acceptance is a misleading health metric on this posterior.** No design
+  checkpoint exists for these runs (illegitimate under the standing rule; recorded now as
+  found artifacts, UNCERTIFIED). Mechanism HYPOTHESIS (untested): the power path p^β
+  re-weights basin masses along the ladder (entropic starvation / first-order-like
+  bottleneck) — configs of the cold-favored basin are equilibrium-disfavored at
+  intermediate β, so downward replica transport is exponentially suppressed even though
+  same-basin swaps accept freely (consistent with b005's mid-rung occ ≈ 0 between hot ≈0.2
+  and cold-truth ≈1.0). Not yet distinguished from a subtle implementation bug (runs 1–2
+  used earlier uncommitted script variants). Consequence: C-18 addendum; the next PT gate
+  must FIRST measure the per-basin tempered-mass profile vs β (path diagnosis) before any
+  expensive dPIE PT run.
+  **HUMAN CONTEXT (2026-07-10, same day):** the user notes "the previous PT example was on
+  a more pathological posterior and the implementation was done by a less capable agent."
+  Weighting adjusted accordingly: the minimal carousel's 1e-5 secondary is an extreme
+  drain test (the dPIE carousel's modes are ~10:1), and an implementation defect is a
+  live explanation alongside the entropic-bottleneck hypothesis. The June-28 failure is
+  therefore NOT treated as evidence that PT fails on the dPIE target; the GATE PT-0
+  design runs the dPIE PT pilot unconditionally (fresh implementation, independently
+  audited) with the tempered-mass profile arm as the mechanism PREDICTOR the pilot must
+  match, not as a gate that can block the pilot.
+
+- **2026-07-10 (HUMAN DIRECTIVE — MAMS64 is NOT converged; its pocket weight must not be
+  treated as ground truth):** the user states, verbatim: "the MAMS64 run is explicitly not
+  converged, and the pocket weights should not be trusted." This is consistent with the
+  record's own measurements (indicator split-R̂ = 1.719, per-chain occupancy-ESS ≈ 1.9,
+  per-chain occupancy range [0.001, 0.951] — see the BENCHMARK baseline block), but it
+  supersedes every place the record uses "MAMS64 = 9.57%" as *truth* (e.g. the GATE L
+  M2b weight comparison and the W2 band derivation). Standing consequence for all future
+  gates on the dPIE carousel: **9.57% is an unconverged point estimate, not an anchor.**
+  No win condition may be scored against it as a reference value; unbiasedness must be
+  established by convergence + reproducibility of the new sampler itself (multi-seed
+  agreement, indicator R̂/ESS, round-trip counts) and, where a weight claim is made, by
+  cross-method agreement or a purpose-built long reference run — not by matching MAMS64.
+  Same session, the user opened a long-horizon engagement: develop an efficient accurate
+  sampler for multimodal lensing posteriors, MCLMC kernel (their workhorse), PT first
+  avenue but not locked in; wall-clock is the constraint, 4-GPU interactive node,
+  reference budget 10k burn-in + 10k kept.
 
 - **2026-07-09 (carousel GATE L RAN — Laplace jump-mixture FALSIFIED, structurally: the
   main basin admits NO PSD quadratic model at its best reachable point; Laplace evidence
