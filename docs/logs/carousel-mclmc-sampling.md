@@ -2073,7 +2073,18 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   the PoolQZ seeding diff gets the standing pre-launch audit (auditor + hash
   recorded); the probe s/step INCLUDES compile (conservative for the >3 h/arm abort
   rule); disclosed: the seed-22 smoke exposed one 8-chain occupancy value (0.2156)
-  before the rerun — negligible, on the record.
+  before the rerun — negligible, on the record. PRE-LAUNCH AUDIT (amendment-xi):
+  PASSED at b1291ba (wrapper blob 27a853c, auditor = rigor-grader instance):
+  PoolQZ.sample/mean/covariance/__init__ byte-identical to the 0ea87c5-audited
+  version (docstring-only class change); SVI seeding verified against
+  dpie/svi/arrays.npz (qz_loc (33,) f64; tril lower-triangular; cov PSD, eigs
+  2.8e-8–5.4e-2); probe returns before any scorer artifact; no stale artifact
+  collisions. Auditor caveat ADOPTED: compile-inclusive probe s/step is conservative
+  against compile ONLY, not against late trajectory-length growth (adaptive n_k,
+  mams.py:322–335) — the abort decision applies a 1.5× margin (launch only if
+  probe-implied wall × 1.5 ≤ 3 h/arm), anchored by the baseline mean n_k 13.4
+  (max 38 < 60 cap) under the same SVI seeding; probe s/step quoted in the launch
+  record (probe JSON, per the auditor's record-keeping deviation note).
   **Costs:** C1/C2 1500 rounds in 11,754 s each (7.84 s/round — matches PT-0b);
   C3/C4 ≈ 7.8 h GPU lost to the clip; total gate ≈ 15.5 GPU·h.
   **Scope:** L2's pass is at its pinned precision ONLY (bias > ~0.19 excluded; the
