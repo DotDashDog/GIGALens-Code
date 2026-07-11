@@ -452,8 +452,13 @@ multimodality, conditioning, or the NFW profile.
   adjudication-only-if-CI-excludes-a-candidate; extension committed + diff audit
   recorded below; IAT 11.4–45.6, ā = 0.53 erfc provenance, rung-0 leakage 25.6/62.6%
   cited, wall margin noted). Grader verified by recomputation: ladder knots + 4.4708-nat
-  cost integral, K* derivation, RT/flip/discovery arithmetic, 7.78 s/round. Awaiting
-  rd-2 re-grade on amended text.** Same script `experiments/flow_precond/carousel_gate_pt0.py`
+  cost integral, K* derivation, RT/flip/discovery arithmetic, 7.78 s/round.
+  rd-2 (2026-07-11): CERTIFY-RECOMMENDED to LAUNCH at 79cdccd — independent B4/env diff
+  audit CLEAN (properties a–e verified at file:line); ladder + erfc/flip/wall/headroom
+  arithmetic independently reproduced; conditional numeric fix APPLIED (RT bound
+  848→755, total lower 170→190; scoring keys off the 300 point prediction, unaffected).
+  Scope: this exact 4-arm config only; β < 0.3594 transport and shared-systematic
+  unbiasedness remain untested. LAUNCHING under the engagement mandate.** Same script `experiments/flow_precond/carousel_gate_pt0.py`
   (audited lineage; PT-0b config via the recorded env overrides + one small extension:
   a power-path all-main arm `B4` and env overrides for K/NSYS/ROUNDS/ss_max — extension
   audited by diff before launch); outputs tagged `_pt0b` via GATE_PT0_TAG_SUFFIX; fresh
@@ -500,8 +505,9 @@ multimodality, conditioning, or the NFW profile.
   inputs; the model itself is UNDER TEST via W-b1).** Adjacent-pair acceptance ā ≈ 0.53
   (erfc model, provenance above; W-b3's [0.25, 0.65] band brackets both this and the
   design-band 0.41). Label transport: per-walker round-trip time ≈ 2R²/(ā·f) with
-  f ≈ K/(K+IAT_pooled), f ∈ 0.18–0.47 ⇒ 289–848 rounds/walker ⇒ with 96 walkers/arm ⇒
-  **≈ 170–500 total round trips per arm in 1500 rounds (point prediction ≈ 300);
+  f ≈ K/(K+IAT_pooled), f ∈ 0.18–0.47 ⇒ 289–755 rounds/walker (grader-corrected:
+  2·36/(0.53·0.18) = 755, not 848) ⇒ with 96 walkers/arm ⇒
+  **≈ 190–500 total round trips per arm in 1500 rounds (point prediction ≈ 300);
   pocket-classified ≈ 30–120** (pocket fraction between the 0.1-anchor and the 0.3–0.4
   open-finding readings). Cold-rung basin flips: PT-0's B1 cold pair acc 0.189 gave
   19–77 flips/system/900 rounds (npz-confirmed) ⇒ at acc ≈ 0.53 and 1500 rounds
