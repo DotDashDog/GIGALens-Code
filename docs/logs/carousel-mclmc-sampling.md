@@ -442,8 +442,9 @@ multimodality, conditioning, or the NFW profile.
 ### C-24 — GATE PT-0b: PT-MCLMC with a measured equal-cost short ladder TRANSPORTS, DRAINS, and DISCOVERS on the dPIE carousel at the reference budget scale; the cold pocket weight is ≈ 0.40 (CI excludes 0.10) — the untrusted MAMS64 9.6% was ~4× low
 - **Status:** `proposed (UNCERTIFIED)` — 2026-07-11, all pre-registered clauses scored (W-b2/W-b3/W-b4 PASS; W-b1 transport PASS with flux-model MARGINAL annulus reading; W-b5 budget-limited zone). Artifacts `carousel_gate_pt0_out/*_P?pt0b*`, `pt0b_score.json`; Log entry "GATE PT-0b RAN".
 - **Config that works (the C-23 knob fixes):** power path p^β; 6-rung equal-swap-cost ladder [0.3594…1.0] (0.894 nats/pair from measured sd(u); adjacent acceptance 0.52–0.54, erfc-predicted 0.53); K = 10 steps/round; per-(rung,chain) EEVPD adaptation (target 5e-4; realized 3.0–4.0e-4 every rung); ss_max = 5; pooled empirical cov metric; even/odd host swaps; 16 ladders/arm, 1500 rounds ≈ 16.5k kernel steps/chain; 96-wide fused vmap, 7.8–8.1 s/round on one A100.
-- **Evidence:** pocket-classified round trips 350–428/arm (PT-0: 0); all-main-init arms (production bad-MAP scenario) DISCOVER the pocket via rung-0 crossing and rise 0.0 → 0.43 ± 0.03, balanced arms descend 0.5 → 0.39 ± 0.03 — two-sided bracket agrees (|Δ| = 0.043 ≤ 0.085) with POWER clause met (se_comb 0.043 ≤ 0.06); seed replicas agree; pooled cold-rung pocket occupancy **0.406 ± 0.021 (2·se CI 0.32–0.49: excludes 0.10, retains 0.35)**.
-- **Scope/caveats:** bracketing shares the unadjusted-MCLMC-kernel systematic (both arms could sit at the same kernel-biased value — cross-method check deferred to PT-1); "pocket" = z[6] > −22.35 halfspace; within-basin ESS not certified; flux model under-predicted 4.2× ⇒ descriptive-only henceforth; wall NOT optimized; single posterior.
+- **Evidence:** pocket-classified round trips 350–428/arm (PT-0: 0); all-main-init arms (production bad-MAP scenario) DISCOVER the pocket (partly via boundary leakage, A5) and rise 0.0 → 0.43, balanced arms descend (realized init 0.375, A4) → 0.39 — two-sided bracket agrees (|Δ| = 0.043 ≤ 0.085) with POWER clause met (se_comb 0.043 ≤ 0.06); seed replicas agree; pooled cold-rung pocket occupancy **0.406, pinned CI = pooled ± 2·se_comb = (0.32, 0.49): excludes 0.10, retains 0.35** (the ±0.021 pooled-se is an unpinned scorer extra, not the adjudication interval).
+- **Scope/caveats:** bracketing shares the unadjusted-MCLMC-kernel systematic (both arms could sit at the same kernel-biased value — cross-method check deferred to PT-1), and the measured EEVPD heavy tail (11–20% of window rounds above 2e-3, maxima to 1.7e4 despite in-band medians) is exactly the mechanism that could produce such a bias (A3); scoring window not fully stationary ⇒ ≈0.4 carries a ~±0.05 drift systematic, 0.10-exclusion unaffected (A2); "pocket" = z[6] > −22.35 halfspace; within-basin ESS not certified; flux model under-predicted 4.2× ⇒ descriptive-only henceforth; wall NOT optimized; single posterior.
+- **Grader:** rd-1 CERTIFY-RECOMMENDED 2026-07-11 conditional on A1–A6 (applied); all headline statistics independently recomputed from the npz; scorer verified formula-faithful to 79cdccd; record integrity clean.
 - **Downstream:** GATE PT-1 = production point-and-go composition + efficiency frontier + cross-method unbiasedness arm.
 
 ## Design checkpoints (criteria awaiting approval)
@@ -1816,11 +1817,16 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   UNDER-predicted transport 4.2× (conservative direction); per routing, the flux model
   cannot be load-bearing in any scale-up design; no auto-scale-up from this gate.**
   (W-b2, THE product test) agreement |0.3888 − 0.4321| = 0.043 ≤ 2·se_comb = 0.085
-  PASS; movement 4.1σ (balanced, down from 0.5) and 13.2σ (all-main, up from 0.0)
-  PASS; POWER se_comb = 0.043 ≤ 0.06 PASS; **adjudication clause: pooled bracket
-  0.406 ± 0.021, CI (0.32, 0.49) EXCLUDES the 0.10 candidate and retains 0.35 ⇒ the
-  cold pocket weight is ≈ 0.4.** PT-0's hot-end anomaly is thereby explained (its
-  direct 0.379 at β = 0.01 was pointing at the true weight, not a transient).
+  PASS; movement 4.1σ (balanced) and 13.2σ (all-main) PASS — grader note A4: the
+  balanced arms' REALIZED init_cold_occ was 0.375 (Bernoulli(0.5) draw, both seeds),
+  so the pinned-from-0.5 movement clause passes but realized-init movement is ~0.5σ;
+  non-frozenness is instead evidenced by 182–217 cold flips/system; POWER se_comb =
+  0.043 ≤ 0.06 PASS; **adjudication clause (A1, pinned wording): pooled 0.406 with
+  pinned CI = pooled ± 2·se_comb = (0.32, 0.49) — EXCLUDES the 0.10 candidate,
+  retains 0.35; the ±0.021 pooled-se is an unpinned scorer extra, NOT the
+  adjudication interval.** PT-0's hot-end anomaly is thereby consistent (its direct
+  0.379 at β = 0.01 was pointing at the same KERNEL-CONSISTENT value — A6: "true
+  weight" withdrawn; the shared-systematic caveat forbids it).
   (W-b3) EEVPD median (last 500) ∈ [3.0e-4, 4.0e-4] at ALL 6 rungs, all four arms —
   in band, centered; pair acceptances 0.519–0.537 vs the erfc prediction 0.53
   (internals validated to ~1%); NaN reverts 0. PASS.
@@ -1830,10 +1836,23 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   failure"; per-system last-500 means still spread sd ≈ 0.14–0.20 (flips_total ≈
   2900–3500 per arm, i.e. ~180–220 cold-rung flips/system — matches the 90–360
   prediction band).
-  **Plots (inspected before metrics):** all-main cold-occupancy traces rise from 0.0
-  and equilibrate in a ~0.4–0.5 band by round ~400 with rapid per-system flipping;
-  balanced traces descend from 0.5 into the same band; worms show dense red/blue churn
-  at every rung, no pinning, no dead pairs.
+  **Plots (inspected before metrics; grader recount A2/A3/A5 folded in):** all-main
+  cold-occupancy traces rise from 0.0 into a ~0.4–0.5 band with rapid per-system
+  flipping; balanced traces descend into the same band; worms show dense red/blue
+  churn at every rung, no pinning, no dead pairs. (A2) "equilibrated by ~round 400"
+  is WITHDRAWN as overstated: the scoring window is NOT fully stationary — all-main
+  window means still rising (P3 +0.040, P4 +0.090 first→second half of last-500; P3
+  run thirds 0.25/0.44/0.47), balanced still falling (P1 thirds 0.46/0.44/0.37) ⇒
+  the ≈0.4 point value carries an unquantified drift systematic ~±0.05 (the
+  0.10-exclusion is unaffected). (A3) EEVPD has a HEAVY TAIL the pinned median hides:
+  11–20% of window rounds exceed the 2e-3 band edge at every rung (maxima 0.2–1.7e4;
+  the run's inline mean-based check prints all-False for P1/P2); the pre-committed
+  "flat in-band" plot appearance is NOT met — open finding, feeds the shared-kernel
+  caveat for PT-1. (A5) discovery timing beat prediction ~10× (pocket-classified
+  cold states by round ≤50 vs predicted 200–500) and P3's "all-main" pool contained
+  one pocket-classified rung-2 state (init occ per rung [0,0,0.06,0,0,0]) —
+  halfspace-boundary leakage means discovery is partly direct boundary crossing, not
+  solely rung-0 propagation.
   **What this certifies (UNCERTIFIED, human validation pending) and what it does
   not:** PT-MCLMC with a measured equal-cost short ladder transports, drains, and
   discovers on the dPIE carousel within ~16.5k kernel steps/chain (≈ the user's
