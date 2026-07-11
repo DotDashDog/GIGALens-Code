@@ -80,6 +80,10 @@ DECAY = (150.0 - 1.0) / (150.0 + 1.0)
 SS_INIT, SS_MAX0 = 0.05, 1.0        # init step 0.05; adapter converges from there
 JITTER = 1e-3                       # N(0,1) jitter on pool-drawn init positions
 SEP_TOL = 1e-6                      # |log_prior + log_like - log_prob| startup gate
+U_REL_TOL = 1e-6                    # RELATIVE u-recovery gate (audit fixes 2+3):
+                                    # max |u - u_direct| / (1 + |u_direct|)
+MIN_CLASS_N = 50                    # Arm A: min retained samples per (beta, class)
+                                    # cell; below -> E missing, Delta truncated (fix 4)
 ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2)   # checkpoint seeds
 # Arm A
 BETAS_A = np.geomspace(0.01, 1.0, 10)
@@ -132,6 +136,11 @@ def pr(*a):
 
 def _json_default(o):
     return o.tolist() if hasattr(o, "tolist") else str(o)
+
+
+def _f3(v):
+    """Format possibly-missing (None) estimates for prints (audit fix 4)."""
+    return "MISSING" if v is None else f"{v:.3f}"
 
 
 # --------------------------------------------------------------- model + pools
@@ -318,7 +327,9 @@ def make_runner_b(tf, kern, dim, L):
 def basin_estimates(u, ind):
     """u, ind: (2 init-groups [M,P], steps, nch). Classify retained samples by
     CURRENT indicator; pool both init groups per class. Chain-clustered se
-    (32 chains as clusters). Returns per-class stats + per-init-group leak."""
+    (32 chains as clusters). Returns per-class stats + per-init-group leak.
+    Empty-class guard (audit fix 4): a cell with < MIN_CLASS_N retained samples
+    reports E = None (missing; null in JSON) -- it never enters the trapezoid."""
     ur, ir = u[:, DISCARD_A:, :], ind[:, DISCARD_A:, :]
     out = {}
     for cls, mask in (("M", ~ir), ("P", ir)):
@@ -330,8 +341,9 @@ def basin_estimates(u, ind):
                 if mgc.any():
                     cms.append(ur[g, mgc, c].mean())
         cms = np.asarray(cms)
-        if len(vals) == 0:
-            out[cls] = dict(E=float("nan"), se=float("nan"), n=0, n_chains=0)
+        if len(vals) < MIN_CLASS_N:
+            out[cls] = dict(E=None, se=None, n=int(len(vals)),
+                            n_chains=int(len(cms)))
         else:
             se = (float(cms.std(ddof=1) / math.sqrt(len(cms)))
                   if len(cms) > 1 else float("inf"))
@@ -441,7 +453,7 @@ def run_arm_a(path_kind, tag):
         ss = (jnp.full(NCH_A, SS_INIT), jnp.full(NCH_A, SS_INIT))
         ast = (fresh_adapt(NCH_A), fresh_adapt(NCH_A))
         key, kr = jax.random.split(key)
-        _, _, _, traces = runner(pos, ss, ast, kr)
+        finals, _, _, traces = runner(pos, ss, ast, kr)
         for g in range(2):
             u, ind, sst, ec2, ok = traces[g]
             u_tr[bi, g] = np.asarray(u)          # (steps, nch), fp64
@@ -449,6 +461,26 @@ def run_arm_a(path_kind, tag):
             ss_tr[bi, g] = np.asarray(sst)
             ev_tr[bi, g] = np.asarray(ec2).mean(axis=1) / DIM
             n_revert[bi, g] = int((~np.asarray(ok)).sum())
+        # u-recovery identity check per (beta, basin) config (audit fix 3): the
+        # runner is one jitted call, so the check runs right after it, comparing
+        # the recorded in-scan u at the FINAL step against a direct eval on the
+        # final positions (the only step whose positions are returned). Same
+        # RELATIVE 1e-6 gate as the Arm-B round-0 check (audit fix 2 rationale).
+        u_check_rel = []
+        for g in range(2):
+            zfin = np.asarray(finals[g])
+            if path_kind == "power":
+                u_dir = M["lp_batch"](zfin)
+            else:
+                u_dir = (M["lp_batch"](zfin)
+                         - np.asarray(M["lpri_b"](jnp.asarray(zfin))))
+            rel = float(np.max(np.abs(u_tr[bi, g, -1] - u_dir)
+                               / (1.0 + np.abs(u_dir))))
+            u_check_rel.append(rel)
+            if rel > U_REL_TOL:
+                raise RuntimeError(
+                    f"Arm A u-recovery check failed at beta={b:.4f} group "
+                    f"{'MP'[g]}: rel {rel:.3e} > {U_REL_TOL}")
         est = basin_estimates(u_tr[bi], ind_tr[bi])
         essM, tauM = group_ess_proxy(u_tr[bi, 0, DISCARD_A:])
         essP, tauP = group_ess_proxy(u_tr[bi, 1, DISCARD_A:])
@@ -463,30 +495,63 @@ def run_arm_a(path_kind, tag):
                    ess_proxy_Minit=essM, iat_Minit=tauM,
                    ess_proxy_Pinit=essP, iat_Pinit=tauP,
                    stationarity_Minit=stat_M, stationarity_Pinit=stat_P,
+                   u_check_rel=u_check_rel,
                    eevpd_last=[float(ev_tr[bi, g, -min(500, STEPS_A // 2):].mean())
                                for g in range(2)],
                    step_final=[float(ss_tr[bi, g, -1].mean()) for g in range(2)],
                    n_revert=[int(n_revert[bi, g]) for g in range(2)],
                    wall_s=time.time() - t0)
         table.append(row)
-        pr(f"[A {tag}] beta={b:.4f}: E_M={row['E_M']:.3f}+-{row['se_M']:.3f} "
-           f"E_P={row['E_P']:.3f}+-{row['se_P']:.3f} "
+        pr(f"[A {tag}] beta={b:.4f}: E_M={_f3(row['E_M'])}+-{_f3(row['se_M'])} "
+           f"(n={row['n_M']}) E_P={_f3(row['E_P'])}+-{_f3(row['se_P'])} "
+           f"(n={row['n_P']}) "
            f"leak M/P={row['leak_Minit']:.3f}/{row['leak_Pinit']:.3f}"
            f"{' LEAK>10%' if row['leak_flag'] else ''} "
+           f"u_check_rel={u_check_rel[0]:.1e}/{u_check_rel[1]:.1e} "
            f"eevpd={row['eevpd_last'][0]:.1e}/{row['eevpd_last'][1]:.1e} "
            f"reverts={row['n_revert']} ({row['wall_s']:.0f}s)")
+        if row["E_M"] is None or row["E_P"] is None:
+            pr(f"[A {tag}]   EMPTY-CLASS FLAG beta={b:.4f}: "
+               f"n_M={row['n_M']}, n_P={row['n_P']} (< {MIN_CLASS_N} in a cell) "
+               f"-> E missing; Delta will be truncated here")
         for gnm, st in (("Minit", stat_M), ("Pinit", stat_P)):
             if st["flag_3se"]:
                 pr(f"[A {tag}]   STATIONARITY FLAG {gnm} beta={b:.4f}: "
                    f"E half1/2 = {st['E_half1']:.3f}/{st['E_half2']:.3f}, "
                    f"|z| = {abs(st['z_diff']):.2f} > {STAT_FLAG_SIGMA}")
 
-    d = np.array([r["E_M"] - r["E_P"] for r in table])
-    var_d = np.array([r["se_M"] ** 2 + r["se_P"] ** 2 for r in table])
-    delta, delta_se = cum_trapz_from_cold(betas, d, var_d)
+    # Truncation rule (audit fix 4; reporting, not interpolation): Delta(beta) is
+    # computed only over the maximal COMPLETE suffix ending at the cold anchor --
+    # down to the hottest beta with BOTH classes complete; hotter betas get null.
+    complete = [(r["E_M"] is not None) and (r["E_P"] is not None) for r in table]
+    k_min = n_b
+    for k in range(n_b - 1, -1, -1):
+        if complete[k]:
+            k_min = k
+        else:
+            break
+    d = np.full(n_b, np.nan)
+    var_d = np.full(n_b, np.nan)
+    for i, r in enumerate(table):
+        if complete[i]:
+            d[i] = r["E_M"] - r["E_P"]
+            var_d[i] = r["se_M"] ** 2 + r["se_P"] ** 2
+    delta = np.full(n_b, np.nan)
+    delta_se = np.full(n_b, np.nan)
+    if k_min < n_b:
+        dl, ds = cum_trapz_from_cold(betas[k_min:], d[k_min:], var_d[k_min:])
+        delta[k_min:], delta_se[k_min:] = dl, ds
+        delta_truncated_at_beta = float(betas[k_min]) if k_min > 0 else None
+    else:
+        delta_truncated_at_beta = "no_complete_config"
+    if k_min > 0:
+        pr(f"[A {tag}] DELTA TRUNCATED: complete suffix starts at "
+           f"beta={betas[k_min]:.4f} (k_min={k_min})" if k_min < n_b
+           else f"[A {tag}] DELTA TRUNCATED: NO complete (beta, class) config")
     pr(f"[A {tag}] Delta(beta): " +
-       " ".join(f"{b:.3f}:{v:+.2f}+-{s:.2f}" for b, v, s in
-                zip(betas, delta, delta_se)))
+       " ".join(f"{b:.3f}:{v:+.2f}+-{s:.2f}" if np.isfinite(v)
+                else f"{b:.3f}:null"
+                for b, v, s in zip(betas, delta, delta_se)))
 
     # hot-end consistency: unconfined runs at the N_HOT_CHECK hottest betas,
     # 50/50 main/pocket init, pooled-cov metric -> direct pocket occupancy
@@ -507,20 +572,31 @@ def run_arm_a(path_kind, tag):
         se = (float(occ_chain.std(ddof=1) / math.sqrt(len(occ_chain)))
               if len(occ_chain) > 1 else float("inf"))
         # convenience prediction from Delta + ASSUMED 0.1 cold pocket anchor
-        lo = math.log(0.1 / 0.9) + delta[bi]
-        occ_pred = 1.0 / (1.0 + math.exp(-lo))
+        if np.isfinite(delta[bi]):
+            lo = math.log(0.1 / 0.9) + float(delta[bi])
+            occ_pred = 1.0 / (1.0 + math.exp(-lo))
+            # consistency flag (audit fix 5): direct occupancy vs prediction
+            consistent = (bool(abs(occ - occ_pred) <= 2.0 * se)
+                          if math.isfinite(se) else None)
+        else:
+            occ_pred, consistent = None, None   # Delta truncated at this beta
         hot[f"beta_{b:.4f}"] = dict(
             beta=float(b), occ_pocket=occ, se_chain_clustered=se,
             occ_pred_assuming_cold_anchor_0p1=occ_pred,
+            consistency_within_2se=consistent,
             wall_s=time.time() - t0)
         hot[f"beta_{b:.4f}"]["ind_frac_by_chain"] = occ_chain.tolist()
         pr(f"[A {tag}] hot-end unconfined beta={b:.4f}: pocket occ={occ:.4f}"
-           f"+-{se:.4f} (pred w/ 0.1 anchor: {occ_pred:.4f}) "
+           f"+-{se:.4f} (pred w/ 0.1 anchor: {_f3(occ_pred)}; "
+           f"consistent within 2se: {consistent}) "
            f"({hot[f'beta_{b:.4f}']['wall_s']:.0f}s)")
 
     summary["per_beta"] = table
-    summary["delta"] = dict(betas=betas.tolist(), d_integrand=d.tolist(),
-                            delta=delta.tolist(), delta_se=delta_se.tolist())
+    _null = lambda arr: [float(v) if np.isfinite(v) else None for v in arr]
+    summary["delta"] = dict(betas=betas.tolist(), d_integrand=_null(d),
+                            delta=_null(delta), delta_se=_null(delta_se),
+                            delta_truncated_at_beta=delta_truncated_at_beta,
+                            min_class_n=MIN_CLASS_N)
     summary["hot_end_consistency"] = hot
     summary["leak_flags"] = [r["beta"] for r in table if r["leak_flag"]]
 
@@ -552,8 +628,10 @@ def run_arm_a(path_kind, tag):
     ax[0].set_ylabel("Delta(beta) = log[wP/wM](beta) - log[wP/wM](1)  [nats]")
     ax[0].legend(fontsize=8)
     ax[0].set_title(f"{tag}: tempered-mass relative profile")
-    EM = np.array([r["E_M"] for r in table])
-    EP = np.array([r["E_P"] for r in table])
+    EM = np.array([np.nan if r["E_M"] is None else r["E_M"] for r in table],
+                  dtype=float)
+    EP = np.array([np.nan if r["E_P"] is None else r["E_P"] for r in table],
+                  dtype=float)
     ax[1].plot(betas, EM, "o-", label="E_M[u]")
     ax[1].plot(betas, EP, "s-", label="E_P[u]")
     ax[1].set_xscale("log")
@@ -649,9 +727,15 @@ def run_pt(tag, seed, spec):
     steps = [jnp.full(NSYS, SS_INIT) for _ in range(R)]
     adapt = [fresh_adapt(NSYS) for _ in range(R)]
     wid = np.tile(np.arange(R)[:, None], (1, NSYS))     # walker ids
-    wflag = np.zeros((R, NSYS), dtype=np.int8)          # [walker_id, sys]: 0/1/2
+    # wflag [walker_id, sys] (audit fix 1): 0 neutral, 1 tagged-hot,
+    # 2 down-traversed arriving MAIN-classified, 3 down-traversed arriving
+    # POCKET-classified -- the arrival class rides in the flag so round trips
+    # split by class on return to rung 0 (W-2 scores the pocket-classified count).
+    wflag = np.zeros((R, NSYS), dtype=np.int8)
     down_traverses = np.zeros(NSYS, dtype=int)
     round_trips = np.zeros(NSYS, dtype=int)
+    round_trips_main = np.zeros(NSYS, dtype=int)
+    round_trips_pocket = np.zeros(NSYS, dtype=int)      # the W-2 statistic
     pocket_cold_arr = np.zeros(NSYS, dtype=int)
     main_cold_arr = np.zeros(NSYS, dtype=int)
 
@@ -663,14 +747,17 @@ def run_pt(tag, seed, spec):
     att = np.zeros((R - 1, 2), dtype=int)   # [pair, 0=same 1=cross] attempts
     acc = np.zeros((R - 1, 2), dtype=int)
     n_revert = 0
-    u0_verify = None
+    u0_verify, u0_rel = None, None
     npz_path = os.path.join(OUT, f"arrays_{tag}.npz")
 
     def save_npz(t):
         np.savez(npz_path, betas=betas, ind_thin=ind_thin[:t // THIN_B + 1],
                  cold_ind=cold_ind[:t + 1], eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
-                 swap_attempts=att, swap_accepts=acc, walker_id=wid,
+                 swap_attempts=att, swap_accepts=acc,
+                 walker_id=wid, walker_flag=wflag,   # machine reconstructible (fix 1)
                  down_traverses=down_traverses, round_trips=round_trips,
+                 round_trips_main=round_trips_main,
+                 round_trips_pocket=round_trips_pocket,
                  pocket_cold_arrivals=pocket_cold_arr,
                  main_cold_arrivals=main_cold_arr, n_revert=np.int64(n_revert),
                  init_cold_occ=init_cold_occ, rounds_done=np.int64(t + 1))
@@ -696,11 +783,19 @@ def run_pt(tag, seed, spec):
         if t == 0:   # round-0 identity verification against direct evals
             u_direct = np.asarray(
                 spec["u_direct"](pos.reshape(-1, dim))).reshape(R, NSYS)
+            # RELATIVE tolerance (audit fix 2): absolute 1e-6 on |u|~3e5 is a
+            # ~1e-11 relative reproducibility demand across jit compiles that
+            # non-bitwise lstsq log_like can spuriously trip (and log_prior
+            # cross-compile mismatch is amplified by 1/beta on the lik path);
+            # 1e-6 RELATIVE (~0.3 nats here) still catches real algebra bugs.
             u0_verify = float(np.max(np.abs(u - u_direct)))
-            pr(f"[B {tag}] round-0 u identity: max|u - direct| = {u0_verify:.3e}")
-            if u0_verify > 1e-6:
+            u0_rel = float(np.max(np.abs(u - u_direct) / (1.0 + np.abs(u_direct))))
+            pr(f"[B {tag}] round-0 u identity: rel = {u0_rel:.3e} "
+               f"(abs = {u0_verify:.3e})")
+            if u0_rel > U_REL_TOL:
                 raise RuntimeError(
-                    f"round-0 u verification failed: {u0_verify:.3e} > 1e-6")
+                    f"round-0 u verification failed: rel {u0_rel:.3e} "
+                    f"> {U_REL_TOL}")
         ind_pre = indicator(pos)
         # even/odd adjacent swaps (host numpy, vectorized over NSYS)
         parity = t % 2
@@ -722,13 +817,18 @@ def run_pt(tag, seed, spec):
             wid[r] = np.where(a, w1, w_)
             wid[r + 1] = np.where(a, w_, w1)
         ind_post = indicator(pos)
-        # walker round-trip state machine: neutral(0) -> tagged-hot(1) at rung 0;
-        # tagged-hot reaching rung R-1 = DOWN-traverse (class recorded) -> 2;
-        # tagged-cold(2) back at rung 0 = round trip -> 1.
+        # walker round-trip state machine (audit fix 1): neutral(0) -> tagged-hot(1)
+        # at rung 0; tagged-hot reaching rung R-1 = DOWN-traverse, arrival class
+        # carried in the flag (2 = arrived MAIN-classified, 3 = arrived
+        # POCKET-classified); back at rung 0 = round trip, split by carried class.
         for s in range(NSYS):
             wh = wid[0, s]
-            if wflag[wh, s] == 2:
+            if wflag[wh, s] in (2, 3):
                 round_trips[s] += 1
+                if wflag[wh, s] == 3:
+                    round_trips_pocket[s] += 1   # W-2 statistic
+                else:
+                    round_trips_main[s] += 1
                 wflag[wh, s] = 1
             elif wflag[wh, s] == 0:
                 wflag[wh, s] = 1
@@ -737,9 +837,10 @@ def run_pt(tag, seed, spec):
                 down_traverses[s] += 1
                 if ind_post[R - 1, s]:
                     pocket_cold_arr[s] += 1
+                    wflag[wc, s] = 3             # arrived POCKET-classified
                 else:
                     main_cold_arr[s] += 1
-                wflag[wc, s] = 2
+                    wflag[wc, s] = 2             # arrived MAIN-classified
         cold_ind[t] = ind_post[R - 1]
         if t % THIN_B == 0:
             ind_thin[t // THIN_B] = ind_post
@@ -771,6 +872,10 @@ def run_pt(tag, seed, spec):
         round_trips_per_system=round_trips.tolist(),
         round_trips_total=int(round_trips.sum()),
         round_trips_median_per_system=float(np.median(round_trips)),
+        round_trips_main_per_system=round_trips_main.tolist(),
+        round_trips_main_total=int(round_trips_main.sum()),
+        round_trips_pocket_per_system=round_trips_pocket.tolist(),
+        round_trips_pocket_total=int(round_trips_pocket.sum()),  # W-2 scores this
         down_traverses_per_system=down_traverses.tolist(),
         pocket_cold_arrivals_per_system=pocket_cold_arr.tolist(),
         pocket_cold_arrivals_total=int(pocket_cold_arr.sum()),
@@ -782,13 +887,16 @@ def run_pt(tag, seed, spec):
         eevpd_band=list(EEVPD_BAND),
         step_mean_last_per_rung=ssm[-last:].mean(axis=0).tolist(),
         n_nan_reverts=int(n_revert),
+        u0_verify_rel=u0_rel,
         u0_verify_max_abs=u0_verify,
     )
     pr(f"\n[B {tag}] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====")
     pr(f"  cold occ last {last} rounds: {occ_mean:.4f} +- {occ_sd:.4f} "
        f"(per-sys {np.round(occ_sys, 3).tolist()}; init {init_cold_occ:.3f})")
     pr(f"  round trips total {int(round_trips.sum())} "
-       f"(median/sys {float(np.median(round_trips)):.1f}); "
+       f"(median/sys {float(np.median(round_trips)):.1f}; "
+       f"pocket-classified {int(round_trips_pocket.sum())} [W-2], "
+       f"main-classified {int(round_trips_main.sum())}); "
        f"pocket cold-arrivals {int(pocket_cold_arr.sum())}, "
        f"main {int(main_cold_arr.sum())}")
     pr(f"  swap acc same={np.round(acc_frac[:, 0], 3).tolist()}")
@@ -876,6 +984,8 @@ def run_pt(tag, seed, spec):
     pr(f"[B {tag}] DONE in {summary['total_wall_s']:.0f}s -> {OUT}")
     data = dict(cold_ind=cold_ind, ind_thin=ind_thin, ev=ev, ssm=ssm,
                 att=att, acc=acc, round_trips=round_trips,
+                round_trips_main=round_trips_main,
+                round_trips_pocket=round_trips_pocket,
                 down_traverses=down_traverses,
                 pocket_cold_arr=pocket_cold_arr, main_cold_arr=main_cold_arr,
                 init_cold_occ=init_cold_occ, n_revert=n_revert)

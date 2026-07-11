@@ -645,7 +645,37 @@ multimodality, conditioning, or the NFW profile.
   per-arm incremental checkpoint/resume path.
   (xi) *Audit artifact (ADVISORY):* the independent code audit must leave a record —
   auditor identity, commit hash audited, findings — in the Log before launch; an
-  unrecorded audit is indistinguishable from none.**
+  unrecorded audit is indistinguishable from none.
+  **INDEPENDENT CODE AUDIT (2026-07-10, per amendment xi):** auditor = dedicated
+  read-only subagent (fresh context, no authorship overlap), audited
+  `carousel_gate_pt0.py` @ commit 9f1f874 against this checkpoint + first principles,
+  14-item mandatory checklist. Verdict: DEFECTS-FOUND → fixed. VERIFIED clean: swap
+  math + sign conventions end-to-end (higher-u configs migrate cold; detailed-balance
+  derivation traced for both paths, prior terms cancel exactly on the likelihood path),
+  adapt_one byte-faithful to the June-28 lineage, rung-resident adaptation (no
+  stale-state class), Arm A estimator signs/cluster-se/trapezoid propagation, control
+  target verbatim pt_weight.py (axis-0 modes, occ₊ = 0.70 mode), inits/seeds/indicator
+  conventions/EEVPD/split-R̂/x64, no OOM-class shapes (positions never scan-traced —
+  the GATE L attempt-1 class is absent). BLOCKING defect found + FIXED pre-launch: the
+  W-2 statistic (pocket-classified round trips) was label-blind and unreconstructible —
+  walker flag now carries arrival class (states 2/3), round_trips_pocket/main counted
+  per system, wflag+wid persisted. Minor fixes applied: round-0 u-identity tolerance
+  made RELATIVE (1e-6; the absolute 1e-6 on |u|~3e5 across jit compiles was a ~1e-11
+  reproducibility demand the recorded non-bitwise lstsq log_like could spuriously trip,
+  and a likelihood-path log_prior cross-compile mismatch amplifies as ε/β); Arm A given
+  its own per-config u-recovery identity check (build-time separability gate is
+  CSE-trivial by construction); empty-class guard (<50 samples ⇒ E missing, Δ(β)
+  truncated at the hottest complete β, recorded — a reporting rule, not interpolation);
+  hot-end consistency flag auto-computed. Wording corrections to THIS checkpoint from
+  the audit: Arm B is implemented as 12 sequential 8-wide per-rung jitted dispatches per
+  round + host-side numpy swaps (mathematically identical to the "96-wide / on-device
+  swaps" description; wall-relevant only); "resumable" means incremental-npz
+  DATA-SALVAGE (diagnostics preserved, sampler state not) — the F-2 probe is a fresh
+  run in a second allocation, per amendment x; smoke is shape-faithful at ~60 dPIE
+  compiles ⇒ realistically 25–60 min in one process — RUN THE FIVE SMOKE SUB-ARMS IN
+  PARALLEL ACROSS THE 4 GPUs (~15 min wall), and production arms each pay their own
+  ~12-compile startup (~6–12 min/process, included in the wall envelope). ESS proxy is
+  2× conservative vs N/IAT (report-only, safe direction — recorded).**
 
 - **Run: carousel GATE L — Laplace jump-proposal feasibility (3 offline diagnostics,
   human-directed 2026-07-09 after the Fv6 escalation; strategic pivot candidate =
