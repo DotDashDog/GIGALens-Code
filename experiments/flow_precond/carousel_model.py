@@ -54,7 +54,15 @@ from gigalens.jax.profiles.light.shapelets import Shapelets
 
 from gigalens.jax.cosmo import wCDM_Cosmo
 
-from gigalens.jax.scene_prob_model import Dataset, ProbModel
+from gigalens.jax.scene_prob_model import ProbModel
+# 2026-07-10: upstream gigalens (linusu-dev-merge @698b990, PRs #32/#33) refactored
+# Dataset into an ABC; the concrete imaging class is now ImageData with an identical
+# constructor signature (image, sim_config, *, error_map=, mask=, sees=, ...).
+# Fall back to Dataset on pre-refactor checkouts so old-env reproduction still works.
+try:
+    from gigalens.jax.scene_prob_model import ImageData as Dataset
+except ImportError:
+    from gigalens.jax.scene_prob_model import Dataset
 from gigalens.simulator import SimulatorConfig
 from gigalens.jax.inference import ModellingSequence
 
