@@ -507,7 +507,16 @@ multimodality, conditioning, or the NFW profile.
   chains, num_burnin 2000 + num_results 4000, target_acceptance 0.9, qz-adapter inits:
   C3 = per-chain Bernoulli(0.25) pocket-pool draws (main-heavy), C4 = Bernoulli(0.75)
   (pocket-heavy), seeds 22/23; metric seeding .covariance = pooled empirical cov,
-  .mean = pooled mean (adapter-recorded in a printed model card).
+  .mean = pooled mean (adapter-recorded in a printed model card). HUMAN NOTE
+  (2026-07-11, verbatim intent): "MAMS requires less samples than MCLMC to achieve
+  the same ESS, since it does more integration steps. But this does mean it takes
+  significantly longer per sample... don't sample for too long." Sizing complies:
+  4000 kept is the MINIMUM clearing the derived occ-ESS ≥ 4 power floor (occupancy
+  is TRANSIT-limited, not parameter-ESS-limited, so MAMS's per-sample ESS advantage
+  does not shrink this particular budget), and the wall is priced at the measured
+  MAMS64 rate (0.44 s/step incl. integration legs) ⇒ ≈ 44 min/arm — the short arms
+  of the gate. Standing consequence: MAMS = cross-check instrument at
+  transit-limited minimum budgets; the production workhorse remains MCLMC-based PT.
   **Predictions (direction + magnitude).** C1: transport within 2× of PT-0b —
   pocket RTs ≥ ~175 (half of P1/P2's ~378–428; SVI-metric mis-conditioning costs
   ≤ 2× via EEVPD step compensation), EEVPD medians in band, pair acceptances within
