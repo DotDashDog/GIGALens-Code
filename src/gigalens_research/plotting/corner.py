@@ -117,6 +117,11 @@ def plot_corner(
     samples, plot_params = _samples_to_matrix(posterior, plot_params)
     labels = [latex_label(k) for k in plot_params] if latex else list(plot_params)
 
+    # A scene-nested truth ({"planes": ..., "cosmo": ...}) must be regrouped into
+    # the same label space as the samples (grouped_free_x) before flattening, or
+    # its keys won't align and its cosmo dict would break the flattener.
+    if truth is not None and hasattr(posterior, "regroup_truth"):
+        truth = posterior.regroup_truth(truth)
     truth_row = None if truth is None else _point_to_row(truth, plot_params)
 
     defaults = dict(show_titles=True, title_fmt=".3f", color=color,
@@ -130,6 +135,8 @@ def plot_corner(
 
     if overplots:
         for _name, pt in overplots.items():
+            if hasattr(posterior, "regroup_truth"):
+                pt = posterior.regroup_truth(pt)
             row = _point_to_row(pt, plot_params, what=f"overplot {_name!r}")
             _corner_pkg.overplot_points(
                 fig, row[None, :], marker="*", markersize=18,

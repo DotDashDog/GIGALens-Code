@@ -322,15 +322,18 @@ def plot_mams_diagnostics(
 def _z_space_labels(ctx, dim: int) -> Optional[list]:
     """Best-effort unconstrained-space parameter labels, in z-dim (sampler column) order.
 
-    COLUMN ORDER NOTE: The sampler builds the z-vector via ``bij.forward(list(z.T))``,
-    which feeds column ``i`` of ``z`` through the bijector's internal
-    ``pack_sequence_as(example)`` step.  JAX sorts dict keys alphabetically when
-    traversing pytrees, so sampler column ``i`` maps to the alphabetically ``i``-th
-    unique key — NOT to position ``i`` in the bijector output dict's iteration order.
-    For TFP's ``JointDistributionNamed`` bijector, the output dict iterates in
-    reversed-alphabetical order, so reading names from ``list(out.keys())`` or
-    ``flatten_param_names(out)`` gives the WRONG column→name assignment (position ``a``
-    gets the name for sampler column ``DIM-1-a``).
+    CANONICAL SOURCE: ``ctx.prob_model.z_param_names`` (from gigalens) is now the
+    authoritative column→name map and should be preferred where available; this helper
+    is the best-effort fallback.
+
+    COLUMN ORDER NOTE: The sampler's z-vector is a flat array of shape ``(N, dim)``
+    fed through ``bij.forward(z)``, whose internal ``pack_sequence_as`` step orders
+    columns by JAX's pytree-leaf (alphabetical dict-key) order.  So sampler column
+    ``i`` maps to the alphabetically ``i``-th unique key — NOT to position ``i`` in the
+    bijector output dict's iteration order.  For TFP's ``JointDistributionNamed``
+    bijector the output dict iterates in reversed-alphabetical order, so reading names
+    from ``list(out.keys())`` or ``flatten_param_names(out)`` gives the WRONG
+    column→name assignment (position ``a`` gets the name for sampler column ``DIM-1-a``).
 
     Fix: sort the output dict keys alphabetically to recover the sampler column order
     before building the label list.
@@ -345,7 +348,7 @@ def _z_space_labels(ctx, dim: int) -> Optional[list]:
     try:
         from .labels import latex_label
         probe = np.zeros((1, dim))
-        out = ctx.prob_model.bij.forward(list(probe.T))
+        out = ctx.prob_model.bij.forward(probe)
         # Only handle the scene-API flat form (unique-key dict with scalar values).
         # Sorting the keys recovers JAX's pytree-leaf order = sampler column order.
         if not isinstance(out, dict) or not out or any(
