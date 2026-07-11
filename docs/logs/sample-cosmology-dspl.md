@@ -43,6 +43,69 @@ Goal: get MCLMC to sample the (Om0, w0) posterior correctly.
   Cost: small profile-MAP + one 8-chain 10k-result MCLMC run (~half the baseline) on the same interactive GPU node. Seed: 10. Status: **approved by grader (user) 2026-07-07 (incl. the bare-scan frozen-metric mechanics amendment); launched**.
   - *2026-07-07 update:* implementation ready: `experiments/sample_cosmology/dspl_arm_init.py` (+ `_analysis.py`, launcher). Arm init point resolved: **w0_arm = −1.011009** at Om0=0.05 (on-contour to r2 residual ~0; local grid density 1.0e-4 ≫ the 99.7% level 1.2e-6 — sits on the near-maximal-density contour as T1 predicts; contour runs (0, −1.264) → crest (~0.2, −0.94), so −1.011 at 0.05 is where it should be). Design amendment (mechanics, not science): `MCLMC_JIT` with all `frac_tune=0` is broken as suspected — `L_adaptation_step=0` fires `calc_new_L` at i=0 on an empty ESS buffer (confirmed empirically: IndexError on a CPU toy; `mclmc.py` ~lines 279/429-437) — so Stage 3 drives `_build_kernel_shardmap` directly in a bare `jax.lax.scan` with step_size/L/inverse-mass-matrix frozen (no adaptation state exists, so no collectives needed). Toy validation (3-D normal, 4 chains, 200 steps): no NaNs, chains move, energy errors sane. Real stages are double-gated (`--run` + `--confirm-run-b-approved`).
 
+- **Run C: ratio-coordinates grouped prior — single-run full forward model.** *(status: awaiting approval)*
+  Claim class: distributional (sampler correctness/efficiency on a fixed target). Link tested:
+  "the (Om0, w0)+NormalCDF sampling coordinates are the sole obstacle in the FULL forward
+  model, and making the data-stiff scalar a sampling coordinate removes it" — the
+  likelihood-equivalence link is already closed by the pre-run gate (below); generalization to
+  ≥2 deflection ratios is explicitly NOT tested by this run.
+  Hypothesis: replacing the cosmology Component's scalar priors with the grouped tuple-key
+  ratio-coordinates prior (`gigalens_research.priors.ratio_coords`; triangular map z1→Om0,
+  z2→u=r2 squashed into its conditional range at that Om0, w0 by bracketed solve; prior
+  density unchanged = uniform box) removes the rotating, semi-infinite thin-ridge geometry:
+  the stiff direction becomes the single coordinate z2, so the frozen global metric suffices
+  and the full arm is visited — Run A's sampleability, without deleting cosmology from the
+  model.
+  Prediction: rank-R̂(Om0), rank-R̂(w0) < 1.01; bulk-ESS of BOTH cosmology z-columns within
+  2× of the median nuisance ESS (Run A observed 1.02×; order of magnitude ~3k/80k, ~15× the
+  baseline's ≈200); mass(Om0<0.146) measured DIRECTLY from the Om0 marginal = 0.103 ± 0.02
+  (grid-derived; binomial error at ESS≈2k is ≈0.007, well inside); 0 nonfinite-flagged steps
+  (baseline: 0/160000); MAP χ²/ν ≈ 1 (Run B profile-MAP: 0.998).
+  Falsifier: either cosmology z-column with bulk-ESS < half the median nuisance ESS or
+  rank-R̂ ≥ 1.01 ⇒ residual hard geometry in the new coordinates (conditional-bracket drift /
+  tangency tail is itself a disease) — hypothesis wrong. Healthy R̂/ESS but
+  mass(Om0<0.146) outside 0.103±0.02 ⇒ distribution wrong despite mixing ⇒ Jacobian-level
+  implementation error — would contradict gate 3 and reopen everything upstream.
+  Metric + derived threshold: R̂ 1.01 = repo standard; ESS factor 2 covers the ~1.4× seed-band
+  scatter (repo history, same derivation as Run A); mass tolerance ±0.02 vs <0.001 measured
+  σ_r-sensitivity and ≈0.007 sampling error.
+  Blind spots: (a) R̂/ESS see only visited regions (T1's lesson) — the PRIMARY phenomenon
+  check is the plot: 2-D (Om0, w0) sample overlay on `def_ratio_grid.png` must show the full
+  arm to Om0=0; (b) errors common to BOTH parameterizations (e.g. a wrong deflection_ratio
+  formula) are invisible, as in Run A; (c) the measured w0-degeneracy sliver (genuine shallow
+  dr2/dw0 inversion, worst −4.128e-5, confined to Om0 ≥ 0.785, ≥15.5 σ_r,eff from the data
+  contour, posterior mass ~1e-53; log-det has an integrable singularity on the dr2/dw0
+  zero-crossing curve, float64-capped at ~46 nats vs ≥~120-nat likelihood penalty to reach
+  it) is quantified for THIS dataset only — monitored via nonfinite-step count and max
+  sampled Om0, not certified for other datasets; (d) single seed, single (seed-0) noise
+  realization — same realization as Runs A/B, NOT the baseline notebook's unseeded one;
+  (e) k=1 only: the multi-ratio u_fn combination path exists in code but is untested.
+  Expected plot: all 8 Om0 traces oscillating over ~0–0.57 with free crossings of the former
+  0.146–0.163 truncation edge; overlay reproduces the full grid band arc. If falsified:
+  bounce at ~0.15 persists, or a NEW truncation appears (watch the w0=−2 tangency end,
+  Om0≈0.54, where the band tail stretches in z2).
+  Cost: one 8-chain 10k+10k MCLMC + 4000-step MAP on one interactive GPU node (≈ Run A).
+  Seeds: data 0, MAP 1, MCLMC 10, pipeline 42 (all = Run A). Code: branch
+  `ratio-coords-prior` — `src/gigalens_research/priors/ratio_coords.py` (+11 passing unit
+  tests), `experiments/sample_cosmology/dspl_ratio_coords.py` (import-safe; `--run` requires
+  `--confirm-run-c-approved` AND a passing gate JSON). Status: **awaiting approval — do not
+  launch**.
+  - *2026-07-11 update:* pre-run **equivalence gate PASSED** —
+    `results/sample_cosmology/dspl_ratio_coords/ratio_coords_gate.json`
+    (`dspl_ratio_coords_gate.py`, 64 matched prior draws, CPU): (1) matched-θ log-likelihood
+    baseline-vs-grouped max rel diff **0.0** (bitwise; threshold 1e-8); (2) matched-θ prior
+    log-density diff 0.0; (3) grouped-bijector FLDJ vs numeric slogdet max abs diff 1.33e-15
+    (threshold 1e-8); (4) (Om0, w0) round-trip through the 80-iteration bisection exact to
+    0.0 (threshold 1e-9). Validator report (autodiff of the actual u_fn, 201² grid):
+    dominant sign +1, worst signed dr2/dw0 −4.128e-5 @ (Om0=0.88, w0=−2), 408/40401 grid
+    flips ALL within du_dw_atol=1e-4 (derived: 2.4× measured worst, 100× below median
+    |dr2/dw0|≈1e-2), max interior excursion 8.785e-7 within excursion_atol=3e-6 (3.4×
+    measured; ≈1.3e-3 σ_r,eff). Flat-z-migration note: `dspl_arm_init.make_prob_model`
+    predates the library's Dataset→ImageData rename and no longer runs; Run C carries its own
+    migrated `make_prob_model` (used for BOTH models in the gate). Full-model gradient smoke:
+    finite grad of log_prob through pixel likelihood + implicit solve, 29 ms/grad on CPU
+    (solver overhead negligible).
+
 ---
 
 ## 2026-07-07 — T1: grid-search overlay proves low-Om0 arm is a sampler failure (UNCERTIFIED cause, CONFIRMED phenomenon)
