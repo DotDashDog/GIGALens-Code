@@ -1,0 +1,6 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+[EQUIV B1_smoke] fused vs legacy, 3 rounds, R=12 NSYS=8 K=10 dim=33 seed=0
+[EQUIV B1_smoke] round 0: max|dpos| = 4.133e-01, max|du| = 4.829e+00, u0_rel legacy/fused = 5.140e-11/5.031e-11
+[EQUIV B1_smoke] round 1: max|dpos| = 5.905e-01, max|du| = 1.133e+01
+[EQUIV B1_smoke] round 2: max|dpos| = 6.262e-01, max|du| = 4.360e+01
+[EQUIV B1_smoke] written -> summary_equiv_B1_smoke.json (UNCERTIFIED; grader reads the numbers, not this print)

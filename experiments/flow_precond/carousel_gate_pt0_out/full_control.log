@@ -109,3 +109,8 @@ MODEL CARD: {
   swap acc same=[0.547, 0.555, 0.561, 0.564, 0.547, 0.552, 0.551, 0.548, 0.551]
   swap acc cross=[0.56, 0.561, 0.552, 0.556, 0.55, 0.55, 0.544, 0.536, 0.538] (cross attempts [12172, 11976, 12214, 11905, 11663, 11762, 11523, 11189, 10641])
   cold split-Rhat = 1.018229610467091; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
+[B control] DONE in 450s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out
+
+[0 control] ===== CONTROL GATE (PROPOSED/UNCERTIFIED) =====
+  0a weight gate: cold occ_+ = 0.6885 +- 0.0112 (across-system se); |occ - 0.70| = 0.0115 vs tol 0.0250 -> PASS
+  0b calibration: abar = 0.551; round trips total = 2480 (need >= 20: OK); c_rw = 9.371 (band [0.1, 3.0]: OUT -> re-derive W-2/W-5 before Arm B)

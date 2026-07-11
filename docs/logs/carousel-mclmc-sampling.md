@@ -447,7 +447,10 @@ multimodality, conditioning, or the NFW profile.
   omits delta_se, note if it fires; A5 = result grading scores W-2 jointly with the
   calibrated c_rw·ā_B expectation, not the raw 7). LAUNCHING under the engagement's
   free-hand mandate (human validates final product; run outcomes return UNCERTIFIED
-  for fresh grading).** Script `experiments/flow_precond/carousel_gate_pt0.py`
+  for fresh grading). RAN 2026-07-11; result in Log ("GATE PT-0 RAN") — W-2/W-5
+  falsifiers fired with complete mechanism localization (swap-back K≪IAT, ladder
+  spacing, ss-cap binding); Arm A profiles FLAT/positive (no starvation); Arm 0 PASS;
+  PT-0b continuation checkpoint is the routed next step.** Script `experiments/flow_precond/carousel_gate_pt0.py`
   (new, written fresh — the June-28 PT implementation is NOT reused
   per the human's provenance note — and independently code-audited before launch);
   outputs `carousel_gate_pt0_out/`; float64; model via `carousel_model.build()` (D=33);
@@ -666,7 +669,44 @@ multimodality, conditioning, or the NFW profile.
   pre-read: on the likelihood path the pocket class (the W-2 species) runs ~0.99 → ~0.10
   along the ladder with NO predicted interior starvation, while the MAIN class is the
   hot-starved one (~0.6%) — main-class round trips may be suppressed without touching
-  W-2; Arm A's measured profile adjudicates.**
+  W-2; Arm A's measured profile adjudicates.
+  (op-5, Arm 0 RESULT + pre-registered c_rw routing FIRED) 0a known-answer gate PASS:
+  fresh-harness cold occ₊ = 0.6885 ± 0.0112 vs truth 0.70 (|diff| 0.0115 ≤ 0.025), 2480
+  round trips, ā = 0.551, wall 450 s — the June-28 implementation-bug hypothesis is now
+  UNREPRODUCED by this code path on the benign target. 0b: c_rw = 9.371, OUTSIDE the
+  [0.1, 3] sanity band ⇒ per the pre-commitment, W-5's prediction is RE-DERIVED before
+  Arm B: diagnosis is bookkeeping, not physics — the naive R²/ā formula prices ONE
+  walker's round-trip time while all R walkers per ladder circulate concurrently
+  (per-walker rate 15.5/3000 rounds ≈ the naive 1/(R²/ā) = 1/182 within 7%), so c_rw ≈ R
+  as it should be under ballistic-ish exchange. Calibrated W-5 expectation for B arms:
+  RT_pocket/ladder ≈ c_rw · (ROUNDS·ā_B/R_B²) · (w_min/w_cold) = 9.371 · (2000·ā_B/144)
+  · e^{Δ_min}, ā_B measured in-run; at ā_B ≈ 0.5 and likelihood-path Δ_min ≥ −2 nats
+  that is ≥ ~9/ladder (~70+ total). W-2's ≥7-total floor is UNCHANGED (conservative);
+  W-5 coherence (×/÷4) scores against the calibrated expectation. Control EEVPD sat at
+  1e-9–1e-7 (≪ 5e-4): the ss_max=1 cap binds on the trivial target — irrelevant to the
+  weight gate; the W-4 EEVPD band applies to the dPIE arms only (noted).
+  (op-6, fused-runner equivalence VERDICT) control target: fused vs legacy BITWISE-level
+  (max|Δpos| 2.8e-15–5.3e-15 over 3 rounds, all R=10×NSYS=16) — rules out any
+  wiring/permutation bug in the fused machinery (a rung misalignment would give O(1)
+  diffs). dPIE (B1 smoke config): positions diverge (max|Δpos| 0.41, max|Δu| 4.8 nats
+  after one K=10 round) while the u0 identity passes at 5e-11 for BOTH impls —
+  attributed to the RECORDED cross-compile FP non-reproducibility (lstsq log_like)
+  amplified by chaotic MCLMC dynamics; β-algebra validated end-to-end by u0; shared
+  code path validated bitwise on control. Validation chain: fused ≡ legacy (bitwise,
+  control) ∧ legacy passes the 0.70 known-answer gate (the full Arm 0 ran pre-fusion,
+  i.e. legacy) ⇒ fused inherits the known-answer validation. B arms run FUSED; per-arm
+  in-run guards (u0 identity, EEVPD band, swap accounting) cover the dPIE regime.
+  (op-7, expected ROUNDS truncation) fused B rounds measure ~5.5 s/round on the dPIE
+  target (vs ~3 s projected; still 6× over the legacy 34 s), so 2000 rounds ≈ 3.1 h/arm
+  does not fit the remaining allocation for arms launched after the smoke/API delays.
+  Pre-commitment for analysis: each arm's realized rounds_done is recorded in its npz;
+  last-500-round windows (W-3, W-4) remain defined for any arm reaching ≥1000 rounds;
+  the W-5 calibrated expectation scales with the REALIZED ROUNDS·ā_B (not nominal
+  2000); W-2's ≥7-total floor is kept but a shortfall with W-5 coherence routes through
+  the pre-registered flux-limited zone (amendment i). If any arm ends <1000 rounds, its
+  windowed stats are reported at reduced window with the reduction stated. A follow-up
+  allocation MAY extend arms only as fresh pre-registered continuation runs (no resume;
+  data-salvage only per the audit).**
   (xi) *Audit artifact (ADVISORY):* the independent code audit must leave a record —
   auditor identity, commit hash audited, findings — in the Log before launch; an
   unrecorded audit is indistinguishable from none.
@@ -1596,7 +1636,80 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
-- **2026-07-10 (RECORD ARCHAEOLOGY — three UNLOGGED GPU PT runs on the minimal carousel,
+- **2026-07-11 (carousel GATE PT-0 RAN — pre-registered transport falsifiers FIRED
+  (W-2 = 0 pocket round trips), but the mechanism decomposition is COMPLETE and
+  everything points at three measured, fixable cadence/spacing knobs; NO entropic
+  starvation on either path; NO cross-basin swap suppression; the dPIE carousel is
+  PT-FRIENDLY at the swap level; PROPOSED (UNCERTIFIED)):** ran 2026-07-11 ~23:10–02:30
+  on job 55789329 (1 node, 4×A100), script commit e051c02 (+ in-gate op-1..op-7
+  amendments, final code 6e32eea/+override), outputs `carousel_gate_pt0_out/`.
+  **Arm 0 (known-answer + calibration):** 0a PASS — fresh harness cold occ₊ 0.6885 ±
+  0.0112 vs truth 0.70; the June-28 "implementation bug" hypothesis is unreproduced by
+  this code path. 0b c_rw = 9.371 (out of band, pre-registered routing fired; diagnosed
+  as per-walker vs per-ladder bookkeeping, c_rw ≈ R).
+  **Arm A (tempered-mass profiles, the mechanism instrument):** POWER path Δ(β) is FLAT
+  — [−0.42, +0.38] nats across β ∈ [0.01, 1], |Δ| ≤ 1σ everywhere (plot inspected:
+  flat band far above the −2.0 viability floor). The Gaussian-model prediction (−8.4
+  nats at β = 0.01) is WRONG in magnitude and direction — hypothesis failure as
+  routed by amendment (i)/(vi); the June-28 minimal-carousel failure does NOT
+  generalize: **the dPIE pocket keeps its relative mass at ALL temperatures.**
+  LIKELIHOOD path Δ(β) = +1.45 to +2.92 nats (pocket mildly ENHANCED hot; m_prior =
+  0.9944 ± 0.0012 — the prior sits 99.4% pocket-side of the indicator). W-1's predicted
+  configuration (power dives, lik flat) is refuted in DIRECTION; measured profiles
+  supersede. **Hot-end consistency flag FIRED (open finding, both paths):** direct
+  unconfined occupancy at β = 0.01 is 0.379 ± 0.046 (power) / 0.967 ± 0.006 (lik) vs
+  0.1-anchor predictions 0.078 / 0.673 — on the power path, direct and TI measurements
+  reconcile if the TRUE cold pocket weight is ~0.3–0.4 rather than ~0.1 (alternative:
+  1500-step hot-end equilibration transient). MAMS64's 9.6% is now DOUBLY suspect (it
+  was already human-flagged unconverged). Adjudication needs a converged cold chain —
+  exactly what PT-0b should deliver. Estimator health: per-config u-identity checks all
+  passed (rel ≤ 2e-11); leak fractions large at hot β as expected (classification
+  handles them); one config (power, M-init, β = 0.046) had EEVPD 0.11 — that point's E
+  carries extra unmodeled error (se there is wide, conclusion unchanged).
+  **Arm B pilot (fused runner; truncated by allocation expiry per op-7 — B1 901/2000
+  rounds, B2 1201/2000, B3 NOT RUN (auto-launch canceled: it would have reproduced B2's
+  diagnosed pathology underpowered ⇒ W-3 bracketing UNSCOREABLE this gate)):**
+  B1 (power, balanced): all 11 adjacent-pair acceptances healthy (0.17–0.38) and
+  **cross-basin ≈ same-basin acceptance (0.18–0.34 vs 0.17–0.33) — the June-28
+  cross-basin suppression signature is ABSENT on the dPIE target.** EEVPD in band at
+  every rung (~1.1e-4). Worm plots (inspected): basin content churns at ALL rungs —
+  the COLD rung flips basin identity repeatedly within 900 rounds in most systems
+  (multi-switch cold-chain basin mixing, which vanilla MCLMC cannot do; C-10) — but
+  walker-LABEL transport is ~25× slower than free-random-walk diffusion (mean
+  displacement 2–4 rungs in 900 rounds vs ~15 expected; 5 down-traverses, 0 completed
+  round trips) ⇒ **W-2 = 0, F-2 zone; W-5 mismatch >10× (F-4 zone).** Cause measured,
+  not conjectured: SWAP-BACK suppression — K = 10 kernel steps/round vs measured
+  within-rung IAT(u) of 11–202 steps (Arm A series), so swapped-in configs don't
+  decorrelate between sweeps and swaps reverse; ALSO the c_rw = 9.371 calibration came
+  from the control's K ≫ IAT regime and cannot transfer (transport model revised: flux
+  needs a decorrelation factor ~K/(K+IAT)). B2 (likelihood, balanced): ladder
+  DISCONNECTED at both ends — hottest pair acceptance 0.000, coldest three 0.005–0.048;
+  interior rungs pinned ~0.9+ pocket-side; 0 down-traverses. Mechanism: (a) geometric
+  spacing mismatched to the measured swap-cost density (total ∫sd(u)dβ = 23.0 nats over
+  11 pairs, concentrated at the ends), (b) the hot rung NEVER equilibrated off its
+  prior-draw inits — hot-rung EEVPD ~2.6e-8 shows the ss_max = 1.0 step cap BINDS on
+  near-prior targets whose z-scale is ≫ 1 (same cap-binding seen on the control).
+  **Measured design outputs for PT-0b (the point of the gate):** equal-swap-cost
+  ladders computed from Arm A sd(u): 21 rungs (power, total 19.1 nats) / 24 rungs (lik)
+  at 1 nat/pair (`ladder_design_{power,lik}.json`); measured IAT(u) per β for K
+  calibration; Arm A leak fractions show the KERNEL already crosses basins at β as
+  cold as 0.6 (17–37% class leakage per 1500 steps) ⇒ a SHORT power-path ladder
+  β ∈ [~0.36, 1] (~6 rungs, ~1 nat/pair) may suffice — discovery does not need β ≪ 0.1
+  on this posterior; raise/re-derive the ss cap at hot rungs. Wall data: fused B round
+  ≈ 5.5 s (96-wide, K=10); Arm A ≈ 9,500–9,700 s/path; total gate ≈ 14 GPU·h.
+  **Scope + verdicts (PROPOSED, UNCERTIFIED):** W-2 FAIL (0 < 7; F-2 routing —
+  diagnostic complete in-gate: replica-trace localization + IAT measurement); W-5 FAIL
+  (>10×; F-4 routing — flux-model revision identified); W-3 unscoreable (B3 absent);
+  W-4 PASS for B1 / FAIL for B2 (end rungs); W-1's predicted path separation refuted in
+  direction. NOT claimed: any working sampler yet, any pocket-weight value, any
+  generalization beyond this posterior. Falsifier status honestly: the PILOT failed
+  as configured; the MECHANISM instrument succeeded and localized every failure to a
+  measured knob. Blind spots: hot-end direct occupancies may be transients; per-basin
+  TI conditioned on the z[6] halfspace (third modes invisible); B arms truncated
+  (901/1201 rounds) per op-7. **Routing (per pre-commitment):** F-2/F-4 ⇒ no scale-up;
+  next = GATE PT-0b continuation checkpoint (short measured ladder, K from IAT, ss-cap
+  fix, balanced + all-main arms, B3 bracketing restored) — new checkpoint + grader
+  before any run. — three UNLOGGED GPU PT runs on the minimal carousel,
   2026-06-28, all FAILED to transport; C-18's "PENDING GPU validation" was in fact answered
   negatively for the naive form and never recorded):** found on disk while scoping the new
   PT-MCLMC engagement: `de_mclmc_prototype/carousel_pt.py` (committed in WIP snapshot

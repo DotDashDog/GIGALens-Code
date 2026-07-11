@@ -12,3 +12,7 @@ E0711 00:21:28.710906  645327 cuda_executor.cc:1206] [0] Failed to allocate devi
 E0711 00:21:28.711408  645327 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 9.29GiB (9980304384 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
 E0711 00:21:28.711927  645327 cuda_executor.cc:1206] [0] Failed to allocate device memory: INTERNAL: [0] Failed to allocate 8.37GiB (8982274048 bytes) of device memory: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
 [EQUIV control_smoke] fused vs legacy, 3 rounds, R=10 NSYS=16 K=20 dim=10 seed=0
+[EQUIV control_smoke] round 0: max|dpos| = 2.776e-15, max|du| = 4.263e-14, u0_rel legacy/fused = 1.672e-16/1.874e-16
+[EQUIV control_smoke] round 1: max|dpos| = 4.441e-15, max|du| = 5.684e-14
+[EQUIV control_smoke] round 2: max|dpos| = 5.329e-15, max|du| = 5.684e-14
+[EQUIV control_smoke] written -> summary_equiv_control_smoke.json (UNCERTIFIED; grader reads the numbers, not this print)
