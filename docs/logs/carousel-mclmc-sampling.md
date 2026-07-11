@@ -556,7 +556,8 @@ multimodality, conditioning, or the NFW profile.
   C-24's caveats is EXPLICITLY beyond C2's reach (L3 is the only arm that
   constrains it, and only to ~0.06–0.09). The tail-fraction change is REPORTED
   alongside; ROUTED ZONE (blocking 4): if the null holds but the above-2e-3 tail
-  fraction does NOT drop materially, L2 is UNRESOLVED — the lever failed to
+  fraction does NOT drop materially ("materially" PINNED pre-unblinding, scorer-audit
+  residual: pooled < 0.05 AND max per-rung < 0.08 — both required), L2 is UNRESOLVED — the lever failed to
   modulate the suspected mechanism — and W-2 does NOT count toward ALL-PASS. (W-3) C3/C4: |m_C3 − m_C4| ≤ 2·√(se_C3² + se_C4²) (MH-exact bracket closes) AND
   the pooled MAMS value ∈ (0.32, 0.49). GATE REPAIRED (rd-1 blocking 5): the dwell
   window is ALL 4000 kept steps (burn-in 2000 already discarded), with a
