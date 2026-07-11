@@ -159,7 +159,8 @@ def main():
         N_HMC, BURNIN, RESULTS = 8, 100, 200
         LAST_KEEP = 200   # smoke: all kept
     if args.probe:
-        N_HMC, BURNIN, RESULTS = 64, 100, 100
+        _ps = int(os.environ.get("GATE_PT1_PROBE_STEPS", "100"))  # diagnostic knob
+        N_HMC, BURNIN, RESULTS = 64, _ps, _ps
         LAST_KEEP = 100   # probe: all kept (console diagnostics only)
     tag = (f"{args.tag}_smoke" if args.smoke
            else f"{args.tag}_probe" if args.probe else args.tag)

@@ -2085,6 +2085,23 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   probe-implied wall × 1.5 ≤ 3 h/arm), anchored by the baseline mean n_k 13.4
   (max 38 < 60 cap) under the same SVI seeding; probe s/step quoted in the launch
   record (probe JSON, per the auditor's record-keeping deviation note).
+  PROBES RAN + ABORT RULE FIRED (2026-07-12, quoted per the record-keeping rule):
+  1-GPU probe 10.097 s/step (200 steps incl. compile) — the pooled-cov-seeding
+  hypothesis was NOT the whole story; the dominant factor was DEVICE SHARDING (the
+  manifest baseline ran MAMS shard-mapped over 4 GPUs; the clipped C3/C4 launches
+  pinned one GPU each). 4-GPU-sharded probes: 200 steps 2.394 s/step, 400 steps
+  2.060 s/step ⇒ marginal rate 1.726 s/step (compile ≈ 134 s, cancels between
+  probes) ⇒ implied full wall 2.91 h/arm BEST-CASE (burn-in-window rate; the
+  auditor's trajectory-growth caveat means steady-state can only be slower) ⇒
+  ×1.5 = 4.37 h > the 3 h/arm ceiling ⇒ ABORT on interactive allocations.
+  ROUTING (keeps every pinned clause — 64 chains, power floor, seeds, estimator,
+  artifact names): C3b/C4b submitted as UNATTENDED regular-queue sbatch jobs
+  55803587/55803588 (1 node, 4 GPUs, 6 h limit each, one arm per job for salvage
+  isolation); interactive allocation released. Post-mortem update: the C3/C4 clip
+  post-mortem's seeding inference is DEMOTED — sharding was the 4.2× factor; the
+  seeding contribution is untested (both rerun jobs use SVI seeding + 4-GPU
+  sharding, so the record will not disentangle them; noted). Probe-length env knob
+  GATE_PT1_PROBE_STEPS added (diagnostic-only, committed).
   **Costs:** C1/C2 1500 rounds in 11,754 s each (7.84 s/round — matches PT-0b);
   C3/C4 ≈ 7.8 h GPU lost to the clip; total gate ≈ 15.5 GPU·h.
   **Scope:** L2's pass is at its pinned precision ONLY (bias > ~0.19 excluded; the

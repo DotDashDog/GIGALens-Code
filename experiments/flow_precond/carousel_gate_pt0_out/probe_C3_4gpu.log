@@ -1,0 +1,41 @@
+MODEL CARD: {
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt1_mams.py",
+ "tag": "C3_probe",
+ "arm": "MAMS MH-exact bracket",
+ "sampler": "gigalens_research.inference.mams.MAMS_JIT (production, untouched)",
+ "jax": "0.10.0.dev20260711",
+ "devices": [
+  "cuda:0",
+  "cuda:1",
+  "cuda:2",
+  "cuda:3"
+ ],
+ "x64": true,
+ "dim": 33,
+ "smoke": false,
+ "seed": 22,
+ "p_pocket": 0.25,
+ "n_hmc": 64,
+ "num_burnin_steps": 100,
+ "num_results": 100,
+ "target_acceptance": 0.9,
+ "thin_stored": 4,
+ "last_keep": 100,
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "svi_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/svi/arrays.npz",
+ "seed_metric": "SVI cov (dpie/svi)",
+ "seed_mean": "SVI qz_loc (dpie/svi)",
+ "pools": {
+  "n_main": 57873,
+  "n_pocket": 6127,
+  "use": "POSITION pools for INITS ONLY, never weights (human directive); seed metric is SVI, L3-rerun amendment"
+ },
+ "pocket_indicator": "z[6] > -22.35",
+ "qz_adapter": "PoolQZ: sample = Bernoulli(p_pocket) pool-mixture draws + 1e-3 jitter (UNCHANGED bracket instrument); mean/covariance = SVI qz_loc / qz_scale_tril@T",
+ "probe": true,
+ "jitter": 0.001
+}
+Sampling took 458.48275526099314 s
+[C3_probe] realized init pocket fraction = 0.3125 (requested Bernoulli p = 0.25)
+[C3_probe] PROBE: wall 478.8s over 200 sampler steps (burnin 100 + results 100) = 2.394 s/step INCLUDING compile (conservative)
+[C3_probe] PROBE written -> probe_C3.json; total wall 485s
