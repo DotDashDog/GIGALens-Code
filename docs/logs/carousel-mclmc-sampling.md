@@ -466,8 +466,11 @@ multimodality, conditioning, or the NFW profile.
   leaked into code) — FIXED (all-4000 window, drift-check print, IAT proxy demoted
   to non-scoring, pinned two-arm moment-matching estimator computed by the cross-arm
   scorer); F-2 >3σ vs (2σ,3σ]-zone reconciled; C2 scaled band corrected to
-  [1e-5, 2e-4]; predictions window aligned; N-4 sliver routes added. Awaiting rd-3
-  verification of the fix commit, then launch.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
+  [1e-5, 2e-4]; predictions window aligned; N-4 sliver routes added. rd-3 (2026-07-11):
+  CERTIFY-RECOMMENDED to LAUNCH @328fb32 — fixes verified item-by-item against the
+  committed diff, nothing beyond declared scope; ADJUDICATION conditional on the
+  cross-arm pt1 scorer being committed + diff-audited BEFORE results enter the
+  record (standing amendment-xi rule); one-arm-underpowered route added. LAUNCHING.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
   small diff-audited extensions: `--arm B5` production-init variant + `GATE_PT0_DEVAR`
   env) and NEW `experiments/flow_precond/carousel_gate_pt1_mams.py` (thin wrapper
   around the production `gigalens_research.inference.mams.MAMS_JIT` with a qz-adapter
@@ -558,7 +561,9 @@ multimodality, conditioning, or the NFW profile.
   is reported alongside as a cross-check. UNDERPOWERED floor DERIVED: occ-ESS ≥ 4
   per chain ⇔ ≥ 256 effective draws/arm ⇔ se_arm ≈ √(0.24/256) ≈ 0.031 ⇔ 2·se_comb
   ≈ 0.087 ≈ the C-24 band half-width — below that the bracket cannot resolve the
-  band at all. ROUTED (blocking 6): BOTH arms UNDERPOWERED ⇒ L3 INCONCLUSIVE —
+  band at all. ROUTED: ONE arm below the ≥4 floor ⇒ its se enters se_comb at the
+  floor-deflated value (occ-ESS clamped to its measured value; the bracket width
+  honestly inflates — rd-3 advisory 2); BOTH arms UNDERPOWERED ⇒ L3 INCONCLUSIVE —
   C-24 stays kernel-consistent-only, a longer MAMS bracket is costed for a later
   gate, and L3 does NOT count toward ALL-PASS.
   **Falsifiers + routing.** F-1: C1 pocket RTs = 0 or cold occupancy exits the C-24
