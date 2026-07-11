@@ -5,15 +5,19 @@ Design checkpoint: docs/logs/carousel-mclmc-sampling.md "carousel GATE PT-1"
 (L3 link). Thin wrapper around the PRODUCTION MAMS
 (gigalens_research.inference.mams.MAMS_JIT — adjusted, hence unbiased in law;
 MAMS itself untouched) with a qz-adapter (PoolQZ) whose .sample returns
-basin-mixture pool draws and whose .mean()/.covariance() are the pooled MAMS64
-empirical moments (metric seeding only). Two arms initialized from OPPOSITE-side
-basin mixtures bracket the pocket occupancy:
+basin-mixture pool draws — the bracket INSTRUMENT — and whose .mean()/
+.covariance() are the PRODUCTION SVI artifacts qz_loc / qz_scale_tril@T
+(L3-rerun amendment, grader-approved: the original pooled-cov mass seeding made
+MAMS ~5x slower than the SVI-seeded baseline and C3/C4 were clipped; the seed
+metric is production-like, the init mixture is the instrument). Two arms
+initialized from OPPOSITE-side basin mixtures bracket the pocket occupancy:
 
   C3: --p-pocket 0.25 --seed 22 --tag C3   (main-heavy init)
   C4: --p-pocket 0.75 --seed 23 --tag C4   (pocket-heavy init)
 
-MAMS64 draws are POSITION POOLS + METRIC SEEDING only (never weights; human
-directive). Outputs land in carousel_gate_pt0_out/ tagged *_pt1.
+MAMS64 draws are POSITION POOLS only (never weights; human directive); metric
+seeding comes from dpie/svi. Outputs land in carousel_gate_pt0_out/ tagged
+*_pt1 (names UNCHANGED so the certified scorer runs unmodified).
 
 MAMS_JIT qz usage matched (src/gigalens_research/inference/mams.py):
   line ~76: qz.sample((n_chains,), seed=init_key)   [init positions, jax key]
@@ -23,6 +27,9 @@ MAMS_JIT qz usage matched (src/gigalens_research/inference/mams.py):
 Run (1 GPU, shifter jax container, float64):
   ... /usr/bin/python3 carousel_gate_pt1_mams.py --p-pocket 0.25 --seed 22 --tag C3
 Smoke: add --smoke (n_hmc=8, burnin 100, results 200; same code path).
+Probe: add --probe (n_hmc=64, burnin 100, results 100; prints wall + s/step
+INCLUDING compile — conservative, grader condition — and writes
+probe_<tag>.json; no npz/plot).
 """
 import argparse
 import json
@@ -52,6 +59,8 @@ import matplotlib.pyplot as plt
 OUT = os.path.join(HERE, "carousel_gate_pt0_out")
 MAMS_NPZ = os.path.join(HERE, "..", "sim_carousel", "messy_tests", "dpie",
                         "mams", "arrays.npz")
+SVI_NPZ = os.path.join(HERE, "..", "sim_carousel", "messy_tests", "dpie",
+                       "svi", "arrays.npz")   # production seed metric (L3 rerun)
 POCKET_COL, POCKET_THR = 6, -22.35
 DIM = 33
 N_HMC, BURNIN, RESULTS = 64, 2000, 4000     # checkpoint config (C3/C4)
@@ -73,8 +82,10 @@ class PoolQZ:
       jax.random.key_data(seed)[-1]; draws are per-chain Bernoulli(p_pocket)
       pocket-vs-main pool picks + 1e-3 N(0,1) jitter. Returns jnp float64
       (n_chains, DIM). The realized pocket fraction is recorded.
-    .mean() / .covariance() — pooled MAMS64 empirical moments (jnp float64),
-      consumed by MAMS as the svi_mean regularizer / starting inverse mass.
+    .mean() / .covariance() — PRODUCTION SVI artifacts (qz_loc, qz_scale_tril
+      @ .T; jnp float64), consumed by MAMS as the svi_mean regularizer /
+      starting inverse mass (L3-rerun amendment; the seed metric is NOT the
+      bracket instrument — the init mixture is).
     """
 
     def __init__(self, pool_main, pool_pocket, p_pocket, mean, cov, seed):
@@ -137,11 +148,21 @@ def main():
     ap.add_argument("--smoke", action="store_true",
                     help="plumbing check: n_hmc=8, burnin 100, results 200 "
                          "(same code path; numbers NOT the measurement)")
+    ap.add_argument("--probe", action="store_true",
+                    help="wall-time probe: n_hmc=64, burnin 100, results 100; "
+                         "prints wall + s/step INCLUDING compile and writes "
+                         "probe_<tag>.json; no npz/plot")
     args = ap.parse_args()
+    if args.smoke and args.probe:
+        ap.error("--smoke and --probe are mutually exclusive")
     if args.smoke:
         N_HMC, BURNIN, RESULTS = 8, 100, 200
         LAST_KEEP = 200   # smoke: all kept
-    tag = f"{args.tag}_smoke" if args.smoke else args.tag
+    if args.probe:
+        N_HMC, BURNIN, RESULTS = 64, 100, 100
+        LAST_KEEP = 100   # probe: all kept (console diagnostics only)
+    tag = (f"{args.tag}_smoke" if args.smoke
+           else f"{args.tag}_probe" if args.probe else args.tag)
     os.makedirs(OUT, exist_ok=True)
     t0_all = time.time()
 
@@ -153,10 +174,16 @@ def main():
     draws = mams.reshape(-1, DIM).astype(np.float64)
     is_pocket = draws[:, POCKET_COL] > POCKET_THR
     pool_M, pool_P = draws[~is_pocket], draws[is_pocket]
-    pooled_mean, pooled_cov = draws.mean(0), np.cov(draws.T)
 
-    qz = PoolQZ(pool_M, pool_P, args.p_pocket, pooled_mean, pooled_cov,
-                args.seed)
+    # PRODUCTION-like seed metric (L3-rerun amendment): SVI qz_loc / cov.
+    svi = np.load(SVI_NPZ)
+    svi_loc = np.asarray(svi["qz_loc"], dtype=np.float64).reshape(-1)
+    svi_tril = np.asarray(svi["qz_scale_tril"],
+                          dtype=np.float64).reshape(DIM, DIM)
+    assert svi_loc.shape == (DIM,), svi_loc.shape
+    svi_cov = svi_tril @ svi_tril.T
+
+    qz = PoolQZ(pool_M, pool_P, args.p_pocket, svi_loc, svi_cov, args.seed)
 
     card = dict(
         script=os.path.abspath(__file__), tag=tag, arm="MAMS MH-exact bracket",
@@ -167,26 +194,45 @@ def main():
         seed=args.seed, p_pocket=args.p_pocket,
         n_hmc=N_HMC, num_burnin_steps=BURNIN, num_results=RESULTS,
         target_acceptance=TARGET_ACC, thin_stored=THIN, last_keep=LAST_KEEP,
-        mams64=os.path.abspath(MAMS_NPZ),
+        mams64=os.path.abspath(MAMS_NPZ), svi_npz=os.path.abspath(SVI_NPZ),
+        seed_metric="SVI cov (dpie/svi)",
+        seed_mean="SVI qz_loc (dpie/svi)",
         pools=dict(n_main=int(len(pool_M)), n_pocket=int(len(pool_P)),
-                   use="POSITION pools + pooled-moment metric seeding ONLY, "
-                       "never weights (human directive)"),
+                   use="POSITION pools for INITS ONLY, never weights (human "
+                       "directive); seed metric is SVI, L3-rerun amendment"),
         pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
-        qz_adapter="PoolQZ: sample=Bernoulli(p_pocket) pool draws + 1e-3 "
-                   "jitter; mean/covariance = pooled MAMS64 empirical",
-        jitter=JITTER,
+        qz_adapter="PoolQZ: sample = Bernoulli(p_pocket) pool-mixture draws "
+                   "+ 1e-3 jitter (UNCHANGED bracket instrument); "
+                   "mean/covariance = SVI qz_loc / qz_scale_tril@T",
+        probe=bool(args.probe), jitter=JITTER,
     )
     pr("MODEL CARD:", json.dumps(card, indent=1,
                                  default=lambda o: o.tolist()
                                  if hasattr(o, "tolist") else str(o)))
 
+    t0_mams = time.time()
     samples = MAMS_JIT(model_seq, qz, n_hmc=N_HMC, num_burnin_steps=BURNIN,
                        num_results=RESULTS, target_acceptance=TARGET_ACC,
                        seed=args.seed, debug_output=False)
     samples = np.asarray(samples)               # (N_HMC, RESULTS, DIM)
+    wall_mams = time.time() - t0_mams           # INCLUDES compile (conservative)
     assert samples.shape == (N_HMC, RESULTS, DIM), samples.shape
     pr(f"[{tag}] realized init pocket fraction = {qz.realized_pocket_frac} "
        f"(requested Bernoulli p = {args.p_pocket})")
+
+    if args.probe:   # wall-time probe (grader condition): timing only, no
+        # npz/plot -- artifact names of the real C3/C4 runs stay untouched
+        steps = BURNIN + RESULTS
+        probe = dict(wall_s=wall_mams, steps=steps,
+                     s_per_step=wall_mams / steps)
+        with open(os.path.join(OUT, f"probe_{args.tag}.json"), "w") as f:
+            json.dump(probe, f, indent=1)
+        pr(f"[{tag}] PROBE: wall {wall_mams:.1f}s over {steps} sampler steps "
+           f"(burnin {BURNIN} + results {RESULTS}) = "
+           f"{wall_mams / steps:.3f} s/step INCLUDING compile (conservative)")
+        pr(f"[{tag}] PROBE written -> probe_{args.tag}.json; total wall "
+           f"{time.time() - t0_all:.0f}s")
+        return
 
     ind = samples[:, :, POCKET_COL] > POCKET_THR        # (N_HMC, RESULTS) bool
     occ_chain = ind[:, -LAST_KEEP:].mean(axis=1)        # per-chain, ALL-kept window
