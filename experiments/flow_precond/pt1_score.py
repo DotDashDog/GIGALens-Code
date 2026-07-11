@@ -14,7 +14,6 @@ BAND = (0.32, 0.49)          # C-24 occupancy band
 RT_FLOOR_FULL, RT_FLOOR_HALF = 175, 60
 EEVPD_BAND = (1e-4, 2e-3)    # C1 (target 5e-4); C2 exempt (scaled ref [1e-5, 2e-4])
 EEVPD_BAND_C2 = (1e-5, 2e-4)
-P12_M, P12_SD = 0.3888125, None   # P1/P2 pooled mean; se recomputed below from npz
 DRIFT_ENV = 0.05             # A2 per-window drift envelope
 ESS_FLOOR = 4.0              # per-chain moment-matching occ-ESS gate
 
@@ -26,40 +25,48 @@ def pt_arm(tag):
     last = min(500, rounds); sysm = cold[-last:].mean(axis=0)
     ev = np.median(d["eevpd"][:rounds][-last:], axis=0)
     tail = float((d["eevpd"][:rounds][-last:] > 2e-3).mean())
+    tail_rung = (d["eevpd"][:rounds][-last:] > 2e-3).mean(axis=0).tolist()
     att, acc = d["swap_attempts"].astype(float), d["swap_accepts"].astype(float)
     return dict(rounds=rounds, sysm=sysm, m=float(sysm.mean()),
                 sd=float(sysm.std(ddof=1)), se=float(sysm.std(ddof=1) / 4.0),
                 rt=int(d["round_trips"].sum()),
                 rt_pocket=int(d["round_trips_pocket"].sum()),
-                ev_med=ev.tolist(), tail_frac=tail,
+                ev_med=ev.tolist(), tail_frac=tail, tail_rung=tail_rung,
                 pair_acc=(acc.sum(1) / np.maximum(att.sum(1), 1)).tolist(),
                 cold=cold, n_revert=int(d["n_revert"]))
 
 # ---- C1: production composition -------------------------------------------
 c1 = pt_arm("B5_C1pt1")
+rt_floor_eff = RT_FLOOR_FULL * c1["rounds"] / 1500.0   # op-7 realized-rounds scaling
+if c1["rounds"] < 1500:
+    print(f"*** C1 INCOMPLETE: rounds_done={c1['rounds']} < 1500 — floors scaled per "
+          f"op-7; last-window={min(500, c1['rounds'])} (pinned 500) ***")
 in_band = BAND[0] <= c1["m"] <= BAND[1]
 ev_ok = all(EEVPD_BAND[0] <= v <= EEVPD_BAND[1] for v in c1["ev_med"])
 near_edge = min(abs(c1["m"] - BAND[0]), abs(c1["m"] - BAND[1])) < DRIFT_ENV
 print(f"[C1] rounds={c1['rounds']} m={c1['m']:.4f}±{c1['se']:.4f} "
       f"RTpocket={c1['rt_pocket']} RTtotal={c1['rt']} eevpd_med={['%.1e'%v for v in c1['ev_med']]}")
-print(f"W-1a: RTpocket>={RT_FLOOR_FULL}: {c1['rt_pocket'] >= RT_FLOOR_FULL}; occ in {BAND}: {in_band}"
-      f"{' (NEAR-EDGE: corroboration rule applies)' if near_edge and in_band else ''}; "
+print(f"W-1a: RTpocket>={rt_floor_eff:.0f} (op-7 scaled): "
+      f"{c1['rt_pocket'] >= rt_floor_eff}; occ in {BAND}: {in_band}"
+      f"{' *** NEAR-EDGE (±0.05): F-1/band reading REQUIRES RT+plot corroboration ***' if near_edge else ''}; "
       f"EEVPD medians in band: {ev_ok}; NaN {c1['n_revert']}==0: {c1['n_revert'] == 0}")
-if 0 < c1["rt_pocket"] < RT_FLOOR_FULL and in_band:
+if 0 < c1["rt_pocket"] < rt_floor_eff and in_band:
     print("W-1a ZONE: FLUX-LIMITED under SVI metric (routed: next-checkpoint decision)")
-if not ev_ok and c1["rt_pocket"] >= RT_FLOOR_FULL and in_band:
+if not ev_ok and c1["rt_pocket"] >= rt_floor_eff and in_band:
     print("W-1a ZONE: HEALTH-only miss (routed: report, no F-1/flux-limited)")
 # W-1b interim window: rounds 250-750, last-500 of a hypothetical 750-round run
 cold = c1["cold"]
 if c1["rounds"] >= 750:
     sysm_i = cold[250:750].mean(axis=0)
     m_i = float(sysm_i.mean())
+    ev_i = np.median(np.load(f"{OUT}/arrays_B5_C1pt1.npz")["eevpd"][250:750], axis=0)
+    ev_i_ok = all(EEVPD_BAND[0] <= v <= EEVPD_BAND[1] for v in ev_i)
     # RTs in window not separable from totals (final counts only) -> use rate proxy:
     # pocket RTs accrue ~linearly (model assumption, recorded) -> window share = 500/rounds
     rt_i_est = c1["rt_pocket"] * 500.0 / c1["rounds"]
     print(f"W-1b (interim 250-750): occ={m_i:.4f} in {BAND}: {BAND[0] <= m_i <= BAND[1]}; "
           f"est. window pocket RTs ≈ {rt_i_est:.0f} >= {RT_FLOOR_HALF} (linear-accrual model): "
-          f"{rt_i_est >= RT_FLOOR_HALF}")
+          f"{rt_i_est >= RT_FLOOR_HALF}; window EEVPD medians in band: {ev_i_ok}")
 res["C1"] = {k: v for k, v in c1.items() if k != "cold" and k != "sysm"}
 
 # ---- C2: kernel-bias probe --------------------------------------------------
@@ -76,14 +83,18 @@ def halves(cold, last=500):
     return float(w[:h].mean()), float(w[h:].mean())
 c2h = halves(c2["cold"]); p1h = halves(p1["cold_ind"]); p2h = halves(p2["cold_ind"])
 drifts = [abs(b - a) for a, b in (c2h, p1h, p2h)]
-drift_consistent = abs(shift) <= 2 * DRIFT_ENV and max(drifts) > DRIFT_ENV / 2
-tail_dropped = c2["tail_frac"] < 0.05
+# pinned letter (checkpoint F-2 clause): shift within the worst-case two-window
+# drift bound (2*DRIFT_ENV = 0.10) => INCONCLUSIVE regardless of half-behaviour;
+# halves are REPORTED. (Scorer-audit D5: the earlier extra conjunct was un-pinned.)
+drift_consistent = abs(shift) <= 2 * DRIFT_ENV
+tail_dropped = c2["tail_frac"] < 0.05 and max(c2["tail_rung"]) < 0.08
 print(f"\n[C2] rounds={c2['rounds']} m={c2['m']:.4f}±{c2['se']:.4f}; P1/P2 pooled "
       f"{float(bal.mean()):.4f}±{se_p12:.4f}; shift={shift:+.4f} = {nsig:.2f}σ "
       f"(2σ={2*se_comb:.4f})")
 print(f"  window drifts |Δhalf|: C2 {drifts[0]:.4f}, P1 {drifts[1]:.4f}, P2 {drifts[2]:.4f}")
-print(f"  above-2e-3 tail fraction: C2 {c2['tail_frac']:.3f} (PT-0b was 0.11-0.20); "
-      f"dropped-materially(<0.05): {tail_dropped}")
+print(f"  above-2e-3 tail fraction: C2 pooled {c2['tail_frac']:.3f}, per-rung "
+      f"{[round(v,3) for v in c2['tail_rung']]} (PT-0b was 0.11-0.20 per rung); "
+      f"dropped-materially(<0.05 pooled AND max per-rung <0.08): {tail_dropped}")
 print(f"  eevpd_med={['%.1e'%v for v in c2['ev_med']]} vs scaled ref {EEVPD_BAND_C2}")
 if nsig <= 2:
     v = ("W-2 PASS: no kernel bias > ~0.19 occupancy units detected — 0.10-exclusion "
@@ -113,8 +124,9 @@ for tag in ("C3", "C4"):
     sd2 = float(a["occ_chain"].std(ddof=1)) ** 2
     a["ess_mm"] = phat * (1 - phat) / sd2 if sd2 > 0 else float("inf")  # pinned estimator
     a["powered"] = a["ess_mm"] >= ESS_FLOOR
-    # se: naive if powered; else clamp to measured ESS (one-arm-underpowered route)
-    n_eff = 64 * min(a["ess_mm"], max(a["ess_mm"], 1e-9)) if False else 64 * a["ess_mm"]
+    # mm-se = sqrt(phat(1-phat)/(64*ess_mm)) ≡ sd_chains/8 algebraically — the
+    # ESS clamp to the measured value is automatic (rd-3 one-arm route)
+    n_eff = 64 * a["ess_mm"]
     a["se"] = float(np.sqrt(phat * (1 - phat) / max(n_eff, 1e-9)))
     print(f"\n[{tag}] m={a['m']:.4f} (naive se {a['se_naive']:.4f}); pinned mm occ-ESS/chain "
           f"= {a['ess_mm']:.2f} (IAT-proxy med {a['iat_ess_med']:.2f}); powered(>= {ESS_FLOOR}): "
@@ -130,7 +142,8 @@ else:
     pooled = float((ms["C3"]["m"] + ms["C4"]["m"]) / 2)
     agree = "AGREE" if ns <= 2 else ("(2σ,3σ] zone: bracket not closed at pilot precision" if ns <= 3 else "F-4 (>3σ): dwell unequilibrated")
     inb = BAND[0] <= pooled <= BAND[1]
-    out_sig = min(abs(pooled - BAND[0]), abs(pooled - BAND[1])) / se_c if not inb else 0.0
+    se_pooled = se_c / 2.0   # pooled-mean se (audit D3: NOT the difference se)
+    out_sig = min(abs(pooled - BAND[0]), abs(pooled - BAND[1])) / se_pooled if not inb else 0.0
     print(f"W-3: |m_C3-m_C4|={abs(dd):.4f} = {ns:.2f}σ -> {agree}; pooled={pooled:.4f} "
           f"in {BAND}: {inb}" + ("" if inb else f" (out by {out_sig:.2f}σ; F-3 needs >2σ with arms agreeing)"))
     res["W3"] = dict(diff_sig=ns, pooled=pooled, in_band=inb, agree=agree,

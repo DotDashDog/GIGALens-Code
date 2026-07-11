@@ -589,7 +589,10 @@ multimodality, conditioning, or the NFW profile.
   efficiency frontier re-costs. (rd-2 N-2 reconciliation: F-2 fires ONLY on
   drift-clean >3σ; drift-clean shifts in (2σ, 3σ] land in the "bias not excluded at
   pilot precision" zone below — fails W-2 without firing F-2. One threshold, one
-  zone, no overlap.) F-3: C3/C4 agree with each other but
+  zone, no overlap. Scorer-audit D5 pin, 2026-07-11: "drift-consistent" =
+  |shift| ≤ 0.10 (the worst-case two-window envelope), REGARDLESS of the
+  half-window behaviour; the first-vs-second-half means are REPORTED as evidence,
+  not used as an additional conjunct.) F-3: C3/C4 agree with each other but
   land outside (0.32, 0.49) by > 2σ ⇒ the unadjusted-kernel bias is MEASURED as the
   difference ⇒ the WEIGHT is thereafter quoted from the MH-exact bracket (exact in
   law); PT keeps the transport/discovery role. F-4: C3/C4 disagree > 3σ ⇒ MH-exact

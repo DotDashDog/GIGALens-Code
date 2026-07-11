@@ -28,3 +28,12 @@ MODEL CARD: {
  "qz_adapter": "PoolQZ: sample=Bernoulli(p_pocket) pool draws + 1e-3 jitter; mean/covariance = pooled MAMS64 empirical",
  "jitter": 0.001
 }
+Sampling took 385.71541689900914 s
+[C3_smoke] realized init pocket fraction = 0.125 (requested Bernoulli p = 0.25)
+
+[C3_smoke] ===== MH-EXACT BRACKET ARM (PROPOSED/UNCERTIFIED) =====
+  ALL-kept (200) occupancy = 0.2156 +- 0.1303 (chain-clustered se, 8 chains)
+  drift check (A2 mirror): first-half 0.2575 vs second-half 0.1737 (delta -0.0838)
+  occ-ESS IAT-proxy per chain (NON-SCORING diagnostic): min 1.74, median 100.00, max 100.00 (IAT median 1.0); the SCORING occ-ESS is the pinned two-arm moment-matching estimator (p-hat(1-p-hat)/sd_chains^2, p-hat = pooled C3+C4 mean) computed cross-arm; UNDERPOWERED gate (occ-ESS < 4) applies to THAT
+  per-chain occ range [0.000, 1.000]
+  wall 416s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out (arrays_C3_smoke_pt1.npz, pt1_mams_C3_smoke_occ.png)

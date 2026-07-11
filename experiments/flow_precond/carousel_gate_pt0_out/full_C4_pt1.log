@@ -1,0 +1,30 @@
+MODEL CARD: {
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt1_mams.py",
+ "tag": "C4",
+ "arm": "MAMS MH-exact bracket",
+ "sampler": "gigalens_research.inference.mams.MAMS_JIT (production, untouched)",
+ "jax": "0.10.0.dev20260711",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "smoke": false,
+ "seed": 23,
+ "p_pocket": 0.75,
+ "n_hmc": 64,
+ "num_burnin_steps": 2000,
+ "num_results": 4000,
+ "target_acceptance": 0.9,
+ "thin_stored": 4,
+ "last_keep": 4000,
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pools": {
+  "n_main": 57873,
+  "n_pocket": 6127,
+  "use": "POSITION pools + pooled-moment metric seeding ONLY, never weights (human directive)"
+ },
+ "pocket_indicator": "z[6] > -22.35",
+ "qz_adapter": "PoolQZ: sample=Bernoulli(p_pocket) pool draws + 1e-3 jitter; mean/covariance = pooled MAMS64 empirical",
+ "jitter": 0.001
+}
