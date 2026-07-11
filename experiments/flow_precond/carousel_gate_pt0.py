@@ -85,8 +85,9 @@ U_REL_TOL = 1e-6                    # RELATIVE u-recovery gate (audit fixes 2+3)
                                     # max |u - u_direct| / (1 + |u_direct|)
 MIN_CLASS_N = 50                    # Arm A: min retained samples per (beta, class)
                                     # cell; below -> E missing, Delta truncated (fix 4)
-ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3)  # checkpoint seeds
-                # (PT-0b arms override via GATE_PT0_SEED_B, e.g. seeds 10-13)
+ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3, B5=4)
+                # checkpoint seeds (PT-0b/PT-1 arms override via GATE_PT0_SEED_B,
+                # e.g. seeds 10-13 for PT-0b, 20/21 for PT-1 C1/C2)
 # Arm A
 BETAS_A = np.geomspace(0.01, 1.0, 10)
 NCH_A = 16                          # chains per basin group
@@ -232,14 +233,16 @@ def u_from_state(path_kind, beta, logdensity, positions):
 
 # ----------------------------------------------------- EEVPD adapter + runners
 def adapt_one(prev_state, next_state, info, step_size, adapt_state, nan_key,
-              dim=DIM):
-    """carousel_pt.py adapt_one, math EXACT (parameterized by D=dim, DEVAR=5e-4);
-    also returns the handle_nans success flag so reverts can be counted
-    (checkpoint NaN policy). dim=33 for dPIE arms, 10 for the Arm-0 control."""
+              dim=DIM, devar=DEVAR):
+    """carousel_pt.py adapt_one, math EXACT (parameterized by D=dim and the EEVPD
+    target devar, default 5e-4); also returns the handle_nans success flag so
+    reverts can be counted (checkpoint NaN policy). dim=33 for dPIE arms, 10 for
+    the Arm-0 control. devar is overridable for B arms ONLY via GATE_PT0_DEVAR
+    (PT-1 C2 bias probe); Arm A and the control always use the default."""
     time_, x_avg, ss_max = adapt_state
     success, state, ss_max, ec = handle_nans(
         prev_state, next_state, step_size, ss_max, info.energy_change, nan_key)
-    xi = jnp.square(ec) / (dim * DEVAR) + 1e-8
+    xi = jnp.square(ec) / (dim * devar) + 1e-8
     weight = jnp.exp(-0.5 * jnp.square(jnp.log(xi) / (6.0 * TRUST)))
     x_avg = DECAY * x_avg + weight * (xi / jnp.power(step_size, 6.0))
     time_ = DECAY * time_ + weight
@@ -313,11 +316,11 @@ def make_runner_a(tf, path_kind, beta, invmasses, n_steps):
     return run
 
 
-def make_runner_b(tf, kern, dim, L):
+def make_runner_b(tf, kern, dim, L, devar=DEVAR):
     """Per-rung jitted K-step runner (carousel_pt.py _mk pattern), with the per-round
     momentum refresh (init_level pattern) folded into the jit: states are rebuilt
     from positions each call, so swaps only move positions/u; adapt stays with rung.
-    Shared by ALL PT arms (B1/B2/B3 dPIE and the Arm-0 control; amendment ii)."""
+    Shared by ALL PT arms (B1..B5 dPIE and the Arm-0 control; amendment ii)."""
 
     @jax.jit
     def run(positions, ss, ast, init_keys, step_keys):  # step_keys (K, NSYS)
@@ -330,7 +333,7 @@ def make_runner_b(tf, kern, dim, L):
             def per(s, step, a, k):
                 k1, k2 = jax.random.split(k)
                 ns, info = kern(rng_key=k1, state=s, L=L, step_size=step)
-                return adapt_one(s, ns, info, step, a, k2, dim)
+                return adapt_one(s, ns, info, step, a, k2, dim, devar)
 
             s2, ss2, a2, ec2, ok = jax.vmap(per)(sts, sss, asts, kt)
             return (s2, ss2, a2), (ec2, ok)
@@ -351,7 +354,8 @@ def make_legacy_runners(spec):
         tf = spec["make_tf"](float(b))
         kern = _build_kernel_shardmap(logdensity_fn=tf, inverse_mass_matrix=imm,
                                       integrator=isokinetic_mclachlan_smart)
-        runners.append(make_runner_b(tf, kern, spec["dim"], spec["L"]))
+        runners.append(make_runner_b(tf, kern, spec["dim"], spec["L"],
+                                     float(spec.get("devar", DEVAR))))
     return runners
 
 
@@ -366,6 +370,7 @@ def make_fused_round_runner(spec):
     (R, NSYS). Math and per-rung/chain/step key semantics identical to
     make_runner_b (verified by --equiv-check up to FP reordering)."""
     dim, L, K = spec["dim"], spec["L"], spec["K"]
+    devar = float(spec.get("devar", DEVAR))
     imm = jnp.asarray(spec["inv_mass"])
     make_tf = spec["make_tf"]
 
@@ -386,7 +391,7 @@ def make_fused_round_runner(spec):
                 def per(s, step, a, k):
                     k1, k2 = jax.random.split(k)
                     ns, info = kern(rng_key=k1, state=s, L=L, step_size=step)
-                    return adapt_one(s, ns, info, step, a, k2, dim)
+                    return adapt_one(s, ns, info, step, a, k2, dim, devar)
 
                 s2, ss2, a2, ec2, ok = jax.vmap(per)(sts, sss, asts, kt)
                 return (s2, ss2, a2), (ec2, ok)
@@ -1164,19 +1169,21 @@ def run_equiv_check(tag, seed, spec, n_rounds=3):
 
 
 def run_arm_b(arm, tag, equiv=False):
-    """dPIE PT arms B1/B2/B3/B4: build the target spec and route through run_pt.
-    B4 (PT-0b extension) = POWER path, ALL-MAIN init at every rung/system, no
-    prior draws anywhere; otherwise identical to B1's spec."""
+    """dPIE PT arms B1..B5: build the target spec and route through run_pt.
+    B4 (PT-0b) = POWER path, ALL-MAIN init at every rung/system, no prior draws.
+    B5 (PT-1 C1, production composition) = POWER path, identical to B4 EXCEPT
+    metric = SVI covariance (dpie/svi qz_scale_tril -> cov) and init = SVI draws
+    at every rung/system (the true point-and-go input state)."""
     seed = ARM_SEED[arm]
     seed_source = "ARM_SEED default"
     env_seed = os.environ.get("GATE_PT0_SEED_B", "").strip()
-    if env_seed:   # PT-0b arms run seeds 10-13 per the checkpoint
+    if env_seed:   # PT-0b seeds 10-13; PT-1 C1/C2 seeds 20/21 per checkpoints
         seed = int(env_seed)
         seed_source = f"env override GATE_PT0_SEED_B={env_seed}"
-    path_kind = "power" if arm in ("B1", "B4") else "lik"
+    path_kind = "power" if arm in ("B1", "B4", "B5") else "lik"
     rng = np.random.default_rng(seed)
 
-    # PT-0b env overrides (B arms ONLY; control/Arm A never read these).
+    # PT-0b/PT-1 env overrides (B arms ONLY; control/Arm A never read these).
     def _env_num(name, default, cast):
         v = os.environ.get(name, "").strip()
         if v:
@@ -1187,6 +1194,20 @@ def run_arm_b(arm, tag, equiv=False):
     nsys, nsys_src = _env_num("GATE_PT0_NSYS_B", NSYS_B, int)
     rounds, rounds_src = _env_num("GATE_PT0_ROUNDS_B", ROUNDS_B, int)
     ss_max, ssmax_src = _env_num("GATE_PT0_SSMAX", SS_MAX0, float)
+    devar, devar_src = _env_num("GATE_PT0_DEVAR", DEVAR, float)
+
+    # metric: pooled MAMS64 cov (B1-B4) or the production SVI cov (B5)
+    if arm == "B5":
+        svi = np.load(SVI_NPZ)
+        svi_loc = np.asarray(svi["qz_loc"], dtype=np.float64).reshape(-1)
+        svi_tril = np.asarray(svi["qz_scale_tril"],
+                              dtype=np.float64).reshape(DIM, DIM)
+        assert svi_loc.shape == (DIM,), svi_loc.shape
+        inv_mass = svi_tril @ svi_tril.T
+        metric_desc = "SVI cov (dpie/svi)"
+    else:
+        inv_mass = M["cov_pool"]
+        metric_desc = "pooled MAMS64 empirical cov, all rungs (positions only)"
     # B-arm ladder override for the PT-0b continuation (mid-run finding: the
     # geometric ladder is disconnected on the likelihood path -- hottest-pair
     # swap acc 0.000, coldest 0.008-0.048 in B2 -- so continuation runs pass a
@@ -1214,7 +1235,9 @@ def run_arm_b(arm, tag, equiv=False):
 
     pos = np.zeros((R, nsys, DIM))
     for r in range(R):
-        if arm in ("B3", "B4"):   # ALL-MAIN init (B4: power path, no prior)
+        if arm == "B5":           # SVI draws at EVERY rung/system (PT-1 C1)
+            pos[r] = svi_loc + rng.standard_normal((nsys, DIM)) @ svi_tril.T
+        elif arm in ("B3", "B4"):  # ALL-MAIN init (B4: power path, no prior)
             pos[r] = draw_pool(M["pool_M"], nsys)
         else:
             pick_p = rng.random(nsys) < 0.5
@@ -1243,22 +1266,24 @@ def run_arm_b(arm, tag, equiv=False):
                 x64=bool(jax.config.jax_enable_x64), dim=DIM,
                 R=R, NSYS=nsys, K=k_b, ROUNDS=rounds, thin=THIN_B,
                 betas=betas.tolist(), betas_source=betas_source,
-                L=L_MCLMC, ss_init=SS_INIT, ss_max=ss_max, devar=DEVAR,
+                L=L_MCLMC, ss_init=SS_INIT, ss_max=ss_max, devar=devar,
                 env_overrides=dict(K=k_src, NSYS=nsys_src, ROUNDS=rounds_src,
-                                   ss_max=ssmax_src),
-                metric="pooled MAMS64 empirical cov, all rungs (positions only)",
+                                   ss_max=ssmax_src, devar=devar_src),
+                metric=metric_desc,
+                svi_npz=SVI_NPZ if arm == "B5" else None,
                 mams64=MAMS_NPZ, pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
                 init={"B1": "all rungs Bernoulli(0.5) main/pocket pool",
                       "B2": "rungs 1..R-1 Bernoulli(0.5); rung 0 prior draws",
                       "B3": "all main pool; rung 0 prior draws",
                       "B4": "ALL rungs/systems main pool (power; no prior draws)",
+                      "B5": "SVI draws all rungs",
                       }[arm],
                 u_def="log_prob = logdensity/beta" if path_kind == "power"
                       else "log_like = (logdensity - log_prior)/beta",
                 harness="run_pt (shared with Arm-0 control, amendment ii)",
                 sep_check_max_abs=M["sep_max"])
     spec = dict(dim=DIM, L=L_MCLMC, betas=betas, NSYS=nsys, K=k_b,
-                ROUNDS=rounds, inv_mass=M["cov_pool"], ss_max=ss_max,
+                ROUNDS=rounds, inv_mass=inv_mass, ss_max=ss_max, devar=devar,
                 make_tf=lambda b: make_tempered(path_kind, b),
                 u_from=u_from, u_direct=u_direct,
                 indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
@@ -1370,7 +1395,7 @@ def main():
     ap = argparse.ArgumentParser(description="GATE PT-0 (one arm per process)")
     ap.add_argument("--arm", required=True,
                     choices=["smoke", "control", "A_power", "A_lik",
-                             "B1", "B2", "B3", "B4"])
+                             "B1", "B2", "B3", "B4", "B5"])
     ap.add_argument("--equiv-check", action="store_true",
                     help="fused-vs-legacy runner equivalence guard: 3 rounds, "
                          "both implementations, identical inits/keys, SMOKE "
@@ -1394,8 +1419,8 @@ def main():
         return f"{arm}_smoke" if SMOKE else arm
 
     if equiv:
-        if args.arm not in ("control", "B1", "B2", "B3", "B4"):
-            ap.error("--equiv-check requires a PT arm (control/B1/B2/B3/B4)")
+        if args.arm not in ("control", "B1", "B2", "B3", "B4", "B5"):
+            ap.error("--equiv-check requires a PT arm (control/B1..B5)")
         if args.arm == "control":
             run_control(tag_of("control"), equiv=True)
         else:
@@ -1406,7 +1431,7 @@ def main():
         run_control(tag_of("control"))          # Arm 0 first (amendment ii)
         run_arm_a("power", tag_of("A_power"))
         run_arm_a("lik", tag_of("A_lik"))
-        for arm in ("B1", "B2", "B3", "B4"):
+        for arm in ("B1", "B2", "B3", "B4", "B5"):
             run_arm_b(arm, tag_of(arm))
     elif args.arm == "control":
         run_control(tag_of("control"))

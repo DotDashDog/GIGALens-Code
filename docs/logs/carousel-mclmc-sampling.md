@@ -449,6 +449,165 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-1 — production composition + kernel-bias probe + MH-exact
+  cross-method bracket (HUMAN-APPROVED direction 2026-07-11: "This looks very
+  promising! Go ahead with Gate PT-1"; closes C-24's named blind spots and starts the
+  efficiency frontier).**
+  **Status: grader rd-1 NEEDS-MORE (2026-07-11) — 7 blocking + 5 advisory, ALL APPLIED
+  in-place below (RT-floor derivation corrected to the all-main basis; three unrouted
+  zones added; C2 minimum-detectable-effect pinned — shift 0.10, underlying bias
+  ≈0.19 after the 0.54 step² attenuation, so the ±0.05 drift-scale bias is EXPLICITLY
+  beyond C2's reach; L3 occ-ESS gate repaired — window pinned to ALL 4000 kept with a
+  first-vs-second-half drift check, estimator named, ≥4 floor derived, provenance
+  corrected to the MAMS64 BENCHMARK baseline; F-2 drift-discrimination clause;
+  ALL-PASS re-worded at its true precision). Awaiting rd-2 + committed-hash diff
+  audits.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
+  small diff-audited extensions: `--arm B5` production-init variant + `GATE_PT0_DEVAR`
+  env) and NEW `experiments/flow_precond/carousel_gate_pt1_mams.py` (thin wrapper
+  around the production `gigalens_research.inference.mams.MAMS_JIT` with a qz-adapter
+  whose .sample returns basin-pool draws and .mean/.covariance = pooled empirical —
+  MAMS itself untouched). Outputs `carousel_gate_pt0_out/*_pt1*`. One 4 h allocation,
+  4 GPUs. Seeds: C1 = 20, C2 = 21, C3 = 22, C4 = 23.
+  **Claim under test + classification.** Stochastic-estimator behaviour; three
+  separately-falsifiable links: (L1, production composition) the C-24 sampler still
+  transports/discovers when its two MAMS64-derived conveniences are replaced by
+  PIPELINE artifacts — metric = SVI covariance (dpie/svi qz_scale_tril → cov) and init
+  = SVI draws at every rung (all-main in effect; the true point-and-go input state);
+  (L2, kernel-bias probe) the ≈0.4 occupancy is stable under a 10× tighter EEVPD
+  target — unadjusted-MCLMC discretization bias scales with step² and the EEVPD
+  heavy-tail mass shrinks with the target, so if the C-24 value is
+  discretization-driven it MUST move; (L3, cross-method) an MH-EXACT sampler (the
+  production MAMS — adjusted, hence unbiased in law) initialized from opposite-side
+  basin mixtures brackets to a value consistent with PT's, closing the shared-kernel
+  blind spot. Explicitly UNTESTED: other lenses; full efficiency frontier (only the
+  pre-registered half-budget interim scoring below); MAP/SVI stage quality itself
+  (existing pipeline artifacts are taken as given).
+  **Cause hypothesis.** C-24's residual doubt is concentrated in two mechanisms: (a)
+  unadjusted-kernel discretization bias (evidenced by the EEVPD heavy tail — 11–20%
+  of rounds above 2e-3, maxima to 1.7e4), which would shift BOTH PT-0b arms to the
+  same wrong occupancy; (b) metric provenance (pooled MAMS64 cov is not available in
+  production; SVI cov is main-fitted and could mis-condition pocket dynamics enough
+  to break transport). L1–L3 isolate (b), (a), and (a) respectively.
+  **Arms (one per GPU).** C1 (production, L1): `--arm B5` = power path, PT-0b ladder
+  [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0], K = 10, NSYS = 16, ROUNDS = 1500,
+  ss_max = 5.0, metric = SVI cov, init = SVI draws (every rung; expected init cold
+  occ ≈ 0 — SVI is main-fitted), seed 20. C2 (bias probe, L2): exact PT-0b balanced
+  P1 config (pooled metric, balanced pools) EXCEPT `GATE_PT0_DEVAR = 5e-5` (10×
+  tighter; expected step ratio (1/10)^{1/6} ≈ 0.68, wall/round unchanged —
+  grad-eval-bound), seed 21. C3/C4 (MH-exact bracket, L3): production MAMS_JIT, 64
+  chains, num_burnin 2000 + num_results 4000, target_acceptance 0.9, qz-adapter inits:
+  C3 = per-chain Bernoulli(0.25) pocket-pool draws (main-heavy), C4 = Bernoulli(0.75)
+  (pocket-heavy), seeds 22/23; metric seeding .covariance = pooled empirical cov,
+  .mean = pooled mean (adapter-recorded in a printed model card).
+  **Predictions (direction + magnitude).** C1: transport within 2× of PT-0b —
+  pocket RTs ≥ ~175 (half of P1/P2's ~378–428; SVI-metric mis-conditioning costs
+  ≤ 2× via EEVPD step compensation), EEVPD medians in band, pair acceptances within
+  [0.25, 0.65] (spacing is metric-independent to first order — sd(u) is a property of
+  the tempered targets), last-500 cold occupancy inside C-24's (0.32, 0.49). C2:
+  |m_C2 − 0.3888 (P1/P2 pooled)| ≤ 2·√(se_C2² + 0.0271²) — the null (no
+  discretization dependence); the EEVPD above-band tail fraction drops from 11–20%
+  to ≤ ~5% (target shrinks 10×; tail is spike-driven so full proportionality is not
+  assumed — direction only, magnitude reported). C3/C4: each arm's per-chain
+  occupancy dwell (last 2000 kept, 64 chains) has occ-ESS ≈ 7–8/chain (PT-0-measured
+  1.9/1000 kept) ⇒ se_arm ≈ 0.022–0.03; the two arms agree within 2·se_comb AND the
+  joint value lands in (0.32, 0.49) if C-24 is kernel-clean.
+  **Win conditions (derived).** (W-1a) C1 pocket RTs ≥ 175 — DERIVATION CORRECTED
+  (grader rd-1): C1 is all-main-init, so the basis is the ALL-MAIN arms P3/P4
+  (421/350), floor = half the minimum = 175 (NOT "half of P1/P2" as first drafted —
+  that arithmetic gave 189 and the balanced arms are the wrong scenario) — AND cold
+  occupancy in (0.32, 0.49) AND EEVPD medians in band. ROUTED ZONE (rd-1 blocking 2):
+  RTs ∈ (0, 175) WITH occupancy in band ⇒ transport FLUX-LIMITED under the SVI
+  metric — pre-committed reading: derived rounds-scaling or metric-inflation decision
+  goes to the NEXT checkpoint (mirror of PT-0b's [1,9] zone); W-1a FAIL is never
+  unrouted. F-1's band-exit clause carries the ±0.05 drift caveat (advisory b): a
+  near-edge exit (within 0.05 of a bound) requires RT + plot corroboration before
+  reading "composition breaks the sampler". (W-1b, half-budget frontier datapoint,
+  pre-registered INTERIM scoring) the same clauses on C1's rounds 250–750 window
+  with the identical per-system-mean/se machinery (window swapped in, nothing else);
+  RT floor ≥ 60 (175/3 ≈ 58 rounded; the linear-accrual-after-~150-round-spin-up
+  premise is a MODEL ASSUMPTION unverifiable from PT-0b artifacts, which store final
+  RT counts only — recorded per advisory e) — a PASS is the first measured evidence
+  that HALF the PT-0b budget suffices; a FAIL with W-1a passing means the frontier
+  needs the full budget (NOT a gate failure). (W-2) C2 null holds: |Δm| ≤ 2·se_comb(C2, P1P2). MINIMUM DETECTABLE EFFECT pinned
+  (rd-1 blocking 3): 2·se_comb ≈ 0.10 in shift units, and the observable shift is
+  attenuated to (1 − 0.68²) ≈ 0.54 of the underlying bias (bias ∝ step², ratio
+  0.68) ⇒ C2 can only detect underlying kernel bias ≳ 0.19 occupancy units. PASS
+  wording is therefore FIXED as: "no kernel bias > ~0.19 detected — the
+  0.10-exclusion is robust at this precision"; the ±0.05 drift-scale bias named in
+  C-24's caveats is EXPLICITLY beyond C2's reach (L3 is the only arm that
+  constrains it, and only to ~0.06–0.09). The tail-fraction change is REPORTED
+  alongside; ROUTED ZONE (blocking 4): if the null holds but the above-2e-3 tail
+  fraction does NOT drop materially, L2 is UNRESOLVED — the lever failed to
+  modulate the suspected mechanism — and W-2 does NOT count toward ALL-PASS. (W-3) C3/C4: |m_C3 − m_C4| ≤ 2·√(se_C3² + se_C4²) (MH-exact bracket closes) AND
+  the pooled MAMS value ∈ (0.32, 0.49). GATE REPAIRED (rd-1 blocking 5): the dwell
+  window is ALL 4000 kept steps (burn-in 2000 already discarded), with a
+  first-2000-vs-last-2000 drift check reported per arm (A2 mirror); expected
+  per-chain occ-ESS ≈ 7–8 on THIS window (4 × the 1.9/1000-kept transit-rate figure,
+  whose provenance is CORRECTED: it is the MAMS64 BENCHMARK-baseline moment-matching
+  estimate — sd² ≈ p(1−p)/ESS at p = 0.096 — from a main-heavy UNCONVERGED run, not
+  a "PT-0 measurement"; its transfer to a pocket-heavy init is blind spot (iii)).
+  occ-ESS estimator PINNED: per arm, moment-matching ESS = p̂(1−p̂)/sd_chains² with
+  p̂ = the two-arm pooled mean, computed on the pinned window; the autocorr-IAT ESS
+  is reported alongside as a cross-check. UNDERPOWERED floor DERIVED: occ-ESS ≥ 4
+  per chain ⇔ ≥ 256 effective draws/arm ⇔ se_arm ≈ √(0.24/256) ≈ 0.031 ⇔ 2·se_comb
+  ≈ 0.087 ≈ the C-24 band half-width — below that the bracket cannot resolve the
+  band at all. ROUTED (blocking 6): BOTH arms UNDERPOWERED ⇒ L3 INCONCLUSIVE —
+  C-24 stays kernel-consistent-only, a longer MAMS bracket is costed for a later
+  gate, and L3 does NOT count toward ALL-PASS.
+  **Falsifiers + routing.** F-1: C1 pocket RTs = 0 or cold occupancy exits the C-24
+  band ⇒ the SVI-metric/init composition breaks the sampler ⇒ production pipeline
+  needs a metric fix (pre-named candidate: inflate SVI cov or per-rung metrics —
+  NEXT checkpoint, no in-gate lever). F-2: C2 shifts > 2σ — BUT (rd-1 blocking 7) before F-2 may fire, the
+  pre-registered drift discrimination runs: compare first-half vs second-half
+  scoring-window means for C2 AND for P1/P2; if the shift is consistent with the A2
+  drift envelope (~±0.05 per window, worst-case two-window bound ≈ 0.10 = exactly
+  the 2σ threshold), the reading is "INCONCLUSIVE — window drift", NOT "bias LIVE".
+  A drift-clean >2σ shift ⇒ discretization bias LIVE ⇒ C-24's ≈0.4 is
+  EEVPD-dependent; routing = report + the production config inherits the TIGHTER
+  target (itself UNCERTIFIED pending the MH-exact anchor — advisory d) and the
+  efficiency frontier re-costs. F-3: C3/C4 agree with each other but
+  land outside (0.32, 0.49) by > 2σ ⇒ the unadjusted-kernel bias is MEASURED as the
+  difference ⇒ the WEIGHT is thereafter quoted from the MH-exact bracket (exact in
+  law); PT keeps the transport/discovery role. F-4: C3/C4 disagree > 3σ ⇒ MH-exact
+  dwell unequilibrated at this budget ⇒ cross-method INCONCLUSIVE (recorded; C-24
+  stays kernel-consistent-only; longer MAMS bracket costed for a later gate — no
+  auto-extension). Zones: C2 in (2σ, 3σ] ⇒ "bias not excluded at pilot precision"
+  (fails W-2 without firing F-2); C3/C4 in band but C1 out ⇒ composition problem
+  isolated to the SVI metric (F-1 reading), cross-method still closes; ALL-PASS ⇒
+  the point-and-go claim is assembled AT THE 0.10-EXCLUSION PRECISION LEVEL —
+  residual kernel bias below ~0.19 is unprobed by L2 and below ~0.06–0.09 unprobed
+  by L3 (pre-worded per rd-1; no stronger phrase may enter the record) — final
+  certification + efficiency-frontier gate (PT-2) follows, human validation invited
+  on C-24+PT-1 jointly.
+  **Metric blind spots.** (i) C2 probes one alternative EEVPD point — a bias flat in
+  [5e-5, 5e-4] but large absolutely is invisible (mitigated by C3/C4: exact in law);
+  (ii) all arms share the z[6] halfspace pocket definition; (iii) MAMS occ-ESS from
+  a pocket-heavy init has never been measured — the UNDERPOWERED pre-commitment
+  covers it; (iv) C1 takes the existing SVI artifact as given (single-realization
+  caveat); (v) the A2 window-drift systematic (~±0.05) confounds BOTH F-2 (handled
+  by the drift-discrimination clause) and F-1's occupancy-band scoring (handled by
+  the near-edge corroboration rule); (vi) PT-0b's discovery-timing expectation was
+  measured from POOL inits — its transfer to SVI-draw inits is untested (A5
+  boundary-leakage channel may be absent for SVI draws), so C1 discovery timing is
+  reported, not scored. C2's EEVPD medians are target-relative: at DEVAR 5e-5 they
+  should sit ≈3–4e-5 — the [1e-4, 2e-3] band clause is EXEMPTED for C2 (its health
+  reference is the scaled band [2e-5, 4e-4]; the TAIL fraction is still measured
+  against the absolute 2e-3 edge, which is the mechanism under test).
+  **Pre-committed plot appearances.** C1 worms/coldocc: PT-0b-like rise from ~0 into
+  a band overlapping (0.32, 0.49); F-1 ⇒ pocket color absent or plateau below 0.2.
+  C2 coldocc: statistically indistinguishable from P1/P2; F-2 ⇒ displaced plateau.
+  C3/C4: per-chain occupancy from 0.25-ish and 0.75-ish inits converging to a common
+  band; F-3 ⇒ common band outside (0.32, 0.49); F-4 ⇒ two non-overlapping bands.
+  NEW small plot: EEVPD above-band tail fraction, C2 vs P1.
+  **Cost estimate.** 1 × 4 h node: smoke (B5 + DEVAR shapes, ~10 min); C1/C2 =
+  1500 × ~7.9 s ≈ 3.3 h (GPU0/GPU1); C3 + C4 MAMS ≈ 64 × 6000 steps ≈ 2× the MAMS64
+  wall ≈ 45–55 min each (GPU2/GPU3); incremental saves + op-7 realized-rounds
+  scaling restated. ≈ 14 GPU·h.
+  **Process notes.** Extensions diff-audited pre-launch with recorded auditor +
+  commit hash (amendment-xi standing rule); model cards print metric/init
+  provenance; MAMS arms print the adapter's pool composition; boundary verification
+  after every log insertion (standing clobber rule).**
+
 - **Run: carousel GATE PT-0b — short-ladder power-path PT-MCLMC transport certification
   on the dPIE carousel (routed continuation of GATE PT-0; C-23's three measured knobs
   applied).**
