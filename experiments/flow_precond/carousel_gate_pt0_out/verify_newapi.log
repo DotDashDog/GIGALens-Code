@@ -1,0 +1,29 @@
+==============================================================================
+carousel dPIE model card
+==============================================================================
+SIM_CAROUSEL_DIR : /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel
+DATA_DIR (RO)    : /global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/newnewcutouts
+ARRAYS_NPZ       : /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/mams/arrays.npz
+BASIN_SLICE_NPZ  : /pscratch/sd/l/linusu/carousel_diag/basin_slice/basin_slice.npz
+num_free_params  : 33
+num datasets     : 2
+  dataset[0] image.shape=(300, 300) event_size=89350 delta_pix=0.2 num_pix=300 supersample=1 likelihood_precision=float64 conv_precision=float32 kernel.shape=(19, 19)
+  dataset[1] image.shape=(300, 300) event_size=89550 delta_pix=0.2 num_pix=300 supersample=1 likelihood_precision=float64 conv_precision=float32 kernel.shape=(19, 19)
+mode             : lstsq
+planes           : [0.49, 1.432, 1.506]
+
+[a] OK: model.num_free_params == 33
+[b] OK: z_param_names[6] == 'planes/0/mass/1/center_x'
+
+[c] MAMS posterior samples (/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/mams/arrays.npz):
+    chain= 0 step=   0  lp=-291320.482839  red_chi2=1.161719
+    chain=10 step= 500  lp=-291317.425807  red_chi2=1.161731
+    chain=63 step= 999  lp=-291314.746059  red_chi2=1.161669
+[c] OK: all 3 samples finite with red_chi2 in [1.15, 1.17]
+
+[d] basin-slice (/pscratch/sd/l/linusu/carousel_diag/basin_slice/basin_slice.npz):
+    zP: lp=-291319.807083  red_chi2=1.161839  (target -291319.81 +/-1)
+    zM: lp=-291325.242941  red_chi2=1.161842  (target -291325.24 +/-1)
+[d] OK: zP/zM lp within +/-1 nat of recorded values
+
+ALL CHECKS PASSED

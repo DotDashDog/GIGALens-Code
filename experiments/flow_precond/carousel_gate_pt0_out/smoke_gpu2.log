@@ -1,0 +1,122 @@
+MODEL CARD: {
+ "arm": "control_smoke",
+ "path": "power",
+ "seed": 0,
+ "swap_seed": 10000,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260710",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 10,
+ "target": "June-28 pt_weight.py known-answer: D=10 Gaussian mixture, modes +/-5, weights 0.7/0.3, equal covariance",
+ "R": 10,
+ "NSYS": 16,
+ "K": 20,
+ "ROUNDS": 30,
+ "burn": 10,
+ "thin": 5,
+ "betas": [
+  0.03,
+  0.04429248065819431,
+  0.0653941280952172,
+  0.09654893846056294,
+  0.1425463996444559,
+  0.21045778830490994,
+  0.3107232505953858,
+  0.4587567855682464,
+  0.6773158683865647,
+  1.0
+ ],
+ "L": 3.1622776601683795,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "metric": "identity",
+ "indicator": "z[0] > 0 (occ_+, +mode weight 0.70)",
+ "init": "all rungs all systems in wrong (-5) basin (N(0,1) spread)",
+ "u_def": "log_prob = logdensity/beta (power path)",
+ "harness": "run_pt (SAME code path as B1/B2/B3)"
+}
+[B control_smoke] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B control_smoke] round-0 u identity: rel = 1.672e-16 (abs = 7.105e-15)
+[B control_smoke] round     0/30 cold occ=0.000 hot occ=0.062 RT=0 pocketCA=0 EEVPD[h/m/c]=3.1e-14/8.8e-10/1.4e-07 reverts=0 wall=162s
+[B control_smoke] round     5/30 cold occ=0.000 hot occ=0.062 RT=0 pocketCA=0 EEVPD[h/m/c]=1.1e-09/1.2e-08/1.9e-07 reverts=0 wall=327s
+[B control_smoke] round    10/30 cold occ=0.062 hot occ=0.375 RT=0 pocketCA=0 EEVPD[h/m/c]=3.4e-10/1.6e-09/1.6e-07 reverts=0 wall=327s
+[B control_smoke] round    15/30 cold occ=0.375 hot occ=0.375 RT=0 pocketCA=1 EEVPD[h/m/c]=7.9e-10/7.2e-09/2.1e-07 reverts=0 wall=328s
+[B control_smoke] round    20/30 cold occ=0.188 hot occ=0.250 RT=0 pocketCA=1 EEVPD[h/m/c]=1.5e-09/3.0e-09/2.1e-07 reverts=0 wall=328s
+[B control_smoke] round    25/30 cold occ=0.375 hot occ=0.438 RT=0 pocketCA=2 EEVPD[h/m/c]=7.7e-09/2.2e-09/3.1e-07 reverts=0 wall=328s
+[B control_smoke] round    29/30 cold occ=0.250 hot occ=0.375 RT=0 pocketCA=3 EEVPD[h/m/c]=2.1e-09/4.8e-08/1.7e-07 reverts=0 wall=328s
+
+[B control_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.2750 +- 0.2720 (per-sys [0.8, 0.0, 0.2, 0.2, 0.0, 0.4, 0.0, 0.4, 0.0, 0.0, 0.4, 0.2, 0.2, 0.6, 0.8, 0.2]; init 0.000)
+  round trips total 0 (median/sys 0.0; pocket-classified 0 [W-2], main-classified 0); pocket cold-arrivals 3, main 4
+  swap acc same=[0.597, 0.435, 0.61, 0.589, 0.562, 0.528, 0.604, 0.571, 0.545]
+  swap acc cross=[0.516, 0.578, 0.574, 0.663, 0.649, 0.494, 0.479, 0.597, 0.587] (cross attempts [91, 116, 94, 89, 94, 79, 71, 77, 75])
+  cold split-Rhat = 1.2389200382389778; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
+[B control_smoke] DONE in 336s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out
+
+[0 control_smoke] ===== CONTROL GATE (PROPOSED/UNCERTIFIED) =====
+  0a weight gate: cold occ_+ = 0.2625 +- 0.0625 (across-system se); |occ - 0.70| = 0.4375 vs tol 0.1250 -> FAIL
+  0b calibration: abar = 0.567; round trips total = 0 (need >= 20: INSUFFICIENT); c_rw = 0.000 (band [0.1, 3.0]: OUT -> re-derive W-2/W-5 before Arm B)
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "B1_smoke",
+ "path": "power",
+ "seed": 0,
+ "swap_seed": 10000,
+ "prior_init_seed": null,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260710",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 12,
+ "NSYS": 8,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.01,
+  0.01519911082952934,
+  0.023101297000831605,
+  0.03511191734215131,
+  0.0533669923120631,
+  0.08111308307896872,
+  0.12328467394420659,
+  0.1873817422860384,
+  0.2848035868435802,
+  0.43287612810830595,
+  0.6579332246575682,
+  1.0
+ ],
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "metric": "pooled MAMS64 empirical cov, all rungs (positions only)",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "all rungs Bernoulli(0.5) main/pocket pool",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0
+}
+[B B1_smoke] init cold occ = 0.375; init occ per rung = [0.38, 0.5, 0.75, 0.5, 0.62, 0.25, 0.5, 0.75, 0.38, 0.5, 0.62, 0.38]
+[B B1_smoke] round-0 u identity: rel = 9.126e-12 (abs = 2.659e-06)
+[B B1_smoke] round     0/20 cold occ=0.500 hot occ=0.625 RT=0 pocketCA=0 EEVPD[h/m/c]=1.9e-08/2.3e-05/5.4e-04 reverts=0 wall=627s
+[B B1_smoke] round     5/20 cold occ=0.375 hot occ=0.625 RT=0 pocketCA=0 EEVPD[h/m/c]=7.6e-07/9.0e-04/1.3e-04 reverts=0 wall=1256s
+[B B1_smoke] round    10/20 cold occ=0.375 hot occ=0.625 RT=0 pocketCA=0 EEVPD[h/m/c]=5.2e-04/4.8e-05/2.4e-04 reverts=0 wall=1295s
+[B B1_smoke] round    15/20 cold occ=0.500 hot occ=0.500 RT=0 pocketCA=0 EEVPD[h/m/c]=1.5e-05/4.5e-03/9.2e-04 reverts=0 wall=1334s
+[B B1_smoke] round    19/20 cold occ=0.500 hot occ=0.500 RT=0 pocketCA=0 EEVPD[h/m/c]=1.0e-06/1.9e-03/7.8e-04 reverts=0 wall=1366s
+
+[B B1_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.4750 +- 0.4268 (per-sys [0.8, 0.4, 0.0, 0.0, 0.8, 0.8, 1.0, 0.0]; init 0.375)
+  round trips total 0 (median/sys 0.0; pocket-classified 0 [W-2], main-classified 0); pocket cold-arrivals 0, main 0
+  swap acc same=[0.789, 0.613, 0.558, 0.542, 0.455, 0.5, 0.325, 0.303, 0.154, 0.393, 0.342]
+  swap acc cross=[0.714, 0.551, 0.541, 0.719, 0.5, 0.667, 0.375, 0.277, 0.352, 0.288, 0.31] (cross attempts [42, 49, 37, 32, 36, 54, 40, 47, 54, 52, 42])
+  cold split-Rhat = 1.7235069452938652; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.True_, np.False_, np.False_, np.True_, np.False_, np.False_, np.True_, np.False_, np.True_, np.True_]; NaN reverts 0
+[B B1_smoke] DONE in 1381s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

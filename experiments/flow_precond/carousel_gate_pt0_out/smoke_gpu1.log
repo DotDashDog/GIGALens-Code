@@ -1,0 +1,60 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "A_lik_smoke",
+ "path": "lik",
+ "seed": 0,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260710",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "betas": [
+  0.01,
+  0.016681005372000592,
+  0.027825594022071243,
+  0.046415888336127774,
+  0.0774263682681127,
+  0.1291549665014884,
+  0.21544346900318834,
+  0.3593813663804626,
+  0.5994842503189409,
+  1.0
+ ],
+ "n_chains_per_basin": 16,
+ "steps": 60,
+ "discard": 30,
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "jitter": 0.001,
+ "metric": "per-basin empirical cov (confined) / pooled cov (hot-end unconfined), MAMS64 positions only, never weights",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "n_pool_M": 57873,
+ "n_pool_P": 6127,
+ "pocket_indicator": "z[6] > -22.35",
+ "sep_check_max_abs": 0.0,
+ "n_hot_check": 2,
+ "u_def": "log_like"
+}
+[A A_lik_smoke] beta=0.0100: E_M=-291603.249+-15.364 (n=98) E_P=-291741.974+-23.497 (n=862) leak M/P=0.835/0.040 LEAK>10% u_check_rel=2.7e-11/2.3e-12 eevpd=2.1e-01/7.5e-04 reverts=[0, 0] (140s)
+[A A_lik_smoke] beta=0.0167: E_M=-291662.600+-25.363 (n=136) E_P=-291658.857+-9.275 (n=824) leak M/P=0.717/0.000 LEAK>10% u_check_rel=1.1e-10/5.3e-12 eevpd=6.2e-05/8.0e-06 reverts=[0, 0] (129s)
+[A A_lik_smoke]   STATIONARITY FLAG Minit beta=0.0167: E half1/2 = -291632.876/-291705.678, |z| = 4.01 > 3.0
+[A A_lik_smoke]   STATIONARITY FLAG Pinit beta=0.0167: E half1/2 = -291596.877/-291702.120, |z| = 4.09 > 3.0
+[A A_lik_smoke] beta=0.0278: E_M=-291575.950+-15.625 (n=114) E_P=-291560.868+-9.678 (n=846) leak M/P=0.762/0.000 LEAK>10% u_check_rel=2.3e-12/7.3e-12 eevpd=4.1e-05/6.2e-06 reverts=[0, 0] (126s)
+[A A_lik_smoke]   STATIONARITY FLAG Minit beta=0.0278: E half1/2 = -291539.659/-291618.242, |z| = 4.28 > 3.0
+[A A_lik_smoke] beta=0.0464: E_M=-291529.871+-13.807 (n=109) E_P=-291495.291+-8.481 (n=851) leak M/P=0.790/0.017 LEAK>10% u_check_rel=3.3e-12/6.9e-12 eevpd=2.1e-05/9.3e-06 reverts=[0, 0] (129s)
+[A A_lik_smoke] beta=0.0774: E_M=-291480.969+-11.490 (n=147) E_P=-291458.792+-6.084 (n=813) leak M/P=0.694/0.000 LEAK>10% u_check_rel=2.9e-12/1.1e-11 eevpd=1.8e-03/3.1e-03 reverts=[0, 0] (124s)
+[A A_lik_smoke]   STATIONARITY FLAG Pinit beta=0.0774: E half1/2 = -291430.284/-291465.523, |z| = 4.23 > 3.0
+[A A_lik_smoke] beta=0.1292: E_M=-291422.183+-5.079 (n=191) E_P=-291414.224+-5.326 (n=769) leak M/P=0.602/0.000 LEAK>10% u_check_rel=3.1e-12/1.3e-11 eevpd=1.3e-01/7.2e-04 reverts=[0, 0] (124s)
+[A A_lik_smoke] beta=0.2154: E_M=-291357.925+-9.752 (n=234) E_P=-291368.666+-4.206 (n=726) leak M/P=0.512/0.000 LEAK>10% u_check_rel=6.8e-12/1.0e-11 eevpd=1.4e-03/8.8e-04 reverts=[0, 0] (126s)
+[A A_lik_smoke] beta=0.3594: E_M=-291315.310+-4.906 (n=308) E_P=-291326.039+-3.216 (n=652) leak M/P=0.415/0.056 LEAK>10% u_check_rel=2.8e-12/4.8e-12 eevpd=1.6e-03/2.0e-03 reverts=[0, 0] (126s)
+[A A_lik_smoke] beta=0.5995: E_M=-291278.020+-2.967 (n=452) E_P=-291278.807+-2.370 (n=508) leak M/P=0.113/0.054 LEAK>10% u_check_rel=7.3e-12/2.1e-11 eevpd=7.9e-04/5.0e-04 reverts=[0, 0] (125s)
+[A A_lik_smoke] beta=1.0000: E_M=-291240.028+-1.281 (n=515) E_P=-291244.884+-2.437 (n=445) leak M/P=0.000/0.073 u_check_rel=4.4e-12/6.5e-12 eevpd=4.6e-04/4.0e-05 reverts=[0, 0] (129s)
+[A A_lik_smoke] Delta(beta): 0.010:+2.40+-2.32 0.017:+1.95+-2.31 0.028:+2.06+-2.30 0.046:+2.52+-2.27 0.077:+3.40+-2.22 0.129:+4.18+-2.16 0.215:+4.06+-1.91 0.359:+2.51+-1.51 0.599:+1.13+-0.94 1.000:+0.00+-0.00
+[A A_lik_smoke] hot-end unconfined beta=0.0100: pocket occ=0.9604+-0.0147 (pred w/ 0.1 anchor: 0.551; consistent within 2se: False) (78s)
+[A A_lik_smoke] hot-end unconfined beta=0.0167: pocket occ=0.9729+-0.0111 (pred w/ 0.1 anchor: 0.439; consistent within 2se: False) (75s)
+[A A_lik_smoke] m_prior = 0.9944 +- 0.0012 (n=4096)
+[A A_lik_smoke] DONE in 1442s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

@@ -1,0 +1,41 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "A_power",
+ "path": "power",
+ "seed": 0,
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260711",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "betas": [
+  0.01,
+  0.016681005372000592,
+  0.027825594022071243,
+  0.046415888336127774,
+  0.0774263682681127,
+  0.1291549665014884,
+  0.21544346900318834,
+  0.3593813663804626,
+  0.5994842503189409,
+  1.0
+ ],
+ "n_chains_per_basin": 16,
+ "steps": 3000,
+ "discard": 1500,
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "jitter": 0.001,
+ "metric": "per-basin empirical cov (confined) / pooled cov (hot-end unconfined), MAMS64 positions only, never weights",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "n_pool_M": 57873,
+ "n_pool_P": 6127,
+ "pocket_indicator": "z[6] > -22.35",
+ "sep_check_max_abs": 0.0,
+ "n_hot_check": 2,
+ "u_def": "log_prob"
+}

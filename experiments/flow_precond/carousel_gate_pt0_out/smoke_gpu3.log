@@ -1,0 +1,108 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "B2_smoke",
+ "path": "lik",
+ "seed": 1,
+ "swap_seed": 10001,
+ "prior_init_seed": 778,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260710",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 12,
+ "NSYS": 8,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.01,
+  0.01519911082952934,
+  0.023101297000831605,
+  0.03511191734215131,
+  0.0533669923120631,
+  0.08111308307896872,
+  0.12328467394420659,
+  0.1873817422860384,
+  0.2848035868435802,
+  0.43287612810830595,
+  0.6579332246575682,
+  1.0
+ ],
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "metric": "pooled MAMS64 empirical cov, all rungs (positions only)",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "rungs 1..R-1 Bernoulli(0.5); rung 0 prior draws",
+ "u_def": "log_like = (logdensity - log_prior)/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0
+}
+[B B2_smoke] init cold occ = 0.250; init occ per rung = [1.0, 0.62, 0.5, 0.38, 1.0, 0.38, 0.38, 0.25, 0.75, 0.5, 0.62, 0.25]
+[B B2_smoke] round-0 u identity: rel = 3.503e-11 (abs = 1.021e-05)
+[B B2_smoke] round     0/20 cold occ=0.375 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.3e-07/3.4e-05/1.4e-03 reverts=0 wall=750s
+[B B2_smoke] round     5/20 cold occ=0.250 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.6e-08/1.7e-04/1.2e-03 reverts=0 wall=1482s
+[B B2_smoke] round    10/20 cold occ=0.250 hot occ=0.875 RT=0 pocketCA=0 EEVPD[h/m/c]=4.6e-07/4.6e-05/4.3e-05 reverts=0 wall=1521s
+[B B2_smoke] round    15/20 cold occ=0.250 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=4.0e-07/1.1e-05/2.7e-04 reverts=0 wall=1560s
+[B B2_smoke] round    19/20 cold occ=0.250 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.7e-09/2.1e-04/7.1e-04 reverts=0 wall=1591s
+
+[B B2_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.2625 +- 0.4565 (per-sys [1.0, 0.0, 0.0, 0.0, 0.0, 0.1, 1.0, 0.0]; init 0.250)
+  round trips total 0 (median/sys 0.0; pocket-classified 0 [W-2], main-classified 0); pocket cold-arrivals 0, main 0
+  swap acc same=[0.0, 0.517, 0.468, 0.438, 0.519, 0.377, 0.213, 0.228, 0.085, 0.1, 0.079]
+  swap acc cross=[0.0, 0.75, 0.556, 0.375, 0.5, 0.368, 0.421, 0.391, 0.212, 0.14, 0.095] (cross attempts [18, 20, 18, 16, 26, 19, 19, 23, 33, 50, 42])
+  cold split-Rhat = 2.947182103796977; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.True_, np.True_, np.True_, np.True_, np.False_, np.False_, np.True_, np.True_, np.True_]; NaN reverts 0
+[B B2_smoke] DONE in 1598s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "B3_smoke",
+ "path": "lik",
+ "seed": 2,
+ "swap_seed": 10002,
+ "prior_init_seed": 779,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260710",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 12,
+ "NSYS": 8,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.01,
+  0.01519911082952934,
+  0.023101297000831605,
+  0.03511191734215131,
+  0.0533669923120631,
+  0.08111308307896872,
+  0.12328467394420659,
+  0.1873817422860384,
+  0.2848035868435802,
+  0.43287612810830595,
+  0.6579332246575682,
+  1.0
+ ],
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "metric": "pooled MAMS64 empirical cov, all rungs (positions only)",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "all main pool; rung 0 prior draws",
+ "u_def": "log_like = (logdensity - log_prior)/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0
+}
+[B B3_smoke] init cold occ = 0.000; init occ per rung = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B B3_smoke] round-0 u identity: rel = 2.728e-11 (abs = 7.945e-06)
+[B B3_smoke] round     0/20 cold occ=0.000 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.5e-05/6.3e-05/1.4e-03 reverts=0 wall=695s

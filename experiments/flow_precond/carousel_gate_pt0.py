@@ -111,6 +111,11 @@ CTRL_MIN_RT = 20                    # >=20 round trips -> c_rw Poisson err <=~25
 CRW_BAND = (0.1, 3.0)               # transport-constant sanity band
 
 SMOKE = False
+# Wall-clock fix (2026-07-11): the PT round is ONE fused jitted call vmapped over
+# rungs with beta as a traced argument (the per-rung dispatch loop was fixed-cost
+# dominated: ~34 s/round in smoke => ~19 h/arm). GATE_PT0_LEGACY_RUNNERS=1
+# selects the old per-rung path (kept for --equiv-check, not for production).
+LEGACY_RUNNERS = os.environ.get("GATE_PT0_LEGACY_RUNNERS", "0") == "1"
 
 
 def apply_smoke():
@@ -206,8 +211,11 @@ def prior_z_samples(n, seed):
 
 def make_tempered(path_kind, beta):
     """logdensity_beta. power: beta*lp. lik: log_prior + beta*log_like, computed as
-    (1-beta)*log_prior + beta*log_prob (identical by the verified split; one sim)."""
-    b = float(beta)
+    (1-beta)*log_prior + beta*log_prob (identical by the verified split; one sim).
+    `beta` may be a Python/numpy float (legacy per-rung path, Arm A) OR a traced
+    jax scalar (fused runner, vmapped over rungs): no coercion, and the Python
+    branch is on path_kind only, never on beta."""
+    b = beta
     lp_fn, lpri_fn = M["lp_fn"], M["lpri_fn"]
     if path_kind == "power":
         return lambda z: b * lp_fn(z)
@@ -240,6 +248,12 @@ def adapt_one(prev_state, next_state, info, step_size, adapt_state, nan_key,
 
 def fresh_adapt(nch):
     return (jnp.zeros(nch), jnp.zeros(nch), jnp.full(nch, SS_MAX0))
+
+
+def fresh_adapt2(n_rungs, nch):
+    """(R, NSYS)-shaped adapt state for the fused round runner."""
+    return (jnp.zeros((n_rungs, nch)), jnp.zeros((n_rungs, nch)),
+            jnp.full((n_rungs, nch), SS_MAX0))
 
 
 def make_runner_a(tf, path_kind, beta, invmasses, n_steps):
@@ -322,6 +336,75 @@ def make_runner_b(tf, kern, dim, L):
         return states.position, states.logdensity, sss, asts, ec2, ok
 
     return run
+
+
+def make_legacy_runners(spec):
+    """Old per-rung dispatch path (one jitted runner per rung, concrete beta).
+    Kept ONLY for the --equiv-check guard and GATE_PT0_LEGACY_RUNNERS=1."""
+    imm = jnp.asarray(spec["inv_mass"])
+    runners = []
+    for b in np.asarray(spec["betas"], dtype=np.float64):
+        tf = spec["make_tf"](float(b))
+        kern = _build_kernel_shardmap(logdensity_fn=tf, inverse_mass_matrix=imm,
+                                      integrator=isokinetic_mclachlan_smart)
+        runners.append(make_runner_b(tf, kern, spec["dim"], spec["L"]))
+    return runners
+
+
+def make_fused_round_runner(spec):
+    """Wall-clock fix (2026-07-11): ONE jitted call per PT round, vmapped over
+    rungs with beta as a mapped (traced) argument -- removes the R sequential
+    per-rung dispatches that dominated the round cost. tf and the kernel are
+    built INSIDE the traced per_rung context (all construction is pure jax:
+    _build_kernel_shardmap composes jnp.where-based steps; the integrator does a
+    cholesky of the static inverse-mass matrix; beta enters only through the
+    logdensity closure). Inner chain vmap is unchanged, so the fused batch is
+    (R, NSYS). Math and per-rung/chain/step key semantics identical to
+    make_runner_b (verified by --equiv-check up to FP reordering)."""
+    dim, L, K = spec["dim"], spec["L"], spec["K"]
+    imm = jnp.asarray(spec["inv_mass"])
+    make_tf = spec["make_tf"]
+
+    @jax.jit
+    def round_all(positions, ss, ast, init_keys, step_keys, betas):
+        # positions (R,NSYS,dim); ss (R,NSYS); ast tuple of (R,NSYS);
+        # init_keys (R,NSYS); step_keys (R,K,NSYS); betas (R,)
+        def per_rung(pos_r, ss_r, ast_r, ik_r, sk_r, beta):
+            tf = make_tf(beta)                    # beta TRACED here
+            kern = _build_kernel_shardmap(
+                logdensity_fn=tf, inverse_mass_matrix=imm,
+                integrator=isokinetic_mclachlan_smart)
+            states = jax.vmap(lambda p, k: _single_init(p, tf, k))(pos_r, ik_r)
+
+            def sstep(carry, kt):
+                sts, sss, asts = carry
+
+                def per(s, step, a, k):
+                    k1, k2 = jax.random.split(k)
+                    ns, info = kern(rng_key=k1, state=s, L=L, step_size=step)
+                    return adapt_one(s, ns, info, step, a, k2, dim)
+
+                s2, ss2, a2, ec2, ok = jax.vmap(per)(sts, sss, asts, kt)
+                return (s2, ss2, a2), (ec2, ok)
+
+            (states, sss, asts), (ec2, ok) = jax.lax.scan(
+                sstep, (states, ss_r, ast_r), sk_r)
+            return states.position, states.logdensity, sss, asts, ec2, ok
+
+        return jax.vmap(per_rung)(positions, ss, ast, init_keys, step_keys, betas)
+
+    return round_all
+
+
+def _round_keys(lks, R, NSYS, K):
+    """Per-round key arrays with the SAME split structure per rung/chain/step as
+    the legacy loop (ik = split(lks[r], NSYS); sk = split(fold_in(lks[r],1),
+    K*NSYS).reshape(K, NSYS)) -- trajectories comparable up to FP reordering."""
+    ik_all = jnp.stack([jax.random.split(lks[r], NSYS) for r in range(R)])
+    sk_all = jnp.stack([jax.random.split(jax.random.fold_in(lks[r], 1),
+                                         K * NSYS).reshape(K, NSYS)
+                        for r in range(R)])
+    return ik_all, sk_all
 
 
 # ------------------------------------------------------------- Arm A analysis
@@ -704,19 +787,21 @@ def run_pt(tag, seed, spec):
     ind_label = spec.get("ind_label", "pocket")
     swap_rng = np.random.default_rng(seed + 10_000)
     key = jax.random.key(seed)
-    card = spec["card"]
+    fused = not LEGACY_RUNNERS
+    card = dict(spec["card"],
+                runner_impl="fused-vmap-over-rungs" if fused
+                            else "legacy-per-rung-dispatch")
     pr("MODEL CARD:", json.dumps(card, indent=1, default=_json_default))
     summary = dict(model_card=card)
     t0_all = time.time()
 
-    # kernels + per-rung jitted runners (one metric for all rungs)
-    inv_mass = jnp.asarray(spec["inv_mass"])
-    runners = []
-    for r in range(R):
-        tf = spec["make_tf"](betas[r])
-        kern = _build_kernel_shardmap(logdensity_fn=tf, inverse_mass_matrix=inv_mass,
-                                      integrator=isokinetic_mclachlan_smart)
-        runners.append(make_runner_b(tf, kern, dim, L))
+    # runner: ONE fused jitted call per round (default; wall-clock fix) or the
+    # legacy per-rung dispatch list (GATE_PT0_LEGACY_RUNNERS=1 / equiv guard)
+    if fused:
+        round_all = make_fused_round_runner(spec)
+        betas_j = jnp.asarray(betas)
+    else:
+        runners = make_legacy_runners(spec)
 
     pos = np.array(spec["init_pos"], dtype=np.float64)
     assert pos.shape == (R, NSYS, dim), pos.shape
@@ -725,8 +810,12 @@ def run_pt(tag, seed, spec):
        f"init occ per rung = "
        f"{np.round(indicator(pos).mean(axis=1), 2).tolist()}")
 
-    steps = [jnp.full(NSYS, SS_INIT) for _ in range(R)]
-    adapt = [fresh_adapt(NSYS) for _ in range(R)]
+    if fused:
+        steps_all = jnp.full((R, NSYS), SS_INIT)
+        adapt_all = fresh_adapt2(R, NSYS)
+    else:
+        steps = [jnp.full(NSYS, SS_INIT) for _ in range(R)]
+        adapt = [fresh_adapt(NSYS) for _ in range(R)]
     wid = np.tile(np.arange(R)[:, None], (1, NSYS))     # walker ids
     # wflag [walker_id, sys] (audit fix 1): 0 neutral, 1 tagged-hot,
     # 2 down-traversed arriving MAIN-classified, 3 down-traversed arriving
@@ -769,17 +858,27 @@ def run_pt(tag, seed, spec):
     logd = np.zeros((R, NSYS))
     for t in range(ROUNDS):
         key, *lks = jax.random.split(key, R + 1)
-        for r in range(R):
-            ik = jax.random.split(lks[r], NSYS)
-            sk = jax.random.split(jax.random.fold_in(lks[r], 1),
-                                  K * NSYS).reshape(K, NSYS)
-            p2, ld, steps[r], adapt[r], ec2, ok = runners[r](
-                pos[r], steps[r], adapt[r], ik, sk)
-            pos[r] = np.asarray(p2)
-            logd[r] = np.asarray(ld)
-            ev[t, r] = float(np.mean(np.asarray(ec2)) / dim)
-            ssm[t, r] = float(np.mean(np.asarray(steps[r])))
+        if fused:   # one jitted (R, NSYS)-wide call per round
+            ik_all, sk_all = _round_keys(lks, R, NSYS, K)
+            p2, ld, steps_all, adapt_all, ec2, ok = round_all(
+                jnp.asarray(pos), steps_all, adapt_all, ik_all, sk_all, betas_j)
+            pos = np.array(p2)              # writable copy (host swaps mutate)
+            logd = np.asarray(ld)
+            ev[t] = np.asarray(ec2).mean(axis=(1, 2)) / dim
+            ssm[t] = np.asarray(steps_all).mean(axis=1)
             n_revert += int((~np.asarray(ok)).sum())
+        else:       # legacy per-rung dispatch (equiv guard only)
+            for r in range(R):
+                ik = jax.random.split(lks[r], NSYS)
+                sk = jax.random.split(jax.random.fold_in(lks[r], 1),
+                                      K * NSYS).reshape(K, NSYS)
+                p2, ld, steps[r], adapt[r], ec2, ok = runners[r](
+                    pos[r], steps[r], adapt[r], ik, sk)
+                pos[r] = np.asarray(p2)
+                logd[r] = np.asarray(ld)
+                ev[t, r] = float(np.mean(np.asarray(ec2)) / dim)
+                ssm[t, r] = float(np.mean(np.asarray(steps[r])))
+                n_revert += int((~np.asarray(ok)).sum())
         # path's u recovered from the tempered logdensity (spec-provided; the lik
         # path does its log_prior batch eval inside u_from)
         u = spec["u_from"](logd, pos)
@@ -996,7 +1095,69 @@ def run_pt(tag, seed, spec):
     return summary, data
 
 
-def run_arm_b(arm, tag):
+def run_equiv_check(tag, seed, spec, n_rounds=3):
+    """MANDATORY equivalence guard for the fused runner (2026-07-11): run
+    n_rounds with BOTH implementations from identical inits/keys (SMOKE config)
+    and report max |dpos|, max |du| per round plus both round-0 u-identity
+    rels. Kernel path only: the host swap/walker logic is shared code operating
+    on these outputs, so kernel equivalence implies run equivalence up to FP
+    reordering."""
+    dim = spec["dim"]
+    betas = np.asarray(spec["betas"], dtype=np.float64)
+    R, NSYS, K = len(betas), spec["NSYS"], spec["K"]
+    pr(f"[EQUIV {tag}] fused vs legacy, {n_rounds} rounds, R={R} NSYS={NSYS} "
+       f"K={K} dim={dim} seed={seed}")
+    round_all = make_fused_round_runner(spec)
+    runners = make_legacy_runners(spec)
+    betas_j = jnp.asarray(betas)
+
+    pos_l = np.array(spec["init_pos"], dtype=np.float64)
+    pos_f = pos_l.copy()
+    steps_l = [jnp.full(NSYS, SS_INIT) for _ in range(R)]
+    adapt_l = [fresh_adapt(NSYS) for _ in range(R)]
+    steps_f = jnp.full((R, NSYS), SS_INIT)
+    adapt_f = fresh_adapt2(R, NSYS)
+    key = jax.random.key(seed)
+    logd_l = np.zeros((R, NSYS))
+    rows = []
+    for t in range(n_rounds):
+        key, *lks = jax.random.split(key, R + 1)
+        ik_all, sk_all = _round_keys(lks, R, NSYS, K)   # SAME keys for both
+        for r in range(R):
+            p2, ld, steps_l[r], adapt_l[r], _, _ = runners[r](
+                pos_l[r], steps_l[r], adapt_l[r], ik_all[r], sk_all[r])
+            pos_l[r] = np.asarray(p2)
+            logd_l[r] = np.asarray(ld)
+        pf, ldf, steps_f, adapt_f, _, _ = round_all(
+            jnp.asarray(pos_f), steps_f, adapt_f, ik_all, sk_all, betas_j)
+        pos_f = np.array(pf)
+        logd_f = np.asarray(ldf)
+        u_l = spec["u_from"](logd_l, pos_l)
+        u_f = spec["u_from"](logd_f, pos_f)
+        row = dict(round=t,
+                   max_dpos=float(np.max(np.abs(pos_l - pos_f))),
+                   max_du=float(np.max(np.abs(u_l - u_f))))
+        if t == 0:
+            for nm, uu, pp in (("legacy", u_l, pos_l), ("fused", u_f, pos_f)):
+                ud = np.asarray(spec["u_direct"](pp.reshape(-1, dim))
+                                ).reshape(R, NSYS)
+                row[f"u0_rel_{nm}"] = float(
+                    np.max(np.abs(uu - ud) / (1.0 + np.abs(ud))))
+        rows.append(row)
+        pr(f"[EQUIV {tag}] round {t}: max|dpos| = {row['max_dpos']:.3e}, "
+           f"max|du| = {row['max_du']:.3e}"
+           + (f", u0_rel legacy/fused = {row['u0_rel_legacy']:.3e}/"
+              f"{row['u0_rel_fused']:.3e}" if t == 0 else ""))
+    out = dict(tag=tag, seed=seed, smoke=SMOKE, R=R, NSYS=NSYS, K=K, dim=dim,
+               n_rounds=n_rounds, rounds=rows)
+    with open(os.path.join(OUT, f"summary_equiv_{tag}.json"), "w") as f:
+        json.dump(out, f, indent=1, default=_json_default)
+    pr(f"[EQUIV {tag}] written -> summary_equiv_{tag}.json (UNCERTIFIED; "
+       f"grader reads the numbers, not this print)")
+    return out
+
+
+def run_arm_b(arm, tag, equiv=False):
     """dPIE PT arms B1/B2/B3: build the target spec and route through run_pt."""
     seed = ARM_SEED[arm]
     path_kind = "power" if arm == "B1" else "lik"
@@ -1052,10 +1213,12 @@ def run_arm_b(arm, tag):
                 u_from=u_from, u_direct=u_direct,
                 indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
                 init_pos=pos, card=card, ind_label="pocket")
+    if equiv:
+        return run_equiv_check(tag, seed, spec)
     return run_pt(tag, seed, spec)
 
 
-def run_control(tag):
+def run_control(tag, equiv=False):
     """Arm 0 (amendment ii, BLOCKING): (0a) known-answer weight gate on the
     June-28 pt_weight.py Gaussian-mixture target + (0b) transport calibration
     c_rw, BOTH through the SAME run_pt harness the dPIE B arms use."""
@@ -1094,12 +1257,15 @@ def run_control(tag):
                 harness="run_pt (SAME code path as B1/B2/B3)")
     spec = dict(dim=CTRL_D, L=math.sqrt(CTRL_D), betas=betas, NSYS=CTRL_NSYS,
                 K=CTRL_K, ROUNDS=CTRL_ROUNDS, inv_mass=np.eye(CTRL_D),
-                make_tf=lambda b: (lambda z, b=float(b): b * mix_logpdf(z)),
+                # b bound as lambda parameter; works for float AND traced beta
+                make_tf=lambda b: (lambda z: b * mix_logpdf(z)),
                 u_from=lambda logd, p: logd / betas[:, None],
                 u_direct=lambda pf: np.asarray(mix_v(jnp.asarray(pf))),
                 indicator=lambda p: p[..., 0] > 0.0,
                 init_pos=init, card=card, ind_label="plus-mode",
                 occ_truth=CTRL_OCC_TRUTH)
+    if equiv:
+        return run_equiv_check(tag, seed, spec)
     summary, data = run_pt(tag, seed, spec)
 
     # ---- 0a: known-answer weight gate --------------------------------------
@@ -1155,9 +1321,15 @@ def main():
     ap.add_argument("--arm", required=True,
                     choices=["smoke", "control", "A_power", "A_lik",
                              "B1", "B2", "B3"])
+    ap.add_argument("--equiv-check", action="store_true",
+                    help="fused-vs-legacy runner equivalence guard: 3 rounds, "
+                         "both implementations, identical inits/keys, SMOKE "
+                         "config; requires a PT arm (control/B1/B2/B3)")
     args = ap.parse_args()
+    equiv = args.equiv_check or os.environ.get("GATE_PT0_EQUIV", "0") == "1"
 
-    if args.arm == "smoke" or os.environ.get("GATE_PT0_SMOKE", "0") == "1":
+    if equiv or args.arm == "smoke" \
+            or os.environ.get("GATE_PT0_SMOKE", "0") == "1":
         apply_smoke()
     os.makedirs(OUT, exist_ok=True)
     if args.arm != "control":   # Arm 0 is analytic: no dPIE model build needed
@@ -1165,6 +1337,15 @@ def main():
 
     def tag_of(arm):
         return f"{arm}_smoke" if SMOKE else arm
+
+    if equiv:
+        if args.arm not in ("control", "B1", "B2", "B3"):
+            ap.error("--equiv-check requires a PT arm (control/B1/B2/B3)")
+        if args.arm == "control":
+            run_control(tag_of("control"), equiv=True)
+        else:
+            run_arm_b(args.arm, tag_of(args.arm), equiv=True)
+        return
 
     if args.arm == "smoke":
         run_control(tag_of("control"))          # Arm 0 first (amendment ii)

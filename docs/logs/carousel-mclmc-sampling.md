@@ -648,6 +648,25 @@ multimodality, conditioning, or the NFW profile.
   on a 4-GPU node ⇒ partial serialization (realistic wall ≈ 3.5 h incl. smoke + Arm 0);
   the pre-authorized F-2 probe realistically lands in a SECOND allocation via the
   per-arm incremental checkpoint/resume path.
+  **IN-GATE OPERATIONAL AMENDMENTS (2026-07-11, during the run; no estimand/threshold
+  changes):** (op-1) upstream gigalens API refactor landed mid-gate (linusu-dev-merge
+  @698b990, 15:20 Jul 10: Dataset → ABC + concrete ImageData) — carousel_model.py
+  adapted (identical ctor signature, fallback import; commit c0c32e7); verify() re-run
+  under the merged code: zP/zM anchors reproduce to millinats, red-χ² 1.1618 — the dPIE
+  likelihood is UNCHANGED, no re-anchoring needed. (op-2) smoke revealed the B-arm
+  round loop is dispatch-fixed-cost dominated (12 sequential 8-wide per-rung calls,
+  34 s/round ⇒ ~19 h/arm): rung loop fused into ONE jitted vmap-over-rungs call
+  (traced-β kernel construction, 96-wide) with a mandatory 3-round equivalence check
+  vs the retained per-rung path (identical inits/keys; max|Δpos|, max|Δu| reported)
+  before B arms launch — projected ~2 h/arm. (op-3) smoke also VINDICATED the relative
+  u-identity gate: B3's round-0 identity measured 7.9e-6 ABSOLUTE (2.7e-11 relative) —
+  the pre-fix absolute 1e-6 gate would have spuriously aborted the arm. (op-4) measured
+  m_prior = 0.9944 ± 0.0012 (n=4096): the PRIOR puts 99.4% of its indicator mass on the
+  POCKET side — the hot-end asymmetry is the reverse of the design sketch; consequence
+  pre-read: on the likelihood path the pocket class (the W-2 species) runs ~0.99 → ~0.10
+  along the ladder with NO predicted interior starvation, while the MAIN class is the
+  hot-starved one (~0.6%) — main-class round trips may be suppressed without touching
+  W-2; Arm A's measured profile adjudicates.**
   (xi) *Audit artifact (ADVISORY):* the independent code audit must leave a record —
   auditor identity, commit hash audited, findings — in the Log before launch; an
   unrecorded audit is indistinguishable from none.

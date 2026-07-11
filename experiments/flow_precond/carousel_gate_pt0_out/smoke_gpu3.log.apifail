@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py", line 1186, in <module>
+    main()
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py", line 1164, in main
+    setup_model()
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py", line 152, in setup_model
+    model_seq, prob_model = carousel_model.build()
+                            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_model.py", line 280, in build
+    d4_5 = ds("4-5", sees=[src4, src5])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_model.py", line 275, in ds
+    dset = Dataset(observed_image, cfg, error_map=error_map, mask=mask, sees=sees)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Dataset() takes no arguments

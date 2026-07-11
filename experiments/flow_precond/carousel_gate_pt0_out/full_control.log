@@ -1,0 +1,111 @@
+MODEL CARD: {
+ "arm": "control",
+ "path": "power",
+ "seed": 0,
+ "swap_seed": 10000,
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260711",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 10,
+ "target": "June-28 pt_weight.py known-answer: D=10 Gaussian mixture, modes +/-5, weights 0.7/0.3, equal covariance",
+ "R": 10,
+ "NSYS": 16,
+ "K": 20,
+ "ROUNDS": 3000,
+ "burn": 600,
+ "thin": 5,
+ "betas": [
+  0.03,
+  0.04429248065819431,
+  0.0653941280952172,
+  0.09654893846056294,
+  0.1425463996444559,
+  0.21045778830490994,
+  0.3107232505953858,
+  0.4587567855682464,
+  0.6773158683865647,
+  1.0
+ ],
+ "L": 3.1622776601683795,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "metric": "identity",
+ "indicator": "z[0] > 0 (occ_+, +mode weight 0.70)",
+ "init": "all rungs all systems in wrong (-5) basin (N(0,1) spread)",
+ "u_def": "log_prob = logdensity/beta (power path)",
+ "harness": "run_pt (SAME code path as B1/B2/B3)"
+}
+[B control] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B control] round-0 u identity: rel = 3.546e-16 (abs = 2.842e-14)
+[B control] round     0/3000 cold occ=0.000 hot occ=0.062 RT=0 pocketCA=0 EEVPD[h/m/c]=3.1e-14/8.8e-10/1.4e-07 reverts=0 wall=174s
+[B control] round    50/3000 cold occ=0.625 hot occ=0.375 RT=1 pocketCA=9 EEVPD[h/m/c]=3.8e-11/2.4e-08/1.2e-07 reverts=0 wall=344s
+[B control] round   100/3000 cold occ=0.625 hot occ=0.625 RT=15 pocketCA=28 EEVPD[h/m/c]=2.6e-10/1.7e-09/1.6e-07 reverts=0 wall=346s
+[B control] round   150/3000 cold occ=0.625 hot occ=0.375 RT=42 pocketCA=51 EEVPD[h/m/c]=3.9e-09/5.3e-09/2.3e-07 reverts=0 wall=347s
+[B control] round   200/3000 cold occ=0.688 hot occ=0.562 RT=71 pocketCA=75 EEVPD[h/m/c]=2.3e-09/1.3e-09/1.6e-07 reverts=0 wall=349s
+[B control] round   250/3000 cold occ=0.750 hot occ=0.500 RT=111 pocketCA=97 EEVPD[h/m/c]=2.7e-09/5.2e-09/2.0e-07 reverts=0 wall=351s
+[B control] round   300/3000 cold occ=0.500 hot occ=0.438 RT=151 pocketCA=132 EEVPD[h/m/c]=1.8e-09/1.8e-08/1.5e-07 reverts=0 wall=352s
+[B control] round   350/3000 cold occ=0.812 hot occ=0.375 RT=191 pocketCA=151 EEVPD[h/m/c]=4.4e-10/2.2e-09/2.3e-07 reverts=0 wall=354s
+[B control] round   400/3000 cold occ=0.688 hot occ=0.625 RT=240 pocketCA=176 EEVPD[h/m/c]=6.6e-10/2.5e-09/1.8e-07 reverts=0 wall=356s
+[B control] round   450/3000 cold occ=0.625 hot occ=0.438 RT=283 pocketCA=205 EEVPD[h/m/c]=4.7e-10/6.0e-08/1.4e-07 reverts=0 wall=357s
+[B control] round   500/3000 cold occ=0.750 hot occ=0.625 RT=328 pocketCA=233 EEVPD[h/m/c]=1.1e-09/1.2e-09/1.7e-07 reverts=0 wall=359s
+[B control] round   550/3000 cold occ=0.812 hot occ=0.500 RT=366 pocketCA=256 EEVPD[h/m/c]=1.5e-10/4.1e-09/1.9e-07 reverts=0 wall=361s
+[B control] round   600/3000 cold occ=0.562 hot occ=0.625 RT=404 pocketCA=282 EEVPD[h/m/c]=2.7e-10/1.4e-08/2.2e-07 reverts=0 wall=362s
+[B control] round   650/3000 cold occ=0.688 hot occ=0.500 RT=445 pocketCA=307 EEVPD[h/m/c]=9.0e-10/3.3e-09/2.0e-07 reverts=0 wall=364s
+[B control] round   700/3000 cold occ=0.562 hot occ=0.562 RT=486 pocketCA=333 EEVPD[h/m/c]=3.4e-12/1.3e-09/1.9e-07 reverts=0 wall=366s
+[B control] round   750/3000 cold occ=0.688 hot occ=0.438 RT=534 pocketCA=357 EEVPD[h/m/c]=3.5e-11/1.2e-09/1.4e-07 reverts=0 wall=368s
+[B control] round   800/3000 cold occ=0.625 hot occ=0.562 RT=580 pocketCA=383 EEVPD[h/m/c]=9.8e-12/2.4e-07/2.1e-07 reverts=0 wall=369s
+[B control] round   850/3000 cold occ=0.500 hot occ=0.688 RT=619 pocketCA=403 EEVPD[h/m/c]=1.3e-10/1.1e-09/1.6e-07 reverts=0 wall=371s
+[B control] round   900/3000 cold occ=0.688 hot occ=0.750 RT=668 pocketCA=429 EEVPD[h/m/c]=2.7e-10/9.5e-09/1.8e-07 reverts=0 wall=373s
+[B control] round   950/3000 cold occ=0.750 hot occ=0.438 RT=712 pocketCA=448 EEVPD[h/m/c]=1.3e-08/1.2e-09/1.3e-07 reverts=0 wall=374s
+[B control] round  1000/3000 cold occ=0.688 hot occ=0.500 RT=748 pocketCA=477 EEVPD[h/m/c]=5.7e-09/4.6e-09/1.7e-07 reverts=0 wall=376s
+[B control] round  1050/3000 cold occ=0.875 hot occ=0.375 RT=789 pocketCA=511 EEVPD[h/m/c]=3.1e-09/4.2e-08/1.5e-07 reverts=0 wall=377s
+[B control] round  1100/3000 cold occ=0.688 hot occ=0.438 RT=840 pocketCA=540 EEVPD[h/m/c]=4.3e-09/8.2e-10/1.7e-07 reverts=0 wall=379s
+[B control] round  1150/3000 cold occ=0.688 hot occ=0.500 RT=885 pocketCA=574 EEVPD[h/m/c]=1.9e-09/1.8e-08/1.2e-07 reverts=0 wall=381s
+[B control] round  1200/3000 cold occ=0.562 hot occ=0.562 RT=935 pocketCA=601 EEVPD[h/m/c]=4.1e-09/9.4e-10/1.8e-07 reverts=0 wall=382s
+[B control] round  1250/3000 cold occ=0.875 hot occ=0.312 RT=975 pocketCA=624 EEVPD[h/m/c]=4.0e-12/1.0e-09/1.8e-07 reverts=0 wall=384s
+[B control] round  1300/3000 cold occ=0.750 hot occ=0.375 RT=1020 pocketCA=645 EEVPD[h/m/c]=1.5e-08/2.3e-09/2.5e-07 reverts=0 wall=385s
+[B control] round  1350/3000 cold occ=0.688 hot occ=0.625 RT=1061 pocketCA=675 EEVPD[h/m/c]=6.5e-10/1.4e-07/1.3e-07 reverts=0 wall=387s
+[B control] round  1400/3000 cold occ=0.688 hot occ=0.562 RT=1100 pocketCA=698 EEVPD[h/m/c]=2.2e-12/3.4e-08/1.9e-07 reverts=0 wall=389s
+[B control] round  1450/3000 cold occ=0.688 hot occ=0.438 RT=1131 pocketCA=714 EEVPD[h/m/c]=3.9e-10/5.4e-09/1.4e-07 reverts=0 wall=390s
+[B control] round  1500/3000 cold occ=0.562 hot occ=0.438 RT=1166 pocketCA=736 EEVPD[h/m/c]=2.8e-09/1.2e-09/2.4e-07 reverts=0 wall=392s
+[B control] round  1550/3000 cold occ=0.750 hot occ=0.625 RT=1210 pocketCA=756 EEVPD[h/m/c]=1.8e-09/2.1e-09/1.6e-07 reverts=0 wall=393s
+[B control] round  1600/3000 cold occ=0.812 hot occ=0.562 RT=1264 pocketCA=785 EEVPD[h/m/c]=3.7e-10/2.1e-07/1.5e-07 reverts=0 wall=395s
+[B control] round  1650/3000 cold occ=0.688 hot occ=0.500 RT=1300 pocketCA=810 EEVPD[h/m/c]=3.5e-12/2.7e-07/1.7e-07 reverts=0 wall=397s
+[B control] round  1700/3000 cold occ=0.750 hot occ=0.562 RT=1345 pocketCA=839 EEVPD[h/m/c]=2.8e-09/1.4e-07/2.1e-07 reverts=0 wall=398s
+[B control] round  1750/3000 cold occ=0.562 hot occ=0.438 RT=1394 pocketCA=865 EEVPD[h/m/c]=7.4e-09/3.6e-09/1.5e-07 reverts=0 wall=400s
+[B control] round  1800/3000 cold occ=0.688 hot occ=0.188 RT=1435 pocketCA=888 EEVPD[h/m/c]=6.9e-12/1.9e-09/1.7e-07 reverts=0 wall=401s
+[B control] round  1850/3000 cold occ=0.750 hot occ=0.438 RT=1481 pocketCA=910 EEVPD[h/m/c]=6.2e-10/2.1e-08/2.2e-07 reverts=0 wall=403s
+[B control] round  1900/3000 cold occ=0.750 hot occ=0.750 RT=1521 pocketCA=929 EEVPD[h/m/c]=5.1e-11/4.1e-08/2.7e-07 reverts=0 wall=405s
+[B control] round  1950/3000 cold occ=0.688 hot occ=0.750 RT=1571 pocketCA=954 EEVPD[h/m/c]=5.5e-12/1.3e-09/1.2e-07 reverts=0 wall=406s
+[B control] round  2000/3000 cold occ=0.750 hot occ=0.438 RT=1604 pocketCA=980 EEVPD[h/m/c]=8.0e-10/2.4e-09/2.3e-07 reverts=0 wall=408s
+[B control] round  2050/3000 cold occ=0.500 hot occ=0.688 RT=1656 pocketCA=1010 EEVPD[h/m/c]=1.4e-08/9.5e-09/1.2e-07 reverts=0 wall=409s
+[B control] round  2100/3000 cold occ=0.875 hot occ=0.688 RT=1698 pocketCA=1036 EEVPD[h/m/c]=1.6e-09/1.3e-08/1.6e-07 reverts=0 wall=411s
+[B control] round  2150/3000 cold occ=0.812 hot occ=0.500 RT=1741 pocketCA=1065 EEVPD[h/m/c]=1.6e-09/2.2e-09/1.3e-07 reverts=0 wall=413s
+[B control] round  2200/3000 cold occ=0.688 hot occ=0.562 RT=1780 pocketCA=1091 EEVPD[h/m/c]=8.8e-12/1.9e-09/2.4e-07 reverts=0 wall=415s
+[B control] round  2250/3000 cold occ=0.750 hot occ=0.625 RT=1825 pocketCA=1115 EEVPD[h/m/c]=3.5e-12/1.8e-08/1.9e-07 reverts=0 wall=416s
+[B control] round  2300/3000 cold occ=0.750 hot occ=0.500 RT=1873 pocketCA=1139 EEVPD[h/m/c]=2.2e-09/1.0e-09/1.7e-07 reverts=0 wall=418s
+[B control] round  2350/3000 cold occ=0.625 hot occ=0.625 RT=1912 pocketCA=1163 EEVPD[h/m/c]=7.5e-12/1.5e-09/1.4e-07 reverts=0 wall=419s
+[B control] round  2400/3000 cold occ=0.938 hot occ=0.438 RT=1964 pocketCA=1186 EEVPD[h/m/c]=1.1e-09/1.3e-07/2.1e-07 reverts=0 wall=421s
+[B control] round  2450/3000 cold occ=0.500 hot occ=0.500 RT=2011 pocketCA=1215 EEVPD[h/m/c]=4.0e-09/1.5e-09/1.3e-07 reverts=0 wall=423s
+[B control] round  2500/3000 cold occ=0.688 hot occ=0.562 RT=2051 pocketCA=1236 EEVPD[h/m/c]=2.9e-09/2.4e-09/1.5e-07 reverts=0 wall=424s
+[B control] round  2550/3000 cold occ=0.812 hot occ=0.500 RT=2093 pocketCA=1267 EEVPD[h/m/c]=6.0e-12/2.1e-09/1.4e-07 reverts=0 wall=426s
+[B control] round  2600/3000 cold occ=0.875 hot occ=0.562 RT=2145 pocketCA=1303 EEVPD[h/m/c]=1.3e-09/8.5e-09/2.2e-07 reverts=0 wall=428s
+[B control] round  2650/3000 cold occ=0.688 hot occ=0.500 RT=2193 pocketCA=1331 EEVPD[h/m/c]=7.0e-10/1.8e-09/1.6e-07 reverts=0 wall=429s
+[B control] round  2700/3000 cold occ=0.875 hot occ=0.625 RT=2235 pocketCA=1357 EEVPD[h/m/c]=7.7e-10/5.0e-09/1.3e-07 reverts=0 wall=431s
+[B control] round  2750/3000 cold occ=0.750 hot occ=0.438 RT=2272 pocketCA=1384 EEVPD[h/m/c]=1.8e-10/2.7e-09/9.9e-08 reverts=0 wall=433s
+[B control] round  2800/3000 cold occ=0.625 hot occ=0.500 RT=2314 pocketCA=1402 EEVPD[h/m/c]=2.4e-10/3.2e-08/1.5e-07 reverts=0 wall=434s
+[B control] round  2850/3000 cold occ=0.625 hot occ=0.625 RT=2361 pocketCA=1426 EEVPD[h/m/c]=2.9e-09/1.5e-08/1.8e-07 reverts=0 wall=436s
+[B control] round  2900/3000 cold occ=0.875 hot occ=0.562 RT=2399 pocketCA=1446 EEVPD[h/m/c]=2.7e-09/2.7e-09/1.0e-07 reverts=0 wall=438s
+[B control] round  2950/3000 cold occ=0.688 hot occ=0.562 RT=2437 pocketCA=1471 EEVPD[h/m/c]=1.1e-10/1.7e-09/1.4e-07 reverts=0 wall=440s
+[B control] round  2999/3000 cold occ=0.562 hot occ=0.625 RT=2480 pocketCA=1497 EEVPD[h/m/c]=1.3e-09/6.7e-08/2.6e-07 reverts=0 wall=441s
+
+[B control] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 500 rounds: 0.6943 +- 0.1079 (per-sys [0.868, 0.804, 0.628, 0.76, 0.68, 0.788, 0.7, 0.644, 0.452, 0.652, 0.808, 0.764, 0.72, 0.696, 0.612, 0.532]; init 0.000)
+  round trips total 2480 (median/sys 155.5; pocket-classified 1439 [W-2], main-classified 1041); pocket cold-arrivals 1497, main 1069
+  swap acc same=[0.547, 0.555, 0.561, 0.564, 0.547, 0.552, 0.551, 0.548, 0.551]
+  swap acc cross=[0.56, 0.561, 0.552, 0.556, 0.55, 0.55, 0.544, 0.536, 0.538] (cross attempts [12172, 11976, 12214, 11905, 11663, 11762, 11523, 11189, 10641])
+  cold split-Rhat = 1.018229610467091; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
