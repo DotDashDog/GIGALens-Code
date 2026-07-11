@@ -432,6 +432,13 @@ multimodality, conditioning, or the NFW profile.
 
 ---
 
+### C-23 — GATE PT-0 (dPIE carousel PT-MCLMC pilot): mechanism diagnosis COMPLETE — no entropic starvation on either tempering path, no cross-basin swap suppression; transport failure localized to swap-back cadence (K ≪ IAT), end-pair ladder disconnection, and ss-cap binding
+- **Status:** `proposed (UNCERTIFIED)` — result grader rd-1 amendments applied; CERTIFY-RECOMMENDED as mechanism diagnosis only. 2026-07-11, artifacts `experiments/flow_precond/carousel_gate_pt0_out/`, Log entry "GATE PT-0 RAN".
+- **Content:** power-path tempered-mass profile Δ(β) flat within ±0.5 (se ≤ 0.9) nats over β ∈ [0.01, 1] (Gaussian-model −8.4-nat starvation prediction WRONG — hypothesis failure); likelihood path +1.5…+2.9 nats (pocket mildly enhanced hot; m_prior = 0.9944). Cross-basin swap acceptance ≈ same-basin (0.18–0.34) — the June-28 minimal-carousel suppression signature is ABSENT here. Transport failure decomposed: swap-back (K = 10 ≪ measured IAT(u) 11–202; label mobility ~3 rungs/900 rounds vs ~13–15 free-walk), likelihood-ladder end-pair disconnection (hottest pair acc 0.000, coldest 0.005–0.05; measured swap-cost 23 nats over 11 pairs, end-concentrated), ss_max = 1.0 cap binding at hot rungs on BOTH B arms + control (EEVPD below band).
+- **Scope:** this posterior only; NO working sampler demonstrated; NO pocket-weight value; W-3 bracketing untested (B3 canceled, op-8); within-basin ESS not certified; IAT transfer confined→pooled metrics is order-of-magnitude; K/(K+IAT) closure is a model.
+- **Open findings:** cold pocket weight may be ~0.3–0.4 (hot-end direct occ 0.379 ± 0.046 reconciles with the flat TI profile only under a ~0.3–0.4 cold anchor; alternatives: 1500-step hot-end transient; hottest-rung EEVPD 5.0 dynamics error) — MAMS64's 9.6% doubly suspect; adjudication = a converged PT-0b cold chain.
+- **PT-0b measured inputs (NOT validated conclusions):** 21/24-rung equal-cost ladders (`ladder_design_{power,lik}.json`); IAT-derived K; ss-cap re-derivation; β ≥ ~0.36 short-ladder option (kernel crosses basins at β = 0.6 at 17–37%/1500 steps). Fresh design checkpoint + grader required.
+
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: carousel GATE PT-0 — tempering-path diagnosis + instrumented PT-MCLMC pilot on
@@ -447,10 +454,13 @@ multimodality, conditioning, or the NFW profile.
   omits delta_se, note if it fires; A5 = result grading scores W-2 jointly with the
   calibrated c_rw·ā_B expectation, not the raw 7). LAUNCHING under the engagement's
   free-hand mandate (human validates final product; run outcomes return UNCERTIFIED
-  for fresh grading). RAN 2026-07-11; result in Log ("GATE PT-0 RAN") — W-2/W-5
-  falsifiers fired with complete mechanism localization (swap-back K≪IAT, ladder
-  spacing, ss-cap binding); Arm A profiles FLAT/positive (no starvation); Arm 0 PASS;
-  PT-0b continuation checkpoint is the routed next step.** Script `experiments/flow_precond/carousel_gate_pt0.py`
+  for fresh grading). RAN 2026-07-11; result graded rd-1 NEEDS-MORE → amendments
+  APPLIED (see RESULT-GRADER AMENDMENTS block in the Log entry): W-2/W-5 FAIL confirmed
+  against artifacts (F-2/F-4 routing); W-4 re-scored FAIL for B1 AND B2 (grader
+  recount: hot-rung EEVPD below band on both, cold split-R̂ 1.68/1.60); W-3 not tested
+  (B3 canceled — op-8 deviation); Arm A no-starvation + Arm 0 PASS verified against
+  artifacts; grader: CERTIFY-RECOMMENDED as mechanism diagnosis ONLY after amendments.
+  C-23 registered. PT-0b continuation checkpoint is the routed next step.** Script `experiments/flow_precond/carousel_gate_pt0.py`
   (new, written fresh — the June-28 PT implementation is NOT reused
   per the human's provenance note — and independently code-audited before launch);
   outputs `carousel_gate_pt0_out/`; float64; model via `carousel_model.build()` (D=33);
@@ -1709,7 +1719,39 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   (901/1201 rounds) per op-7. **Routing (per pre-commitment):** F-2/F-4 ⇒ no scale-up;
   next = GATE PT-0b continuation checkpoint (short measured ladder, K from IAT, ss-cap
   fix, balanced + all-main arms, B3 bracketing restored) — new checkpoint + grader
-  before any run. — three UNLOGGED GPU PT runs on the minimal carousel,
+  before any run.
+  **RESULT-GRADER AMENDMENTS (rd-1, 2026-07-11; applied — corrections to THIS entry):**
+  (1) W-4 RE-SCORED: **FAIL for B1 AND B2** — B1 hot rungs 0–6 median EEVPD
+  4.4e-6–9.3e-5, BELOW the [1e-4, 2e-3] band (ss-cap binding is present on B1 too, not
+  only B2/control); cold-rung indicator split-R̂ = 1.68 (B1) / 1.60 (B2) vs ≤ 1.05
+  (expected given 0 round trips). The earlier "EEVPD in band at every rung (~1.1e-4)"
+  sentence is WITHDRAWN — it generalized a single round-900 print line (operating-card
+  rule-3 violation caught by the grader: the full series swings 5.6e-8–2.3e-2).
+  (2) Estimator-health CORRECTION: the worst Arm-A config EEVPD is **5.01** at (power,
+  P-init, β = 0.01) — the hottest rung, the SAME rung as the 0.379 hot-end occupancy —
+  with 0.11 at (power, M-init, β = 0.046) second; the hot-end open finding therefore
+  carries under-controlled dynamics error IN ADDITION to the named transient
+  alternative. The flatness conclusion is unchanged because the required rescue is ~8
+  nats against ~1-nat noise and the independent likelihood path agrees; stated per
+  grader. (3) The 2026-07-10 RECORD ARCHAEOLOGY header below was clobbered by this
+  entry's insertion — restored verbatim (THIRD instance of this failure class; see the
+  standing lesson: an Edit that consumes a following header in its anchor must restore
+  it at the end of the insertion). (4) Number fixes: B1 pair acceptance range
+  0.17–0.34 (not 0.38); power-path flatness is |Δ| ≤ 1.4σ (β = 0.36 is 1.40σ, β = 0.60
+  is 1.27σ), not ≤ 1σ; fused B rounds ran 7.8 s/round steady-state (not 5.5 — feeds
+  PT-0b wall planning); run window extended to ~03:26 (B arms killed at the 10:26 UTC
+  time limit). (5) op-8 DEVIATION (recorded): canceling B3's auto-launch was an in-run
+  producer judgment — op-7 pre-authorized truncation, NOT cancellation; and B1 was
+  relaunched via a second same-job srun (`srun_full_B1b.log`) after its queue-waiter
+  deadlocked on a self-matching pgrep. (6) Mechanism caveats added: Arm-A IATs were
+  measured on CONFINED chains with per-basin metrics — transfer to the B arms'
+  pooled-metric chains is order-of-magnitude only, and the K/(K+IAT) closure of the
+  0-round-trip observation is a MODEL, not a measurement; also the A3 advisory stands
+  (hot-end consistency flag omits delta_se — conservative direction). Grader verdict
+  after amendments: CERTIFY-RECOMMENDED as mechanism diagnosis ONLY (no working
+  sampler, no pocket weight, no bracketing, within-basin ESS not certified).**
+
+- **2026-07-10 (RECORD ARCHAEOLOGY — three UNLOGGED GPU PT runs on the minimal carousel,
   2026-06-28, all FAILED to transport; C-18's "PENDING GPU validation" was in fact answered
   negatively for the naive form and never recorded):** found on disk while scoping the new
   PT-MCLMC engagement: `de_mclmc_prototype/carousel_pt.py` (committed in WIP snapshot

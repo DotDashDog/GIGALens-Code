@@ -71,3 +71,4 @@ MODEL CARD: {
 [B B2] round  1100/2000 cold occ=0.375 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.8e-08/3.4e-03/3.9e-04 reverts=0 wall=8672s
 [B B2] round  1150/2000 cold occ=0.375 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.0e-06/4.2e-05/1.6e-04 reverts=0 wall=9059s
 [B B2] round  1200/2000 cold occ=0.375 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.8e-03/4.4e-05/1.7e-03 reverts=0 wall=9446s
+[B B2] round  1250/2000 cold occ=0.375 hot occ=1.000 RT=0 pocketCA=0 EEVPD[h/m/c]=8.8e-05/5.1e-04/7.6e-04 reverts=0 wall=9833s
