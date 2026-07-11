@@ -72,7 +72,7 @@ import matplotlib.pyplot as plt
 OUT = os.path.join(HERE, "carousel_gate_pt0_out")
 DPIE = os.path.join(HERE, "..", "sim_carousel", "messy_tests", "dpie")
 MAMS_NPZ = os.path.join(DPIE, "mams", "arrays.npz")
-SVI_NPZ = os.path.join(DPIE, "svi", "arrays.npz")   # fallback metric only
+SVI_NPZ = os.path.join(DPIE, "svi", "arrays.npz")   # fallback metric only  # (B5: PRIMARY metric — comment updated rd-2)
 POCKET_COL, POCKET_THR = 6, -22.35
 DIM = 33
 L_MCLMC = math.sqrt(DIM)            # fixed L = sqrt(33), both arms (recorded)

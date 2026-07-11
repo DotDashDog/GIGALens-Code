@@ -460,8 +460,14 @@ multimodality, conditioning, or the NFW profile.
   beyond C2's reach; L3 occ-ESS gate repaired — window pinned to ALL 4000 kept with a
   first-vs-second-half drift check, estimator named, ≥4 floor derived, provenance
   corrected to the MAMS64 BENCHMARK baseline; F-2 drift-discrimination clause;
-  ALL-PASS re-worded at its true precision). Awaiting rd-2 + committed-hash diff
-  audits.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
+  ALL-PASS re-worded at its true precision). rd-2 (2026-07-11): NEEDS-MORE — rd-1
+  items verified faithfully applied; pt0.py B5/DEVAR diff audited CLEAN @a19eb90;
+  wrapper defect found (pre-amendment last-2000 window + missing pinned estimator
+  leaked into code) — FIXED (all-4000 window, drift-check print, IAT proxy demoted
+  to non-scoring, pinned two-arm moment-matching estimator computed by the cross-arm
+  scorer); F-2 >3σ vs (2σ,3σ]-zone reconciled; C2 scaled band corrected to
+  [1e-5, 2e-4]; predictions window aligned; N-4 sliver routes added. Awaiting rd-3
+  verification of the fix commit, then launch.** Scripts: `carousel_gate_pt0.py` (audited lineage; two
   small diff-audited extensions: `--arm B5` production-init variant + `GATE_PT0_DEVAR`
   env) and NEW `experiments/flow_precond/carousel_gate_pt1_mams.py` (thin wrapper
   around the production `gigalens_research.inference.mams.MAMS_JIT` with a qz-adapter
@@ -508,8 +514,9 @@ multimodality, conditioning, or the NFW profile.
   discretization dependence); the EEVPD above-band tail fraction drops from 11–20%
   to ≤ ~5% (target shrinks 10×; tail is spike-driven so full proportionality is not
   assumed — direction only, magnitude reported). C3/C4: each arm's per-chain
-  occupancy dwell (last 2000 kept, 64 chains) has occ-ESS ≈ 7–8/chain (PT-0-measured
-  1.9/1000 kept) ⇒ se_arm ≈ 0.022–0.03; the two arms agree within 2·se_comb AND the
+  occupancy dwell (ALL 4000 kept, 64 chains — rd-2 N-3 aligned with the pinned W-3
+  window) has expected occ-ESS ≈ 7–8/chain (4 × the MAMS64-BENCHMARK 1.9/1000-kept
+  transit figure) ⇒ se_arm ≈ 0.022–0.03; the two arms agree within 2·se_comb AND the
   joint value lands in (0.32, 0.49) if C-24 is kernel-clean.
   **Win conditions (derived).** (W-1a) C1 pocket RTs ≥ 175 — DERIVATION CORRECTED
   (grader rd-1): C1 is all-main-init, so the basis is the ALL-MAIN arms P3/P4
@@ -562,10 +569,13 @@ multimodality, conditioning, or the NFW profile.
   scoring-window means for C2 AND for P1/P2; if the shift is consistent with the A2
   drift envelope (~±0.05 per window, worst-case two-window bound ≈ 0.10 = exactly
   the 2σ threshold), the reading is "INCONCLUSIVE — window drift", NOT "bias LIVE".
-  A drift-clean >2σ shift ⇒ discretization bias LIVE ⇒ C-24's ≈0.4 is
+  A drift-clean >3σ shift ⇒ discretization bias LIVE ⇒ C-24's ≈0.4 is
   EEVPD-dependent; routing = report + the production config inherits the TIGHTER
   target (itself UNCERTIFIED pending the MH-exact anchor — advisory d) and the
-  efficiency frontier re-costs. F-3: C3/C4 agree with each other but
+  efficiency frontier re-costs. (rd-2 N-2 reconciliation: F-2 fires ONLY on
+  drift-clean >3σ; drift-clean shifts in (2σ, 3σ] land in the "bias not excluded at
+  pilot precision" zone below — fails W-2 without firing F-2. One threshold, one
+  zone, no overlap.) F-3: C3/C4 agree with each other but
   land outside (0.32, 0.49) by > 2σ ⇒ the unadjusted-kernel bias is MEASURED as the
   difference ⇒ the WEIGHT is thereafter quoted from the MH-exact bracket (exact in
   law); PT keeps the transport/discovery role. F-4: C3/C4 disagree > 3σ ⇒ MH-exact
@@ -573,7 +583,13 @@ multimodality, conditioning, or the NFW profile.
   stays kernel-consistent-only; longer MAMS bracket costed for a later gate — no
   auto-extension). Zones: C2 in (2σ, 3σ] ⇒ "bias not excluded at pilot precision"
   (fails W-2 without firing F-2); C3/C4 in band but C1 out ⇒ composition problem
-  isolated to the SVI metric (F-1 reading), cross-method still closes; ALL-PASS ⇒
+  isolated to the SVI metric (F-1 reading), cross-method still closes; Sliver routes (rd-2 N-4, so every W-fail has a name): C1 EEVPD medians out of
+  band with RTs+occupancy passing ⇒ W-1a fails as a HEALTH-only miss — report,
+  production config decision deferred, neither F-1 nor flux-limited fires; C3/C4
+  disagreement in (2σ, 3σ] ⇒ "bracket not closed at pilot precision" (fails W-3,
+  F-4 reserved for >3σ); pooled MAMS outside (0.32, 0.49) by ≤2σ ⇒ "cross-method
+  agreement not demonstrated at pilot precision" (fails W-3, F-3 reserved for >2σ
+  exits with arms agreeing). ALL-PASS ⇒
   the point-and-go claim is assembled AT THE 0.10-EXCLUSION PRECISION LEVEL —
   residual kernel bias below ~0.19 is unprobed by L2 and below ~0.06–0.09 unprobed
   by L3 (pre-worded per rd-1; no stronger phrase may enter the record) — final
@@ -591,8 +607,9 @@ multimodality, conditioning, or the NFW profile.
   boundary-leakage channel may be absent for SVI draws), so C1 discovery timing is
   reported, not scored. C2's EEVPD medians are target-relative: at DEVAR 5e-5 they
   should sit ≈3–4e-5 — the [1e-4, 2e-3] band clause is EXEMPTED for C2 (its health
-  reference is the scaled band [2e-5, 4e-4]; the TAIL fraction is still measured
-  against the absolute 2e-3 edge, which is the mechanism under test).
+  reference is the ÷10-scaled band [1e-5, 2e-4] — rd-2 N-1 corrected the earlier ÷5
+  arithmetic; the TAIL fraction is still measured against the absolute 2e-3 edge,
+  which is the mechanism under test).
   **Pre-committed plot appearances.** C1 worms/coldocc: PT-0b-like rise from ~0 into
   a band overlapping (0.32, 0.49); F-1 ⇒ pocket color absent or plateau below 0.2.
   C2 coldocc: statistically indistinguishable from P1/P2; F-2 ⇒ displaced plateau.

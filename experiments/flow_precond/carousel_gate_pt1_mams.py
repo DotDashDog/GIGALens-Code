@@ -57,7 +57,7 @@ DIM = 33
 N_HMC, BURNIN, RESULTS = 64, 2000, 4000     # checkpoint config (C3/C4)
 TARGET_ACC = 0.9
 THIN = 4                                    # samples_z stored thinned x4
-LAST_KEEP = 2000                            # occupancy scoring window (kept)
+LAST_KEEP = 4000                            # pinned W-3 window: ALL kept draws (rd-2)
 JITTER = 1e-3                               # pool-draw init jitter
 
 
@@ -140,7 +140,7 @@ def main():
     args = ap.parse_args()
     if args.smoke:
         N_HMC, BURNIN, RESULTS = 8, 100, 200
-        LAST_KEEP = 100
+        LAST_KEEP = 200   # smoke: all kept
     tag = f"{args.tag}_smoke" if args.smoke else args.tag
     os.makedirs(OUT, exist_ok=True)
     t0_all = time.time()
@@ -189,13 +189,18 @@ def main():
        f"(requested Bernoulli p = {args.p_pocket})")
 
     ind = samples[:, :, POCKET_COL] > POCKET_THR        # (N_HMC, RESULTS) bool
-    occ_chain = ind[:, -LAST_KEEP:].mean(axis=1)        # per-chain last-kept occ
+    occ_chain = ind[:, -LAST_KEEP:].mean(axis=1)        # per-chain, ALL-kept window
     iat_chain = np.array([iat_1d(ind[c, -LAST_KEEP:].astype(np.float64))
                           for c in range(N_HMC)])
-    ess_chain = LAST_KEEP / (2.0 * iat_chain)           # occ-ESS proxy per chain
+    ess_chain = LAST_KEEP / (2.0 * iat_chain)   # IAT proxy — NON-SCORING diagnostic;
+    # the PINNED W-3 estimator (moment-matching, p-hat = two-arm pooled mean) needs
+    # BOTH arms and is computed by the cross-arm scorer below / pt1_score.
     occ_mean = float(occ_chain.mean())
     se_clust = (float(occ_chain.std(ddof=1) / math.sqrt(N_HMC))
                 if N_HMC > 1 else float("inf"))
+    # rd-2 A2-mirror drift check: first vs second half of the kept window
+    h = RESULTS // 2
+    occ_h1, occ_h2 = float(ind[:, :h].mean()), float(ind[:, h:].mean())
 
     np.savez(
         os.path.join(OUT, f"arrays_{tag}_pt1.npz"),
@@ -203,6 +208,7 @@ def main():
         indicator=ind,                                      # full-res bools
         occ_chain=occ_chain, iat_chain=iat_chain, occ_ess_chain=ess_chain,
         occ_mean=occ_mean, se_chain_clustered=se_clust,
+        occ_first_half=occ_h1, occ_second_half=occ_h2,
         realized_init_pocket_frac=(np.nan if qz.realized_pocket_frac is None
                                    else qz.realized_pocket_frac),
         p_pocket=args.p_pocket, seed=np.int64(args.seed),
@@ -220,8 +226,8 @@ def main():
     smm = ind[:, :nkeep].mean(axis=0).reshape(-1, w).mean(axis=1)
     ax.plot(np.arange(len(smm)) * w, smm, "k-", lw=2,
             label=f"mean over {N_HMC} chains")
-    ax.axvline(RESULTS - LAST_KEEP, color="r", ls=":", lw=1,
-               label=f"scoring window (last {LAST_KEEP})")
+    ax.axvline(RESULTS // 2, color="r", ls=":", lw=1,
+               label="drift-check halves (scoring = ALL kept)")
     ax.axhline(args.p_pocket, color="g", ls="--", lw=0.8,
                label=f"init p_pocket {args.p_pocket}")
     ax.set_xlabel("kept draw")
@@ -234,12 +240,16 @@ def main():
     plt.close(fig)
 
     pr(f"\n[{tag}] ===== MH-EXACT BRACKET ARM (PROPOSED/UNCERTIFIED) =====")
-    pr(f"  last-{LAST_KEEP} occupancy = {occ_mean:.4f} +- {se_clust:.4f} "
+    pr(f"  ALL-kept ({LAST_KEEP}) occupancy = {occ_mean:.4f} +- {se_clust:.4f} "
        f"(chain-clustered se, {N_HMC} chains)")
-    pr(f"  occ-ESS proxy per chain: min {ess_chain.min():.2f}, "
-       f"median {float(np.median(ess_chain)):.2f}, max {ess_chain.max():.2f} "
-       f"(IAT median {float(np.median(iat_chain)):.1f}; UNDERPOWERED "
-       f"pre-commitment applies if measured occ-ESS < 4)")
+    pr(f"  drift check (A2 mirror): first-half {occ_h1:.4f} vs second-half "
+       f"{occ_h2:.4f} (delta {occ_h2-occ_h1:+.4f})")
+    pr(f"  occ-ESS IAT-proxy per chain (NON-SCORING diagnostic): min "
+       f"{ess_chain.min():.2f}, median {float(np.median(ess_chain)):.2f}, max "
+       f"{ess_chain.max():.2f} (IAT median {float(np.median(iat_chain)):.1f}); "
+       f"the SCORING occ-ESS is the pinned two-arm moment-matching estimator "
+       f"(p-hat(1-p-hat)/sd_chains^2, p-hat = pooled C3+C4 mean) computed "
+       f"cross-arm; UNDERPOWERED gate (occ-ESS < 4) applies to THAT")
     pr(f"  per-chain occ range [{occ_chain.min():.3f}, {occ_chain.max():.3f}]")
     pr(f"  wall {time.time() - t0_all:.0f}s -> {OUT} (arrays_{tag}_pt1.npz, "
        f"pt1_mams_{tag}_occ.png)")
