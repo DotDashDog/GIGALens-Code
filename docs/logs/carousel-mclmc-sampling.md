@@ -2002,26 +2002,40 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   ~3.5× transport cost, under-equilibrated at budget — slow, not dead); L3 MH-exact
   bracket LOST to allocation clip (MAMS wall 5.5×+ the manifest-derived estimate);
   PROPOSED (UNCERTIFIED)):** job 55798988, scripts @328fb32, scorer @0ea87c5
-  (audit-certified pre-unblinding), outputs `*_pt1*` + `pt1_score.json`.
+  (audit-certified pre-unblinding), outputs `*_pt1*`; the certified scorer ran to its designed C3-load crash (L3 arrays
+  absent) — stdout archived as `pt1_score_stdout_C1C2.txt`; `pt1_score.json` will
+  exist only after C3b/C4b (result-grader blocking 2: the entry originally listed the
+  json as an output — FALSE, corrected).
   **L2 / W-2 (C2, DEVAR 5e-5, seed 21) — PASS, non-vacuous:** shift vs P1/P2 pooled =
-  +0.0658 = 1.17σ (null holds; pinned wording: NO kernel bias > ~0.19 occupancy units
-  detected — the 0.10-exclusion is robust to discretization at production EEVPD);
+  +0.0658 = 1.17σ (null holds; pinned wording VERBATIM: "no kernel bias > ~0.19 occupancy units
+  detected — the 0.10-exclusion is robust at this precision" — result-grader
+  blocking 3: an earlier paraphrase overstated the pin);
   the above-2e-3 EEVPD tail collapsed 11–20% → 1.4–2.8% per rung (pooled 0.022,
   max-rung 0.028 < 0.08 ⇒ NOT the vacuous-probe zone: the lever modulated the
-  mechanism); scaled-band medians 3.4–4.3e-5 ✓; C2's own m = 0.4546 ± 0.0495 —
-  ABOVE the P1/P2 value, i.e. the tighter-step arm moved the weight UP, not down
-  (direction note: if unadjusted-kernel bias were suppressing the pocket, tightening
-  would raise occupancy — consistent with ≈0.4 being if anything a floor; C2 window
-  drift +0.083 still rising, so this is suggestive, not scored). Cold split-R̂ 1.096
-  (budget-limited zone, W-b5-style reading).
+  mechanism); scaled-band medians 3.4–4.3e-5 ✓; C2's own m = 0.4546 ± 0.0495 sits
+  1.17σ above the P1/P2 value. CORRECTED (result-grader blocking 1 — the original
+  note carried a SIGN-FLIPPED drift and built directional commentary on it,
+  withdrawn in full): C2's scoring window is FALLING, 0.4963 → 0.4130 (Δhalf =
+  −0.083), i.e. drifting TOWARD the P1/P2 value — so the +0.066 offset is
+  drift-consistent under the D5 envelope (|shift| ≤ 0.10) and carries NO directional
+  information about kernel bias. The honest residual doubt, stated: a 16-system arm
+  with a non-stationary window cannot distinguish "null" from "small bias masked by
+  drift"; only the L3 MH-exact bracket constrains below ~0.19. Cold split-R̂ 1.096
+  (C2) / 1.131 (C1, worst arm; grader addition) — budget-limited zone readings.
   **L1 / W-1a (C1, B5 production: SVI cov metric + SVI-draw inits, seed 20) — FAIL,
   F-1 reading with trajectory nuance:** pocket RTs 117 < 175 AND window occupancy
   0.2204 ± 0.0491, below (0.32, 0.49) by more than the ±0.05 near-edge margin;
-  EEVPD medians in band (health fine; two rungs' inline mean-check flags reflect the
-  known tail). The traces show LATE ACCELERATION (cold occ 0.06 @900 → 0.31 @1350):
-  the SVI-metric composition discovers and drains but at ~3.5× transport cost
-  (RT_total 616 vs P3/P4's 1294/1343), and 1500 rounds is insufficient to
-  equilibrate. Pre-registered routing: production pipeline needs a metric fix —
+  EEVPD medians in band (health fine; FOUR rungs' inline mean-check flags — grader
+  count — reflect the known tail). The traces show LATE ACCELERATION (cold occ 0.06
+  @900 → 0.31 @1350; 100-round means 0.11/0.23 — snapshot values are single-round):
+  the SVI-metric composition discovers and drains but at ~3.5× POCKET transport cost
+  (pocket RTs 117 vs P3/P4's 421/350; totals 616 vs ~1300 give 2.1× — grader
+  correction), and 1500 rounds is insufficient to equilibrate. DOUBT (grader
+  advisory 6, recorded): "slow, not dead" presumes an in-band asymptote — at this
+  budget it is indistinguishable from the composition equilibrating to a genuinely
+  different value; only a longer run or the metric fix resolves it. The
+  pre-committed C2-vs-P1 tail-fraction plot was NOT produced (tail numbers
+  recomputed and verified instead — recorded as a miss). Pre-registered routing: production pipeline needs a metric fix —
   decision menu for the NEXT checkpoint: inflate SVI cov, cheap pooled-metric
   pre-pass, or longer burn-in. W-1b interim (250–750): FAIL on all three clauses
   (occ 0.110, est. window RTs 39 < 60, window EEVPD medians out — early adaptation)
@@ -2031,16 +2045,21 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   **L3 (C3/C4 MH-exact MAMS brackets, seeds 22/23) — NOT SCORED: allocation clip.**
   Both arms ran >3.9 h against a 44-min manifest-derived estimate and were killed at
   the wall with NO salvage (MAMS_JIT has no incremental saves — known exposure,
-  accepted at design time, realized). Post-mortem (mundane, evidence-backed): the
-  wall estimate came from the PIPELINE manifest (SVI-cov mass-matrix seeding, ~7
-  grads/step avg); the C3/C4 adapter seeded the mass matrix with the POOLED
-  empirical covariance — a much wider metric that drives dual-averaged trajectories
-  toward the max_num_integration_steps=60 cap ⇒ ~5× more grads/step. The human's
-  standing MAMS-cost warning was priced for the budget but not for the seeding
-  change. LESSONS (recorded): (i) never size a MAMS run from another config's
-  manifest — measure a ~5-min per-step probe first; (ii) the bracket adapter should
-  seed with the PRODUCTION SVI covariance (adaptation re-learns the mass matrix in
-  its windowed phase regardless; only the INITS need to be pool mixtures).
+  accepted at design time, realized). Post-mortem (grader-corrected labels): MEASURED — wall ratio 5.25× (3.85 h vs the
+  44-min sizing basis); baseline `dpie/mams/diagnostics.npz` mean
+  num_integration_steps 13.4 (max 38, under the 60 cap; the earlier "~7 grads/step"
+  was wrong). INFERENCE, labeled as such — the pooled-cov seeding (documented in the
+  C3/C4 model cards; the baseline used the SVI qz) plausibly drove trajectories
+  toward the 60-step cap (60/13.4 ≈ 4.5× ≈ the wall ratio), but no trajectory
+  telemetry survives the clip, so cap-saturation is unverified. The human's standing
+  MAMS-cost warning was priced for the budget but not for the seeding change — AND a
+  probe-like signal existed pre-launch and was not consulted: the MAMS smoke printed
+  385.7 s for 300 steps (1.29 s/step face value, ~3× the sizing basis; compile
+  fraction unknown). LESSONS (recorded): (i) never size a MAMS run from another
+  config's manifest — measure and DECOMPOSE a per-step probe first, and READ the
+  smoke's timing line; (ii) the bracket adapter should seed with the PRODUCTION SVI
+  covariance (adaptation re-learns the mass matrix in its windowed phase; only the
+  INITS need to be pool mixtures).
   **L3 RERUN AMENDMENT (pre-registered here, grader review with the result pass):**
   C3b/C4b identical to C3/C4 EXCEPT PoolQZ.covariance() returns the SVI covariance
   and .mean() the SVI loc (production-like seeding; pool-mixture inits unchanged —
@@ -2048,7 +2067,13 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   ~5-min measured per-step probe (64 chains, 100+100 steps) whose s/step SIZES the
   run and is recorded in the model card; budget stays 2000+4000 (power floor
   unchanged); abort-and-report if the probe implies > 3 h/arm. All W-3 clauses,
-  the pinned estimator, zones, and seeds 22/23 carry over verbatim.
+  the pinned estimator, zones, and seeds 22/23 carry over verbatim. Grader
+  conditions (accepted): the rerun writes the SAME artifact names
+  (arrays_C3_pt1.npz / arrays_C4_pt1.npz) so the certified scorer runs unmodified;
+  the PoolQZ seeding diff gets the standing pre-launch audit (auditor + hash
+  recorded); the probe s/step INCLUDES compile (conservative for the >3 h/arm abort
+  rule); disclosed: the seed-22 smoke exposed one 8-chain occupancy value (0.2156)
+  before the rerun — negligible, on the record.
   **Costs:** C1/C2 1500 rounds in 11,754 s each (7.84 s/round — matches PT-0b);
   C3/C4 ≈ 7.8 h GPU lost to the clip; total gate ≈ 15.5 GPU·h.
   **Scope:** L2's pass is at its pinned precision ONLY (bias > ~0.19 excluded; the

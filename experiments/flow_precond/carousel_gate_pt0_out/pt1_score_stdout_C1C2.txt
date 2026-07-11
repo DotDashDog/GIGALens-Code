@@ -1,0 +1,17 @@
+[C1] rounds=1500 m=0.2204±0.0491 RTpocket=117 RTtotal=616 eevpd_med=['3.3e-04', '3.7e-04', '3.9e-04', '3.9e-04', '4.2e-04', '4.4e-04']
+W-1a: RTpocket>=175 (op-7 scaled): False; occ in (0.32, 0.49): False; EEVPD medians in band: True; NaN 0==0: True
+W-1b (interim 250-750): occ=0.1104 in (0.32, 0.49): False; est. window pocket RTs ≈ 39 >= 60 (linear-accrual model): False; window EEVPD medians in band: False
+
+[C2] rounds=1500 m=0.4546±0.0495; P1/P2 pooled 0.3888±0.0271; shift=+0.0658 = 1.17σ (2σ=0.1128)
+  window drifts |Δhalf|: C2 0.0833, P1 0.0180, P2 0.0117
+  above-2e-3 tail fraction: C2 pooled 0.022, per-rung [0.024, 0.028, 0.02, 0.022, 0.026, 0.014] (PT-0b was 0.11-0.20 per rung); dropped-materially(<0.05 pooled AND max per-rung <0.08): True
+  eevpd_med=['3.4e-05', '3.5e-05', '3.9e-05', '3.9e-05', '4.2e-05', '4.3e-05'] vs scaled ref (1e-05, 0.0002)
+  verdict: W-2 PASS: no kernel bias > ~0.19 occupancy units detected — 0.10-exclusion robust at this precision
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/pt1_score.py", line 115, in <module>
+    d = np.load(f"{OUT}/arrays_{tag}_pt1.npz")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/l/linusu/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages/numpy/lib/_npyio_impl.py", line 459, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/arrays_C3_pt1.npz'
