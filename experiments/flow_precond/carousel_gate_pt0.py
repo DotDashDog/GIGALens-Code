@@ -1162,14 +1162,33 @@ def run_arm_b(arm, tag, equiv=False):
     seed = ARM_SEED[arm]
     path_kind = "power" if arm == "B1" else "lik"
     rng = np.random.default_rng(seed)
-    betas = np.geomspace(0.01, 1.0, R_B)   # rung 0 = hottest, R-1 = cold
+    # B-arm ladder override for the PT-0b continuation (mid-run finding: the
+    # geometric ladder is disconnected on the likelihood path -- hottest-pair
+    # swap acc 0.000, coldest 0.008-0.048 in B2 -- so continuation runs pass a
+    # MEASURED ladder). Applies to B arms ONLY, never Arm A or the control.
+    env_betas = os.environ.get("GATE_PT0_BETAS_B", "")
+    if env_betas:
+        betas = np.array([float(x) for x in env_betas.split(",")],
+                         dtype=np.float64)   # rung 0 = hottest, R-1 = cold
+        assert len(betas) >= 2, "GATE_PT0_BETAS_B needs >= 2 rungs"
+        assert np.all(np.diff(betas) > 0), \
+            "GATE_PT0_BETAS_B must be strictly increasing"
+        assert np.all((betas > 0.0) & (betas <= 1.0)), \
+            "GATE_PT0_BETAS_B values must lie in (0, 1]"
+        assert betas[-1] == 1.0, "GATE_PT0_BETAS_B must end at exactly 1.0"
+        betas_source = (f"env override GATE_PT0_BETAS_B "
+                        f"({len(betas)} rungs: {env_betas})")
+    else:
+        betas = np.geomspace(0.01, 1.0, R_B)   # rung 0 = hottest, R-1 = cold
+        betas_source = "geomspace default"
+    R = len(betas)
 
     def draw_pool(pool, n):
         idx = rng.integers(0, len(pool), size=n)
         return pool[idx] + JITTER * rng.standard_normal((n, DIM))
 
-    pos = np.zeros((R_B, NSYS_B, DIM))
-    for r in range(R_B):
+    pos = np.zeros((R, NSYS_B, DIM))
+    for r in range(R):
         if arm == "B3":
             pos[r] = draw_pool(M["pool_M"], NSYS_B)
         else:
@@ -1196,8 +1215,9 @@ def run_arm_b(arm, tag, equiv=False):
                 smoke=SMOKE, script=os.path.abspath(__file__), jax=jax.__version__,
                 devices=[str(d) for d in jax.devices()],
                 x64=bool(jax.config.jax_enable_x64), dim=DIM,
-                R=R_B, NSYS=NSYS_B, K=K_B, ROUNDS=ROUNDS_B, thin=THIN_B,
-                betas=betas.tolist(), L=L_MCLMC, ss_init=SS_INIT, devar=DEVAR,
+                R=R, NSYS=NSYS_B, K=K_B, ROUNDS=ROUNDS_B, thin=THIN_B,
+                betas=betas.tolist(), betas_source=betas_source,
+                L=L_MCLMC, ss_init=SS_INIT, devar=DEVAR,
                 metric="pooled MAMS64 empirical cov, all rungs (positions only)",
                 mams64=MAMS_NPZ, pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
                 init={"B1": "all rungs Bernoulli(0.5) main/pocket pool",
@@ -1336,6 +1356,11 @@ def main():
         setup_model()
 
     def tag_of(arm):
+        # GATE_PT0_TAG_SUFFIX: continuation runs (e.g. PT-0b) tag their outputs
+        # separately (B2 -> B2_pt0b) so PT-0 artifacts are never clobbered.
+        suffix = os.environ.get("GATE_PT0_TAG_SUFFIX", "").strip()
+        if suffix:
+            arm = f"{arm}_{suffix.lstrip('_')}"
         return f"{arm}_smoke" if SMOKE else arm
 
     if equiv:
