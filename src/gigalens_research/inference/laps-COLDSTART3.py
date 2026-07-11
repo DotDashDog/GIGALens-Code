@@ -265,7 +265,7 @@ def LAPS(model_seq, qz=None, n_chains=16, num_burnin_steps=1000, num_results=200
         init_inv_mass  = qz.covariance()
     else:
         one     = model_seq.prob_model.prior.sample(seed=init_key)
-        dim_map = len(model_seq.prob_model.bij.inverse(one))
+        dim_map = model_seq.prob_model.bij.inverse(one).shape[-1]
         init_positions = jax.random.normal(init_key, shape=(n_local, dim_map))
         init_inv_mass  = jnp.eye(dim_map)
 

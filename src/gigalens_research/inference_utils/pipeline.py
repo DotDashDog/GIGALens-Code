@@ -141,6 +141,16 @@ def _feed(h: "hashlib._Hash", obj: Any) -> None:
             # parameters as pytree leaves still surface them via ``.parameters``.
             h.update(b"params:"); h.update(type(obj).__name__.encode()); h.update(b":")
             _feed(h, obj.parameters)
+        elif callable(obj) and getattr(obj, "__qualname__", None) is not None:
+            # Functions / methods / classes: hash by stable module-qualified name, NOT
+            # repr() (which embeds a memory address and so changes every process,
+            # silently breaking resume). TFP's TransformedDistribution stashes helper
+            # functions in ``.parameters`` (e.g. ``_default_kwargs_split_fn``), which is
+            # how a DiskEllipticity / any transformed-distribution prior reaches here.
+            # These are fixed library callables, so a name-based key is both stable and
+            # correct (their identity, not their address, is what matters).
+            h.update(b"func:")
+            h.update(f"{getattr(obj, '__module__', '?')}.{obj.__qualname__}".encode())
         else:
             warnings.warn(
                 f"[pipeline.stable_hash] no structural hash for {type(obj).__name__}; "
@@ -1900,6 +1910,240 @@ class MAMSStage(InferenceStage):
         return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
 
 
+# Sentinel distinguishing "user didn't pass this kwarg" (use the preset value)
+# from "user explicitly passed None" (e.g. ``p2_resample_at_chunk=None`` to
+# force the resampler off from an otherwise-cold preset). Plain ``None``
+# defaults can't do this because ``None`` is itself a meaningful certified
+# value (it's the warm preset's "resampler off").
+_UNSET = object()
+
+# Certified LAPS hyperparameters (Robnik & Seljak 2026 port), extracted
+# verbatim from the validation drivers -- do NOT hand-tune these here; if the
+# certified numbers change, re-derive from the driver + re-certify, then
+# update this dict.
+#
+# Cold ("prior" init, no MAP/SVI needed): certified at both M=128
+# (``experiments/laps_validation/handoff/diag_resample128.py``, arm "R128a")
+# and M=512 (``.../diag_resample.py``, arm "R1"); the M=128 point is the
+# default operating point (cheaper), with ``p2_resample_min_survivors=24``
+# (the M=128 guard -- diag_resample128.py's ``MIN_SURV_128``). The M=512 arm
+# used the sampler's own default (32) and is not reproduced verbatim here
+# (num_chains=128 is the stage default; pass ``num_chains=512,
+# p2_resample_min_survivors=32`` to reproduce the 512-chain arm exactly).
+# ``num_unadjusted_steps`` is the sampler's own default (300) in both drivers
+# (never overridden by the certified arms). ``num_adjusted_steps=248``
+# (T2a=13 + T2b=18 chunks @ the sampler's default ``p2_chunk_size=8``),
+# ``p2_resample_at_chunk=13`` (T2a), ``early_stop=False``,
+# ``track_chains=True`` throughout.
+_LAPS_PRESETS: Dict[str, Dict[str, Any]] = {
+    "cold": dict(
+        init_mode="prior",
+        num_chains=128,
+        num_unadjusted_steps=300,
+        num_adjusted_steps=248,
+        early_stop=False,
+        track_chains=True,
+        p2_resample_at_chunk=13,
+        p2_resample_min_survivors=24,
+        p2_resample_mode="replace",
+    ),
+    # Warm (qz/SVI-surrogate init): certified at M=128 ("W128") and M=512
+    # ("W"), same budget as the cold arms, NO resample kwargs -- the resample
+    # lever is a no-op at its default (``p2_resample_at_chunk=None``) and the
+    # drivers never turn it on for the warm arm.
+    "warm": dict(
+        init_mode="warm",
+        num_chains=128,
+        num_unadjusted_steps=300,
+        num_adjusted_steps=248,
+        early_stop=False,
+        track_chains=True,
+        p2_resample_at_chunk=None,
+        p2_resample_min_survivors=32,  # sampler default; inert (resampler off)
+        p2_resample_mode="replace",    # sampler default; inert (resampler off)
+    ),
+}
+
+
+class LAPSStage(InferenceStage):
+    """LAPS (Late-Adjusted Parallel Sampler; Robnik & Seljak 2026). Wraps
+    ``gigalens_research.inference.laps_late_adjusted.LAPS_late_adjusted_JIT``.
+
+    Two certified init presets (``init="cold"|"warm"``), matching the
+    validated configurations in ``experiments/laps_validation/handoff/
+    diag_resample.py`` (512 chains) and ``diag_resample128.py`` (128 chains,
+    the default operating point here); see ``docs/logs/
+    laps_prior_init_investigation.md`` (DC-7.3/DC-7.4) for the certification.
+
+    * ``init="cold"``: no upstream artifact needed. Draws initial positions
+      from the model's PRIOR (``init_mode="prior"``: constrained prior draw
+      mapped through the bijector inverse to unconstrained space -- the
+      "RECOMMENDED robust cold-start", see ``LAPS_late_adjusted_JIT``'s
+      docstring), then rescues the resulting straggler mixture with the
+      certified mid-Phase-2 resample lever (``p2_resample_at_chunk=13`` +
+      companions). Requires nothing upstream (``requires == ()``).
+    * ``init="warm"``: draws initial positions from the ``qz`` surrogate
+      (SVI or Hessian-surrogate) the way :class:`MCLMCStage`/:class:`HMCStage`
+      do. Requires ``qz`` (``requires == ("qz",)``).
+
+    Any certified default can be overridden by passing it explicitly to the
+    constructor (the override wins); anything not listed as a constructor
+    kwarg can still be passed through ``extra_kwargs`` (forwarded verbatim to
+    ``LAPS_late_adjusted_JIT``, e.g. ``schedule``, ``velocity_init``,
+    ``p2_keep_per_chain``). Requires ``qz`` only in warm mode -- see
+    :attr:`requires`, which is computed from the resolved ``init_mode``.
+    """
+
+    name: ClassVar[str] = "laps"
+    schema_version: ClassVar[int] = 1
+    produces: ClassVar[Tuple[str, ...]] = ("samples_z",)
+
+    def __init__(
+        self,
+        init: str = "cold",
+        *,
+        num_chains: Any = _UNSET,
+        num_unadjusted_steps: Any = _UNSET,
+        num_adjusted_steps: Any = _UNSET,
+        early_stop: Any = _UNSET,
+        track_chains: Any = _UNSET,
+        p2_resample_at_chunk: Any = _UNSET,
+        p2_resample_min_survivors: Any = _UNSET,
+        p2_resample_mode: Any = _UNSET,
+        extra_kwargs: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
+        seed: Optional[int] = None,
+    ):
+        super().__init__(name=name, seed=seed)
+        if init not in ("cold", "warm"):
+            raise ValueError(f"init must be 'cold' or 'warm', got {init!r}")
+        self.init = init
+
+        preset = dict(_LAPS_PRESETS[init])
+        overrides = dict(
+            num_chains=num_chains,
+            num_unadjusted_steps=num_unadjusted_steps,
+            num_adjusted_steps=num_adjusted_steps,
+            early_stop=early_stop,
+            track_chains=track_chains,
+            p2_resample_at_chunk=p2_resample_at_chunk,
+            p2_resample_min_survivors=p2_resample_min_survivors,
+            p2_resample_mode=p2_resample_mode,
+        )
+        for key, value in overrides.items():
+            if value is not _UNSET:
+                preset[key] = value
+        self.config = preset
+        self.extra_kwargs = dict(extra_kwargs or {})
+
+    @property
+    def requires(self) -> Tuple[str, ...]:  # type: ignore[override]
+        # Only the warm preset's qz-surrogate init needs an upstream qz; cold
+        # (prior) init needs nothing (see class docstring).
+        return ("qz",) if self.config["init_mode"] == "warm" else ()
+
+    def diagnostics_config(self):
+        # Plot-relevant config for a future LAPS diagnostic plotter (phase
+        # budgets + resample chunk), mirroring MCLMCStage.diagnostics_config.
+        return dict(self.config)
+
+    def run(self, ctx, artifacts, seed):
+        # Local import: keeps LAPS's heavy blackjax dependency optional for
+        # users who only need MAP/SVI/HMC (mirrors MCLMCStage/
+        # HessianSurrogateStage's local imports).
+        from gigalens_research.inference.laps_late_adjusted import (
+            LAPS_late_adjusted_JIT,
+        )
+
+        t0 = time.perf_counter()
+        kwargs = dict(self.config)
+        init_mode = kwargs.pop("init_mode")
+        num_chains = kwargs.pop("num_chains")
+        kwargs.update(self.extra_kwargs)
+
+        res = LAPS_late_adjusted_JIT(
+            ctx.model_seq,
+            artifacts.get("qz"),
+            init_mode=init_mode,
+            num_chains=num_chains,
+            seed=seed,
+            **kwargs,
+        )
+
+        # res.samples is already (num_chains, p2_keep_per_chain, dim) --
+        # exactly the canonical (num_chains, num_steps, n_params) layout other
+        # stages normalize to (p2_keep_per_chain plays the role of "steps";
+        # p2_keep_per_chain=1, the default, reproduces the classic
+        # one-sample-per-chain final ensemble).
+        samples_np = np.asarray(res.samples)
+
+        resample_info = res.resample_info
+        resample_summary = None
+        if resample_info is not None:
+            resample_summary = {
+                "chunk": int(resample_info["chunk"]),
+                "skipped": bool(resample_info["skipped"]),
+                "mode": resample_info.get("mode"),
+                "n_survivors": int(resample_info["n_survivors"]),
+                "n_stragglers": int(resample_info["n_stragglers"]),
+                "cut": float(resample_info["cut"]),
+                "eps0_rs": (
+                    float(resample_info["eps0_rs"])
+                    if resample_info.get("eps0_rs") is not None
+                    else None
+                ),
+            }
+
+        diagnostics: Dict[str, np.ndarray] = {
+            "p1_step_size": np.asarray(res.p1_step_size),
+            "p1_L": np.asarray(res.p1_L),
+            "p1_D_tilde": np.asarray(res.p1_D_tilde),
+            "p1_eevpd_obs": np.asarray(res.p1_eevpd_obs),
+            "p1_eevpd_wanted": np.asarray(res.p1_eevpd_wanted),
+            "p1_delta_max": np.asarray(res.p1_delta_max),
+            "p1_nan_frac": np.asarray(res.p1_nan_frac),
+            "p2_step_size": np.asarray(res.p2_step_size),
+            "p2_accept": np.asarray(res.p2_accept),
+            "p2_frozen": np.asarray(res.p2_frozen),
+            "p2_settled_accept": np.asarray(res.p2_settled_accept),
+            "precond_var": np.asarray(res.precond_var),
+        }
+        if resample_info is not None:
+            if resample_info.get("stragglers") is not None:
+                diagnostics["resample_stragglers"] = np.asarray(
+                    resample_info["stragglers"])
+            if resample_info.get("donors") is not None:
+                diagnostics["resample_donors"] = np.asarray(
+                    resample_info["donors"])
+
+        return StageResult(
+            arrays={"samples_z": samples_np},
+            metadata={
+                "wall_time_s": time.perf_counter() - t0,
+                "num_chains": int(samples_np.shape[0]),
+                "num_steps": int(samples_np.shape[1]),
+                "n_params": int(samples_np.shape[2]),
+                "n_samples_total": int(res.n_samples_total),
+                "init": self.init,
+                "init_mode": init_mode,
+                "phase1_len": int(res.phase1_len),
+                "switched": bool(res.switched),
+                "switch_index": int(res.switch_index),
+                "integrator_order": int(res.integrator_order),
+                "target_accept": float(res.target_accept),
+                "p2_final_step_size": float(res.p2_final_step_size),
+                "p2_accept_last": float(np.asarray(res.p2_accept)[-1]),
+                "resample_info": resample_summary,
+            },
+            diagnostics=diagnostics,
+        )
+
+    @classmethod
+    def to_posterior(cls, arrays, ctx):
+        from .posterior import SamplerPosterior
+        return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
+
+
 def _to_canonical_samples(samples) -> np.ndarray:
     """Normalize HMC's ``(num_steps, num_devices, n_per_device, n_params)``
     layout to the canonical ``(num_chains, num_steps, n_params)``.
@@ -1934,7 +2178,8 @@ def register_stage(cls: type) -> type:
     return cls
 
 
-for _cls in (MAPStage, SVIStage, HessianSurrogateStage, HMCStage, MCLMCStage, MAMSStage, BridgeStage):
+for _cls in (MAPStage, SVIStage, HessianSurrogateStage, HMCStage, MCLMCStage,
+             MAMSStage, LAPSStage, BridgeStage):
     register_stage(_cls)
 
 

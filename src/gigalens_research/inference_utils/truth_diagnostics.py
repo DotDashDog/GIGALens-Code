@@ -39,6 +39,7 @@ _GROUP_PREFIX_BY_NAME = {
     "lens_light": "lens_",
     "src_light": "src_",
     "source_light": "src_",  # convenience alias
+    "cosmo": "cosmo_",
 }
 
 
@@ -53,12 +54,15 @@ def filter_labels_by_group(labels: Sequence[str], group: str) -> list:
         return list(labels)
     if group not in _GROUP_PREFIX_BY_NAME:
         raise ValueError(
-            f"group must be one of 'mass', 'lens_light', 'src_light', "
+            f"group must be one of 'mass', 'lens_light', 'src_light', 'cosmo', "
             f"'all', or None; got {group!r}."
         )
     prefix = _GROUP_PREFIX_BY_NAME[group]
     if group == "mass":
-        return [l for l in labels if not l.startswith("lens_") and not l.startswith("src_")]
+        # Mass params are the prefix-less ones; exclude every other group's prefix
+        # (cosmo included) so cosmology bars don't leak into the mass panel.
+        return [l for l in labels
+                if not l.startswith(("lens_", "src_", "cosmo_"))]
     return [l for l in labels if l.startswith(prefix)]
 
 
@@ -104,6 +108,11 @@ def z_scores(
     # suffix (see plotting.labels.flatten_params), so each profile's params are
     # scored separately rather than colliding onto one column. This requires the
     # truth's profiles to be in the same order as the model's within each group.
+    # Regroup a scene-nested truth ({"planes":..,"cosmo":..}) into the same
+    # 3-group + cosmo label space the posterior points below use (pass-through for
+    # an already-grouped truth), so labels match and the cosmo dict flattens.
+    if hasattr(posterior, "regroup_truth"):
+        truth_x = posterior.regroup_truth(truth_x)
     flat_truth = _flat_floats(truth_x)
     flat_med = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.median_z)))
     flat_lo = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.quantiles_z(low_q))))

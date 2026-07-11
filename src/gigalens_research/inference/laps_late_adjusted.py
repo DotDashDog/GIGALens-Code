@@ -114,9 +114,24 @@ Spec deviations (honest reporting)
   kernel; ``L_full = N*eps`` and ``L_proposal`` are recorded in diagnostics but
   do not influence Phase 2. Composing the validated kernel was preferred over
   reimplementing partial refresh (task instruction).
-* Velocity init: ``_single_init`` draws a RANDOM unit momentum; the paper aligns
-  the initial velocity with the gradient (design open-Q2). Phase 1 is only meant
-  to "approach the target fast", so random init is retained.
+* Velocity init: by default ``_single_init`` draws a RANDOM unit momentum; the
+  paper (and blackjax ``laps_burn_in.initialize``) align the initial velocity
+  with the gradient, sign-flipped per coordinate by the ensemble equipartition
+  (overdispersed coordinate -> velocity toward the mode). The reference
+  mechanism is available via ``velocity_init="gradient"`` (cold-start lever,
+  stocktake F1); the default stays "random" pending its empirical evaluation.
+  Its bj companion — first-step L=inf, so step 1 applies NO Maruyama refresh
+  and the aligned velocity survives one full step — is ``L0_inf=True``
+  (default off = paper Eq. 9 L0, the documented paper-over-bj choice).
+* NaN -> step-halving: blackjax halves the Phase-1 step whenever ANY chain
+  NaN-rejects (``laps_burn_in.py:333-335``); our default controller instead
+  zeroes the rejected chains' energy change only (which biases EEVPD_obs LOW,
+  i.e. GROWS the step). The reference brake is available via
+  ``nan_eps_halving=True`` (stocktake F2). Default off = historical behaviour.
+* Phase-boundary preconditioner: default pools Var[x_i] over the SECOND HALF of
+  Phase-1 steps; both references use the END-STATE (final-step instantaneous)
+  ensemble Var. ``precond_source="final"`` selects the reference behaviour
+  (stocktake F3). Default stays "pooled_half" = historical behaviour.
 * ``D-tilde`` uses the diagonal estimator (Eq. 18); the full-rank Hutchinson
   estimator (App. B.1) is not implemented (App. D: diagonal ~ full-rank).
 """
@@ -182,12 +197,49 @@ LAPSResults = namedtuple(
         "p2_final_step_size", # float: final (frozen) step size
         "p2_L_full",          # float: N*eps_final (recorded; see deviations)
         "p2_L_proposal",      # float: 1.25*L_full (recorded; NOT applied)
+        "p1_nan_frac",        # (T1,) fraction of chains NaN-rejected per step
+                              #   (diagnostic stream, mirrors bj rejection_rate_nans)
+        "chain_traj",         # None, or (track_chains=True) dict with per-chunk
+                              #   per-chain snapshots: p1_pos (n_ck1, M, d),
+                              #   p1_logp (n_ck1, M), p2_pos, p2_logp
+        "resample_info",      # None, or (p2_resample_at_chunk set) dict: chunk,
+                              #   skipped, n_survivors/n_stragglers, cut, dlogp,
+                              #   stragglers/donors index arrays, eps0_rs, rs_var,
+                              #   snap_index (post-resample chain_traj p2 index)
     ],
 )
 
 
 def _canon_dtype(state):
     return jnp.asarray(state.logdensity).dtype
+
+
+def _gradient_equipartition_momentum(position, momentum, grad, canon):
+    """F1 lever math (bj ``laps_burn_in.initialize``, lines 77-156).
+
+    Each chain's velocity = grad/|grad| (unit norm), then ONE shared
+    per-coordinate sign from the ensemble's UNCENTERED equipartition
+    E_ii = E_rho[-x_i g_i] (bj's init-time convention, NOT the centered Eq. 4):
+    +1 where E_ii >= 1 (overdispersed -> move toward the mode), -1 where < 1.
+    The flip preserves unit norm. Safety rail beyond bj: rows with a non-finite
+    gradient keep the supplied (random) momentum and are excluded from E_ii
+    (no-op when, as measured on the lens, 0% of prior draws have non-finite
+    grads).
+    """
+    gnorm = jnp.linalg.norm(grad, axis=-1, keepdims=True)
+    v = grad / jnp.maximum(gnorm, jnp.asarray(1e-30, canon))
+    row_ok = jnp.all(jnp.isfinite(grad), axis=-1, keepdims=True)
+    n_ok = jnp.maximum(jnp.sum(row_ok.astype(canon)), jnp.asarray(1.0, canon))
+    E_ii = jnp.sum(jnp.where(row_ok, -position * grad, 0.0), axis=0) / n_ok
+    signs = jnp.where(E_ii < 1.0, -1.0, 1.0).astype(canon)
+    return jnp.where(row_ok, v * signs, momentum).astype(canon)
+
+
+def _traj_pack(traj):
+    """Stack per-chunk chain snapshots into arrays (None passthrough)."""
+    if traj is None:
+        return None
+    return {k: (np.stack(v, axis=0) if v else None) for k, v in traj.items()}
 
 
 def _chunk_sizes(total, chunk):
@@ -266,6 +318,41 @@ def LAPS_late_adjusted(
     p2_min_adapt_chunks=0,      # STAGED: no freeze before this many Phase-2 chunks
     p2_keep_per_chain=1,        # CHANGE B: post-freeze samples kept per chain
     p2_thin=5,                  # CHANGE B: frozen steps between kept samples
+    p2_precond_var=None,        # DIAGNOSTIC: override Phase-2 diag preconditioner
+                                # (dim,) with a known metric (e.g. qz var); None=from ensemble
+    velocity_init="random",     # F1 lever: "random" (baseline) | "gradient"
+                                # (bj-faithful grad-aligned + equipartition sign flip)
+    nan_eps_halving=False,      # F2 lever: bj-faithful eps*0.5 when any chain NaN-rejects
+    precond_source="pooled_half",  # F3 lever: "pooled_half" (baseline) | "final"
+                                # (bj/paper end-state ensemble Var)
+    L0_inf=False,               # F1-companion lever: bj-faithful FIRST-step L=inf
+                                # (laps_burn_in.py:261: no Maruyama refresh on step 1,
+                                # protecting a gradient-aligned init velocity; L is
+                                # then re-set from the ensemble as usual)
+    track_chains=False,         # DIAGNOSTIC: record per-chain (position, logdensity)
+                                # at every ADAPTATION chunk boundary (both phases;
+                                # p2_keep_per_chain>1 collection sub-chunks are NOT
+                                # snapshotted) into results.chain_traj; default off
+    p2_resample_at_chunk=None,  # RESAMPLE lever (DC-7.3): after this many Phase-2
+                                # adaptation chunks, replace straggler STATES with
+                                # uniform draws from survivor states (survivor iff
+                                # logp > max - p2_resample_dlogp), REBUILD the diag
+                                # metric from the resampled ensemble, and RESTART the
+                                # eps bisection (eps0 = L/N of resampled ensemble).
+                                # Pre-resample states are burn-in (never averaged);
+                                # validity = MH re-initialization, the warm-init
+                                # class. None = off (baseline).
+    p2_resample_dlogp=None,     # survivor cut below ensemble max logp
+                                # (None -> d/2 + 4*sqrt(d/2), ~7 posterior logp
+                                # spreads: generous, misclassification only affects
+                                # which INIT a chain restarts from)
+    p2_resample_min_survivors=32,  # guard: skip resampling (warn) below this pool
+    p2_resample_mode="replace",    # "replace" = move straggler states to survivor
+                                   # draws; "retune_only" = KEEP all positions, only
+                                   # rebuild metric+eps from the SURVIVOR subset and
+                                   # restart bisection (control: isolates the
+                                   # poisoned-metric fix from position replacement =
+                                   # the pre-committed "retuned adjusted phase")
     cold_scale=1.0,
     seed=0,
 ):
@@ -301,6 +388,21 @@ def LAPS_late_adjusted(
             f"(got {num_unadjusted_steps}, {num_adjusted_steps}).")
     if int(switch_persist) < 1:
         raise ValueError(f"switch_persist must be >= 1, got {switch_persist}.")
+    if velocity_init not in ("random", "gradient"):
+        raise ValueError(
+            f"velocity_init must be 'random' or 'gradient', got {velocity_init!r}")
+    if p2_resample_at_chunk is not None and int(p2_resample_at_chunk) < 1:
+        raise ValueError(
+            f"p2_resample_at_chunk must be >= 1 or None, got {p2_resample_at_chunk}")
+    if int(p2_resample_min_survivors) < 2:
+        raise ValueError("p2_resample_min_survivors must be >= 2")
+    if p2_resample_mode not in ("replace", "retune_only"):
+        raise ValueError(
+            f"p2_resample_mode must be 'replace' or 'retune_only', "
+            f"got {p2_resample_mode!r}")
+    if precond_source not in ("pooled_half", "final"):
+        raise ValueError(
+            f"precond_source must be 'pooled_half' or 'final', got {precond_source!r}")
 
     num_devices = len(jax.devices())
     num_chains = (num_chains // num_devices) * num_devices
@@ -365,6 +467,12 @@ def LAPS_late_adjusted(
     state = jax.tree_util.tree_map(_cast, state)
     dim = state.position.shape[-1]
 
+    # F1 lever (stocktake): blackjax-faithful gradient-aligned velocity init with
+    # equipartition sign flip (see _gradient_equipartition_momentum).
+    if velocity_init == "gradient":
+        state = state._replace(momentum=_gradient_equipartition_momentum(
+            state.position, state.momentum, state.logdensity_grad, canon))
+
     mesh = jax.make_mesh((num_devices,), ("device",))
     _resh = getattr(jax, "reshard", jax.device_put)
     sh_chain = NamedSharding(mesh, P("device"))
@@ -389,6 +497,13 @@ def LAPS_late_adjusted(
     # init eps0 = 0.01*sqrt(d) (spec Alg.1); L0 from initial ensemble (Eq. 9).
     eps0 = jnp.asarray(0.01 * np.sqrt(dim), canon)
     L0 = laps_core.decoherence_length(state.position, alpha=alpha).astype(canon)
+    # F1-companion lever: bj initializes L = inf so the FIRST step applies no
+    # Maruyama refresh (nu = exp(-2*eps/L) -> 1, zero noise), preserving the
+    # init velocity through step 1; the per-step L adaptation immediately
+    # replaces it from the ensemble stats afterwards. Default off = paper Eq. 9
+    # from the initial ensemble (the documented paper-over-bj choice).
+    if L0_inf:
+        L0 = jnp.asarray(jnp.inf, canon)
 
     @jax.jit
     @functools.partial(
@@ -397,7 +512,7 @@ def LAPS_late_adjusted(
         in_specs=(P(None, "device"), P("device"), P(), P()),
         out_specs=(
             (P("device"), P(), P()),
-            (P(), P(), P(), P(), P(), P(), P(), P()),
+            (P(), P(), P(), P(), P(), P(), P(), P(), P()),
         ),
     )
     def run_p1_chunk(keys, states, step_size, L):
@@ -435,6 +550,17 @@ def LAPS_late_adjusted(
             eevpd_w = eevpd_want_fn(D_tilde)
             ss_new = laps_core.step_size_update(ss, eevpd_w, eevpd_obs)
 
+            # per-step NaN-rejection fraction (diagnostic stream; mirrors bj's
+            # rejection_rate_nans). F2 lever: bj-faithful brake — when ANY chain
+            # NaN-rejected this step, the controller factor is REPLACED by 0.5
+            # (laps_burn_in.py:333-335: eps_factor = nan_reject(1-nans, 0.5, .)).
+            nonans = infos.nonans.astype(canon)          # (cpd,)
+            nan_frac = jax.lax.psum(
+                jnp.sum(jnp.ones_like(nonans) - nonans), "device") / n_total
+            if nan_eps_halving:
+                ss_new = jnp.where(nan_frac > 0,
+                                   ss * jnp.asarray(0.5, canon), ss_new)
+
             # self-calibrated noise floor of the ACTIVE switch observable from the
             # CURRENT ensemble: floor_i = sqrt(Var_rho[f]/M)/E_rho[f]. paper f=x_i^2
             # -> Var = E[x^4]-E[x^2]^2; emaus f=x_i -> Var = E[x^2]-E[x]^2.
@@ -449,7 +575,8 @@ def LAPS_late_adjusted(
                 var_obs = var_i
             floor = jnp.sqrt(var_obs / M_tot) / jnp.maximum(jnp.abs(e_obs), tiny)
 
-            y = (D_tilde, eevpd_w, eevpd_obs, ss_new, L_new, s_xx, s_x, floor)
+            y = (D_tilde, eevpd_w, eevpd_obs, ss_new, L_new, s_xx, s_x, floor,
+                 nan_frac)
             return (new_states, ss_new, L_new), y
 
         carry, ys = jax.lax.scan(body, (states, step_size, L), keys)
@@ -457,7 +584,8 @@ def LAPS_late_adjusted(
 
     # histories accumulated on host across chunks
     H = {k: [] for k in
-         ["D_tilde", "ew", "eo", "ss", "L", "s_xx", "s_x", "floor", "delta_max"]}
+         ["D_tilde", "ew", "eo", "ss", "L", "s_xx", "s_x", "floor", "nan",
+          "delta_max"]}
     eps, L = eps0, L0
     steps_done = 0
     switch_index = num_unadjusted_steps
@@ -465,7 +593,16 @@ def LAPS_late_adjusted(
     consecutive_fires = 0       # persistence guard: consecutive ripe chunks
     p1_sizes = _chunk_sizes(num_unadjusted_steps, chunk_size)  # final short chunk ok
 
+    traj = ({"p1_pos": [], "p1_logp": [], "p2_pos": [], "p2_logp": []}
+            if track_chains else None)
+
+    def _snap(phase):
+        if traj is not None:
+            traj[f"{phase}_pos"].append(np.asarray(_resh(state.position, sh_repl)))
+            traj[f"{phase}_logp"].append(np.asarray(_resh(state.logdensity, sh_repl)))
+
     state = _resh(state, sh_chain)
+    _snap("p1")                       # chunk-0 snapshot = the initial ensemble
     for c, sz in enumerate(p1_sizes):
         ck = jax.random.fold_in(k_p1, c)
         keys = jax.random.split(ck, (sz, num_chains))
@@ -473,10 +610,12 @@ def LAPS_late_adjusted(
             _resh(keys, sh_keys), state,
             _resh(eps, sh_repl), _resh(L, sh_repl),
         )
-        D_t, ew, eo, ss, Lh, s_xx, s_x, fl = (np.asarray(_resh(a, sh_repl)) for a in ys)
+        _snap("p1")
+        D_t, ew, eo, ss, Lh, s_xx, s_x, fl, nf = (
+            np.asarray(_resh(a, sh_repl)) for a in ys)
         H["D_tilde"].append(D_t); H["ew"].append(ew); H["eo"].append(eo)
         H["ss"].append(ss); H["L"].append(Lh); H["s_xx"].append(s_xx)
-        H["s_x"].append(s_x); H["floor"].append(fl)
+        H["s_x"].append(s_x); H["floor"].append(fl); H["nan"].append(nf)
         steps_done += sz
 
         # host-side switch eval on the trailing window (active observable + mode)
@@ -511,6 +650,7 @@ def LAPS_late_adjusted(
     p1_sq = np.concatenate(H["s_xx"], axis=0)[:phase1_len]
     p1_mn = np.concatenate(H["s_x"], axis=0)[:phase1_len]
     p1_floor = np.concatenate(H["floor"], axis=0)[:phase1_len]
+    p1_nan = np.concatenate(H["nan"])[:phase1_len]
     p1_dmax = np.concatenate(H["delta_max"])[:phase1_len]
 
     # post-hoc: where would the LITERAL paper/emaus absolute switch fire over the
@@ -521,11 +661,22 @@ def LAPS_late_adjusted(
     sidx_emaus = _switch_index_host(p1_mn, "emaus", switch_threshold, T_window,
                                     switch_mode="absolute")
 
-    # ---- phase boundary: diagonal preconditioner from 2nd half (pooled) ----
-    half = phase1_len // 2
-    e_xx = p1_sq[half:].mean(axis=0)
-    e_x = p1_mn[half:].mean(axis=0)
+    # ---- phase boundary: diagonal preconditioner Var[x_i] ----
+    # Default "pooled_half": Var from per-step ensemble moments POOLED over the
+    # 2nd half of Phase 1 (historical). F3 lever "final": END-STATE instantaneous
+    # ensemble Var (what BOTH references use: bj laps.py:250-251 consumes the
+    # final-step carried Var; paper Eq. y_i = x_i/sqrt(Var_rho_t[x_i]) at switch).
+    if precond_source == "final":
+        e_xx = p1_sq[-1]
+        e_x = p1_mn[-1]
+    else:
+        half = phase1_len // 2
+        e_xx = p1_sq[half:].mean(axis=0)
+        e_x = p1_mn[half:].mean(axis=0)
     precond_var = np.maximum(e_xx - e_x ** 2, 1e-12)        # Var[x_i]
+    if p2_precond_var is not None:                          # DIAGNOSTIC override:
+        # replace the (broad-ensemble) metric with a known-correct one (e.g. qz var)
+        precond_var = np.maximum(np.asarray(p2_precond_var, dtype=precond_var.dtype), 1e-12)
     imm_diag = jnp.asarray(np.diag(precond_var), canon)
 
     # =====================================================================
@@ -560,45 +711,57 @@ def LAPS_late_adjusted(
             p2_frozen=np.array([False]), p2_settled_accept=np.array([np.nan]),
             p2_final_step_size=eps_final, p2_L_full=L_full,
             p2_L_proposal=L_proposal_factor * L_full,
+            p1_nan_frac=p1_nan,
+            chain_traj=_traj_pack(traj),
+            resample_info=None,
         )
 
-    p2_kernel = _build_adjusted_kernel_shardmap(
-        logdensity_fn=logdensity_fn,
-        inverse_mass_matrix=imm_diag,
-        integrator=p2_integrator,
-    )
+    def _make_p2_runner(imm):
+        """Build the adjusted kernel + jitted chunk runner for a given diagonal
+        metric. A factory so the DC-7.3 resample step can REBUILD both from the
+        resampled ensemble's Var mid-phase (the boundary metric is poisoned by
+        the broad mixture)."""
+        kern = _build_adjusted_kernel_shardmap(
+            logdensity_fn=logdensity_fn,
+            inverse_mass_matrix=imm,
+            integrator=p2_integrator,
+        )
+
+        @jax.jit
+        @functools.partial(
+            _shard_map,
+            mesh=mesh,
+            in_specs=(P(None, "device"), P("device"), P()),
+            out_specs=(P("device"), P()),
+        )
+        def _run(keys, states, step_size):
+            # eps is HELD CONSTANT across the whole chunk: it is a scan CONSTANT,
+            # not a carry, so the kernel cannot mutate it within the traced region.
+            def body(states, key_row):
+                def per_chain(st, k):
+                    return kern(rng_key=k, state=st, step_size=step_size,
+                                num_integration_steps=N)
+
+                new_states, infos = jax.vmap(per_chain)(states, key_row)
+                n_total = cpd * jax.lax.axis_size("device")
+                accept = jax.lax.psum(
+                    jnp.sum(infos.acceptance_rate), "device") / n_total
+                return new_states, accept             # per-step ensemble accept
+
+            states, accepts = jax.lax.scan(body, states, keys)
+            return states, accepts
+
+        return _run
 
     # STAGED per-chunk bisection (regression fix): the bisection lives ENTIRELY on
-    # the host between chunks. The device scan below runs at a FIXED ``step_size``
+    # the host between chunks. The device scan runs at a FIXED ``step_size``
     # (never mutates eps) and only records the per-step ensemble acceptance; the
     # bracket/freeze are updated ONCE per chunk on the SETTLED acceptance (see the
     # host loop). ``persist_need`` counts CONSECUTIVE in-band CHUNKS;
     # ``min_chunks`` defers any freeze until that many chunks have elapsed.
     persist_need = int(p2_freeze_persist)
     min_chunks = int(p2_min_adapt_chunks)
-
-    @jax.jit
-    @functools.partial(
-        _shard_map,
-        mesh=mesh,
-        in_specs=(P(None, "device"), P("device"), P()),
-        out_specs=(P("device"), P()),
-    )
-    def run_p2_chunk(keys, states, step_size):
-        # eps is HELD CONSTANT across the whole chunk: it is a scan CONSTANT, not a
-        # carry, so the kernel cannot mutate it within the traced region.
-        def body(states, key_row):
-            def per_chain(st, k):
-                return p2_kernel(rng_key=k, state=st, step_size=step_size,
-                                 num_integration_steps=N)
-
-            new_states, infos = jax.vmap(per_chain)(states, key_row)
-            n_total = cpd * jax.lax.axis_size("device")
-            accept = jax.lax.psum(jnp.sum(infos.acceptance_rate), "device") / n_total
-            return new_states, accept                 # per-step ensemble accept
-
-        states, accepts = jax.lax.scan(body, states, keys)
-        return states, accepts
+    run_p2_chunk = _make_p2_runner(imm_diag)
 
     # FIX A: initialize the Phase-2 step from the TRAJECTORY SCALE, not the tiny
     # Phase-1 EEVPD handoff eps (which pins acceptance ~1.0 and leaves the bracket
@@ -642,6 +805,7 @@ def LAPS_late_adjusted(
     eps_max = eps0_p2 * 1e3
     P2 = {"accept": [], "ss": [], "frozen": []}
     settled_hist = []
+    resample_info = None
     # CHANGE A: Phase 2 gets its OWN (smaller) chunk size so a FIXED
     # ``num_adjusted_steps`` adaptation budget yields MANY more bisection updates
     # (one per chunk). At the defaults (num_adjusted_steps=200, p2_chunk_size=8)
@@ -657,6 +821,7 @@ def LAPS_late_adjusted(
         keys = jax.random.split(ck, (sz, num_chains))
         state, accepts = run_p2_chunk(
             _resh(keys, sh_keys), state, _resh(eps2, sh_repl))
+        _snap("p2")
         accepts = np.asarray(_resh(accepts, sh_repl))          # (sz,) per-step accept
         # Record the per-step ensemble accept (real trajectory for the diagnose
         # plot), the eps HELD during this chunk, and the (pre-update) frozen flag.
@@ -684,6 +849,75 @@ def LAPS_late_adjusted(
                 eps_min=eps_min, eps_max=eps_max, growth=p2_growth)
             eps2 = jnp.asarray(eps2_new, canon)
             frozen = bool(fr)
+
+        # ---- DC-7.3 RESAMPLE step (flag-gated; default off) ----
+        # Replace straggler STATES with survivor draws (an MH re-initialization:
+        # pre-resample states are burn-in, never averaged), REBUILD the diagonal
+        # metric from the resampled ensemble (the boundary metric is poisoned by
+        # the broad mixture), and RESTART the eps bisection at eps0 = L/N of the
+        # resampled ensemble (FIX A applied to the clean ensemble).
+        if (p2_resample_at_chunk is not None
+                and (c + 1) == int(p2_resample_at_chunk)):
+            pos = np.asarray(_resh(state.position, sh_repl))
+            lp = np.asarray(_resh(state.logdensity, sh_repl))
+            dlp = (float(p2_resample_dlogp) if p2_resample_dlogp is not None
+                   else dim / 2.0 + 4.0 * np.sqrt(dim / 2.0))
+            cut = float(np.nanmax(lp)) - dlp
+            surv = np.where(lp > cut)[0]
+            strag = np.where(~(lp > cut))[0]        # includes NaN-logp chains
+            if surv.size < int(p2_resample_min_survivors) or strag.size == 0:
+                resample_info = dict(
+                    chunk=c + 1, skipped=True, n_survivors=int(surv.size),
+                    n_stragglers=int(strag.size), cut=cut, dlogp=dlp)
+                print(f"[LAPS] resample SKIPPED at chunk {c + 1}: "
+                      f"{surv.size} survivors / {strag.size} stragglers "
+                      f"(min_survivors={int(p2_resample_min_survivors)})",
+                      flush=True)
+            else:
+                if p2_resample_mode == "replace":
+                    kr = jax.random.fold_in(k_p2, 0x5E5A)
+                    donors = surv[np.asarray(
+                        jax.random.randint(kr, (strag.size,), 0, surv.size))]
+                    idx = np.arange(num_chains)
+                    idx[strag] = donors
+                    take = lambda a: jnp.asarray(
+                        np.asarray(_resh(a, sh_repl))[idx])
+                    state = state._replace(
+                        position=take(state.position),
+                        momentum=take(state.momentum),
+                        logdensity=take(state.logdensity),
+                        logdensity_grad=take(state.logdensity_grad))
+                    state = _resh(jax.tree_util.tree_map(_cast, state), sh_chain)
+                    pos_rs = pos[idx]
+                else:                       # retune_only: positions untouched;
+                    donors = None           # metric/eps from the SURVIVOR subset
+                    pos_rs = pos[surv]
+                rs_var = np.maximum(pos_rs.var(axis=0), 1e-12)
+                run_p2_chunk = _make_p2_runner(jnp.asarray(np.diag(rs_var), canon))
+                L_rs = float(laps_core.decoherence_length(
+                    jnp.asarray(pos_rs), alpha=alpha))
+                eps0_rs = L_rs / max(N, 1)
+                if not np.isfinite(eps0_rs) or eps0_rs <= 0.0:
+                    eps0_rs = float(eps2)           # degenerate rail
+                eps2 = jnp.asarray(eps0_rs, canon)
+                lo = jnp.asarray(jnp.nan, canon)
+                hi = jnp.asarray(jnp.nan, canon)
+                frozen = False
+                persist = 0
+                eps_min = eps0_rs * 1e-3
+                eps_max = eps0_rs * 1e3
+                _snap("p2")     # post-resample snapshot (duplicate-decorr t0)
+                resample_info = dict(
+                    chunk=c + 1, skipped=False, mode=p2_resample_mode,
+                    n_survivors=int(surv.size),
+                    n_stragglers=int(strag.size), cut=cut, dlogp=dlp,
+                    stragglers=strag, donors=donors, eps0_rs=eps0_rs,
+                    rs_var=rs_var,
+                    snap_index=(len(traj["p2_pos"]) - 1
+                                if traj is not None else None))
+                print(f"[LAPS] resample mode={p2_resample_mode}: "
+                      f"{strag.size} stragglers / {surv.size} survivors at chunk "
+                      f"{c + 1} (cut={cut:.2f}, eps0_rs={eps0_rs:.3e})", flush=True)
 
     p2_accept = np.concatenate(P2["accept"])
     p2_ss = np.concatenate(P2["ss"])
@@ -744,6 +978,9 @@ def LAPS_late_adjusted(
         p2_settled_accept=p2_settled,
         p2_final_step_size=eps_final, p2_L_full=L_full,
         p2_L_proposal=L_proposal_factor * L_full,
+        p1_nan_frac=p1_nan,
+        chain_traj=_traj_pack(traj),
+        resample_info=resample_info,
     )
 
 
@@ -780,10 +1017,10 @@ def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
                 "(prob_model.prior / prob_model.bij are None for a constants-only "
                 "model).")
         # Sample num_chains prior draws (constrained), map to UNCONSTRAINED via the
-        # bijector inverse, and stack to (num_chains, dim). Same idiom as gigalens'
-        # gigalens/src/gigalens/jax/inference.py:
-        #     start = prob_model.prior.sample(n, seed=key)        # constrained
-        #     params = jnp.stack(prob_model.bij.inverse(start)).T # unconstrained
+        # bijector inverse (flat-z convention: (n, dim) in, (n, dim) out). Same
+        # idiom as gigalens' gigalens/src/gigalens/jax/inference.py:
+        #     start = prob_model.prior.sample(n, seed=key)   # constrained
+        #     params = prob_model.bij.inverse(start)         # unconstrained
         ndev = len(jax.devices())
         n_init = (num_chains // ndev) * ndev
         if n_init < 1:
@@ -791,7 +1028,7 @@ def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
                 f"num_chains ({num_chains}) must be >= num_devices ({ndev}).")
         k_prior = jax.random.fold_in(jax.random.key(seed), 0x9E3779B9)
         start = prob_model.prior.sample(n_init, seed=k_prior)     # constrained draws
-        init_positions = jnp.stack(prob_model.bij.inverse(start)).T  # (n_init, dim)
+        init_positions = prob_model.bij.inverse(start)            # (n_init, dim)
         dtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
         init_positions = init_positions.astype(dtype)             # sampler dtype
         return LAPS_late_adjusted(

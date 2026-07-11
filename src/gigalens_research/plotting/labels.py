@@ -73,6 +73,13 @@ LATEX_LABELS: Dict[str, str] = {
     "src_center_x": r"$x_s$",
     "src_center_y": r"$y_s$",
     "src_Ie": r"$I_s$",
+    # Cosmology (own corner group; labelled cosmo_<param> by flatten_params)
+    "cosmo_H0": r"$H_0$",
+    "cosmo_Om0": r"$\Omega_m$",
+    "cosmo_Ode0": r"$\Omega_\Lambda$",
+    "cosmo_Ok0": r"$\Omega_k$",
+    "cosmo_w0": r"$w_0$",
+    "cosmo_wa": r"$w_a$",
 }
 
 
