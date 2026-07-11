@@ -1,0 +1,64 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "B1_pt0b_smoke",
+ "path": "power",
+ "seed": 10,
+ "seed_source": "env override GATE_PT0_SEED_B=10",
+ "swap_seed": 10010,
+ "prior_init_seed": null,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260711",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "default",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0"
+ },
+ "metric": "pooled MAMS64 empirical cov, all rungs (positions only)",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "all rungs Bernoulli(0.5) main/pocket pool",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B B1_pt0b_smoke] init cold occ = 0.375; init occ per rung = [0.31, 0.56, 0.62, 0.5, 0.56, 0.38]
+[B B1_pt0b_smoke] round-0 u identity: rel = 1.006e-10 (abs = 2.932e-05)
+[B B1_pt0b_smoke] round     0/20 cold occ=0.625 hot occ=0.625 RT=0 pocketCA=0 EEVPD[h/m/c]=1.7e-03/2.3e-02/3.4e-04 reverts=0 wall=72s
+[B B1_pt0b_smoke] round     5/20 cold occ=0.312 hot occ=0.375 RT=0 pocketCA=0 EEVPD[h/m/c]=8.8e-04/3.7e-03/3.4e-04 reverts=0 wall=158s
+[B B1_pt0b_smoke] round    10/20 cold occ=0.562 hot occ=0.562 RT=0 pocketCA=3 EEVPD[h/m/c]=7.2e-04/6.6e-03/1.5e-03 reverts=0 wall=196s
+[B B1_pt0b_smoke] round    15/20 cold occ=0.562 hot occ=0.562 RT=0 pocketCA=4 EEVPD[h/m/c]=3.0e-04/1.4e-03/1.4e-04 reverts=0 wall=235s
+[B B1_pt0b_smoke] round    19/20 cold occ=0.625 hot occ=0.625 RT=0 pocketCA=7 EEVPD[h/m/c]=6.2e-05/1.2e-04/4.6e-03 reverts=0 wall=266s
+
+[B B1_pt0b_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.5625 +- 0.2527 (per-sys [0.3, 0.7, 0.6, 1.0, 0.4, 0.6, 0.2, 0.2, 0.6, 0.4, 0.8, 0.4, 0.8, 0.4, 1.0, 0.6]; init 0.375)
+  round trips total 0 (median/sys 0.0; pocket-classified 0 [W-2], main-classified 0); pocket cold-arrivals 7, main 6
+  swap acc same=[0.548, 0.57, 0.593, 0.568, 0.611]
+  swap acc cross=[0.539, 0.612, 0.608, 0.628, 0.602] (cross attempts [76, 67, 79, 86, 88])
+  cold split-Rhat = 1.1956673999843566; EEVPD in [1e-4,2e-3]: [np.True_, np.True_, np.True_, np.True_, np.True_, np.True_]; NaN reverts 0
+[B B1_pt0b_smoke] DONE in 273s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

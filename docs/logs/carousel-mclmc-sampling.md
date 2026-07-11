@@ -439,6 +439,13 @@ multimodality, conditioning, or the NFW profile.
 - **Open findings:** cold pocket weight may be ~0.3–0.4 (hot-end direct occ 0.379 ± 0.046 reconciles with the flat TI profile only under a ~0.3–0.4 cold anchor; alternatives: 1500-step hot-end transient; hottest-rung EEVPD 5.0 dynamics error) — MAMS64's 9.6% doubly suspect; adjudication = a converged PT-0b cold chain.
 - **PT-0b measured inputs (NOT validated conclusions):** 21/24-rung equal-cost ladders (`ladder_design_{power,lik}.json`); IAT-derived K; ss-cap re-derivation; β ≥ ~0.36 short-ladder option (kernel crosses basins at β = 0.6 at 17–37%/1500 steps). Fresh design checkpoint + grader required.
 
+### C-24 — GATE PT-0b: PT-MCLMC with a measured equal-cost short ladder TRANSPORTS, DRAINS, and DISCOVERS on the dPIE carousel at the reference budget scale; the cold pocket weight is ≈ 0.40 (CI excludes 0.10) — the untrusted MAMS64 9.6% was ~4× low
+- **Status:** `proposed (UNCERTIFIED)` — 2026-07-11, all pre-registered clauses scored (W-b2/W-b3/W-b4 PASS; W-b1 transport PASS with flux-model MARGINAL annulus reading; W-b5 budget-limited zone). Artifacts `carousel_gate_pt0_out/*_P?pt0b*`, `pt0b_score.json`; Log entry "GATE PT-0b RAN".
+- **Config that works (the C-23 knob fixes):** power path p^β; 6-rung equal-swap-cost ladder [0.3594…1.0] (0.894 nats/pair from measured sd(u); adjacent acceptance 0.52–0.54, erfc-predicted 0.53); K = 10 steps/round; per-(rung,chain) EEVPD adaptation (target 5e-4; realized 3.0–4.0e-4 every rung); ss_max = 5; pooled empirical cov metric; even/odd host swaps; 16 ladders/arm, 1500 rounds ≈ 16.5k kernel steps/chain; 96-wide fused vmap, 7.8–8.1 s/round on one A100.
+- **Evidence:** pocket-classified round trips 350–428/arm (PT-0: 0); all-main-init arms (production bad-MAP scenario) DISCOVER the pocket via rung-0 crossing and rise 0.0 → 0.43 ± 0.03, balanced arms descend 0.5 → 0.39 ± 0.03 — two-sided bracket agrees (|Δ| = 0.043 ≤ 0.085) with POWER clause met (se_comb 0.043 ≤ 0.06); seed replicas agree; pooled cold-rung pocket occupancy **0.406 ± 0.021 (2·se CI 0.32–0.49: excludes 0.10, retains 0.35)**.
+- **Scope/caveats:** bracketing shares the unadjusted-MCLMC-kernel systematic (both arms could sit at the same kernel-biased value — cross-method check deferred to PT-1); "pocket" = z[6] > −22.35 halfspace; within-basin ESS not certified; flux model under-predicted 4.2× ⇒ descriptive-only henceforth; wall NOT optimized; single posterior.
+- **Downstream:** GATE PT-1 = production point-and-go composition + efficiency frontier + cross-method unbiasedness arm.
+
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: carousel GATE PT-0b — short-ladder power-path PT-MCLMC transport certification
@@ -458,7 +465,11 @@ multimodality, conditioning, or the NFW profile.
   arithmetic independently reproduced; conditional numeric fix APPLIED (RT bound
   848→755, total lower 170→190; scoring keys off the 300 point prediction, unaffected).
   Scope: this exact 4-arm config only; β < 0.3594 transport and shared-systematic
-  unbiasedness remain untested. LAUNCHING under the engagement mandate.** Same script `experiments/flow_precond/carousel_gate_pt0.py`
+  unbiasedness remain untested. LAUNCHING under the engagement mandate.
+  RAN 2026-07-11; result in Log ("GATE PT-0b RAN") — transport certification PASSED
+  (pocket RTs 350–428/arm), bracket agrees, pocket weight adjudicated 0.406 ± 0.021
+  (CI excludes 0.10), W-b1 flux-model annulus reading fired (model marginal,
+  descriptive-only downstream); C-24 registered; next = GATE PT-1 checkpoint.** Same script `experiments/flow_precond/carousel_gate_pt0.py`
   (audited lineage; PT-0b config via the recorded env overrides + one small extension:
   a power-path all-main arm `B4` and env overrides for K/NSYS/ROUNDS/ss_max — extension
   audited by diff before launch); outputs tagged `_pt0b` via GATE_PT0_TAG_SUFFIX; fresh
@@ -1784,6 +1795,59 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-11 (carousel GATE PT-0b RAN — PT-MCLMC TRANSPORT CERTIFICATION PASSED on
+  the dPIE carousel: pocket round trips 350–428 per arm (PT-0: zero; floor: 10), all
+  health clauses pass, two-sided bracketing AGREES from opposite inits, and the
+  pocket-weight open finding is ADJUDICATED: pooled cold-rung pocket occupancy =
+  0.406 ± 0.021 — the CI EXCLUDES 0.10; the untrusted MAMS64 9.6% was ~4× too low;
+  PROPOSED (UNCERTIFIED)):** ran 2026-07-11 on job 55794619 (4×A100, one arm/GPU),
+  config per the rd-2-certified checkpoint (commit 79cdccd + numeric fix): power path,
+  measured 6-rung ladder [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0], K = 10,
+  NSYS = 16/arm, ROUNDS = 1500, ss_max = 5.0, seeds 10–13; arms P1/P2 = balanced init
+  (cold occ 0.5), P3/P4 = ALL-MAIN init (0.0; production bad-MAP scenario, B4 arm
+  type). Full-shape smoke passed first (u-identity 1.0e-10 rel; abs 2.9e-5 — the
+  relative gate again load-bearing). Outputs `carousel_gate_pt0_out/*_P?pt0b*` +
+  `pt0b_score.json` (scorer `pt0b_score.py`, pinned formulas verbatim).
+  **Scored verdicts (pre-registered formulas):**
+  (W-b1) pocket RTs 428/378 (P1/P2) ≥ 10 — transport clause PASS by ~40×; total RTs
+  1258/1214 vs point prediction 300 land JUST past the ×4 edge (1200) ⇒ the
+  pre-registered (×4, ×10] annulus reading fires: **flux model MARGINAL — it
+  UNDER-predicted transport 4.2× (conservative direction); per routing, the flux model
+  cannot be load-bearing in any scale-up design; no auto-scale-up from this gate.**
+  (W-b2, THE product test) agreement |0.3888 − 0.4321| = 0.043 ≤ 2·se_comb = 0.085
+  PASS; movement 4.1σ (balanced, down from 0.5) and 13.2σ (all-main, up from 0.0)
+  PASS; POWER se_comb = 0.043 ≤ 0.06 PASS; **adjudication clause: pooled bracket
+  0.406 ± 0.021, CI (0.32, 0.49) EXCLUDES the 0.10 candidate and retains 0.35 ⇒ the
+  cold pocket weight is ≈ 0.4.** PT-0's hot-end anomaly is thereby explained (its
+  direct 0.379 at β = 0.01 was pointing at the true weight, not a transient).
+  (W-b3) EEVPD median (last 500) ∈ [3.0e-4, 4.0e-4] at ALL 6 rungs, all four arms —
+  in band, centered; pair acceptances 0.519–0.537 vs the erfc prediction 0.53
+  (internals validated to ~1%); NaN reverts 0. PASS.
+  (W-b4) seed replicas: |Δm| = 0.037 ≤ 0.109 (P1/P2), 0.078 ≤ 0.130 (P3/P4). PASS.
+  (W-b5) cold split-R̂ 1.051/1.055/1.073/1.070 — all in the pre-registered
+  budget-limited zone (1.05, 1.2] with W-b1 passing ⇒ "budget-limited mixing, not
+  failure"; per-system last-500 means still spread sd ≈ 0.14–0.20 (flips_total ≈
+  2900–3500 per arm, i.e. ~180–220 cold-rung flips/system — matches the 90–360
+  prediction band).
+  **Plots (inspected before metrics):** all-main cold-occupancy traces rise from 0.0
+  and equilibrate in a ~0.4–0.5 band by round ~400 with rapid per-system flipping;
+  balanced traces descend from 0.5 into the same band; worms show dense red/blue churn
+  at every rung, no pinning, no dead pairs.
+  **What this certifies (UNCERTIFIED, human validation pending) and what it does
+  not:** PT-MCLMC with a measured equal-cost short ladder transports, drains, and
+  discovers on the dPIE carousel within ~16.5k kernel steps/chain (≈ the user's
+  10k+10k reference scale; wall 3.3 h/arm at 96-wide — NOT yet optimized). NOT
+  certified: absolute unbiasedness beyond bracketing (both arms share the
+  unadjusted-kernel systematic — the named blind spot; cross-method check deferred),
+  within-basin ESS, efficiency frontier, other lenses, β < 0.3594 transport. The
+  pocket-weight ≈ 0.4 claim inherits the shared-kernel caveat and the z[6]-halfspace
+  definition of "pocket".
+  **Routing:** W-b1's annulus reading blocks flux-model-based auto-scale-up; all other
+  clauses pass ⇒ next = GATE PT-1 design checkpoint (production pipeline composition:
+  MAP → SVI → PT-MCLMC point-and-go config; efficiency accounting per gradient eval;
+  cross-method unbiasedness arm to close the shared-systematic blind spot; flux model
+  descriptive-only). C-24 registered.
 
 - **2026-07-11 (carousel GATE PT-0 RAN — pre-registered transport falsifiers FIRED
   (W-2 = 0 pocket round trips), but the mechanism decomposition is COMPLETE and

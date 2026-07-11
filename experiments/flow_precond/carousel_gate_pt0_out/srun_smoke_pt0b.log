@@ -1,0 +1,5 @@
+srun: forcing job termination
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+[2026-07-11T11:02:23.179] error: *** STEP 55794619.0 ON nid001028 CANCELLED AT 2026-07-11T11:02:23 DUE to SIGNAL Killed ***
+srun: error: nid001028: task 0: Killed
+srun: Terminating StepId=55794619.0
