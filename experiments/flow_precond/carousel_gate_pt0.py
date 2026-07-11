@@ -40,7 +40,8 @@ Run (4-GPU node, shifter jax container, float64), one arm per GPU:
     --image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 bash -c '
       export PYTHONPATH=/global/homes/l/linusu/sidecar_jax_upgrade:$HOME/.conda/envs/gigalens_multinode_env/lib/python3.12/site-packages:<repo>/src:<repo>/experiments/flow_precond
       CUDA_VISIBLE_DEVICES=0 /usr/bin/python3 carousel_gate_pt0.py --arm A_power'
-Smoke first: GATE_PT0_SMOKE=1 ... --arm smoke   (~10 min, 1 GPU).
+Smoke first: GATE_PT0_SMOKE=1 with per-arm --arm flags in parallel across GPUs
+(~15 min wall; single-process --arm smoke is ~25-60 min: ~60 dPIE compiles).
 """
 import argparse
 import json
@@ -741,6 +742,7 @@ def run_pt(tag, seed, spec):
 
     n_thin = (ROUNDS + THIN_B - 1) // THIN_B
     ind_thin = np.zeros((n_thin, R, NSYS), dtype=np.uint8)
+    wid_thin = np.zeros((n_thin, R, NSYS), dtype=np.int16)  # rd-2 A4: F-2 forensics
     cold_ind = np.zeros((ROUNDS, NSYS), dtype=np.uint8)
     ev = np.zeros((ROUNDS, R))
     ssm = np.zeros((ROUNDS, R))
@@ -752,6 +754,7 @@ def run_pt(tag, seed, spec):
 
     def save_npz(t):
         np.savez(npz_path, betas=betas, ind_thin=ind_thin[:t // THIN_B + 1],
+                 wid_thin=wid_thin[:t // THIN_B + 1],
                  cold_ind=cold_ind[:t + 1], eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
                  swap_attempts=att, swap_accepts=acc,
                  walker_id=wid, walker_flag=wflag,   # machine reconstructible (fix 1)
@@ -844,6 +847,7 @@ def run_pt(tag, seed, spec):
         cold_ind[t] = ind_post[R - 1]
         if t % THIN_B == 0:
             ind_thin[t // THIN_B] = ind_post
+            wid_thin[t // THIN_B] = wid
         if t % PRINT_EVERY_B == 0 or t == ROUNDS - 1:
             pr(f"[B {tag}] round {t:5d}/{ROUNDS} cold occ={cold_ind[t].mean():.3f} "
                f"hot occ={ind_post[0].mean():.3f} RT={int(round_trips.sum())} "

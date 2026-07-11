@@ -438,11 +438,16 @@ multimodality, conditioning, or the NFW profile.
   the dPIE carousel (opening gate of the 2026-07-10 long-horizon engagement: efficient
   accurate sampler for multimodal lensing posteriors; MCLMC kernel per human directive;
   PT first avenue, not locked in).**
-  **Status: grader NEEDS-MORE (rd-1, 2026-07-10) — 5 blocking amendments (W-2/gap-zone
-  routing; fresh-implementation known-answer controls incl. transport-rate calibration
-  of ā and R²/ā; shape-faithful smoke; confinement mechanism specified; GATE L header
-  repair) + 6 advisory; ALL ADOPTED in the amendment block at the end of this entry;
-  awaiting rd-2 verification.** Script `experiments/flow_precond/carousel_gate_pt0.py`
+  **Status: grader-verified rd-2 (2026-07-10) — all 5 blocking + 6 advisory rd-1
+  amendments confirmed applied and faithful (control target verbatim pt_weight.py;
+  adapt_one math-exact to lineage; GATE L header byte-identical to 8e3e8bf; audit-fix
+  commit contains no unrelated changes); CERTIFY-RECOMMENDED to LAUNCH at 409824a
+  (+ rd-2 advisories A1/A2/A4 applied post-verdict: superseded-W-2 tag, smoke
+  count/docstring wall fix, thinned walker-id series persisted; A3 = hot-end flag
+  omits delta_se, note if it fires; A5 = result grading scores W-2 jointly with the
+  calibrated c_rw·ā_B expectation, not the raw 7). LAUNCHING under the engagement's
+  free-hand mandate (human validates final product; run outcomes return UNCERTIFIED
+  for fresh grading).** Script `experiments/flow_precond/carousel_gate_pt0.py`
   (new, written fresh — the June-28 PT implementation is NOT reused
   per the human's provenance note — and independently code-audited before launch);
   outputs `carousel_gate_pt0_out/`; float64; model via `carousel_model.build()` (D=33);
@@ -529,7 +534,7 @@ multimodality, conditioning, or the NFW profile.
   (w_min/w_cold); at ROUNDS = 2000, R = 12, ā ≈ 0.5 (June-28 measured average): ≈ 6.9 ×
   (w_min/w_cold). Likelihood path (|Δ| ≤ 2 ⇒ w_min/w_cold ≥ 0.135): ≥ ~0.9 per ladder,
   ~7–55 total over 8 ladders. Power path (Δ ≈ −8.4): ≈ 1.5×10⁻³ per ladder ⇒ ~0 total.
-  (W-2, transport) likelihood-path balanced arm: ≥10 pocket round trips total AND median
+  (W-2, transport) [SUPERSEDED by amendment i] likelihood-path balanced arm: ≥10 pocket round trips total AND median
   ≥1 per ladder. (W-3, bracketing drain) B2 vs B3 final cold-rung occupancy (last 500
   rounds, per-ladder means, n=8 each): |occ_B2 − occ_B3| ≤ 2·se_comb AND each arm moved
   ≥3× its binomial se from its init value (0.5 and 0.0) — convergence from OPPOSITE
@@ -672,7 +677,7 @@ multimodality, conditioning, or the NFW profile.
   swaps" description; wall-relevant only); "resumable" means incremental-npz
   DATA-SALVAGE (diagnostics preserved, sampler state not) — the F-2 probe is a fresh
   run in a second allocation, per amendment x; smoke is shape-faithful at ~60 dPIE
-  compiles ⇒ realistically 25–60 min in one process — RUN THE FIVE SMOKE SUB-ARMS IN
+  compiles ⇒ realistically 25–60 min in one process — RUN THE SIX SMOKE SUB-ARMS IN
   PARALLEL ACROSS THE 4 GPUs (~15 min wall), and production arms each pay their own
   ~12-compile startup (~6–12 min/process, included in the wall envelope). ESS proxy is
   2× conservative vs N/IAT (report-only, safe direction — recorded).**
