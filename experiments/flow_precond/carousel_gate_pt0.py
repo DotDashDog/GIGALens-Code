@@ -1137,7 +1137,7 @@ def run_pt(tag, seed, spec):
         summary["metric_adapt"] = dict(
             windows=list(windows), n0=n0, frozen=bool(metric_frozen_flag),
             n_boundaries_applied=len(boundary_covs),
-            reference=("pooled MAMS64 cov (reference-ONLY, PT-2 internals "
+            reference=("pooled MAMS64 cov — DIAGNOSTIC ONLY, NOT the scored clause "
                        "instrument)" if metric_ref is not None else None),
             geneig_final_cold_min=(float(gfin[R - 1].min())
                                    if gfin is not None else None),
@@ -1147,7 +1147,7 @@ def run_pt(tag, seed, spec):
                                        if gfin is not None else None),
             geneig_final_max_per_rung=(gfin.max(axis=1).tolist()
                                        if gfin is not None else None),
-            geneig_in_band_1_3rd_to_3_all_rungs=(
+            geneig_pooledref_DIAGNOSTIC_in_band=(   # NOT scored: scored clause = Sigma_ref(w-hat), pt2 scorer
                 bool(np.all((gfin >= 1.0 / 3.0) & (gfin <= 3.0)))
                 if gfin is not None else None),
         )
@@ -1156,7 +1156,8 @@ def run_pt(tag, seed, spec):
                f"frozen={metric_frozen_flag}; final gen-eig cold rung "
                f"[{gfin[R - 1].min():.3f}, {gfin[R - 1].max():.3f}] "
                f"(band [1/3, 3] all rungs: "
-               f"{summary['metric_adapt']['geneig_in_band_1_3rd_to_3_all_rungs']})")
+               f"{summary['metric_adapt']['geneig_pooledref_DIAGNOSTIC_in_band']} "
+               f"[DIAGNOSTIC vs pooled ref — scored clause is vs Sigma_ref(w-hat), pt2 scorer])")
     save_npz(ROUNDS - 1)
 
     if adapt_metric and geneig_trace:
@@ -1171,8 +1172,8 @@ def run_pt(tag, seed, spec):
         ax.set_yscale("log")
         ax.set_xlabel("round")
         ax.set_ylabel("gen-eig ratio (adapted vs reference)")
-        ax.set_title(f"{tag}: cold-rung per-axis gen-eig ratios "
-                     f"(band [1/3, 3]; boundaries dotted)")
+        ax.set_title(f"{tag}: cold-rung per-axis gen-eig ratios vs POOLED ref — "
+                     f"DIAGNOSTIC ONLY (scored clause: vs Sigma_ref(w-hat), pt2 scorer)")
         fig.tight_layout()
         fig.savefig(os.path.join(OUT, f"pt0_{tag}_geneig.png"), dpi=120)
         plt.close(fig)

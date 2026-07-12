@@ -468,7 +468,14 @@ multimodality, conditioning, or the NFW profile.
   production-deviation flag; per-rung sample counts honest; D3/D4 balanced-basis
   floors 94/94 + windows pinned; F-M1 gen-eig-primary). NOTE (record correction):
   commit bf89942's message claimed these amendments were applied — a script abort
-  meant only the CODE extension went in; THIS edit applies them. Awaiting rd-2.**
+  meant only the CODE extension went in; the follow-up edit applied them.
+  rd-2 (2026-07-12): CERTIFY-RECOMMENDED to LAUNCH — extension audit CLEAN except
+  one labeling defect (D-1, rd-1 language leaked into the in-run summary key/print
+  — RELABELED geneig_pooledref_DIAGNOSTIC + re-audit); circularity blind-spot (ix)
+  added with the out-of-band Σ_ref(0.42) reporting rule; standing conditions:
+  smoke incl. one --equiv-check arm, pt2 scorer (with metric_windows/smoke/frozen
+  asserts) committed + audited BEFORE unblinding, env pins recorded. LAUNCHING on
+  an interactive node per the standing directive.**
   Script: carousel_gate_pt0.py + one substantial audited extension (adaptive-metric
   PT runner, below); outputs `*_pt2*`; one 4 h allocation, 4 arms on 4 GPUs; seeds
   D1–D4 = 30–33.
@@ -587,7 +594,16 @@ multimodality, conditioning, or the NFW profile.
   (0.32, 0.49) band, RT bases, and reference pools all derive from UNCERTIFIED
   C-24/C-25 — human de-certification voids this gate's scoring basis; (viii,
   advisory f) the pre-launch diff audit must verify the smoke-only
-  METRIC_WINDOWS=(5,10,15) override cannot leak into production arms.
+  METRIC_WINDOWS=(5,10,15) override cannot leak into production arms; (ix, rd-2
+  condition 2 — Σ_ref(ŵ) CIRCULARITY BOUND) gen-eig vs Σ_ref(ŵ) is
+  adaptation-quality evidence ONLY when ŵ is inside the occupancy band: in the
+  chicken-egg failure mode (bad seed ⇒ no pocket flux ⇒ main-only metric ⇒ low ŵ),
+  composition-matching makes the gen-eig clause read CLEAN while adaptation failed
+  at its purpose — the conjunctive occupancy clause + the RT secondary catch the
+  WIN, but mechanism ATTRIBUTION is blinded; PRE-COMMITTED rule: when ŵ is out of
+  band, the pt2 scorer ALSO reports gen-eig vs Σ_ref(0.42) before any mechanism
+  reading; within-band joint miscalibration is bounded (grader-interpolated: a
+  1.5× in-band ŵ error distorts gen-eig ≲1.4×, cannot flip the clause).
   **Pre-committed plots.** D1/D2: per-axis gen-eig ratio traces vs round (log-y)
   collapsing into the [1/3, 3] band by round 500, flat after freeze — F-M1 shows
   pocket axes plateauing high; worms/coldocc as PT-0b-class. D2 additionally: EEVPD
