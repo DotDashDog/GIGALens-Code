@@ -454,6 +454,11 @@ multimodality, conditioning, or the NFW profile.
 - **Grader:** result pass 2026-07-12 CERTIFY-RECOMMENDED (L3 leg + band-precision consistency) conditional on B1–B5, applied; all W-3 statistics recomputed exactly from npz; common-direction drift doubt on the record (point value may sit slightly below 0.4262; band conclusion unaffected); awaiting HUMAN certification (incl. the MAMS64 adjudication, reserved per the 2026-07-10 directive).
 - **Downstream:** PT-2 = production metric fix + efficiency frontier (costing inherits the sharded SVI-seeded 2.02 s/step); C-24's config remains the reference sampler.
 
+### C-26 — GATE PT-2: windowed in-burn-in mass adaptation TRANSPORTS from pipeline-only seeds (SVI RT 253; MAP+1e-6·I RT 228 vs floor 175 — the no-SVI entry mode works at transport level; single seed each) but freezes an over-inflated metric on ~4 slow ridge axes ⊥ Δμ (5–20×, F-M1 fired; mechanism inference = freeze-before-ridge-equilibration); frontier: half rounds OR half chains land in the SAME budget-limited zone as the full-budget reference
+- **Status:** `proposed (UNCERTIFIED)` — 2026-07-12; scorer @aca0ec9 (audit-certified pre-unblinding); artifacts `carousel_gate_pt0_out/{arrays_D1_D1pt2,arrays_D2_D2pt2,arrays_B1_D3pt2,arrays_B1_D4pt2}.npz`, `pt2_score.json`, stdout + plots; Log entry "GATE PT-2 RAN"; result-grader CERTIFY-RECOMMENDED conditional on B1–B3 (applied).
+- **Does NOT cover:** other lenses; band-converged no-SVI occupancy (D2 occ 0.291 below band, split-R̂ 1.104 at this budget); certified production config; whether D2's extra under-inflated axis is seed-specific; z-col → parameter-name mapping (C-8: owed before physical interpretation).
+- **Downstream:** PT-3 = later-freeze/robust-shrink metric refinement + point-and-go certification (~R6/K10/NSYS 8–16/ROUNDS 750–1000 ≈ 1–1.7 h single-A100 target); everything remains downstream of UNCERTIFIED C-24/C-25.
+
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: carousel GATE PT-2 — SELF-CONTAINED PT-MCLMC: windowed mass-matrix adaptation
@@ -489,7 +494,13 @@ multimodality, conditioning, or the NFW profile.
   manually; R2: F-M1 PRIMARY banner side-agnostic — confirm the >10 side from
   geneig_full before declaring; R3: non-adapt smoke guard = tag separation +
   INCOMPLETE banner). Auditor blind status disclosed: only rounds_done=1 and key
-  lists read mid-run. Adjudication conditional on complete runs.**
+  lists read mid-run. Adjudication conditional on complete runs.
+  RAN 2026-07-12, all four arms complete; result in Log ("GATE PT-2 RAN"): W-M
+  transport clauses PASS both modes, F-M1 PRIMARY fired both adaptive arms
+  (mechanism inference: freeze-before-ridge-equilibration; fix pre-registration
+  owed to the next gate); W-E both in the budget-limited zone; result-grader
+  CERTIFY-RECOMMENDED conditional on B1–B3 record amendments (APPLIED); C-26
+  registered; awaiting human certification.**
   Script: carousel_gate_pt0.py + one substantial audited extension (adaptive-metric
   PT runner, below); outputs `*_pt2*`; one 4 h allocation, 4 arms on 4 GPUs; seeds
   D1–D4 = 30–33.
@@ -2220,9 +2231,12 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   **F-M1 mechanism diagnosis (in-gate, pre-registered diagnostic-first route;
   hypothesis TESTED and REFINED):** initial suspect (freeze at cold-occ ~0.15 ⇒
   pocket-axis under-weighting) FALSIFIED — the offending axes have |cos(Δμ)| =
-  0.000 in BOTH arms; they are the SAME 4-column family (z-cols 19, 2, 3, 20) in
-  both arms with ratios > 1, i.e. the adapted metric is OVER-INFLATED ~5–20× along
-  slow directions orthogonal to basin separation. Refined mechanism (labeled
+  0.000 in BOTH arms; 4 of D2's 5 and all 3 of D1's offending axes are the SAME over-inflated family
+  (z-cols 19, 2, 3, 20; ratios 5.6–22.9, |cos Δμ| ≈ 0) — the adapted metric is
+  OVER-INFLATED along slow directions orthogonal to basin separation; B2
+  correction: D2 has a FIFTH, distinct axis (ratio 0.321, UNDER-inflated,
+  |cos Δμ| = 0.03, cols {10, 4, 11, 1}) — a near-band low-side miss NOT explained
+  by the transit-variance inference (open). Refined mechanism (labeled
   INFERENCE, consistent with C-5): those are curved-ridge degeneracy directions
   with IAT ~10²–10³ rounds — window 3 (rounds 250–500) still carries burn-in
   TRANSIT variance along them, so the frozen metric embeds transient spread, not
@@ -2230,7 +2244,11 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   windows 250/500/1000) or robust-shrink high-variance outlier axes; NOTE the
   inflation was NOT transport-fatal (all transport/health clauses passed) — the
   practical cost is step-size headroom, not correctness.
-  **W-E (frontier, both routed-PASS per the PT-0b W-b5 precedent):** D3 (HALF
+  **W-E (frontier; B1-corrected wording): split-R̂ clause scored FAIL in both arms,
+  ROUTED to the pre-registered (1.05, 1.2] budget-limited zone ("not failure") with
+  ALL OTHER clauses passing — strengthening fact (grader): PT-0b's own FULL-budget
+  split-R̂ was 1.051–1.073, i.e. the same zone, so half budget shows NO mixing
+  degradation vs the reference config:** D3 (HALF
   budget, 750 rounds): RT 190 ≥ 94, occ 0.3500 in band (near-edge corroborated),
   EEVPD + pair-acc (0.52–0.54) in band, split-R̂ 1.075 ⇒ (1.05, 1.2] budget-limited
   zone with transport passing (occ-ESS ≈ 7.5/system, reported per residual R1); 
@@ -2238,14 +2256,20 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   in band, split-R̂ 1.073 ⇒ same routed zone (occ-ESS ≈ 6.3/system); wall 1.67 h.
   **FRONTIER FINDING: the C-24 reference config is ≥2× over-budgeted on BOTH axes —
   750 rounds × 16 systems and 1500 rounds × 8 systems both deliver band-consistent
-  occupancy with transport margins ≥2×.** Combined suggestion for the point-and-go
+  occupancy with transport margins ≥2×, at NO split-R̂ cost relative to the
+  full-budget reference (same budget-limited zone).** Combined suggestion for the point-and-go
   config (NEXT gate to certify): pooled-or-adapted metric, R = 6 measured ladder,
   K = 10, NSYS ≈ 8–16, ROUNDS ≈ 750–1000 ⇒ ~1–1.7 h on ONE A100 (interactive-node
   directive satisfied with margin).
-  **Verdict summary:** M-links: transport/entry-mode SUCCESS both modes; metric
+  **Verdict summary:** M-links: transport/entry-mode SUCCESS both modes (RT clause;
+  B3 caveat: the no-SVI mode TRANSPORTS but is NOT yet band-converged at this
+  budget — D2 occ 0.2906 below band, cold split-R̂ 1.104; D1's 1.073 also reported
+  as a non-clause diagnostic; one D1 system sat at occ 0.008 all window); metric
   pooled-quality NOT achieved (F-M1, mechanism diagnosed, fix derived) — the
-  adaptive path is VIABLE but one refinement short. E-links: both frontier points
-  PASS (routed zones). Scope: same posterior/indicator caveats as C-24/C-25 (all
+  adaptive path is VIABLE but one refinement short, and the single-seed arms
+  cannot exclude that D2's worse inflation is partly seed-specific rather than
+  pure freeze-timing (grader's strongest-case, recorded). E-links: both frontier
+  points land in the budget-limited routed zone with every other clause passing. Scope: same posterior/indicator caveats as C-24/C-25 (all
   UNCERTIFIED, human validation pending); gen-eig judged vs MAMS64 position pools;
   z-col → parameter-name mapping not yet attached to the named axes (C-8 lesson:
   attach names before any physical interpretation — deferred to the write-up).
