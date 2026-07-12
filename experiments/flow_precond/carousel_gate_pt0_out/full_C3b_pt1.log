@@ -1,0 +1,46 @@
+MODEL CARD: {
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt1_mams.py",
+ "tag": "C3",
+ "arm": "MAMS MH-exact bracket",
+ "sampler": "gigalens_research.inference.mams.MAMS_JIT (production, untouched)",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0",
+  "cuda:1",
+  "cuda:2",
+  "cuda:3"
+ ],
+ "x64": true,
+ "dim": 33,
+ "smoke": false,
+ "seed": 22,
+ "p_pocket": 0.25,
+ "n_hmc": 64,
+ "num_burnin_steps": 2000,
+ "num_results": 4000,
+ "target_acceptance": 0.9,
+ "thin_stored": 4,
+ "last_keep": 4000,
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "svi_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/sim_carousel/messy_tests/dpie/svi/arrays.npz",
+ "seed_metric": "SVI cov (dpie/svi)",
+ "seed_mean": "SVI qz_loc (dpie/svi)",
+ "pools": {
+  "n_main": 57873,
+  "n_pocket": 6127,
+  "use": "POSITION pools for INITS ONLY, never weights (human directive); seed metric is SVI, L3-rerun amendment"
+ },
+ "pocket_indicator": "z[6] > -22.35",
+ "qz_adapter": "PoolQZ: sample = Bernoulli(p_pocket) pool-mixture draws + 1e-3 jitter (UNCHANGED bracket instrument); mean/covariance = SVI qz_loc / qz_scale_tril@T",
+ "probe": false,
+ "jitter": 0.001
+}
+Sampling took 12141.262238800991 s
+[C3] realized init pocket fraction = 0.3125 (requested Bernoulli p = 0.25)
+
+[C3] ===== MH-EXACT BRACKET ARM (PROPOSED/UNCERTIFIED) =====
+  ALL-kept (4000) occupancy = 0.4377 +- 0.0219 (chain-clustered se, 64 chains)
+  drift check (A2 mirror): first-half 0.4478 vs second-half 0.4276 (delta -0.0202)
+  occ-ESS IAT-proxy per chain (NON-SCORING diagnostic): min 2.03, median 6.64, max 24.09 (IAT median 301.3); the SCORING occ-ESS is the pinned two-arm moment-matching estimator (p-hat(1-p-hat)/sd_chains^2, p-hat = pooled C3+C4 mean) computed cross-arm; UNDERPOWERED gate (occ-ESS < 4) applies to THAT
+  per-chain occ range [0.025, 0.805]
+  wall 12171s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out (arrays_C3_pt1.npz, pt1_mams_C3_occ.png)

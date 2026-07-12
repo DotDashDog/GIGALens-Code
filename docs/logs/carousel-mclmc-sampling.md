@@ -447,6 +447,11 @@ multimodality, conditioning, or the NFW profile.
 - **Grader:** rd-1 CERTIFY-RECOMMENDED 2026-07-11 conditional on A1–A6 (applied); all headline statistics independently recomputed from the npz; scorer verified formula-faithful to 79cdccd; record integrity clean.
 - **Downstream:** GATE PT-1 = production point-and-go composition + efficiency frontier + cross-method unbiasedness arm.
 
+### C-25 — GATE PT-1: the dPIE carousel's cold pocket weight ≈ 0.42, CROSS-METHOD (unadjusted PT bracket 0.406 ± 0.021; PT at 10× tighter EEVPD 0.455 ± 0.050; MH-exact MAMS opposite-side bracket 0.4262, arms 0.74σ); MAMS64's 9.6% refuted (~4.4× low, init-biased dwell disequilibrium); no unadjusted-kernel bias > ~0.19 detected; production SVI-metric composition costs ~3.5× pocket transport (fix menu open)
+- **Status:** `proposed (UNCERTIFIED)` — 2026-07-12; scored by the certified pt1 scorer @0ea87c5 on pinned formulas; artifacts `carousel_gate_pt0_out/{arrays_B5_C1pt1,arrays_B1_C2pt1,arrays_C3_pt1,arrays_C4_pt1}.npz`, `pt1_score.json`, `pt1_score_stdout_C1C2.txt`; Log entries "GATE PT-1 RAN, PARTIAL" + "GATE PT-1 L3 COMPLETED".
+- **Scope/caveats:** "pocket" = z[6] > −22.35 halfspace (third modes invisible); kernel-bias exclusion is at the ~0.19 level (L2's MDE) plus the MH-exact leg's own law-exactness; the three legs share the carousel data, model, and position pools (positions only, never weights); within-basin parameter-ESS not certified; single posterior; L1's composition failure is scoped to raw-SVI metric/init, not the sampler.
+- **Downstream:** PT-2 = production metric fix + efficiency frontier; C-24's config remains the reference sampler.
+
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: carousel GATE PT-1 — production composition + kernel-bias probe + MH-exact
@@ -1996,6 +2001,37 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-12 (carousel GATE PT-1 L3 COMPLETED — MH-EXACT CROSS-METHOD BRACKET CLOSES
+  ON PT'S VALUE: pooled MAMS occupancy 0.4262, arms agree at 0.74σ from opposite-side
+  inits, both arms POWERED exactly at prediction; the pocket weight ≈ 0.42 is now
+  confirmed by a Metropolis-exact sampler and the shared-kernel blind spot is CLOSED;
+  PROPOSED (UNCERTIFIED)):** regular-queue jobs 55803587/55803588 (4-GPU sharded, one
+  arm per job), wrapper @b1291ba (pre-launch audit blob 27a853c), certified scorer
+  @0ea87c5 run on completion — `pt1_score.json` now exists (the PARTIAL entry's
+  correction stands: it was produced only now, with all arms present).
+  **W-3 (pinned formulas, scored):** C3 (main-heavy init, realized 31.2% pocket):
+  0.4377, pinned mm occ-ESS/chain 7.99; C4 (pocket-heavy, realized 79.7%): 0.4146,
+  occ-ESS 7.56 — both POWERED (≥ 4; the 7–8 prediction from the MAMS64-BENCHMARK
+  transit figure hit within 5% — internals validated); |Δ| = 0.0231 = 0.74σ ⇒ AGREE;
+  pooled 0.4262 ∈ (0.32, 0.49) ⇒ cross-method agreement with PT. Drift checks small
+  and shrinking (−0.020 / −0.014 across halves); per-chain traces (plots inspected)
+  flip basins rapidly with stationary means from draw 0 — the MH-exact kernel at this
+  budget equilibrates dwell from BOTH sides, resolving what MAMS64 could not (its
+  9.6% was init-biased dwell disequilibrium, as the record long suspected).
+  **Gate-level synthesis (PT-1 complete):** L1 FAIL (production SVI-metric
+  composition ~3.5× pocket-transport cost — fix menu to PT-2); L2 PASS non-vacuous
+  (no kernel bias > ~0.19; tail mechanism modulated); L3 PASS (MH-exact bracket
+  0.4262, agrees with PT-0b's 0.406 ± 0.021 at <1σ). Combined weight evidence, now
+  THREE-legged: PT bracketing (unadjusted kernel, 0.406 ± 0.021), PT at 10× tighter
+  EEVPD (0.455 ± 0.050), MH-exact MAMS bracketing (0.4262 ± ~0.016 pooled se) — all
+  consistent; **the carousel's cold pocket weight is ≈ 0.42, and MAMS64's untrusted
+  9.6% is definitively refuted (≈4.4× low).** ALL-PASS routing does NOT fire (L1
+  failed): next = GATE PT-2 (production metric fix + efficiency frontier), drafted
+  on this full evidence base. Wall/cost: C3b/C4b ≈ 3.0/3.2 h each on 4-GPU nodes
+  (probe-predicted 2.91 h best-case — within 10%); PT-1 total ≈ 42 GPU·h incl. the
+  7.8 lost to the clip. C-25 registered; C-24's open pocket-weight finding is
+  RESOLVED by cross-method closure (register updated).
 
 - **2026-07-11 (carousel GATE PT-1 RAN, PARTIAL — L2 kernel-bias probe PASSES with the
   mechanism demonstrably modulated; L1 production composition fires F-1 (SVI metric =
