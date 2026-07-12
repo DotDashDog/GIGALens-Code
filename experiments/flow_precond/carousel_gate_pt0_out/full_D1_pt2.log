@@ -1,0 +1,66 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "D1_D1pt2",
+ "path": "power",
+ "seed": 30,
+ "seed_source": "env override GATE_PT0_SEED_B=30",
+ "swap_seed": 10030,
+ "prior_init_seed": null,
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 1500,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "env override GATE_PT0_ROUNDS_B=1500",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default"
+ },
+ "metric": "ADAPTIVE (windowed); seed = SVI cov (dpie/svi)",
+ "adapt_metric": true,
+ "metric_windows": [
+  100,
+  250,
+  500
+ ],
+ "metric_n0": 160,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": null,
+ "d2_diag_provenance": null,
+ "svi_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/svi/arrays.npz",
+ "map_npz": null,
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "SVI draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D1_D1pt2] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D1_D1pt2] round-0 u identity: rel = 2.211e-11 (abs = 6.441e-06)
+[B D1_D1pt2] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.0e-10/1.1e-09/2.9e-09 reverts=0 wall=74s
+[B D1_D1pt2] round    50/1500 cold occ=0.000 hot occ=0.062 RT=29 pocketCA=1 EEVPD[h/m/c]=3.7e-07/2.3e-02/1.4e-04 reverts=0 wall=509s

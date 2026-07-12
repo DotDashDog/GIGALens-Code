@@ -1,0 +1,7 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+[EQUIV B1_smoke] fused vs legacy, 3 rounds, R=6 NSYS=16 K=10 dim=33 seed=0
+E0712 09:36:40.371398 1041618 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+[EQUIV B1_smoke] round 0: max|dpos| = 6.138e-01, max|du| = 1.445e+01, u0_rel legacy/fused = 1.671e-11/6.438e-11
+[EQUIV B1_smoke] round 1: max|dpos| = 9.000e-01, max|du| = 4.282e+01
+[EQUIV B1_smoke] round 2: max|dpos| = 1.087e+00, max|du| = 1.466e+01
+[EQUIV B1_smoke] written -> summary_equiv_B1_smoke.json (UNCERTIFIED; grader reads the numbers, not this print)

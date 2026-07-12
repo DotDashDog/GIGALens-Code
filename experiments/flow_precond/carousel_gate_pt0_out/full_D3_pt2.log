@@ -1,0 +1,62 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "B1_D3pt2",
+ "path": "power",
+ "seed": 32,
+ "seed_source": "env override GATE_PT0_SEED_B=32",
+ "swap_seed": 10032,
+ "prior_init_seed": null,
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 750,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "env override GATE_PT0_ROUNDS_B=750",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default"
+ },
+ "metric": "pooled MAMS64 empirical cov, all rungs (positions only)",
+ "adapt_metric": false,
+ "metric_windows": null,
+ "metric_n0": null,
+ "metric_reference": null,
+ "metric_smoke_boundaries_note": null,
+ "d2_diag_provenance": null,
+ "svi_npz": null,
+ "map_npz": null,
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "all rungs Bernoulli(0.5) main/pocket pool",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B B1_D3pt2] init cold occ = 0.375; init occ per rung = [0.31, 0.31, 0.5, 0.38, 0.25, 0.38]
+[B B1_D3pt2] round-0 u identity: rel = 5.445e-11 (abs = 1.586e-05)
+[B B1_D3pt2] round     0/750 cold occ=0.250 hot occ=0.375 RT=0 pocketCA=0 EEVPD[h/m/c]=1.2e-03/4.1e-03/3.5e-04 reverts=0 wall=75s
+[B B1_D3pt2] round    50/750 cold occ=0.250 hot occ=0.125 RT=8 pocketCA=9 EEVPD[h/m/c]=2.0e-05/2.4e-04/9.5e-05 reverts=0 wall=510s

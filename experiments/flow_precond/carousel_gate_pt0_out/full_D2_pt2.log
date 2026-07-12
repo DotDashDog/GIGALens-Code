@@ -1,0 +1,66 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "D2_D2pt2",
+ "path": "power",
+ "seed": 31,
+ "seed_source": "env override GATE_PT0_SEED_B=31",
+ "swap_seed": 10031,
+ "prior_init_seed": null,
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 1500,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "env override GATE_PT0_ROUNDS_B=1500",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default"
+ },
+ "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
+ "adapt_metric": true,
+ "metric_windows": [
+  100,
+  250,
+  500
+ ],
+ "metric_n0": 160,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": null,
+ "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
+ "svi_npz": null,
+ "map_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/map/arrays.npz",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "MAP z_best + stock-diagonal draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D2_D2pt2] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D2_D2pt2] round-0 u identity: rel = 3.268e-11 (abs = 9.522e-06)
+[B D2_D2pt2] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=4.4e-07/2.5e-06/1.3e-05 reverts=0 wall=75s
+[B D2_D2pt2] round    50/1500 cold occ=0.000 hot occ=0.000 RT=56 pocketCA=0 EEVPD[h/m/c]=3.5e-04/1.5e-04/6.6e-04 reverts=0 wall=509s

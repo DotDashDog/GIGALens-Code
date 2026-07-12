@@ -1,0 +1,81 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "D1_smoke",
+ "path": "power",
+ "seed": 5,
+ "seed_source": "ARM_SEED default",
+ "swap_seed": 10005,
+ "prior_init_seed": null,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "default",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default"
+ },
+ "metric": "ADAPTIVE (windowed); seed = SVI cov (dpie/svi)",
+ "adapt_metric": true,
+ "metric_windows": [
+  5,
+  10,
+  15
+ ],
+ "metric_n0": 160,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": "SMOKE boundaries scaled to exercise window/freeze/save paths only",
+ "d2_diag_provenance": null,
+ "svi_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/svi/arrays.npz",
+ "map_npz": null,
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "SVI draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D1_smoke] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D1_smoke] round-0 u identity: rel = 1.756e-11 (abs = 5.115e-06)
+[B D1_smoke] round     0/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=4.4e-10/1.3e-09/2.0e-09 reverts=0 wall=76s
+[B D1_smoke] metric window boundary at round 5: n_w=80, n0=160
+[B D1_smoke] round     5/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.0e+00/5.6e-01/2.1e+00 reverts=0 wall=162s
+[B D1_smoke] metric window boundary at round 10: n_w=80, n0=160
+[B D1_smoke] round    10/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=2.2e-02/7.1e-02/4.0e-02 reverts=0 wall=201s
+[B D1_smoke] metric window boundary at round 15: n_w=80, n0=160 (METRIC FROZEN)
+[B D1_smoke] round    15/20 cold occ=0.000 hot occ=0.062 RT=0 pocketCA=0 EEVPD[h/m/c]=5.7e-01/1.8e+00/1.9e-01 reverts=0 wall=240s
+[B D1_smoke] round    19/20 cold occ=0.000 hot occ=0.062 RT=0 pocketCA=0 EEVPD[h/m/c]=3.4e-04/3.9e-03/4.0e-04 reverts=0 wall=271s
+
+[B D1_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.0000 +- 0.0000 (per-sys [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; init 0.000)
+  round trips total 0 (median/sys 0.0; pocket-classified 0 [W-2], main-classified 0); pocket cold-arrivals 0, main 19
+  swap acc same=[0.759, 0.75, 0.638, 0.675, 0.562]
+  swap acc cross=[0.0, nan, nan, nan, nan] (cross attempts [2, 0, 0, 0, 0])
+  cold split-Rhat = nan; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
+  metric adapt: 3 boundaries applied, frozen=True; final gen-eig cold rung [0.003, 685.877] (band [1/3, 3] all rungs: False [DIAGNOSTIC vs pooled ref — scored clause is vs Sigma_ref(w-hat), pt2 scorer])
+[B D1_smoke] DONE in 279s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

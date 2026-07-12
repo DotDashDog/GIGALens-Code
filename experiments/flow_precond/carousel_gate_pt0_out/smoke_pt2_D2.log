@@ -1,0 +1,81 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+MODEL CARD: {
+ "arm": "D2_smoke",
+ "path": "power",
+ "seed": 6,
+ "seed_source": "ARM_SEED default",
+ "swap_seed": 10006,
+ "prior_init_seed": null,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "default",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default"
+ },
+ "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
+ "adapt_metric": true,
+ "metric_windows": [
+  5,
+  10,
+  15
+ ],
+ "metric_n0": 160,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": "SMOKE boundaries scaled to exercise window/freeze/save paths only",
+ "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
+ "svi_npz": null,
+ "map_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/map/arrays.npz",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "MAP z_best + stock-diagonal draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D2_smoke] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D2_smoke] round-0 u identity: rel = 3.185e-11 (abs = 9.280e-06)
+[B D2_smoke] round     0/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=2.4e-07/6.5e-07/1.2e-05 reverts=0 wall=76s
+[B D2_smoke] metric window boundary at round 5: n_w=80, n0=160
+[B D2_smoke] round     5/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=4.1e+00/2.7e+01/1.8e+00 reverts=0 wall=162s
+[B D2_smoke] metric window boundary at round 10: n_w=80, n0=160
+[B D2_smoke] round    10/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=1.9e+02/2.8e+01/2.7e-01 reverts=0 wall=201s
+[B D2_smoke] metric window boundary at round 15: n_w=80, n0=160 (METRIC FROZEN)
+[B D2_smoke] round    15/20 cold occ=0.000 hot occ=0.000 RT=1 pocketCA=0 EEVPD[h/m/c]=1.6e+00/1.0e+00/3.3e-02 reverts=0 wall=240s
+[B D2_smoke] round    19/20 cold occ=0.000 hot occ=0.000 RT=6 pocketCA=0 EEVPD[h/m/c]=5.4e-04/2.7e-04/5.2e-04 reverts=0 wall=271s
+
+[B D2_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.0000 +- 0.0000 (per-sys [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; init 0.000)
+  round trips total 6 (median/sys 0.0; pocket-classified 0 [W-2], main-classified 6); pocket cold-arrivals 0, main 30
+  swap acc same=[0.788, 0.744, 0.75, 0.731, 0.712]
+  swap acc cross=[nan, nan, nan, nan, nan] (cross attempts [0, 0, 0, 0, 0])
+  cold split-Rhat = nan; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
+  metric adapt: 3 boundaries applied, frozen=True; final gen-eig cold rung [0.000, 689.056] (band [1/3, 3] all rungs: False [DIAGNOSTIC vs pooled ref — scored clause is vs Sigma_ref(w-hat), pt2 scorer])
+[B D2_smoke] DONE in 279s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out
