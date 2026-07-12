@@ -88,8 +88,11 @@ Goal: get MCLMC to sample the (Om0, w0) posterior correctly.
   Seeds: data 0, MAP 1, MCLMC 10, pipeline 42 (all = Run A). Code: branch
   `ratio-coords-prior` — `src/gigalens_research/priors/ratio_coords.py` (+11 passing unit
   tests), `experiments/sample_cosmology/dspl_ratio_coords.py` (import-safe; `--run` requires
-  `--confirm-run-c-approved` AND a passing gate JSON). Status: **awaiting approval — do not
-  launch**.
+  `--confirm-run-c-approved` AND a passing gate JSON). Status: **approved by grader (user)
+  2026-07-11 ("can you test this on the double source-plane system"); launched** via
+  `run_dspl_ratio_coords.sh` (Run A launcher idiom, 1 interactive hbm80g GPU).
+  **COMPLETED 2026-07-11 — predictions P1–P3 FAILED (P4/P5 hit): crest cured but mirror
+  truncation at Om0≈0.385; see the "Run C outcome" entry below. Checkpoint cleared.**
   - *2026-07-11 update:* pre-run **equivalence gate PASSED** —
     `results/sample_cosmology/dspl_ratio_coords/ratio_coords_gate.json`
     (`dspl_ratio_coords_gate.py`, 64 matched prior draws, CPU): (1) matched-θ log-likelihood
@@ -105,6 +108,92 @@ Goal: get MCLMC to sample the (Om0, w0) posterior correctly.
     migrated `make_prob_model` (used for BOTH models in the gate). Full-model gradient smoke:
     finite grad of log_prob through pixel likelihood + implicit solve, 29 ms/grad on CPU
     (solver overhead negligible).
+
+- **Run D (DRAFT, awaiting approval): u-first ratio coordinates — global squash of the
+  stiff scalar.**
+  Hypothesis (from Run C's T3 mechanism below): Run C's residual disease is the ROTATION of
+  the likelihood band in (z1, z2) (−8°→−84°), caused by squashing u into a bracket that
+  drifts with Om0. Swapping the conditioning order — z1 → u squashed over its GLOBAL range
+  [min u, max u] over the box; z2 → Om0 squashed into the u-contour's Om0-interval
+  [Om0_min(u), Om0_max(u)] (endpoints by root-solve, implicit gradients); w0 = solve as in
+  Run C — makes the likelihood a function of z1 ALONE: the band is an axis-aligned slab,
+  zero rotation by construction, at every point of the posterior.
+  Prediction: rank-R̂(Om0), R̂(w0) < 1.01; BOTH cosmology z-columns' bulk-ESS within 2× of
+  the median nuisance ESS; mass(Om0 < 0.146) = 0.104 ± 0.02 (u*-corrected grid value, see
+  Run C outcome); full arc visited INCLUDING both edges (per-chain min Om0 < 0.05 AND max
+  Om0 > 0.50); 0 nonfinite steps.
+  Falsifier: any cosmology z-column ESS < half the median nuisance ESS, or a visited-range
+  edge short of [0.05, 0.50] ⇒ slab geometry is not sufficient ⇒ the rotation mechanism
+  (T3) is not the (only) residual disease — stop and diagnose, do not re-fix.
+  Threshold derivation: same standards as Runs A/C (R̂ 1.01 repo standard, ESS factor 2 =
+  seed band, mass ±0.02 ⊇ binomial+σ_r sensitivity).
+  Blind spots: prior-pushforward structure along z2 (density along the contour) is assumed
+  mild — checked post-hoc from the samples; Om0-interval endpoints introduce two more
+  root-solves per eval (validated by the same gate battery before running); same
+  single-seed / single-realization limits as Run C.
+  Cost: one 8-chain 10k+10k run + gate battery, ≈ Run C (~13 min wall on 1 interactive GPU).
+  Status: **draft — implementation not yet written; do not build the run until the grader
+  approves this direction.**
+
+---
+
+## 2026-07-11 — Run C outcome: ratio-coordinates grouped prior — crest cured, but predictions FAILED; mirror truncation at the w0=−2 arm (proposed UNCERTIFIED)
+
+Evidence: `results/sample_cosmology/dspl_ratio_coords/ratio_coords_run_summary.json`,
+`ratio_coords_traces.png`, `ratio_coords_overlay.png`, `mclmc/`, `map/`; code
+`dspl_ratio_coords.py`, `dspl_ratio_coords_analysis.py`, launcher
+`run_dspl_ratio_coords.sh` (wall: 734 s run + 37 s analysis on 1 GPU).
+
+Observed vs predicted:
+
+| Quantity | Predicted | Observed | Verdict |
+|---|---|---|---|
+| rank-R̂ Om0 / w0 (physical) | < 1.01 | **1.0156 / 1.0158** | **miss** |
+| bulk-ESS cosmo z-cols vs median nuisance (1830) | ≥ half, ~within 2× | **499 / 491 (0.27×)** | **miss** |
+| mass(Om0 < 0.146) | 0.103 ± 0.02 | **0.282** | **miss** |
+| nonfinite-flagged steps | 0 | 0 / 160000 | hit |
+| MAP χ²/ν | ≈ 1 | 0.9972 | hit |
+
+**Phenomenon (plot-confirmed, traces + overlay):** the old disease is CURED — all 8 chains
+cross the baseline's 0.146–0.163 truncation edge freely (dozens of round trips; per-chain
+min Om0 0.032–0.040; the arm Run B showed to be one-way is now routine) — but a MIRROR
+truncation appears at the other end: per-chain max Om0 0.358–0.385 across all 8 chains,
+while the posterior's right arm (the w0 plunge to the w0=−2 tangency at Om0≈0.52) is
+unvisited; w0 never goes below −1.10.
+
+**Mass accounting (kills a density-bug explanation):** recomputing the grid posterior at
+the run's own u* = r2(MAP) = 1.3239203 (σ_r,eff = 6.7e-4): true mass(Om0 < 0.146) = 0.104,
+true mass(Om0 > 0.385) = **0.627**, and the conditional mass(< 0.146 | Om0 ≤ 0.385) =
+**0.280 vs the run's measured 0.282**. The sampler reproduces the restricted density to
+3 parts in 1000 — the map, Jacobian, and solver are exact in practice (consistent with the
+bitwise gate); the failure is pure mobility: ~63% of the posterior, a |Δz| ≈ 1 walk away,
+is never entered in 8×20k steps.
+
+**T3 — mechanism (UNCERTIFIED, from cheap contour arithmetic, `band_geom` check):** in
+(z1, z2) the likelihood band's tangent rotates continuously from −8° (Om0=0.03) through
+−60° (Om0≈0.385, the observed truncation edge) to −84° (Om0=0.515), because the
+conditional bracket [u(Om0,−2), u(Om0,−⅓)] drifts with Om0 (t = position of u* in the
+bracket falls 0.76→0.04); cross-band width simultaneously grows 15× (0.028→0.43). MAP sat
+at Om0=0.111 (near-horizontal band, −8°..−18°), so the burn-in metric adapted to that
+orientation — the same frozen-global-metric-vs-rotating-ridge disease as T2/C-3
+(playbook (iv)), relocated: the reparameterization removed the crest kink and the
+semi-infinite left tail but NOT the band rotation. Doubts: (a) rotation-vs-truncation
+colocation is correlational — no arm-init falsification run performed (a Run-B-style
+mirror test, init at Om0=0.48, would discriminate); (b) single seed; (c) metric history
+not yet inspected (`mclmc/diagnostics.npz` has the full inverse-mass-matrix history —
+a T2-style alignment analysis is the cheap next diagnostic).
+
+**Proposed claim C-4 (UNCERTIFIED):** the ratio-coordinates grouped prior samples the DSPL
+posterior with exactly correct restricted density and cures the crest/left-arm truncation,
+but under a single frozen global metric it truncates the w0-plunge arm (63% of mass) —
+the conditional-bracket construction leaves a rotating band; a global (non-conditional)
+squash of the stiff scalar (Run D draft above) is the structural candidate fix.
+Grader: pending (inspect the two PNGs + summary JSON).
+
+Mechanics note (fixed during launch): under the sharded MCLMC/MAP kernels the bisection's
+`fori_loop` carry must inherit the inputs' sharding/varying type — seeding it from plain
+constants fails inside `shard_map` (`ratio_coords.py::_bisect`, fixed + unit-tested; first
+GPU launch aborted in MAP with the carry-type error, no artifacts written).
 
 ---
 

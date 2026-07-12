@@ -244,8 +244,13 @@ def _make_w_solver(u_fn: Callable, w_lo: float, w_hi: float, n_bisect: int):
 
     def _bisect(om, u):
         dt = jnp.result_type(om, u)
-        lo = jnp.asarray(w_lo, dt)
-        hi = jnp.asarray(w_hi, dt)
+        # Seed the bracket FROM the inputs (om*0 + u*0): under shard_map (the
+        # sharded MCLMC kernel) a plain-constant fori_loop carry is unvarying
+        # while the body output mixes in the device-varying om/u, and the loop
+        # rejects the mismatched carry types.
+        base = (om * 0 + u * 0).astype(dt)
+        lo = base + jnp.asarray(w_lo, dt)
+        hi = base + jnp.asarray(w_hi, dt)
         # Local orientation: works wherever u_fn is monotone at this om and
         # degrades gracefully (stays in the bracket) in a degenerate sliver.
         s = jnp.sign(u_fn(om, hi) - u_fn(om, lo))
