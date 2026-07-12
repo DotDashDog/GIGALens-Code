@@ -1,0 +1,194 @@
+{
+ "model_card": {
+  "arm": "B1_D4pt2",
+  "path": "power",
+  "seed": 33,
+  "seed_source": "env override GATE_PT0_SEED_B=33",
+  "swap_seed": 10033,
+  "prior_init_seed": null,
+  "smoke": false,
+  "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+  "jax": "0.10.0.dev20260712",
+  "devices": [
+   "cuda:0"
+  ],
+  "x64": true,
+  "dim": 33,
+  "R": 6,
+  "NSYS": 8,
+  "K": 10,
+  "ROUNDS": 1500,
+  "thin": 5,
+  "betas": [
+   0.3594,
+   0.4388,
+   0.5373,
+   0.6598,
+   0.8116,
+   1.0
+  ],
+  "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+  "L": 5.744562646538029,
+  "ss_init": 0.05,
+  "ss_max": 5.0,
+  "devar": 0.0005,
+  "env_overrides": {
+   "K": "env override GATE_PT0_K_B=10",
+   "NSYS": "env override GATE_PT0_NSYS_B=8",
+   "ROUNDS": "env override GATE_PT0_ROUNDS_B=1500",
+   "ss_max": "env override GATE_PT0_SSMAX=5.0",
+   "devar": "default"
+  },
+  "metric": "pooled MAMS64 empirical cov, all rungs (positions only)",
+  "adapt_metric": false,
+  "metric_windows": null,
+  "metric_n0": null,
+  "metric_reference": null,
+  "metric_smoke_boundaries_note": null,
+  "d2_diag_provenance": null,
+  "svi_npz": null,
+  "map_npz": null,
+  "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+  "pocket_indicator": "z[6] > -22.35",
+  "init": "all rungs Bernoulli(0.5) main/pocket pool",
+  "u_def": "log_prob = logdensity/beta",
+  "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+  "sep_check_max_abs": 0.0,
+  "runner_impl": "fused-vmap-over-rungs"
+ },
+ "end_stats": {
+  "indicator_label": "pocket",
+  "last_rounds": 500,
+  "cold_occ_per_system": [
+   0.342,
+   0.232,
+   0.368,
+   0.262,
+   0.534,
+   0.516,
+   0.068,
+   0.672
+  ],
+  "cold_occ_mean": 0.37425,
+  "cold_occ_sd": 0.19345412892983185,
+  "init_cold_occ": 0.375,
+  "round_trips_per_system": [
+   90,
+   69,
+   77,
+   83,
+   81,
+   83,
+   83,
+   78
+  ],
+  "round_trips_total": 644,
+  "round_trips_median_per_system": 82.0,
+  "round_trips_main_per_system": [
+   51,
+   41,
+   51,
+   66,
+   37,
+   48,
+   63,
+   50
+  ],
+  "round_trips_main_total": 407,
+  "round_trips_pocket_per_system": [
+   39,
+   28,
+   26,
+   17,
+   44,
+   35,
+   20,
+   28
+  ],
+  "round_trips_pocket_total": 237,
+  "down_traverses_per_system": [
+   91,
+   72,
+   81,
+   87,
+   85,
+   87,
+   86,
+   82
+  ],
+  "pocket_cold_arrivals_per_system": [
+   40,
+   29,
+   27,
+   17,
+   46,
+   36,
+   21,
+   29
+  ],
+  "pocket_cold_arrivals_total": 245,
+  "main_cold_arrivals_total": 426,
+  "swap_attempts_same": [
+   3211,
+   3245,
+   3363,
+   3303,
+   3169
+  ],
+  "swap_attempts_cross": [
+   2789,
+   2755,
+   2637,
+   2697,
+   2831
+  ],
+  "swap_acc_same": [
+   0.5272500778573653,
+   0.5445300462249615,
+   0.5233422539399346,
+   0.5122615803814714,
+   0.531397917324077
+  ],
+  "swap_acc_cross": [
+   0.5198996055934026,
+   0.5375680580762251,
+   0.5309063329541145,
+   0.525027808676307,
+   0.5298481102084069
+  ],
+  "cold_indicator_split_rhat": 1.0724986379115957,
+  "rhat_last_rounds": 1000,
+  "eevpd_last_per_rung": [
+   0.005330154528105851,
+   0.005296746228096944,
+   0.0021564374567687424,
+   0.007829236143123471,
+   0.0022397038262760532,
+   0.0015182466602868562
+  ],
+  "eevpd_in_band": [
+   false,
+   false,
+   false,
+   false,
+   false,
+   true
+  ],
+  "eevpd_band": [
+   0.0001,
+   0.002
+  ],
+  "step_mean_last_per_rung": [
+   0.6546824835550258,
+   0.6359705091346943,
+   0.6288703195216523,
+   0.590130587083653,
+   0.5842630092918152,
+   0.5599928579516222
+  ],
+  "n_nan_reverts": 0,
+  "u0_verify_rel": 5.997377579148135e-11,
+  "u0_verify_max_abs": 1.7473124898970127e-05
+ },
+ "total_wall_s": 5999.517327785492
+}

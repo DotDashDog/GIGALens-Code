@@ -1,0 +1,26 @@
+
+[D1] rounds=1500 m=0.3226±0.0434 RTpocket=253 (floor 175) RTtotal=1257 eevpd_med=['3.9e-04', '3.9e-04', '3.7e-04', '4.0e-04', '3.8e-04', '3.9e-04'] NaN=0
+  *** NEAR-EDGE (±0.05): band reading REQUIRES RT+plot corroboration ***
+  gen-eig vs Sigma_ref(w-hat=0.323): [0.472, 20.177] in [1/3,3] all axes: False (out: 3, of which (3,10]: 2)
+  *** F-M1 PRIMARY: 1 axes outside (soft) band beyond 10 or below 1/3 — gen-eig primary falsifier fires ***
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'geneig': False} -> not-pass (see zones)
+
+[D2] rounds=1500 m=0.2906±0.0460 RTpocket=228 (floor 175) RTtotal=1289 eevpd_med=['3.6e-04', '4.0e-04', '3.7e-04', '3.6e-04', '3.8e-04', '4.3e-04'] NaN=0
+  *** NEAR-EDGE (±0.05): band reading REQUIRES RT+plot corroboration ***
+  gen-eig vs Sigma_ref(w-hat=0.291): [0.321, 22.944] in [1/3,3] all axes: False (out: 5, of which (3,10]: 2)
+  blind-spot ix (w-hat OUT of band): gen-eig vs Sigma_ref(0.42): [0.262, 22.806] — REQUIRED before any mechanism attribution
+  *** F-M1 PRIMARY: 3 axes outside (soft) band beyond 10 or below 1/3 — gen-eig primary falsifier fires ***
+  clauses: {'rt': True, 'occ': False, 'eevpd': True, 'geneig': False} -> not-pass (see zones)
+
+[D3] rounds=750 m=0.3500±0.0435 RTpocket=190 (floor 94) RTtotal=637 eevpd_med=['3.4e-04', '3.1e-04', '3.1e-04', '4.1e-04', '3.9e-04', '4.1e-04'] NaN=0
+  pair acc [0.54, 0.523, 0.539, 0.531, 0.523] in [0.25,0.65]: True; cold split-Rhat(last 750) = 1.0752 -> budget-limited zone (1.05,1.2]
+  (1.05,1.2] zone with transport passing: budget-limited mixing reading applies — split_rhat clause scored FAIL but routed, per PT-0b W-b5 precedent)
+  *** NEAR-EDGE (±0.05): band reading REQUIRES RT+plot corroboration ***
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'nan': True, 'pair_acc': True, 'split_rhat': False} -> not-pass (see zones)
+
+[D4] rounds=1500 m=0.3743±0.0684 RTpocket=237 (floor 94) RTtotal=644 eevpd_med=['1.8e-04', '1.6e-04', '2.0e-04', '1.9e-04', '2.5e-04', '3.0e-04'] NaN=0
+  pair acc [0.524, 0.541, 0.527, 0.518, 0.531] in [0.25,0.65]: True; cold split-Rhat(last 1000) = 1.0725 -> budget-limited zone (1.05,1.2]
+  (1.05,1.2] zone with transport passing: budget-limited mixing reading applies — split_rhat clause scored FAIL but routed, per PT-0b W-b5 precedent)
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'nan': True, 'pair_acc': True, 'split_rhat': False} -> not-pass (see zones)
+
+-> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/pt2_score.json

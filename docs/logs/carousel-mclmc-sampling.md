@@ -2194,6 +2194,63 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-12 (carousel GATE PT-2 RAN — BOTH ENTRY MODES TRANSPORT (SVI-seed RT 253,
+  MAP+1e-6·I-diagonal RT 228, floors 175 — the user's no-SVI workflow WORKS on
+  PT-MCLMC); the gen-eig PRIMARY falsifier FIRES on both adaptive arms with the
+  mechanism DIAGNOSED in-gate (metric over-inflated ~20× on ~4 slow curved-ridge
+  axes orthogonal to Δμ — freeze-before-ridge-equilibration, NOT pocket starvation);
+  BOTH frontier arms pass into routed zones — HALF budget and HALF chains are viable;
+  PROPOSED (UNCERTIFIED)):** allocation 55823792, code @6a4a96f, scorer @aca0ec9
+  (audit-certified pre-unblinding; run to completion, stdout archived
+  `pt2_score_stdout.txt`, `pt2_score.json` written); all four arms complete at
+  nominal rounds; smoke + --equiv-check passed pre-launch.
+  **W-M1 (D1, SVI entry):** RT_pocket 253 ≥ 175 (2.2× PT-1's frozen-SVI 117 —
+  adaptation clearly helped transport); occupancy 0.3226 ± 0.0434 IN band
+  (NEAR-EDGE flag: corroboration = RT 253 + late-rising coldocc trace, applied);
+  EEVPD medians 3.7–4.0e-4 in band; **gen-eig vs Σ_ref(ŵ): FAIL — [0.472, 20.18],
+  3 axes out (2 soft, 1 hard >10) ⇒ F-M1 PRIMARY fires** (>10 side confirmed from
+  geneig_full per residual R2).
+  **W-M2 (D2, MAP + 1e-6·I diagonal — the human's no-SVI mode):** RT_pocket 228 ≥
+  175; occupancy 0.2906 ± 0.0460 just BELOW band (near-edge; trace still rising at
+  round 1350 → 0.31; blind-spot ix applied: gen-eig vs Σ_ref(0.42) = [0.26, 22.8]
+  — the hard axes are NOT a composition artifact); EEVPD in band; gen-eig FAIL
+  [0.321, 22.94], 5 out (2 soft, 3 hard) ⇒ F-M1 fires. **Transport verdict for the
+  entry mode itself: SUCCESS** — from a 1e-6·I seed the EEVPD controller found
+  scale within window 1 and the arm discovered + drained to band edge.
+  **F-M1 mechanism diagnosis (in-gate, pre-registered diagnostic-first route;
+  hypothesis TESTED and REFINED):** initial suspect (freeze at cold-occ ~0.15 ⇒
+  pocket-axis under-weighting) FALSIFIED — the offending axes have |cos(Δμ)| =
+  0.000 in BOTH arms; they are the SAME 4-column family (z-cols 19, 2, 3, 20) in
+  both arms with ratios > 1, i.e. the adapted metric is OVER-INFLATED ~5–20× along
+  slow directions orthogonal to basin separation. Refined mechanism (labeled
+  INFERENCE, consistent with C-5): those are curved-ridge degeneracy directions
+  with IAT ~10²–10³ rounds — window 3 (rounds 250–500) still carries burn-in
+  TRANSIT variance along them, so the frozen metric embeds transient spread, not
+  equilibrium spread. Predicted fix (next gate, derived): freeze later (e.g.
+  windows 250/500/1000) or robust-shrink high-variance outlier axes; NOTE the
+  inflation was NOT transport-fatal (all transport/health clauses passed) — the
+  practical cost is step-size headroom, not correctness.
+  **W-E (frontier, both routed-PASS per the PT-0b W-b5 precedent):** D3 (HALF
+  budget, 750 rounds): RT 190 ≥ 94, occ 0.3500 in band (near-edge corroborated),
+  EEVPD + pair-acc (0.52–0.54) in band, split-R̂ 1.075 ⇒ (1.05, 1.2] budget-limited
+  zone with transport passing (occ-ESS ≈ 7.5/system, reported per residual R1); 
+  wall 1.66 h. D4 (HALF chains, NSYS 8): RT 237 ≥ 94, occ 0.3743 in band, health
+  in band, split-R̂ 1.073 ⇒ same routed zone (occ-ESS ≈ 6.3/system); wall 1.67 h.
+  **FRONTIER FINDING: the C-24 reference config is ≥2× over-budgeted on BOTH axes —
+  750 rounds × 16 systems and 1500 rounds × 8 systems both deliver band-consistent
+  occupancy with transport margins ≥2×.** Combined suggestion for the point-and-go
+  config (NEXT gate to certify): pooled-or-adapted metric, R = 6 measured ladder,
+  K = 10, NSYS ≈ 8–16, ROUNDS ≈ 750–1000 ⇒ ~1–1.7 h on ONE A100 (interactive-node
+  directive satisfied with margin).
+  **Verdict summary:** M-links: transport/entry-mode SUCCESS both modes; metric
+  pooled-quality NOT achieved (F-M1, mechanism diagnosed, fix derived) — the
+  adaptive path is VIABLE but one refinement short. E-links: both frontier points
+  PASS (routed zones). Scope: same posterior/indicator caveats as C-24/C-25 (all
+  UNCERTIFIED, human validation pending); gen-eig judged vs MAMS64 position pools;
+  z-col → parameter-name mapping not yet attached to the named axes (C-8 lesson:
+  attach names before any physical interpretation — deferred to the write-up).
+  Cost: 4 arms ≈ 13 GPU·h, one interactive allocation, released on completion.
+
 - **2026-07-12 (carousel GATE PT-1 L3 COMPLETED — MH-EXACT CROSS-METHOD BRACKET CLOSES
   ON PT'S VALUE: pooled MAMS occupancy 0.4262, arms agree at 0.74σ from opposite-side
   inits, both arms POWERED exactly at prediction; the pocket weight ≈ 0.42 is now
