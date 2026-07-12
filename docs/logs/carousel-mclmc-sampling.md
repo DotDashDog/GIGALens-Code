@@ -469,7 +469,16 @@ multimodality, conditioning, or the NFW profile.
   heuristic; B2 W-p gen-eig conjunct + NSYS-16 guard; B3 inflation-bias caveats +
   EEVPD tail-fraction report; B4 F-S pinned via pt3_fs_reference.npz + |cos| ≥
   0.8; B5 NSYS-8 power stated; B6 1e-6·I reverted to PENDING HUMAN RATIFICATION).
-  Awaiting rd-2.** Script: carousel_gate_pt0.py + ONE small audited
+  rd-2 (2026-07-12): CERTIFY-RECOMMENDED to LAUNCH — extension diff a43178c
+  audited CLEAN; all B/A items verified with independent recomputation (D2
+  48.6→126.4→24.9 exact; D1 scored 20.18; se 0.068 / MDE 0.19 / 3σ 0.29; F-S
+  vector |cos| > 0.999); 1e-6·I pending-ratification judged PROPERLY FIREWALLED
+  (pin + card + UNCERTIFIED-chain flag; ratification scopes the claim, not the
+  measurement; the result entry must carry the pending flag onto the deliverable).
+  Pre-unblinding conditions: pt3 scorer pins the F-S convention x = L⁻ᵀu
+  (whitened-space |cos| ≈ 0.095 — wrong convention silently disables F-S) +
+  asserts windows [250, 500, 1000]; pt3_fs_reference.npz force-committed; launch
+  pins GATE_PT0_ROUNDS_B=1500 + --arm D2. LAUNCHING.** Script: carousel_gate_pt0.py + ONE small audited
   extension (env GATE_PT0_METRIC_WINDOWS for the boundary/freeze schedule + a
   build-time z_param_names printout for the C-8 duty); scorer = pt3 variant of the
   certified pt2 scorer (windows/tags parameterized; committed + audited before
