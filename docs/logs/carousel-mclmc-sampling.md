@@ -478,7 +478,17 @@ multimodality, conditioning, or the NFW profile.
   Pre-unblinding conditions: pt3 scorer pins the F-S convention x = L⁻ᵀu
   (whitened-space |cos| ≈ 0.095 — wrong convention silently disables F-S) +
   asserts windows [250, 500, 1000]; pt3_fs_reference.npz force-committed; launch
-  pins GATE_PT0_ROUNDS_B=1500 + --arm D2. LAUNCHING.** Script: carousel_gate_pt0.py + ONE small audited
+  pins GATE_PT0_ROUNDS_B=1500 + --arm D2. LAUNCHING.
+  OP-INCIDENT (2026-07-12, recorded before relaunch): the first smoke launch set
+  GATE_PT0_ROUNDS_B=1500 alongside GATE_PT0_SMOKE=1; the env override silently
+  beat the smoke ROUNDS reduction (SECOND occurrence of this class — PT-0b's
+  first smoke hit it too) and ran a full-length mislabeled smoke, consuming ~3 h
+  of the allocation before detection; production arms never launched; allocation
+  released. NO scientific contamination (run was smoke-tagged with smoke metric
+  windows 5/10/15 — artifacts inert). ROOT-CAUSE FIX committed: smoke > env >
+  default is now uniform for ROUNDS as well, with the ignored env value recorded
+  loudly in the model card. Relaunching on a fresh allocation with a corrected
+  smoke (no conflicting env).** Script: carousel_gate_pt0.py + ONE small audited
   extension (env GATE_PT0_METRIC_WINDOWS for the boundary/freeze schedule + a
   build-time z_param_names printout for the C-8 duty); scorer = pt3 variant of the
   certified pt2 scorer (windows/tags parameterized; committed + audited before
