@@ -563,7 +563,15 @@ multimodality, conditioning, or the NFW profile.
   **Process.** Adaptive-runner extension diff-audited pre-launch (auditor + hash
   recorded); scorer extension (gen-eig clause + D-arm tags) committed + audited
   BEFORE unblinding (standing rule); model cards record entry mode, seed matrix
-  provenance, window/freeze config; boundary checks after log edits (standing).**
+  provenance, window/freeze config; boundary checks after log edits (standing).
+  HUMAN DIRECTIVE (2026-07-12, standing for ALL future gates): "I'd like you to not
+  have to wait for queue times, so make sure all your runs are as quick as you can
+  make them while still doing what you want and run them on interactive nodes" —
+  consequence: NO regular-queue jobs; any arm whose probe-implied wall exceeds the
+  interactive envelope gets REDESIGNED (smaller pinned budget, sharding, arm
+  splitting) rather than queued; run-length minimization becomes an explicit design
+  criterion alongside power. PT-2's plan already complies (4 arms ≤ 3.3 h, one
+  interactive allocation).**
 
 - **Run: carousel GATE PT-1 — production composition + kernel-bias probe + MH-exact
   cross-method bracket (HUMAN-APPROVED direction 2026-07-11: "This looks very
