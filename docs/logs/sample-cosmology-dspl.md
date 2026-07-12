@@ -132,8 +132,34 @@ Goal: get MCLMC to sample the (Om0, w0) posterior correctly.
   root-solves per eval (validated by the same gate battery before running); same
   single-seed / single-realization limits as Run C.
   Cost: one 8-chain 10k+10k run + gate battery, ≈ Run C (~13 min wall on 1 interactive GPU).
-  Status: **draft — implementation not yet written; do not build the run until the grader
-  approves this direction.**
+  Status: **approved by grader (user) 2026-07-11 ("Go ahead with Run D!"); implemented;
+  launched** via `run_dspl_ratio_ufirst.sh` after the amendment + gate below.
+  - *2026-07-11 amendment (BANDED SUPPORT — science-level, quantified-immaterial):* the
+    full-box u-first map is topologically impossible for the real u_fn — u has interior
+    critical points (u_a(Om0)=r2(Om0,−2) dips to a minimum at Om0≈0.02, corner slope −4.7,
+    before rising; u_b(Om0)=r2(Om0,−⅓) wiggles, 110/201 grid slopes negative), caught by the
+    strict validator, so level sets change topology and "u as a global coordinate" cannot
+    exist on the whole box. Adaptation: z1 squashes u into the BAND (u_a(0), min u_b) =
+    (1.2867134, 1.3398900), inside which u_a is single-crossing (min signed slope above the
+    band floor +0.0250, strict curve_atol=0 passes) and the u_b constraint never binds. The
+    prior becomes an unnormalized TRUNCATED uniform: 11.1% of PRIOR box volume is excluded,
+    but the band edges sit 55.5σ and 23.8σ from the data (u*=1.3239203, σ_r,eff=6.7e-4) —
+    excluded posterior mass < 1e-125. Explicit support change, not a silent approximation.
+  - *2026-07-11 mechanics fix (found by the new FLDJ-vs-jacrev unit test):* the om-root
+    solver's implicit-vjp rule emitted ~1e15 garbage gradients when a constraint was
+    INACTIVE (bisection clamps to the box edge; `max/min` then selected the clamped root
+    over the constant). Fixed twice over: interval bounds are `jnp.where`-gated on concrete
+    activity tests (inactive constraint → constant bound, no gradient path), and the shared
+    solver's bwd rule zeroes itself at bracket-edge clamps. Analytic FLDJ was verified
+    correct against finite differences (1e-10) before the fix — the bug was in autodiff
+    gradients only. 19/19 unit tests (11 om-first + 8 u-first).
+  - *2026-07-11 pre-run gate PASSED* —
+    `results/sample_cosmology/dspl_ratio_ufirst/ratio_ufirst_gate.json`
+    (`dspl_ratio_ufirst_gate.py`, 96 draws, 88 in-band = 8.3% dropped vs 11.1% grid
+    estimate): (1) matched-θ log-likelihood bitwise equal; (2) prior log-density equal;
+    (3) FLDJ vs numeric slogdet 2.2e-15; (4) round-trip exact; (5) NEW zero-rotation check —
+    u(forward(z)) invariant under z2 shifts to 1.1e-15 (the construction claim, verified
+    numerically on the real u_fn).
 
 ---
 

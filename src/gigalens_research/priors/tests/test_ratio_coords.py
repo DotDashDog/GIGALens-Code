@@ -26,7 +26,7 @@ W_BOUNDS = (-2.0, -1.0 / 3.0)
 
 def u_curved(om, w):
     """Monotone-increasing in w at fixed om; non-separable (curved contours)."""
-    return (1.0 + om) ** 0.2 * jnp.exp(0.15 * w + 0.05 * om * w)
+    return (1.0 + om) ** 0.2 * jnp.exp(0.15 * w + 0.04 * om * w)
 
 
 def u_folded(om, w):
@@ -198,3 +198,121 @@ def test_pushforward_density_is_uniform_on_box(bij):
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+# ------------------------------------------------------------------------------
+# u-first ordering (Run D). u_curved has u_a and u_b both INCREASING in om —
+# deliberately a different sign combination than the DSPL system (u_a up,
+# u_b down), so the interval logic's other branch is covered here and the
+# DSPL branch by the CPU gate (dspl_ratio_ufirst_gate.py) before any GPU run.
+# ------------------------------------------------------------------------------
+from gigalens_research.priors.ratio_coords import (  # noqa: E402
+    UFirstRatioCoordsBijector,
+    UFirstRatioCoordsUniform,
+    validate_u_first_ratio_coords,
+)
+
+
+@pytest.fixture(scope="module")
+def ubij():
+    return UFirstRatioCoordsBijector(u_curved, OM_BOUNDS, W_BOUNDS)
+
+
+def test_ufirst_forward_in_box_and_roundtrip(ubij, z_batch):
+    x = ubij.forward(z_batch)
+    om, w = x[..., 0], x[..., 1]
+    assert bool(jnp.all((om >= OM_BOUNDS[0]) & (om <= OM_BOUNDS[1])))
+    assert bool(jnp.all((w >= W_BOUNDS[0]) & (w <= W_BOUNDS[1])))
+    z_back = ubij.inverse(x)
+    np.testing.assert_allclose(np.asarray(z_back), np.asarray(z_batch),
+                               rtol=0, atol=1e-8)
+    x_back = ubij.forward(z_back)
+    np.testing.assert_allclose(np.asarray(x_back), np.asarray(x),
+                               rtol=0, atol=1e-11)
+
+
+def test_ufirst_u_depends_on_z1_alone(ubij, z_batch):
+    # The construction's whole point: u(theta(z)) is a function of z1 only.
+    x = ubij.forward(z_batch)
+    u_vals = u_curved(x[..., 0], x[..., 1])
+    z_mod = z_batch.at[:, 1].add(1.7)      # move z2 arbitrarily
+    x2 = ubij.forward(z_mod)
+    u_vals2 = u_curved(x2[..., 0], x2[..., 1])
+    np.testing.assert_allclose(np.asarray(u_vals), np.asarray(u_vals2),
+                               rtol=0, atol=1e-11)
+
+
+def test_ufirst_fldj_matches_numeric_jacobian(ubij, z_batch):
+    fldj = ubij.forward_log_det_jacobian(z_batch, event_ndims=1)
+    jac = jax.vmap(jax.jacrev(ubij.forward))(z_batch[:16])
+    _, logdet = jnp.linalg.slogdet(jac)
+    np.testing.assert_allclose(np.asarray(fldj[:16]), np.asarray(logdet),
+                               rtol=0, atol=1e-7)
+
+
+def test_ufirst_ildj_is_minus_fldj(ubij, z_batch):
+    x = ubij.forward(z_batch)
+    fldj = ubij.forward_log_det_jacobian(z_batch, event_ndims=1)
+    ildj = ubij.inverse_log_det_jacobian(x, event_ndims=1)
+    np.testing.assert_allclose(np.asarray(ildj), np.asarray(-fldj),
+                               rtol=0, atol=1e-7)
+
+
+def test_ufirst_gradients_flow_and_are_finite(ubij, z_batch):
+    dist = UFirstRatioCoordsUniform(u_curved, OM_BOUNDS, W_BOUNDS)
+
+    def log_prior(z):
+        x = ubij.forward(z)
+        return jnp.sum(dist.log_prob(x)
+                       + ubij.forward_log_det_jacobian(z, event_ndims=1))
+
+    g = jax.grad(log_prior)(z_batch)
+    assert bool(jnp.all(jnp.isfinite(g)))
+    g2 = jax.grad(lambda z: jnp.sum(jnp.square(ubij.forward(z))))(z_batch)
+    assert bool(jnp.all(jnp.isfinite(g2)))
+
+
+def test_ufirst_fldj_gradient_matches_finite_difference(ubij):
+    z0 = jnp.asarray([0.4, -0.6])
+    f = lambda z: ubij.forward_log_det_jacobian(z, event_ndims=1)
+    g = jax.grad(lambda z: jnp.sum(f(z)))(z0)
+    eps = 1e-6
+    for i in range(2):
+        dz = jnp.zeros(2).at[i].set(eps)
+        fd = (f(z0 + dz) - f(z0 - dz)) / (2 * eps)
+        np.testing.assert_allclose(float(g[i]), float(fd), rtol=1e-4, atol=1e-6)
+
+
+def test_ufirst_validator_accepts_and_rejects():
+    report = validate_u_first_ratio_coords(u_curved, OM_BOUNDS, W_BOUNDS)
+    assert report["u_a_n_flips_beyond_atol"] == 0
+    assert report["u_band_ceiling"] > report["u_band_floor"]
+    assert 0.0 <= report["excluded_prior_volume_frac"] < 1.0
+    # a fold in w0 fails the shared w0-monotonicity check first
+    with pytest.raises(ValueError, match="not monotone in w0"):
+        validate_u_first_ratio_coords(u_folded, OM_BOUNDS, W_BOUNDS)
+    # a curve that rises then falls in om fails the endpoint-curve check
+    def u_om_arch(om, w):
+        return u_curved(om, w) + 0.2 * jnp.sin(jnp.pi * om)
+    with pytest.raises(ValueError, match="endpoint curve"):
+        validate_u_first_ratio_coords(u_om_arch, OM_BOUNDS, W_BOUNDS,
+                                      du_dw_atol=1e9, excursion_atol=1e9)
+
+
+def test_ufirst_distribution_uniform_box_and_jdn():
+    dist = UFirstRatioCoordsUniform(u_curved, OM_BOUNDS, W_BOUNDS,
+                                    skip_validation=True)
+    assert list(dist.event_shape) == [2]
+    assert isinstance(dist.experimental_default_event_space_bijector(),
+                      UFirstRatioCoordsBijector)
+    area = (OM_BOUNDS[1] - OM_BOUNDS[0]) * (W_BOUNDS[1] - W_BOUNDS[0])
+    np.testing.assert_allclose(float(dist.log_prob(jnp.asarray([0.3, -1.0]))),
+                               -np.log(area), rtol=0, atol=1e-12)
+    joint = tfd.JointDistributionNamed(
+        {"cosmo/Om0|cosmo/w0": dist, "other": tfd.Normal(0.0, 1.0)})
+    esb = joint.experimental_default_event_space_bijector()
+    example = joint.sample(seed=jax.random.PRNGKey(4))
+    back = esb.forward(esb.inverse(example))
+    np.testing.assert_allclose(
+        np.asarray(back["cosmo/Om0|cosmo/w0"]),
+        np.asarray(example["cosmo/Om0|cosmo/w0"]), rtol=0, atol=1e-8)
