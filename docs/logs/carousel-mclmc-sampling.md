@@ -464,7 +464,12 @@ multimodality, conditioning, or the NFW profile.
 - **Run: carousel GATE PT-3 — later-freeze metric refinement + MAP-entry point-and-go
   certification, multi-seed (HUMAN-APPROVED 2026-07-12: "Can you go ahead with
   PT-3?"; the assembly gate for the engagement deliverable).**
-  **Status: awaiting approval.** Script: carousel_gate_pt0.py + ONE small audited
+  **Status: grader rd-1 NEEDS-MORE (2026-07-12) — 6 blocking + 6 advisory, ALL
+  APPLIED (B1 decay re-attributed + D2's non-monotone trace disclosed, ≤8
+  heuristic; B2 W-p gen-eig conjunct + NSYS-16 guard; B3 inflation-bias caveats +
+  EEVPD tail-fraction report; B4 F-S pinned via pt3_fs_reference.npz + |cos| ≥
+  0.8; B5 NSYS-8 power stated; B6 1e-6·I reverted to PENDING HUMAN RATIFICATION).
+  Awaiting rd-2.** Script: carousel_gate_pt0.py + ONE small audited
   extension (env GATE_PT0_METRIC_WINDOWS for the boundary/freeze schedule + a
   build-time z_param_names printout for the C-8 duty); scorer = pt3 variant of the
   certified pt2 scorer (windows/tags parameterized; committed + audited before
@@ -476,8 +481,9 @@ multimodality, conditioning, or the NFW profile.
   500–1000) samples substantially more equilibrated ridge dynamics; (S, seed
   question) PT-2 D2's distinct under-inflated axis ({10,4,11,1} family, ratio
   0.321) is seed-specific noise, not systematic; (P, the product) the MAP-only
-  entry mode (z_best + 1e-3·N(0,1), 1e-6·I seed — the human-ratified stock
-  convention) passes the FULL clause set at both NSYS 16 and NSYS 8 with seed
+  entry mode (z_best + 1e-3·N(0,1), 1e-6·I seed — the located stock convention, PENDING
+  HUMAN RATIFICATION; B6: the earlier "human-ratified" wording was a silent
+  status upgrade, corrected; question put to the human in-channel) passes the FULL clause set at both NSYS 16 and NSYS 8 with seed
   replication — the point-and-go certification. UNTESTED: other lenses; SVI entry
   under the new schedule (PT-2 showed it strictly easier); adjusted-kernel PT;
   within-basin parameter ESS.
@@ -485,31 +491,47 @@ multimodality, conditioning, or the NFW profile.
   offending axes (z-cols 19, 2, 3, 20 — parameter names to be printed at build
   time and attached in the result, C-8 duty) have IAT ~10²–10³ rounds; window 3
   (250–500) still carried burn-in transit variance, freezing 5–20× inflation. The
-  PT-2 gen-eig window-max trace decayed 87.7 → 66.9 → 22.4 across boundaries and
-  was frozen MID-DECAY — extrapolating the per-window decay (×~0.3–0.75 per
-  window, window 4 being 2× longer) predicts freeze-1000 lands the max in ≈ 3–8.
+  PT-2 gen-eig window-max traces (B1 re-attribution: cold-rung DIAGNOSTIC values
+  vs the FIXED pooled reference, ~10% off the scored Σ_ref(ŵ) numbers — 22.4
+  diagnostic vs 20.18 scored for D1): D1 (SVI entry) decayed 87.7 → 66.9 → 22.4
+  monotonically; **D2 (MAP entry — the mode ALL FOUR PT-3 arms run) went
+  48.6 → 126.4 → 24.9, NON-monotone (window 2 rose 2.6×)** — the smooth-decay
+  premise holds only for the arm mode PT-3 does not run; MAP-entry support is a
+  single ratio (24.9 × ~0.2 ≈ 5). The "≤ 8" prediction (scored against Σ_ref(ŵ))
+  is EXPLICITLY HEURISTIC; its miss into (8, 10] is routed, not absorbed (blind
+  spot ii); the post-boundary-3 span (rounds 500–1000) being 2× longer is the
+  only structural argument retained.
   **Arms (all MAP-only entry — the hard mode; adaptive metric, windows
   250/500/1000, freeze 1000, ROUNDS = 1500, scoring window rounds 1000–1500):**
   E1 = NSYS 16, seed 40; E2 = NSYS 16, seed 41 (seed replica — serves BOTH the
-  fix replication and the S-link: does the {10,4,11,1} axis reappear?); E3 = NSYS
-  8, seed 42; E4 = NSYS 8, seed 43 (the point-and-go candidate width, ~4 s/round
-  measured at 48-wide ⇒ ≈ 1.7 h/arm). Ladder/K/ss_max/DEVAR: C-24 reference
+  fix replication and the S-link); E3 = NSYS 8, seed 42; E4 = NSYS 8, seed 43
+  (the point-and-go candidate width, ~4 s/round measured ⇒ ≈ 1.7 h/arm; A6: seed
+  42's prior use was an unrelated program/RNG stream, immaterial). Ladder/K/ss_max/DEVAR: C-24 reference
   values (R = 6 measured ladder, K = 10, 5.0, 5e-4).
   **Predictions (direction + magnitude).** (R) cold-rung gen-eig vs Σ_ref(ŵ): max
   drops from PT-2's 20–23 to ≤ 8 (extrapolated decay), with FULL-band [1/3, 3]
   plausible but not promised — the band clause is scored, and the (3, 10] zone
   carries the pre-committed PRODUCT DECISION: if transport + occupancy + health
   pass with max gen-eig ∈ (3, 10], the config is certifiable WITH RECORDED
-  INFLATION (PT-2 measured the cost as step-size headroom only — every transport
-  clause passed at 20×; correctness is not at stake, C-3/C-5 lineage). (P)
+  INFLATION — B3 caveats: that decision's correctness evidence is OCCUPANCY-only,
+  and occupancy is BLIND along the inflated axes (|cos Δμ| ≈ 0); "transport
+  passed at 20×" is D1-only (D2's occ was below band); with an unadjusted
+  kernel, inflated axes take effectively larger steps, so residual
+  discretization bias would concentrate exactly where no scored clause looks —
+  therefore per-rung EEVPD TAIL FRACTION (> 2e-3, C2-style) is REPORTED per arm,
+  and within-basin bias along the inflated axes is RECORDED AS UNCONSTRAINED by
+  this gate (distinct from the within-basin-ESS UNTESTED item). (P)
   occupancy: freeze-1000 also defers equilibration ~500 rounds, but the BETTER
   post-freeze metric should equilibrate faster than PT-2 D2's (which reached
   0.29–0.31 by 1350 under a 20×-inflated metric): predict last-500 occ IN
   (0.32, 0.49) for all four arms; RT floors (all-main basis, op-7): NSYS 16 ≥
   175, NSYS 8 ≥ 88; predict 200–300 / 100–200 (PT-2 D2 got 228 at 16 systems
-  under the worse metric). (S) E1/E2 both show |ratio − 1| small on the
-  {10,4,11,1} direction (< 3 band) ⇒ seed-specific, closed; if it recurs in
-  either seed ⇒ systematic, named open finding.
+  under the worse metric). (S) PINNED OPERATIONAL RULE (B4): the PT-2 D2 under-inflated eigendirection is
+  PERSISTED (`carousel_gate_pt0_out/pt3_fs_reference.npz`: z-space unit vector,
+  ratio 0.3213, top cols {10,4,11,1}); F-S fires iff, in E1 or E2, a gen-eig
+  axis exits [1/3, 3] on the LOW side AND its z-space eigendirection has |cos| ≥
+  0.8 with the stored vector — scorer-computable, no judgment. Neither seed
+  firing ⇒ seed-specific, closed.
   **Win conditions (derived; formulas verbatim from the certified pt2 scorer
   lineage).** Per arm: (W-t) RT_pocket ≥ floor (175/88, op-7-scaled); (W-o)
   last-500 occ ∈ (0.32, 0.49) with the near-edge ±0.05 corroboration rule; (W-h)
@@ -521,36 +543,56 @@ multimodality, conditioning, or the NFW profile.
   without a robust-shrink lever, which goes to a NEW checkpoint, no in-gate
   knob); ŵ out of band ⇒ blind-spot-ix Σ_ref(0.42) reporting before mechanism
   attribution (standing). (W-s) seed pairs agree: |m_E1 − m_E2| ≤
-  2·√(se₁² + se₂²), same for E3/E4. (W-p, the CERTIFICATION clause) all of
-  W-t/W-o/W-h pass on BOTH NSYS-8 arms AND W-s holds ⇒ the point-and-go config
+  2·√(se₁² + se₂²), same for E3/E4. (W-p, the CERTIFICATION clause; B2-repaired) all of
+  W-t/W-o/W-h pass on BOTH NSYS-8 arms AND their W-g is in [1/3, 3] OR the routed
+  (3, 10] zone (ANY axis > 10 on a candidate arm BLOCKS W-p — F-R and W-p may not
+  both fire) AND W-s holds AND neither NSYS-16 arm fails W-o or W-t outright
+  (beyond near-edge; an "8 passes, 16 fails" split is more likely the √2-wider
+  NSYS-8 se than signal and SUSPENDS W-p pending explanation) ⇒ the
+  point-and-go config
   (MAP entry, R6/K10/NSYS8/ROUNDS 1500, adaptive freeze-1000) is PROPOSED as the
   engagement deliverable at measured wall ≈ 1.7 h single-A100 (UNCERTIFIED until
   human certification of the chain).
   **Falsifiers.** F-R: any post-freeze gen-eig axis > 10 (mechanism
   wrong/insufficient ⇒ robust-shrink checkpoint next, no auto-lever). F-P: either
   NSYS-8 arm fails W-t or W-o ⇒ the product config needs NSYS 16 (certify the
-  16-wide config instead if IT passes; a real finding, not a failure). F-S: the
+  16-wide config instead if IT passes; a real finding, not a failure). A1 ZONE
+  (the likely near-miss): W-g fixed but occ short beyond near-edge WITH the
+  coldocc trace still rising ⇒ "metric fixed, occupancy BUDGET-limited" — routed
+  to a next-checkpoint decision (extend ROUNDS vs earlier freeze), NOT to F-P. F-S: the
   {10,4,11,1} axis recurs in either E1 or E2 ⇒ systematic, open. F-eq: seed pairs
   disagree > 3σ ⇒ single-seed certification impossible at this budget — report.
   Every W-fail routes as above; anything else ⇒ report-to-human, no auto-lever.
-  **Blind spots.** (i) freeze-1000 leaves only 500 scored rounds — occupancy se
-  ~0.045 (PT-2-measured sd class), so the band test is ~±2·se wide relative to
-  band width (adequate: PT-2 scored the same window length); (ii) the decay
+  **Blind spots.** (i, B5-corrected) freeze-1000 leaves 500 scored rounds —
+  occupancy se ≈ 0.045 at NSYS 16 but ≈ 0.068 at NSYS 8 (D4-measured); stated
+  consequences: W-s MDE ≈ 0.19 for E3/E4, F-eq 3σ ≈ 0.29 — NSYS-8 "seed
+  replication" detects only gross disagreement, and the near-edge rule (±0.05 ≈
+  0.73·se there) will trigger easily; (ii) the decay
   extrapolation for the ≤ 8 prediction is a 3-point fit — its miss (max in
   (8, 10]) is routed to the (3,10] zone, not silently absorbed; (iii) Σ_ref(ŵ)
   circularity bound as pinned in PT-2 blind-spot ix (standing); (iv) all arms
   share the carousel/model/indicator and the UNCERTIFIED C-24/C-25 scoring basis;
   (v) the product certification is at THIS posterior only — generality is the
   engagement's stated residual, not this gate's claim; (vi) z-col names attached
-  at build time — any physical interpretation deferred until then (C-8).
+  at build time — any physical interpretation deferred until then (C-8); (vii,
+  A2) PT-3's early windows (250/250) differ from PT-2's (100/150) — the first
+  two trace points are NOT comparable to the 87.7/66.9 anchors and the
+  pre-committed plot expectation tolerates D2-like early non-monotonicity;
+  (viii, A3) NSYS-8 window-3 count ≈ 4000 raw ≈ 2000 effective at cold
+  (adequate; n0 = 80); (ix, A4) the HOT-rung metric is unscored and froze far
+  beyond the tempering-width expectation in PT-2 (D1 hot 68→188→224) — transport
+  flows through hot rungs where C-24's EEVPD tail lived; the B3 tail-fraction
+  report is the partial guard, a hot-rung clause deferred with this note.
   **Pre-committed plots.** gen-eig traces: window maxima continuing the
   87.7→66.9→22.4 decay through a 4th point ≤ 8, flat post-freeze-1000; F-R shows
   a plateau > 10. Cold-occ: all four arms rising into a common band by ~round
   1000 and holding through the scored window; F-P shows an NSYS-8 arm plateauing
   below 0.27. Seed-pair overlays.
-  **Cost.** ONE interactive 4 h allocation: smoke (full shapes incl. the new
-  windows env, ~10 min); E1/E2 ≈ 3.3 h (96-wide), E3/E4 ≈ 1.7 h (48-wide) — all
-  parallel on 4 GPUs; ≈ 12 GPU·h; incremental saves + op-7 standing. Wall
+  **Cost.** ONE interactive 4 h allocation: smoke (~10 min) + ~12-compile
+  startup per process; E1/E2 ≈ 3.3 h (96-wide, measured 7.83 s/round), E3/E4 ≈
+  1.7 h (48-wide, measured 3.97 s/round) — all parallel; margin ≈ 25 min on the
+  long arms (A5: op-7 + incremental saves are the stated clip contingency);
+  ≈ 12 GPU·h. Wall
   minimized: the two NSYS-8 arms ARE the cheap product candidates.
   **Process.** Env-knob + names-print extension diff-audited pre-launch; pt3
   scorer committed + audited BEFORE unblinding; model cards record windows/seeds/
