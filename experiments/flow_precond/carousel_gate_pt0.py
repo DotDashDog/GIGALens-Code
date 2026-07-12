@@ -208,6 +208,14 @@ def setup_model():
     pr(f"[setup] separability check OK: max |log_prior+log_like-log_prob| "
        f"= {sep_max:.3e} over 8 points")
 
+    # C-8 duty (PT-3): every run log carries the z column -> parameter name
+    # map (the C-8 trap: column names were once mis-assigned by assuming
+    # insertion order; print the authoritative sorted-key mapping, never assume)
+    names = [str(n) for n in prob_model.z_param_names]
+    pr(f"[setup] z_param_names ({len(names)} columns; C-8 column->name map):")
+    for i, nm in enumerate(names):
+        pr(f"  z[{i:2d}] = {nm}")
+
     M.update(prob_model=prob_model, lp_fn=lp_fn, lpri_fn=lpri_fn, llik_fn=llik_fn,
              lpri_b=lpri_b, lp_batch=lp_batch, draws=draws, is_pocket=is_pocket,
              pool_M=pool_M, pool_P=pool_P, cov_pool=cov_pool, cov_M=cov_M,
@@ -1363,6 +1371,36 @@ def run_arm_b(arm, tag, equiv=False):
     ss_max, ssmax_src = _env_num("GATE_PT0_SSMAX", SS_MAX0, float)
     devar, devar_src = _env_num("GATE_PT0_DEVAR", DEVAR, float)
 
+    # PT-3: metric window/freeze schedule for ADAPTIVE arms only.
+    # Precedence (explicit): SMOKE > env GATE_PT0_METRIC_WINDOWS > default --
+    # the smoke schedule exists purely to exercise the window/freeze/save code
+    # paths at ROUNDS=20 and must win; which source applied is recorded.
+    env_mw = os.environ.get("GATE_PT0_METRIC_WINDOWS", "").strip()
+    if not adaptive:
+        metric_windows, mw_src = None, "n/a (non-adaptive arm)"
+    elif SMOKE:
+        metric_windows = tuple(METRIC_WINDOWS)   # apply_smoke's (5, 10, 15)
+        mw_src = (f"SMOKE override {metric_windows} "
+                  + (f"[env GATE_PT0_METRIC_WINDOWS={env_mw} IGNORED; "
+                     f"precedence smoke > env > default]" if env_mw
+                     else "[precedence smoke > env > default]"))
+    elif env_mw:
+        metric_windows = tuple(int(x) for x in env_mw.split(","))
+        assert len(metric_windows) >= 1 and all(
+            w > 0 for w in metric_windows), \
+            "GATE_PT0_METRIC_WINDOWS entries must be positive ints"
+        assert all(b > a for a, b in
+                   zip(metric_windows, metric_windows[1:])), \
+            "GATE_PT0_METRIC_WINDOWS must be strictly increasing"
+        mw_src = (f"env override GATE_PT0_METRIC_WINDOWS={env_mw} "
+                  f"(freeze = last entry, round {metric_windows[-1]})")
+    else:
+        metric_windows = tuple(METRIC_WINDOWS)
+        mw_src = f"default {metric_windows}"
+    if adaptive and metric_windows[-1] >= rounds:
+        pr(f"[B {tag}] WARNING: freeze boundary {metric_windows[-1]} >= "
+           f"ROUNDS {rounds} -- the metric will NEVER freeze in this run")
+
     # metric: pooled MAMS64 cov (B1-B4), production SVI cov (B5, D1 seed), or
     # the stock no-SVI diagonal (D2 seed); D arms ADAPT from their seed.
     d2_diag_provenance = None
@@ -1455,10 +1493,12 @@ def run_arm_b(arm, tag, equiv=False):
                 betas=betas.tolist(), betas_source=betas_source,
                 L=L_MCLMC, ss_init=SS_INIT, ss_max=ss_max, devar=devar,
                 env_overrides=dict(K=k_src, NSYS=nsys_src, ROUNDS=rounds_src,
-                                   ss_max=ssmax_src, devar=devar_src),
+                                   ss_max=ssmax_src, devar=devar_src,
+                                   metric_windows=mw_src),
                 metric=metric_desc,
                 adapt_metric=adaptive,
-                metric_windows=(list(METRIC_WINDOWS) if adaptive else None),
+                metric_windows=(list(metric_windows) if adaptive else None),
+                metric_windows_source=mw_src,
                 metric_n0=(10 * nsys if adaptive else None),
                 metric_reference=("pooled MAMS64 cov (reference-ONLY)"
                                   if adaptive else None),
@@ -1489,7 +1529,7 @@ def run_arm_b(arm, tag, equiv=False):
                 indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
                 init_pos=pos, card=card, ind_label="pocket",
                 adapt_metric=adaptive,
-                metric_windows=METRIC_WINDOWS if adaptive else None,
+                metric_windows=metric_windows if adaptive else None,
                 metric_n0=(10 * nsys if adaptive else None),
                 metric_ref=(M["cov_pool"] if adaptive else None))
     if equiv:
