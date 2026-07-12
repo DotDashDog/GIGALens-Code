@@ -1,0 +1,382 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+[setup] z_param_names (33 columns; C-8 column->name map):
+  z[ 0] = planes/0/mass/0/center_x
+  z[ 1] = planes/0/mass/0/center_y
+  z[ 2] = planes/0/mass/0/e1
+  z[ 3] = planes/0/mass/0/e2
+  z[ 4] = planes/0/mass/0/s_E
+  z[ 5] = planes/0/mass/0/theta_E
+  z[ 6] = planes/0/mass/1/center_x
+  z[ 7] = planes/0/mass/1/center_y
+  z[ 8] = planes/0/mass/1/e1
+  z[ 9] = planes/0/mass/1/e2
+  z[10] = planes/0/mass/1/gamma
+  z[11] = planes/0/mass/1/theta_E
+  z[12] = planes/0/mass/2/center_x
+  z[13] = planes/0/mass/2/center_y
+  z[14] = planes/0/mass/2/e1
+  z[15] = planes/0/mass/2/e2
+  z[16] = planes/0/mass/2/r_core
+  z[17] = planes/0/mass/2/r_cut
+  z[18] = planes/0/mass/2/theta_E
+  z[19] = planes/0/mass/3/gamma1
+  z[20] = planes/0/mass/3/gamma2
+  z[21] = planes/1/light/0/beta
+  z[22] = planes/1/light/0/center_x
+  z[23] = planes/1/light/0/center_y
+  z[24] = planes/1/light/1/beta
+  z[25] = planes/1/light/1/center_x
+  z[26] = planes/1/light/1/center_y
+  z[27] = planes/2/light/0/R_sersic
+  z[28] = planes/2/light/0/center_x
+  z[29] = planes/2/light/0/center_y
+  z[30] = planes/2/light/0/e1
+  z[31] = planes/2/light/0/e2
+  z[32] = planes/2/light/0/n_sersic
+MODEL CARD: {
+ "arm": "D2_smoke",
+ "path": "power",
+ "seed": 40,
+ "seed_source": "env override GATE_PT0_SEED_B=40",
+ "swap_seed": 10040,
+ "prior_init_seed": null,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 1500,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "env override GATE_PT0_ROUNDS_B=1500",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default",
+  "metric_windows": "SMOKE override (5, 10, 15) [env GATE_PT0_METRIC_WINDOWS=250,500,1000 IGNORED; precedence smoke > env > default]"
+ },
+ "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
+ "adapt_metric": true,
+ "metric_windows": [
+  5,
+  10,
+  15
+ ],
+ "metric_windows_source": "SMOKE override (5, 10, 15) [env GATE_PT0_METRIC_WINDOWS=250,500,1000 IGNORED; precedence smoke > env > default]",
+ "metric_n0": 160,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": "SMOKE boundaries scaled to exercise window/freeze/save paths only",
+ "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
+ "svi_npz": null,
+ "map_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/map/arrays.npz",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "MAP z_best + stock-diagonal draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D2_smoke] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D2_smoke] round-0 u identity: rel = 1.198e-10 (abs = 3.489e-05)
+[B D2_smoke] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.9e-07/3.7e-06/1.5e-05 reverts=0 wall=72s
+[B D2_smoke] metric window boundary at round 5: n_w=80, n0=160
+[B D2_smoke] round     5/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=2.5e+00/1.7e+01/1.7e+01 reverts=0 wall=157s
+[B D2_smoke] metric window boundary at round 10: n_w=80, n0=160
+[B D2_smoke] round    10/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=2.5e+00/4.5e+01/3.6e+00 reverts=0 wall=196s
+[B D2_smoke] metric window boundary at round 15: n_w=80, n0=160 (METRIC FROZEN)
+[B D2_smoke] round    15/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.4e-01/2.6e+00/7.2e-01 reverts=0 wall=235s
+[B D2_smoke] round    20/1500 cold occ=0.000 hot occ=0.000 RT=4 pocketCA=0 EEVPD[h/m/c]=2.3e-04/3.8e-04/5.1e-04 reverts=0 wall=273s
+[B D2_smoke] round    25/1500 cold occ=0.000 hot occ=0.000 RT=10 pocketCA=0 EEVPD[h/m/c]=2.9e-04/4.3e-04/5.8e-04 reverts=0 wall=312s
+[B D2_smoke] round    30/1500 cold occ=0.000 hot occ=0.000 RT=16 pocketCA=0 EEVPD[h/m/c]=5.0e-04/4.7e-04/4.6e-04 reverts=0 wall=351s
+[B D2_smoke] round    35/1500 cold occ=0.000 hot occ=0.000 RT=22 pocketCA=0 EEVPD[h/m/c]=3.5e-04/4.6e-04/5.9e-04 reverts=0 wall=390s
+[B D2_smoke] round    40/1500 cold occ=0.000 hot occ=0.000 RT=32 pocketCA=0 EEVPD[h/m/c]=4.2e-04/7.2e-04/3.9e-04 reverts=0 wall=428s
+[B D2_smoke] round    45/1500 cold occ=0.000 hot occ=0.000 RT=43 pocketCA=0 EEVPD[h/m/c]=4.3e-03/3.8e-04/6.6e-04 reverts=0 wall=467s
+[B D2_smoke] round    50/1500 cold occ=0.000 hot occ=0.000 RT=54 pocketCA=0 EEVPD[h/m/c]=6.3e-04/4.6e-04/2.5e-04 reverts=0 wall=506s
+[B D2_smoke] round    55/1500 cold occ=0.000 hot occ=0.000 RT=61 pocketCA=0 EEVPD[h/m/c]=1.3e-03/4.6e-04/5.4e-04 reverts=0 wall=544s
+[B D2_smoke] round    60/1500 cold occ=0.000 hot occ=0.000 RT=68 pocketCA=0 EEVPD[h/m/c]=4.6e-04/3.7e-04/4.0e-04 reverts=0 wall=583s
+[B D2_smoke] round    65/1500 cold occ=0.000 hot occ=0.000 RT=75 pocketCA=0 EEVPD[h/m/c]=5.2e-04/5.0e-04/8.0e-04 reverts=0 wall=622s
+[B D2_smoke] round    70/1500 cold occ=0.000 hot occ=0.000 RT=86 pocketCA=0 EEVPD[h/m/c]=5.2e-04/3.9e-04/1.3e-04 reverts=0 wall=661s
+[B D2_smoke] round    75/1500 cold occ=0.000 hot occ=0.000 RT=90 pocketCA=0 EEVPD[h/m/c]=3.6e-04/5.5e-04/2.5e-04 reverts=0 wall=699s
+[B D2_smoke] round    80/1500 cold occ=0.000 hot occ=0.000 RT=98 pocketCA=0 EEVPD[h/m/c]=3.7e-04/5.6e-04/4.9e-04 reverts=0 wall=738s
+[B D2_smoke] round    85/1500 cold occ=0.000 hot occ=0.000 RT=106 pocketCA=0 EEVPD[h/m/c]=5.0e-04/9.9e-04/3.5e-04 reverts=0 wall=777s
+[B D2_smoke] round    90/1500 cold occ=0.000 hot occ=0.000 RT=115 pocketCA=0 EEVPD[h/m/c]=5.3e-04/8.3e-04/4.5e-04 reverts=0 wall=815s
+[B D2_smoke] round    95/1500 cold occ=0.000 hot occ=0.000 RT=121 pocketCA=0 EEVPD[h/m/c]=2.5e-04/3.9e-04/5.3e-04 reverts=0 wall=854s
+[B D2_smoke] round   100/1500 cold occ=0.000 hot occ=0.000 RT=128 pocketCA=0 EEVPD[h/m/c]=5.1e-04/5.5e-04/4.8e-04 reverts=0 wall=893s
+[B D2_smoke] round   105/1500 cold occ=0.000 hot occ=0.000 RT=133 pocketCA=0 EEVPD[h/m/c]=8.2e-04/7.3e-04/3.4e-04 reverts=0 wall=932s
+[B D2_smoke] round   110/1500 cold occ=0.000 hot occ=0.000 RT=139 pocketCA=0 EEVPD[h/m/c]=6.8e-04/3.0e-04/4.4e-04 reverts=0 wall=970s
+[B D2_smoke] round   115/1500 cold occ=0.000 hot occ=0.000 RT=140 pocketCA=0 EEVPD[h/m/c]=6.0e-04/9.5e-04/1.0e-03 reverts=0 wall=1009s
+[B D2_smoke] round   120/1500 cold occ=0.000 hot occ=0.000 RT=149 pocketCA=0 EEVPD[h/m/c]=1.3e-03/3.8e-04/2.4e-04 reverts=0 wall=1048s
+[B D2_smoke] round   125/1500 cold occ=0.000 hot occ=0.000 RT=153 pocketCA=0 EEVPD[h/m/c]=3.9e-04/6.2e-04/3.8e-04 reverts=0 wall=1087s
+[B D2_smoke] round   130/1500 cold occ=0.000 hot occ=0.000 RT=155 pocketCA=0 EEVPD[h/m/c]=2.2e-04/4.1e-04/6.4e-04 reverts=0 wall=1125s
+[B D2_smoke] round   135/1500 cold occ=0.000 hot occ=0.000 RT=164 pocketCA=0 EEVPD[h/m/c]=3.5e-04/4.1e-04/4.6e-04 reverts=0 wall=1164s
+[B D2_smoke] round   140/1500 cold occ=0.000 hot occ=0.000 RT=169 pocketCA=0 EEVPD[h/m/c]=2.7e-04/4.1e-04/1.3e-03 reverts=0 wall=1203s
+[B D2_smoke] round   145/1500 cold occ=0.000 hot occ=0.000 RT=172 pocketCA=0 EEVPD[h/m/c]=3.2e-04/2.7e-04/6.6e-04 reverts=0 wall=1241s
+[B D2_smoke] round   150/1500 cold occ=0.000 hot occ=0.000 RT=181 pocketCA=0 EEVPD[h/m/c]=6.9e-04/3.8e-04/3.6e-04 reverts=0 wall=1280s
+[B D2_smoke] round   155/1500 cold occ=0.000 hot occ=0.000 RT=184 pocketCA=0 EEVPD[h/m/c]=1.8e-03/9.3e-04/4.0e-04 reverts=0 wall=1319s
+[B D2_smoke] round   160/1500 cold occ=0.000 hot occ=0.000 RT=193 pocketCA=0 EEVPD[h/m/c]=5.1e-04/2.9e-04/2.6e-04 reverts=0 wall=1358s
+[B D2_smoke] round   165/1500 cold occ=0.000 hot occ=0.000 RT=195 pocketCA=0 EEVPD[h/m/c]=9.7e-04/7.5e-04/5.0e-04 reverts=0 wall=1396s
+[B D2_smoke] round   170/1500 cold occ=0.000 hot occ=0.000 RT=204 pocketCA=0 EEVPD[h/m/c]=5.0e-04/6.5e-04/6.8e-04 reverts=0 wall=1435s
+[B D2_smoke] round   175/1500 cold occ=0.000 hot occ=0.000 RT=209 pocketCA=0 EEVPD[h/m/c]=4.5e-04/4.7e-04/7.4e-04 reverts=0 wall=1474s
+[B D2_smoke] round   180/1500 cold occ=0.000 hot occ=0.000 RT=215 pocketCA=0 EEVPD[h/m/c]=1.3e-03/7.3e-04/1.6e-03 reverts=0 wall=1513s
+[B D2_smoke] round   185/1500 cold occ=0.000 hot occ=0.000 RT=220 pocketCA=0 EEVPD[h/m/c]=3.8e-04/6.0e-04/3.1e-04 reverts=0 wall=1551s
+[B D2_smoke] round   190/1500 cold occ=0.000 hot occ=0.000 RT=224 pocketCA=0 EEVPD[h/m/c]=2.4e-03/4.5e-04/5.4e-04 reverts=0 wall=1590s
+[B D2_smoke] round   195/1500 cold occ=0.000 hot occ=0.000 RT=227 pocketCA=0 EEVPD[h/m/c]=4.8e-04/4.5e-04/4.2e-04 reverts=0 wall=1629s
+[B D2_smoke] round   200/1500 cold occ=0.000 hot occ=0.000 RT=234 pocketCA=0 EEVPD[h/m/c]=2.3e-04/4.9e-04/3.7e-04 reverts=0 wall=1667s
+[B D2_smoke] round   205/1500 cold occ=0.000 hot occ=0.000 RT=239 pocketCA=0 EEVPD[h/m/c]=3.4e-04/6.0e-04/4.3e-04 reverts=0 wall=1706s
+[B D2_smoke] round   210/1500 cold occ=0.000 hot occ=0.062 RT=247 pocketCA=0 EEVPD[h/m/c]=3.8e-04/5.7e-04/5.0e-04 reverts=0 wall=1745s
+[B D2_smoke] round   215/1500 cold occ=0.000 hot occ=0.062 RT=252 pocketCA=0 EEVPD[h/m/c]=3.7e-04/4.2e-04/5.6e-04 reverts=0 wall=1784s
+[B D2_smoke] round   220/1500 cold occ=0.000 hot occ=0.000 RT=253 pocketCA=0 EEVPD[h/m/c]=4.2e-04/5.7e-04/8.2e-04 reverts=0 wall=1822s
+[B D2_smoke] round   225/1500 cold occ=0.000 hot occ=0.062 RT=255 pocketCA=0 EEVPD[h/m/c]=2.8e-04/4.0e-04/3.2e-04 reverts=0 wall=1861s
+[B D2_smoke] round   230/1500 cold occ=0.000 hot occ=0.062 RT=256 pocketCA=0 EEVPD[h/m/c]=2.8e-04/4.5e-04/3.4e-04 reverts=0 wall=1900s
+[B D2_smoke] round   235/1500 cold occ=0.000 hot occ=0.000 RT=261 pocketCA=0 EEVPD[h/m/c]=8.3e-04/2.8e-04/6.0e-04 reverts=0 wall=1939s
+[B D2_smoke] round   240/1500 cold occ=0.000 hot occ=0.062 RT=269 pocketCA=0 EEVPD[h/m/c]=4.1e-04/4.1e-04/4.7e-04 reverts=0 wall=1977s
+[B D2_smoke] round   245/1500 cold occ=0.000 hot occ=0.062 RT=271 pocketCA=0 EEVPD[h/m/c]=1.6e-04/5.6e-04/3.4e-04 reverts=0 wall=2016s
+[B D2_smoke] round   250/1500 cold occ=0.000 hot occ=0.000 RT=277 pocketCA=0 EEVPD[h/m/c]=4.5e-04/5.8e-04/7.3e-04 reverts=0 wall=2055s
+[B D2_smoke] round   255/1500 cold occ=0.000 hot occ=0.000 RT=281 pocketCA=0 EEVPD[h/m/c]=8.5e-03/4.0e-04/6.7e-04 reverts=0 wall=2094s
+[B D2_smoke] round   260/1500 cold occ=0.000 hot occ=0.000 RT=286 pocketCA=0 EEVPD[h/m/c]=1.5e-04/3.6e-04/3.7e-04 reverts=0 wall=2132s
+[B D2_smoke] round   265/1500 cold occ=0.000 hot occ=0.000 RT=292 pocketCA=1 EEVPD[h/m/c]=5.0e-04/3.1e-04/2.8e-04 reverts=0 wall=2171s
+[B D2_smoke] round   270/1500 cold occ=0.000 hot occ=0.000 RT=297 pocketCA=1 EEVPD[h/m/c]=1.7e-03/3.2e-04/4.1e-04 reverts=0 wall=2210s
+[B D2_smoke] round   275/1500 cold occ=0.000 hot occ=0.062 RT=298 pocketCA=1 EEVPD[h/m/c]=2.5e-04/8.9e-04/5.9e-04 reverts=0 wall=2248s
+[B D2_smoke] round   280/1500 cold occ=0.000 hot occ=0.000 RT=304 pocketCA=1 EEVPD[h/m/c]=3.8e-04/2.9e-04/2.5e-04 reverts=0 wall=2287s
+[B D2_smoke] round   285/1500 cold occ=0.000 hot occ=0.000 RT=307 pocketCA=1 EEVPD[h/m/c]=2.6e-04/6.3e-04/8.7e-04 reverts=0 wall=2326s
+[B D2_smoke] round   290/1500 cold occ=0.000 hot occ=0.062 RT=309 pocketCA=1 EEVPD[h/m/c]=7.0e-04/4.3e-04/4.1e-04 reverts=0 wall=2365s
+[B D2_smoke] round   295/1500 cold occ=0.000 hot occ=0.062 RT=311 pocketCA=1 EEVPD[h/m/c]=5.0e-04/4.5e-04/3.5e-04 reverts=0 wall=2403s
+[B D2_smoke] round   300/1500 cold occ=0.000 hot occ=0.000 RT=318 pocketCA=1 EEVPD[h/m/c]=2.2e-04/1.7e-04/5.3e-04 reverts=0 wall=2442s
+[B D2_smoke] round   305/1500 cold occ=0.000 hot occ=0.125 RT=319 pocketCA=2 EEVPD[h/m/c]=3.9e-04/1.6e-04/2.9e-04 reverts=0 wall=2481s
+[B D2_smoke] round   310/1500 cold occ=0.000 hot occ=0.125 RT=324 pocketCA=2 EEVPD[h/m/c]=1.6e-04/4.0e-04/3.8e-04 reverts=0 wall=2519s
+[B D2_smoke] round   315/1500 cold occ=0.000 hot occ=0.000 RT=329 pocketCA=2 EEVPD[h/m/c]=6.1e-04/8.7e-04/5.8e-04 reverts=0 wall=2558s
+[B D2_smoke] round   320/1500 cold occ=0.000 hot occ=0.062 RT=337 pocketCA=2 EEVPD[h/m/c]=3.2e-04/1.8e-04/3.2e-04 reverts=0 wall=2597s
+[B D2_smoke] round   325/1500 cold occ=0.000 hot occ=0.000 RT=340 pocketCA=2 EEVPD[h/m/c]=3.7e-04/4.9e-04/3.7e-04 reverts=0 wall=2636s
+[B D2_smoke] round   330/1500 cold occ=0.000 hot occ=0.062 RT=342 pocketCA=3 EEVPD[h/m/c]=5.5e-04/1.7e-04/5.3e-04 reverts=0 wall=2674s
+[B D2_smoke] round   335/1500 cold occ=0.000 hot occ=0.062 RT=346 pocketCA=3 EEVPD[h/m/c]=3.0e-04/3.9e-04/3.8e-04 reverts=0 wall=2713s
+[B D2_smoke] round   340/1500 cold occ=0.000 hot occ=0.125 RT=346 pocketCA=3 EEVPD[h/m/c]=7.4e-04/4.0e-04/7.7e-04 reverts=0 wall=2752s
+[B D2_smoke] round   345/1500 cold occ=0.000 hot occ=0.125 RT=347 pocketCA=3 EEVPD[h/m/c]=8.9e-03/7.1e-04/3.3e-03 reverts=0 wall=2791s
+[B D2_smoke] round   350/1500 cold occ=0.000 hot occ=0.188 RT=350 pocketCA=3 EEVPD[h/m/c]=2.8e-04/2.4e-04/7.6e-04 reverts=0 wall=2829s
+[B D2_smoke] round   355/1500 cold occ=0.000 hot occ=0.312 RT=354 pocketCA=3 EEVPD[h/m/c]=3.8e-04/3.1e-04/6.5e-04 reverts=0 wall=2868s
+[B D2_smoke] round   360/1500 cold occ=0.000 hot occ=0.125 RT=358 pocketCA=3 EEVPD[h/m/c]=5.8e-04/3.8e-04/2.9e-04 reverts=0 wall=2907s
+[B D2_smoke] round   365/1500 cold occ=0.000 hot occ=0.125 RT=361 pocketCA=3 EEVPD[h/m/c]=9.2e-04/9.6e-04/6.9e-04 reverts=0 wall=2946s
+[B D2_smoke] round   370/1500 cold occ=0.062 hot occ=0.000 RT=368 pocketCA=4 EEVPD[h/m/c]=3.7e-04/1.1e-03/8.9e-04 reverts=0 wall=2985s
+[B D2_smoke] round   375/1500 cold occ=0.062 hot occ=0.188 RT=369 pocketCA=5 EEVPD[h/m/c]=2.3e-04/1.6e-04/5.1e-04 reverts=0 wall=3023s
+[B D2_smoke] round   380/1500 cold occ=0.000 hot occ=0.125 RT=377 pocketCA=5 EEVPD[h/m/c]=6.6e-04/8.6e-04/2.9e-04 reverts=0 wall=3062s
+[B D2_smoke] round   385/1500 cold occ=0.000 hot occ=0.062 RT=379 pocketCA=5 EEVPD[h/m/c]=2.6e-04/3.1e-04/3.5e-04 reverts=0 wall=3101s
+[B D2_smoke] round   390/1500 cold occ=0.000 hot occ=0.125 RT=387 pocketCA=5 EEVPD[h/m/c]=2.2e-04/4.6e-04/4.8e-04 reverts=0 wall=3140s
+[B D2_smoke] round   395/1500 cold occ=0.062 hot occ=0.062 RT=392 pocketCA=6 EEVPD[h/m/c]=2.5e-02/2.6e-04/3.2e-04 reverts=0 wall=3178s
+[B D2_smoke] round   400/1500 cold occ=0.000 hot occ=0.062 RT=398 pocketCA=6 EEVPD[h/m/c]=1.7e-04/5.8e-04/5.2e-04 reverts=0 wall=3217s
+[B D2_smoke] round   405/1500 cold occ=0.000 hot occ=0.000 RT=403 pocketCA=6 EEVPD[h/m/c]=6.7e-04/8.6e-04/2.9e-04 reverts=0 wall=3256s
+[B D2_smoke] round   410/1500 cold occ=0.000 hot occ=0.125 RT=409 pocketCA=6 EEVPD[h/m/c]=1.7e-02/2.3e-04/5.8e-04 reverts=0 wall=3294s
+[B D2_smoke] round   415/1500 cold occ=0.000 hot occ=0.062 RT=415 pocketCA=6 EEVPD[h/m/c]=2.2e-04/7.0e-04/5.1e-04 reverts=0 wall=3333s
+[B D2_smoke] round   420/1500 cold occ=0.000 hot occ=0.125 RT=421 pocketCA=6 EEVPD[h/m/c]=3.5e-04/4.7e-04/2.7e-04 reverts=0 wall=3372s
+[B D2_smoke] round   425/1500 cold occ=0.000 hot occ=0.062 RT=423 pocketCA=6 EEVPD[h/m/c]=1.2e-03/2.5e-04/6.6e-04 reverts=0 wall=3411s
+[B D2_smoke] round   430/1500 cold occ=0.000 hot occ=0.062 RT=425 pocketCA=7 EEVPD[h/m/c]=1.8e-04/5.2e-04/3.4e-04 reverts=0 wall=3449s
+[B D2_smoke] round   435/1500 cold occ=0.062 hot occ=0.062 RT=426 pocketCA=7 EEVPD[h/m/c]=3.1e-04/7.4e-04/5.2e-04 reverts=0 wall=3488s
+[B D2_smoke] round   440/1500 cold occ=0.000 hot occ=0.062 RT=430 pocketCA=7 EEVPD[h/m/c]=4.4e-04/4.9e-04/4.4e-04 reverts=0 wall=3527s
+[B D2_smoke] round   445/1500 cold occ=0.062 hot occ=0.062 RT=435 pocketCA=7 EEVPD[h/m/c]=3.6e-04/2.2e-03/6.3e-04 reverts=0 wall=3565s
+[B D2_smoke] round   450/1500 cold occ=0.062 hot occ=0.062 RT=439 pocketCA=7 EEVPD[h/m/c]=2.5e-04/3.4e-04/3.2e-04 reverts=0 wall=3604s
+[B D2_smoke] round   455/1500 cold occ=0.062 hot occ=0.000 RT=443 pocketCA=7 EEVPD[h/m/c]=2.9e-01/6.5e-04/7.0e-04 reverts=0 wall=3643s
+[B D2_smoke] round   460/1500 cold occ=0.062 hot occ=0.000 RT=449 pocketCA=8 EEVPD[h/m/c]=2.4e-04/5.8e-04/9.7e-04 reverts=0 wall=3681s
+[B D2_smoke] round   465/1500 cold occ=0.062 hot occ=0.000 RT=450 pocketCA=8 EEVPD[h/m/c]=7.4e-03/3.4e-04/2.8e-04 reverts=0 wall=3720s
+[B D2_smoke] round   470/1500 cold occ=0.000 hot occ=0.062 RT=460 pocketCA=8 EEVPD[h/m/c]=6.0e-04/3.3e-04/2.4e-04 reverts=0 wall=3759s
+[B D2_smoke] round   475/1500 cold occ=0.000 hot occ=0.062 RT=465 pocketCA=8 EEVPD[h/m/c]=9.3e-04/5.4e-04/3.9e-04 reverts=0 wall=3798s
+[B D2_smoke] round   480/1500 cold occ=0.000 hot occ=0.000 RT=469 pocketCA=8 EEVPD[h/m/c]=2.4e-04/3.2e-04/4.1e-04 reverts=0 wall=3836s
+[B D2_smoke] round   485/1500 cold occ=0.000 hot occ=0.000 RT=472 pocketCA=8 EEVPD[h/m/c]=1.8e-04/6.2e-04/3.2e-04 reverts=0 wall=3875s
+[B D2_smoke] round   490/1500 cold occ=0.000 hot occ=0.062 RT=474 pocketCA=8 EEVPD[h/m/c]=4.4e-04/7.6e-04/4.2e-04 reverts=0 wall=3914s
+[B D2_smoke] round   495/1500 cold occ=0.000 hot occ=0.062 RT=479 pocketCA=8 EEVPD[h/m/c]=3.5e-04/4.7e-04/3.2e-04 reverts=0 wall=3952s
+[B D2_smoke] round   500/1500 cold occ=0.000 hot occ=0.062 RT=481 pocketCA=8 EEVPD[h/m/c]=4.1e-04/2.0e-04/2.1e-04 reverts=0 wall=3991s
+[B D2_smoke] round   505/1500 cold occ=0.000 hot occ=0.062 RT=485 pocketCA=8 EEVPD[h/m/c]=4.7e-04/6.1e-04/3.0e-04 reverts=0 wall=4030s
+[B D2_smoke] round   510/1500 cold occ=0.000 hot occ=0.000 RT=490 pocketCA=8 EEVPD[h/m/c]=4.5e-04/5.7e-04/3.7e-04 reverts=0 wall=4069s
+[B D2_smoke] round   515/1500 cold occ=0.000 hot occ=0.000 RT=493 pocketCA=8 EEVPD[h/m/c]=4.0e-04/6.9e-04/4.3e-04 reverts=0 wall=4107s
+[B D2_smoke] round   520/1500 cold occ=0.000 hot occ=0.000 RT=494 pocketCA=8 EEVPD[h/m/c]=4.6e-04/6.0e-04/2.0e-03 reverts=0 wall=4146s
+[B D2_smoke] round   525/1500 cold occ=0.000 hot occ=0.000 RT=495 pocketCA=9 EEVPD[h/m/c]=6.5e-03/4.5e-04/4.5e-04 reverts=0 wall=4185s
+[B D2_smoke] round   530/1500 cold occ=0.000 hot occ=0.000 RT=498 pocketCA=9 EEVPD[h/m/c]=3.5e-04/2.7e-04/3.8e-04 reverts=0 wall=4223s
+[B D2_smoke] round   535/1500 cold occ=0.000 hot occ=0.125 RT=499 pocketCA=9 EEVPD[h/m/c]=6.2e-04/7.9e-04/4.8e-04 reverts=0 wall=4262s
+[B D2_smoke] round   540/1500 cold occ=0.000 hot occ=0.062 RT=507 pocketCA=9 EEVPD[h/m/c]=1.7e-04/3.9e-04/2.9e-04 reverts=0 wall=4301s
+[B D2_smoke] round   545/1500 cold occ=0.000 hot occ=0.000 RT=508 pocketCA=9 EEVPD[h/m/c]=1.3e-04/2.3e-04/6.8e-04 reverts=0 wall=4340s
+[B D2_smoke] round   550/1500 cold occ=0.000 hot occ=0.000 RT=515 pocketCA=9 EEVPD[h/m/c]=3.1e-04/4.7e-04/4.4e-04 reverts=0 wall=4378s
+[B D2_smoke] round   555/1500 cold occ=0.000 hot occ=0.062 RT=517 pocketCA=9 EEVPD[h/m/c]=1.8e-04/1.1e-03/3.5e-04 reverts=0 wall=4417s
+[B D2_smoke] round   560/1500 cold occ=0.000 hot occ=0.000 RT=521 pocketCA=9 EEVPD[h/m/c]=1.7e-04/6.5e-04/4.3e-04 reverts=0 wall=4456s
+[B D2_smoke] round   565/1500 cold occ=0.062 hot occ=0.000 RT=523 pocketCA=9 EEVPD[h/m/c]=1.6e-04/3.0e-04/4.0e-04 reverts=0 wall=4494s
+[B D2_smoke] round   570/1500 cold occ=0.000 hot occ=0.062 RT=526 pocketCA=9 EEVPD[h/m/c]=3.3e-04/1.6e-04/3.4e-04 reverts=0 wall=4533s
+[B D2_smoke] round   575/1500 cold occ=0.062 hot occ=0.062 RT=528 pocketCA=9 EEVPD[h/m/c]=4.2e-04/6.2e-04/3.5e-04 reverts=0 wall=4572s
+[B D2_smoke] round   580/1500 cold occ=0.000 hot occ=0.062 RT=529 pocketCA=9 EEVPD[h/m/c]=5.2e-04/2.4e-03/3.3e-04 reverts=0 wall=4611s
+[B D2_smoke] round   585/1500 cold occ=0.000 hot occ=0.125 RT=530 pocketCA=9 EEVPD[h/m/c]=3.9e-04/4.0e-04/2.2e-04 reverts=0 wall=4649s
+[B D2_smoke] round   590/1500 cold occ=0.000 hot occ=0.125 RT=533 pocketCA=9 EEVPD[h/m/c]=6.9e-04/4.0e-04/2.5e-04 reverts=0 wall=4688s
+[B D2_smoke] round   595/1500 cold occ=0.000 hot occ=0.125 RT=538 pocketCA=9 EEVPD[h/m/c]=3.1e-04/6.3e-04/2.6e-04 reverts=0 wall=4727s
+[B D2_smoke] round   600/1500 cold occ=0.000 hot occ=0.062 RT=545 pocketCA=9 EEVPD[h/m/c]=6.0e-04/2.5e-04/5.2e-04 reverts=0 wall=4765s
+[B D2_smoke] round   605/1500 cold occ=0.000 hot occ=0.000 RT=547 pocketCA=9 EEVPD[h/m/c]=2.2e-04/4.1e-04/2.3e-04 reverts=0 wall=4804s
+[B D2_smoke] round   610/1500 cold occ=0.062 hot occ=0.000 RT=553 pocketCA=10 EEVPD[h/m/c]=6.6e-04/9.1e-04/6.4e-04 reverts=0 wall=4843s
+[B D2_smoke] round   615/1500 cold occ=0.000 hot occ=0.000 RT=556 pocketCA=10 EEVPD[h/m/c]=2.3e-04/2.5e-04/6.0e-04 reverts=0 wall=4882s
+[B D2_smoke] round   620/1500 cold occ=0.000 hot occ=0.000 RT=559 pocketCA=10 EEVPD[h/m/c]=7.7e-04/5.0e-04/2.5e-04 reverts=0 wall=4920s
+[B D2_smoke] round   625/1500 cold occ=0.000 hot occ=0.000 RT=563 pocketCA=10 EEVPD[h/m/c]=3.2e-04/3.2e-04/4.5e-04 reverts=0 wall=4959s
+[B D2_smoke] round   630/1500 cold occ=0.000 hot occ=0.000 RT=564 pocketCA=10 EEVPD[h/m/c]=4.7e-04/4.9e-04/2.7e-03 reverts=0 wall=4998s
+[B D2_smoke] round   635/1500 cold occ=0.000 hot occ=0.000 RT=567 pocketCA=10 EEVPD[h/m/c]=2.1e-04/3.0e-04/4.2e-04 reverts=0 wall=5036s
+[B D2_smoke] round   640/1500 cold occ=0.000 hot occ=0.000 RT=571 pocketCA=10 EEVPD[h/m/c]=4.9e-03/6.2e-02/6.3e-04 reverts=0 wall=5075s
+[B D2_smoke] round   645/1500 cold occ=0.000 hot occ=0.000 RT=574 pocketCA=10 EEVPD[h/m/c]=4.7e-04/4.0e-04/7.8e-04 reverts=0 wall=5114s
+[B D2_smoke] round   650/1500 cold occ=0.062 hot occ=0.125 RT=581 pocketCA=10 EEVPD[h/m/c]=3.1e-04/6.0e-04/3.9e-04 reverts=0 wall=5152s
+[B D2_smoke] round   655/1500 cold occ=0.000 hot occ=0.125 RT=582 pocketCA=10 EEVPD[h/m/c]=4.8e-04/6.7e-04/5.4e-04 reverts=0 wall=5191s
+[B D2_smoke] round   660/1500 cold occ=0.062 hot occ=0.000 RT=587 pocketCA=10 EEVPD[h/m/c]=5.5e-04/3.8e-04/4.5e-04 reverts=0 wall=5230s
+[B D2_smoke] round   665/1500 cold occ=0.000 hot occ=0.062 RT=590 pocketCA=10 EEVPD[h/m/c]=8.2e-04/4.4e-04/9.0e-04 reverts=0 wall=5269s
+[B D2_smoke] round   670/1500 cold occ=0.000 hot occ=0.125 RT=591 pocketCA=10 EEVPD[h/m/c]=4.7e-04/3.4e-04/5.4e-04 reverts=0 wall=5307s
+[B D2_smoke] round   675/1500 cold occ=0.062 hot occ=0.062 RT=593 pocketCA=10 EEVPD[h/m/c]=2.9e-04/4.0e-04/2.4e-04 reverts=0 wall=5346s
+[B D2_smoke] round   680/1500 cold occ=0.000 hot occ=0.125 RT=597 pocketCA=10 EEVPD[h/m/c]=3.9e-04/7.0e-04/6.7e-04 reverts=0 wall=5385s
+[B D2_smoke] round   685/1500 cold occ=0.000 hot occ=0.000 RT=599 pocketCA=10 EEVPD[h/m/c]=1.2e-03/2.6e-04/4.8e-04 reverts=0 wall=5423s
+[B D2_smoke] round   690/1500 cold occ=0.000 hot occ=0.000 RT=602 pocketCA=10 EEVPD[h/m/c]=1.2e-02/3.6e-04/1.0e-03 reverts=0 wall=5462s
+[B D2_smoke] round   695/1500 cold occ=0.000 hot occ=0.000 RT=604 pocketCA=10 EEVPD[h/m/c]=4.7e-04/6.9e-04/6.0e-04 reverts=0 wall=5501s
+[B D2_smoke] round   700/1500 cold occ=0.000 hot occ=0.000 RT=606 pocketCA=11 EEVPD[h/m/c]=5.2e-03/3.1e-04/4.4e-04 reverts=0 wall=5540s
+[B D2_smoke] round   705/1500 cold occ=0.000 hot occ=0.000 RT=612 pocketCA=12 EEVPD[h/m/c]=3.0e-04/1.9e-04/9.5e-04 reverts=0 wall=5578s
+[B D2_smoke] round   710/1500 cold occ=0.000 hot occ=0.000 RT=616 pocketCA=13 EEVPD[h/m/c]=5.7e-04/5.6e-04/5.2e-04 reverts=0 wall=5617s
+[B D2_smoke] round   715/1500 cold occ=0.000 hot occ=0.062 RT=619 pocketCA=13 EEVPD[h/m/c]=7.8e-04/3.2e-04/5.1e-04 reverts=0 wall=5656s
+[B D2_smoke] round   720/1500 cold occ=0.125 hot occ=0.000 RT=623 pocketCA=15 EEVPD[h/m/c]=1.3e-03/3.3e-04/3.2e-04 reverts=0 wall=5694s
+[B D2_smoke] round   725/1500 cold occ=0.000 hot occ=0.000 RT=628 pocketCA=15 EEVPD[h/m/c]=2.0e-04/2.3e-04/9.8e-04 reverts=0 wall=5733s
+[B D2_smoke] round   730/1500 cold occ=0.000 hot occ=0.000 RT=632 pocketCA=15 EEVPD[h/m/c]=3.6e-04/4.6e-04/5.2e-04 reverts=0 wall=5772s
+[B D2_smoke] round   735/1500 cold occ=0.000 hot occ=0.000 RT=635 pocketCA=16 EEVPD[h/m/c]=3.0e-04/4.2e-01/5.7e-04 reverts=0 wall=5811s
+[B D2_smoke] round   740/1500 cold occ=0.125 hot occ=0.062 RT=639 pocketCA=16 EEVPD[h/m/c]=4.2e-04/1.5e-03/1.3e-03 reverts=0 wall=5849s
+[B D2_smoke] round   745/1500 cold occ=0.000 hot occ=0.062 RT=640 pocketCA=16 EEVPD[h/m/c]=3.4e-04/2.7e-04/3.4e-04 reverts=0 wall=5888s
+[B D2_smoke] round   750/1500 cold occ=0.000 hot occ=0.062 RT=647 pocketCA=16 EEVPD[h/m/c]=5.9e-04/3.7e-04/5.9e-04 reverts=0 wall=5927s
+[B D2_smoke] round   755/1500 cold occ=0.062 hot occ=0.062 RT=649 pocketCA=16 EEVPD[h/m/c]=1.2e-02/4.6e-04/3.4e-04 reverts=0 wall=5965s
+[B D2_smoke] round   760/1500 cold occ=0.000 hot occ=0.000 RT=652 pocketCA=17 EEVPD[h/m/c]=7.9e-04/5.2e-04/2.6e-03 reverts=0 wall=6004s
+[B D2_smoke] round   765/1500 cold occ=0.000 hot occ=0.000 RT=654 pocketCA=17 EEVPD[h/m/c]=4.4e-04/1.8e-04/4.7e-04 reverts=0 wall=6043s
+[B D2_smoke] round   770/1500 cold occ=0.000 hot occ=0.000 RT=660 pocketCA=17 EEVPD[h/m/c]=5.4e-03/5.0e-04/4.5e-04 reverts=0 wall=6082s
+[B D2_smoke] round   775/1500 cold occ=0.062 hot occ=0.062 RT=662 pocketCA=17 EEVPD[h/m/c]=9.9e-04/1.4e-04/4.6e-04 reverts=0 wall=6120s
+[B D2_smoke] round   780/1500 cold occ=0.000 hot occ=0.062 RT=667 pocketCA=17 EEVPD[h/m/c]=2.7e-04/5.3e-04/2.8e-04 reverts=0 wall=6159s
+[B D2_smoke] round   785/1500 cold occ=0.062 hot occ=0.000 RT=671 pocketCA=17 EEVPD[h/m/c]=7.6e-04/6.8e-04/2.5e-04 reverts=0 wall=6198s
+[B D2_smoke] round   790/1500 cold occ=0.000 hot occ=0.000 RT=674 pocketCA=17 EEVPD[h/m/c]=1.9e-04/5.1e-04/5.8e-04 reverts=0 wall=6236s
+[B D2_smoke] round   795/1500 cold occ=0.000 hot occ=0.062 RT=677 pocketCA=17 EEVPD[h/m/c]=4.9e-03/1.9e-04/9.4e-04 reverts=0 wall=6275s
+[B D2_smoke] round   800/1500 cold occ=0.000 hot occ=0.000 RT=680 pocketCA=17 EEVPD[h/m/c]=6.4e-04/6.5e-04/1.7e-04 reverts=0 wall=6314s
+[B D2_smoke] round   805/1500 cold occ=0.125 hot occ=0.000 RT=682 pocketCA=17 EEVPD[h/m/c]=3.0e-03/2.7e-04/3.7e-04 reverts=0 wall=6353s
+[B D2_smoke] round   810/1500 cold occ=0.000 hot occ=0.000 RT=687 pocketCA=17 EEVPD[h/m/c]=1.5e-04/5.9e-04/3.2e-04 reverts=0 wall=6391s
+[B D2_smoke] round   815/1500 cold occ=0.062 hot occ=0.000 RT=689 pocketCA=17 EEVPD[h/m/c]=3.0e-03/2.0e-04/3.6e-04 reverts=0 wall=6430s
+[B D2_smoke] round   820/1500 cold occ=0.062 hot occ=0.062 RT=690 pocketCA=17 EEVPD[h/m/c]=3.7e-04/1.4e-03/4.3e-04 reverts=0 wall=6469s
+[B D2_smoke] round   825/1500 cold occ=0.062 hot occ=0.000 RT=691 pocketCA=17 EEVPD[h/m/c]=3.7e-04/2.9e-04/2.1e-04 reverts=0 wall=6508s
+[B D2_smoke] round   830/1500 cold occ=0.125 hot occ=0.062 RT=694 pocketCA=17 EEVPD[h/m/c]=1.5e-04/3.6e-04/2.1e-04 reverts=0 wall=6546s
+[B D2_smoke] round   835/1500 cold occ=0.062 hot occ=0.062 RT=699 pocketCA=17 EEVPD[h/m/c]=2.3e-04/3.8e-03/4.4e-04 reverts=0 wall=6585s
+[B D2_smoke] round   840/1500 cold occ=0.000 hot occ=0.125 RT=703 pocketCA=17 EEVPD[h/m/c]=1.7e-04/3.3e-04/4.5e-04 reverts=0 wall=6624s
+[B D2_smoke] round   845/1500 cold occ=0.062 hot occ=0.062 RT=706 pocketCA=17 EEVPD[h/m/c]=9.6e-03/4.0e-04/5.5e-04 reverts=0 wall=6663s
+[B D2_smoke] round   850/1500 cold occ=0.062 hot occ=0.000 RT=711 pocketCA=17 EEVPD[h/m/c]=3.0e-04/4.3e-04/5.0e-04 reverts=0 wall=6701s
+[B D2_smoke] round   855/1500 cold occ=0.062 hot occ=0.188 RT=713 pocketCA=17 EEVPD[h/m/c]=4.3e-04/1.4e-03/3.5e-04 reverts=0 wall=6740s
+[B D2_smoke] round   860/1500 cold occ=0.000 hot occ=0.062 RT=718 pocketCA=17 EEVPD[h/m/c]=3.3e-04/2.0e-04/3.6e-04 reverts=0 wall=6779s
+[B D2_smoke] round   865/1500 cold occ=0.062 hot occ=0.062 RT=721 pocketCA=17 EEVPD[h/m/c]=3.6e-03/1.2e-04/7.6e-04 reverts=0 wall=6818s
+[B D2_smoke] round   870/1500 cold occ=0.000 hot occ=0.000 RT=726 pocketCA=17 EEVPD[h/m/c]=2.2e-03/5.7e-04/2.1e-04 reverts=0 wall=6856s
+[B D2_smoke] round   875/1500 cold occ=0.000 hot occ=0.000 RT=727 pocketCA=17 EEVPD[h/m/c]=4.3e-04/5.7e-04/3.2e-04 reverts=0 wall=6895s
+[B D2_smoke] round   880/1500 cold occ=0.062 hot occ=0.188 RT=727 pocketCA=17 EEVPD[h/m/c]=1.6e-04/2.3e-04/1.3e-03 reverts=0 wall=6934s
+[B D2_smoke] round   885/1500 cold occ=0.062 hot occ=0.062 RT=728 pocketCA=17 EEVPD[h/m/c]=2.2e-04/8.2e-03/9.4e-04 reverts=0 wall=6973s
+[B D2_smoke] round   890/1500 cold occ=0.000 hot occ=0.125 RT=734 pocketCA=17 EEVPD[h/m/c]=1.0e-03/6.3e-04/5.8e-04 reverts=0 wall=7011s
+[B D2_smoke] round   895/1500 cold occ=0.000 hot occ=0.062 RT=737 pocketCA=17 EEVPD[h/m/c]=3.5e-04/3.3e-04/5.9e-04 reverts=0 wall=7050s
+[B D2_smoke] round   900/1500 cold occ=0.000 hot occ=0.000 RT=739 pocketCA=17 EEVPD[h/m/c]=4.1e-04/4.1e-04/2.8e-04 reverts=0 wall=7089s
+[B D2_smoke] round   905/1500 cold occ=0.000 hot occ=0.062 RT=739 pocketCA=17 EEVPD[h/m/c]=1.0e-03/5.5e-04/1.2e-03 reverts=0 wall=7127s
+[B D2_smoke] round   910/1500 cold occ=0.000 hot occ=0.125 RT=743 pocketCA=17 EEVPD[h/m/c]=2.8e-04/2.2e-04/5.9e-04 reverts=0 wall=7166s
+[B D2_smoke] round   915/1500 cold occ=0.062 hot occ=0.062 RT=744 pocketCA=17 EEVPD[h/m/c]=4.6e-04/1.7e-04/3.6e-04 reverts=0 wall=7205s
+[B D2_smoke] round   920/1500 cold occ=0.062 hot occ=0.000 RT=747 pocketCA=17 EEVPD[h/m/c]=7.1e-04/2.9e-04/3.2e-04 reverts=0 wall=7244s
+[B D2_smoke] round   925/1500 cold occ=0.000 hot occ=0.000 RT=748 pocketCA=17 EEVPD[h/m/c]=4.3e-04/3.2e-04/8.4e-04 reverts=0 wall=7282s
+[B D2_smoke] round   930/1500 cold occ=0.000 hot occ=0.062 RT=751 pocketCA=17 EEVPD[h/m/c]=4.9e-04/3.6e-04/3.3e-04 reverts=0 wall=7321s
+[B D2_smoke] round   935/1500 cold occ=0.000 hot occ=0.000 RT=753 pocketCA=17 EEVPD[h/m/c]=8.1e-04/2.8e-04/6.7e-04 reverts=0 wall=7360s
+[B D2_smoke] round   940/1500 cold occ=0.000 hot occ=0.062 RT=755 pocketCA=17 EEVPD[h/m/c]=1.6e-03/3.5e-04/2.9e-04 reverts=0 wall=7398s
+[B D2_smoke] round   945/1500 cold occ=0.000 hot occ=0.000 RT=759 pocketCA=17 EEVPD[h/m/c]=5.1e-04/6.3e-04/9.9e-04 reverts=0 wall=7437s
+[B D2_smoke] round   950/1500 cold occ=0.000 hot occ=0.062 RT=762 pocketCA=17 EEVPD[h/m/c]=2.8e-04/1.8e-03/4.2e-04 reverts=0 wall=7476s
+[B D2_smoke] round   955/1500 cold occ=0.000 hot occ=0.000 RT=763 pocketCA=17 EEVPD[h/m/c]=2.9e-03/3.8e-04/8.1e-04 reverts=0 wall=7515s
+[B D2_smoke] round   960/1500 cold occ=0.000 hot occ=0.000 RT=767 pocketCA=18 EEVPD[h/m/c]=4.1e-04/1.9e-04/4.1e-04 reverts=0 wall=7553s
+[B D2_smoke] round   965/1500 cold occ=0.062 hot occ=0.000 RT=768 pocketCA=18 EEVPD[h/m/c]=4.5e-04/1.6e-04/4.5e-04 reverts=0 wall=7592s
+[B D2_smoke] round   970/1500 cold occ=0.000 hot occ=0.062 RT=770 pocketCA=18 EEVPD[h/m/c]=4.0e-04/2.4e-04/4.9e-04 reverts=0 wall=7631s
+[B D2_smoke] round   975/1500 cold occ=0.062 hot occ=0.000 RT=773 pocketCA=18 EEVPD[h/m/c]=5.0e-04/8.6e-04/6.8e-04 reverts=0 wall=7669s
+[B D2_smoke] round   980/1500 cold occ=0.000 hot occ=0.000 RT=777 pocketCA=18 EEVPD[h/m/c]=1.7e-04/4.6e-04/3.5e-04 reverts=0 wall=7708s
+[B D2_smoke] round   985/1500 cold occ=0.000 hot occ=0.000 RT=779 pocketCA=18 EEVPD[h/m/c]=2.1e-04/2.3e-04/2.4e-03 reverts=0 wall=7747s
+[B D2_smoke] round   990/1500 cold occ=0.000 hot occ=0.000 RT=782 pocketCA=18 EEVPD[h/m/c]=3.6e-04/6.9e-04/6.0e-04 reverts=0 wall=7786s
+[B D2_smoke] round   995/1500 cold occ=0.000 hot occ=0.000 RT=783 pocketCA=18 EEVPD[h/m/c]=1.4e-03/4.1e-04/3.4e-04 reverts=0 wall=7824s
+[B D2_smoke] round  1000/1500 cold occ=0.000 hot occ=0.000 RT=785 pocketCA=18 EEVPD[h/m/c]=4.0e-04/4.2e-04/3.2e-04 reverts=0 wall=7863s
+[B D2_smoke] round  1005/1500 cold occ=0.000 hot occ=0.000 RT=786 pocketCA=18 EEVPD[h/m/c]=8.1e-04/3.5e-04/2.6e-04 reverts=0 wall=7902s
+[B D2_smoke] round  1010/1500 cold occ=0.000 hot occ=0.062 RT=789 pocketCA=18 EEVPD[h/m/c]=1.5e-04/3.5e-04/3.6e-04 reverts=0 wall=7940s
+[B D2_smoke] round  1015/1500 cold occ=0.000 hot occ=0.000 RT=791 pocketCA=18 EEVPD[h/m/c]=7.2e-03/4.8e-04/3.8e-04 reverts=0 wall=7979s
+[B D2_smoke] round  1020/1500 cold occ=0.000 hot occ=0.125 RT=792 pocketCA=18 EEVPD[h/m/c]=1.2e-04/2.3e-04/4.9e-04 reverts=0 wall=8018s
+[B D2_smoke] round  1025/1500 cold occ=0.000 hot occ=0.000 RT=795 pocketCA=18 EEVPD[h/m/c]=2.1e-04/3.2e-04/4.0e-04 reverts=0 wall=8057s
+[B D2_smoke] round  1030/1500 cold occ=0.000 hot occ=0.000 RT=797 pocketCA=18 EEVPD[h/m/c]=2.6e-03/4.8e-04/4.7e-04 reverts=0 wall=8095s
+[B D2_smoke] round  1035/1500 cold occ=0.062 hot occ=0.000 RT=799 pocketCA=18 EEVPD[h/m/c]=4.3e-03/2.6e-04/3.7e-04 reverts=0 wall=8134s
+[B D2_smoke] round  1040/1500 cold occ=0.000 hot occ=0.062 RT=803 pocketCA=18 EEVPD[h/m/c]=2.9e-03/4.3e-04/6.4e-04 reverts=0 wall=8173s
+[B D2_smoke] round  1045/1500 cold occ=0.000 hot occ=0.000 RT=805 pocketCA=18 EEVPD[h/m/c]=1.9e-04/6.5e-03/1.5e-03 reverts=0 wall=8211s
+[B D2_smoke] round  1050/1500 cold occ=0.062 hot occ=0.125 RT=806 pocketCA=20 EEVPD[h/m/c]=2.9e-02/5.2e-04/6.5e-04 reverts=0 wall=8250s
+[B D2_smoke] round  1055/1500 cold occ=0.000 hot occ=0.125 RT=808 pocketCA=20 EEVPD[h/m/c]=3.3e-04/1.5e-04/4.5e-04 reverts=0 wall=8289s
+[B D2_smoke] round  1060/1500 cold occ=0.062 hot occ=0.062 RT=812 pocketCA=20 EEVPD[h/m/c]=1.9e-03/3.4e-04/3.3e-04 reverts=0 wall=8327s
+[B D2_smoke] round  1065/1500 cold occ=0.000 hot occ=0.125 RT=815 pocketCA=20 EEVPD[h/m/c]=2.5e-04/1.8e-04/1.8e-03 reverts=0 wall=8366s
+[B D2_smoke] round  1070/1500 cold occ=0.000 hot occ=0.062 RT=818 pocketCA=20 EEVPD[h/m/c]=6.4e-04/9.9e-04/2.8e-04 reverts=0 wall=8405s
+[B D2_smoke] round  1075/1500 cold occ=0.000 hot occ=0.062 RT=821 pocketCA=20 EEVPD[h/m/c]=1.1e-03/4.2e-04/2.7e-04 reverts=0 wall=8444s
+[B D2_smoke] round  1080/1500 cold occ=0.125 hot occ=0.000 RT=822 pocketCA=21 EEVPD[h/m/c]=9.6e-04/3.6e-04/4.9e-04 reverts=0 wall=8482s
+[B D2_smoke] round  1085/1500 cold occ=0.000 hot occ=0.000 RT=824 pocketCA=21 EEVPD[h/m/c]=6.3e-04/5.3e-02/2.9e-04 reverts=0 wall=8521s
+[B D2_smoke] round  1090/1500 cold occ=0.062 hot occ=0.125 RT=827 pocketCA=21 EEVPD[h/m/c]=3.9e-03/3.4e-04/6.0e-04 reverts=0 wall=8560s
+[B D2_smoke] round  1095/1500 cold occ=0.062 hot occ=0.125 RT=831 pocketCA=21 EEVPD[h/m/c]=1.2e-04/2.9e-04/7.4e-04 reverts=0 wall=8599s
+[B D2_smoke] round  1100/1500 cold occ=0.062 hot occ=0.062 RT=832 pocketCA=21 EEVPD[h/m/c]=1.4e-03/3.1e-04/2.8e-04 reverts=0 wall=8637s
+[B D2_smoke] round  1105/1500 cold occ=0.000 hot occ=0.062 RT=835 pocketCA=21 EEVPD[h/m/c]=2.1e-04/5.2e-04/7.5e-04 reverts=0 wall=8676s
+[B D2_smoke] round  1110/1500 cold occ=0.125 hot occ=0.062 RT=837 pocketCA=21 EEVPD[h/m/c]=2.5e-04/1.1e-03/5.4e-04 reverts=0 wall=8715s
+[B D2_smoke] round  1115/1500 cold occ=0.062 hot occ=0.062 RT=838 pocketCA=22 EEVPD[h/m/c]=2.4e-04/4.4e-04/3.4e-04 reverts=0 wall=8754s
+[B D2_smoke] round  1120/1500 cold occ=0.000 hot occ=0.000 RT=842 pocketCA=22 EEVPD[h/m/c]=3.5e-04/2.5e-04/2.1e-03 reverts=0 wall=8792s
+[B D2_smoke] round  1125/1500 cold occ=0.000 hot occ=0.125 RT=844 pocketCA=22 EEVPD[h/m/c]=5.5e-04/4.4e-04/4.2e-04 reverts=0 wall=8831s
+[B D2_smoke] round  1130/1500 cold occ=0.062 hot occ=0.125 RT=849 pocketCA=23 EEVPD[h/m/c]=2.6e-04/2.1e-03/3.6e-04 reverts=0 wall=8870s
+[B D2_smoke] round  1135/1500 cold occ=0.000 hot occ=0.125 RT=849 pocketCA=23 EEVPD[h/m/c]=2.5e-04/3.8e-04/1.2e-03 reverts=0 wall=8909s
+[B D2_smoke] round  1140/1500 cold occ=0.000 hot occ=0.062 RT=850 pocketCA=23 EEVPD[h/m/c]=5.0e-04/7.1e-04/6.8e-04 reverts=0 wall=8947s
+[B D2_smoke] round  1145/1500 cold occ=0.000 hot occ=0.000 RT=851 pocketCA=23 EEVPD[h/m/c]=5.6e-04/3.3e-04/2.0e-02 reverts=0 wall=8986s
+[B D2_smoke] round  1150/1500 cold occ=0.000 hot occ=0.188 RT=854 pocketCA=23 EEVPD[h/m/c]=4.2e-04/1.9e-04/4.6e-04 reverts=0 wall=9025s
+[B D2_smoke] round  1155/1500 cold occ=0.000 hot occ=0.125 RT=855 pocketCA=23 EEVPD[h/m/c]=5.9e-04/5.1e-04/4.8e-04 reverts=0 wall=9064s
+[B D2_smoke] round  1160/1500 cold occ=0.000 hot occ=0.125 RT=859 pocketCA=23 EEVPD[h/m/c]=3.1e-04/1.6e-04/5.5e-04 reverts=0 wall=9103s
+[B D2_smoke] round  1165/1500 cold occ=0.062 hot occ=0.125 RT=861 pocketCA=23 EEVPD[h/m/c]=6.6e-04/3.7e-04/1.2e-03 reverts=0 wall=9142s
+[B D2_smoke] round  1170/1500 cold occ=0.000 hot occ=0.250 RT=863 pocketCA=23 EEVPD[h/m/c]=3.8e-04/8.4e-04/1.9e-04 reverts=0 wall=9180s
+[B D2_smoke] round  1175/1500 cold occ=0.000 hot occ=0.125 RT=866 pocketCA=23 EEVPD[h/m/c]=4.2e-04/2.9e-04/2.8e-04 reverts=0 wall=9219s
+[B D2_smoke] round  1180/1500 cold occ=0.000 hot occ=0.125 RT=867 pocketCA=23 EEVPD[h/m/c]=3.4e-04/3.5e-04/4.7e-04 reverts=0 wall=9258s
+[B D2_smoke] round  1185/1500 cold occ=0.000 hot occ=0.125 RT=871 pocketCA=23 EEVPD[h/m/c]=3.3e-04/4.4e-04/4.8e-04 reverts=0 wall=9297s
+[B D2_smoke] round  1190/1500 cold occ=0.062 hot occ=0.125 RT=874 pocketCA=24 EEVPD[h/m/c]=2.1e-04/1.9e-04/5.2e-04 reverts=0 wall=9335s
+[B D2_smoke] round  1195/1500 cold occ=0.000 hot occ=0.062 RT=878 pocketCA=24 EEVPD[h/m/c]=1.8e-03/4.9e-04/4.2e-04 reverts=0 wall=9374s
+[B D2_smoke] round  1200/1500 cold occ=0.000 hot occ=0.062 RT=879 pocketCA=24 EEVPD[h/m/c]=3.1e-04/3.3e-04/7.8e-04 reverts=0 wall=9413s
+[B D2_smoke] round  1205/1500 cold occ=0.000 hot occ=0.125 RT=882 pocketCA=24 EEVPD[h/m/c]=2.3e-04/6.2e-03/1.1e-02 reverts=0 wall=9452s
+[B D2_smoke] round  1210/1500 cold occ=0.000 hot occ=0.125 RT=884 pocketCA=25 EEVPD[h/m/c]=3.2e-04/3.2e-04/3.1e-04 reverts=0 wall=9491s
+[B D2_smoke] round  1215/1500 cold occ=0.000 hot occ=0.125 RT=886 pocketCA=25 EEVPD[h/m/c]=2.9e-04/2.1e-03/1.9e-03 reverts=0 wall=9530s
+[B D2_smoke] round  1220/1500 cold occ=0.000 hot occ=0.125 RT=888 pocketCA=25 EEVPD[h/m/c]=2.5e-04/4.4e-04/4.5e-04 reverts=0 wall=9568s
+[B D2_smoke] round  1225/1500 cold occ=0.000 hot occ=0.062 RT=889 pocketCA=25 EEVPD[h/m/c]=2.5e-04/4.5e-04/1.6e-04 reverts=0 wall=9607s
+[B D2_smoke] round  1230/1500 cold occ=0.000 hot occ=0.125 RT=893 pocketCA=25 EEVPD[h/m/c]=4.2e-04/4.5e-04/2.7e-04 reverts=0 wall=9646s
+[B D2_smoke] round  1235/1500 cold occ=0.000 hot occ=0.250 RT=897 pocketCA=25 EEVPD[h/m/c]=5.2e-04/5.4e-04/5.1e-04 reverts=0 wall=9684s
+[B D2_smoke] round  1240/1500 cold occ=0.000 hot occ=0.250 RT=899 pocketCA=25 EEVPD[h/m/c]=3.7e-04/3.5e-04/3.5e-04 reverts=0 wall=9723s
+[B D2_smoke] round  1245/1500 cold occ=0.000 hot occ=0.062 RT=901 pocketCA=25 EEVPD[h/m/c]=6.8e-04/1.8e-04/3.3e-04 reverts=0 wall=9762s
+[B D2_smoke] round  1250/1500 cold occ=0.000 hot occ=0.125 RT=902 pocketCA=25 EEVPD[h/m/c]=1.0e-03/5.9e-04/2.9e-04 reverts=0 wall=9801s
+[B D2_smoke] round  1255/1500 cold occ=0.000 hot occ=0.062 RT=903 pocketCA=25 EEVPD[h/m/c]=4.0e-04/3.3e-04/1.2e-03 reverts=0 wall=9840s
+[B D2_smoke] round  1260/1500 cold occ=0.000 hot occ=0.188 RT=904 pocketCA=25 EEVPD[h/m/c]=3.8e-04/5.4e-04/3.0e-04 reverts=0 wall=9879s
+[B D2_smoke] round  1265/1500 cold occ=0.000 hot occ=0.125 RT=905 pocketCA=25 EEVPD[h/m/c]=6.5e-02/1.9e-04/2.4e-04 reverts=0 wall=9917s
+[B D2_smoke] round  1270/1500 cold occ=0.000 hot occ=0.250 RT=907 pocketCA=25 EEVPD[h/m/c]=2.6e-04/3.6e-04/7.0e-04 reverts=0 wall=9956s
+[B D2_smoke] round  1275/1500 cold occ=0.000 hot occ=0.125 RT=910 pocketCA=25 EEVPD[h/m/c]=2.4e-04/4.4e-04/5.5e-04 reverts=0 wall=9995s
+[B D2_smoke] round  1280/1500 cold occ=0.062 hot occ=0.125 RT=911 pocketCA=26 EEVPD[h/m/c]=9.1e-04/2.1e-04/2.2e-04 reverts=0 wall=10034s
+[B D2_smoke] round  1285/1500 cold occ=0.000 hot occ=0.062 RT=911 pocketCA=26 EEVPD[h/m/c]=4.9e-04/1.9e-04/3.6e-04 reverts=0 wall=10073s
+[B D2_smoke] round  1290/1500 cold occ=0.062 hot occ=0.125 RT=913 pocketCA=27 EEVPD[h/m/c]=3.4e-04/7.8e-04/2.9e-04 reverts=0 wall=10111s
+[B D2_smoke] round  1295/1500 cold occ=0.000 hot occ=0.250 RT=916 pocketCA=27 EEVPD[h/m/c]=4.6e-04/1.5e-04/1.6e-04 reverts=0 wall=10150s
+[B D2_smoke] round  1300/1500 cold occ=0.062 hot occ=0.062 RT=917 pocketCA=27 EEVPD[h/m/c]=1.5e-03/2.6e-04/6.1e-04 reverts=0 wall=10189s
+[B D2_smoke] round  1305/1500 cold occ=0.062 hot occ=0.062 RT=918 pocketCA=27 EEVPD[h/m/c]=4.6e-04/2.3e-04/2.6e-03 reverts=0 wall=10228s
+[B D2_smoke] round  1310/1500 cold occ=0.000 hot occ=0.062 RT=920 pocketCA=27 EEVPD[h/m/c]=1.0e-03/4.6e-04/4.9e-04 reverts=0 wall=10266s
+[B D2_smoke] round  1315/1500 cold occ=0.062 hot occ=0.312 RT=921 pocketCA=27 EEVPD[h/m/c]=2.3e-03/3.6e-04/3.7e-04 reverts=0 wall=10305s
+[B D2_smoke] round  1320/1500 cold occ=0.062 hot occ=0.188 RT=923 pocketCA=27 EEVPD[h/m/c]=1.7e-04/9.6e-03/2.7e-04 reverts=0 wall=10344s
+[B D2_smoke] round  1325/1500 cold occ=0.062 hot occ=0.062 RT=925 pocketCA=27 EEVPD[h/m/c]=1.9e-04/2.0e-04/1.5e-04 reverts=0 wall=10382s
+[B D2_smoke] round  1330/1500 cold occ=0.062 hot occ=0.250 RT=925 pocketCA=27 EEVPD[h/m/c]=2.8e-04/2.2e-04/3.6e-04 reverts=0 wall=10421s
+[B D2_smoke] round  1335/1500 cold occ=0.000 hot occ=0.125 RT=926 pocketCA=27 EEVPD[h/m/c]=3.8e-04/2.5e-04/7.4e-04 reverts=0 wall=10460s
+[B D2_smoke] round  1340/1500 cold occ=0.062 hot occ=0.188 RT=926 pocketCA=27 EEVPD[h/m/c]=6.4e-03/4.0e-04/1.7e-04 reverts=0 wall=10499s
+[B D2_smoke] round  1345/1500 cold occ=0.062 hot occ=0.250 RT=927 pocketCA=28 EEVPD[h/m/c]=4.4e-04/6.8e-05/6.8e-04 reverts=0 wall=10538s
+[B D2_smoke] round  1350/1500 cold occ=0.062 hot occ=0.125 RT=928 pocketCA=29 EEVPD[h/m/c]=1.0e-03/2.6e-04/1.8e-03 reverts=0 wall=10577s
+[B D2_smoke] round  1355/1500 cold occ=0.000 hot occ=0.062 RT=929 pocketCA=29 EEVPD[h/m/c]=2.4e-04/3.6e-04/6.2e-04 reverts=0 wall=10615s
+[B D2_smoke] round  1360/1500 cold occ=0.062 hot occ=0.250 RT=932 pocketCA=29 EEVPD[h/m/c]=1.6e-04/4.9e-04/1.2e-03 reverts=0 wall=10654s
+[B D2_smoke] round  1365/1500 cold occ=0.125 hot occ=0.125 RT=935 pocketCA=29 EEVPD[h/m/c]=8.7e+00/9.1e-04/3.1e-04 reverts=0 wall=10693s
+[B D2_smoke] round  1370/1500 cold occ=0.062 hot occ=0.250 RT=935 pocketCA=29 EEVPD[h/m/c]=5.3e-04/2.9e-04/4.4e-04 reverts=0 wall=10732s
+[B D2_smoke] round  1375/1500 cold occ=0.062 hot occ=0.375 RT=935 pocketCA=29 EEVPD[h/m/c]=3.6e-04/5.7e-04/4.7e-04 reverts=0 wall=10771s
+[B D2_smoke] round  1380/1500 cold occ=0.000 hot occ=0.188 RT=939 pocketCA=29 EEVPD[h/m/c]=6.1e-04/4.9e-04/1.6e-04 reverts=0 wall=10809s
+[B D2_smoke] round  1385/1500 cold occ=0.000 hot occ=0.312 RT=940 pocketCA=29 EEVPD[h/m/c]=3.8e-04/8.6e-04/3.9e-04 reverts=0 wall=10848s
+[B D2_smoke] round  1390/1500 cold occ=0.062 hot occ=0.312 RT=942 pocketCA=30 EEVPD[h/m/c]=7.8e-04/4.8e-04/3.9e-04 reverts=0 wall=10887s

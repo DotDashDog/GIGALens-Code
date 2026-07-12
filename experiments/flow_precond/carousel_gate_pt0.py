@@ -1368,6 +1368,14 @@ def run_arm_b(arm, tag, equiv=False):
     k_b, k_src = _env_num("GATE_PT0_K_B", K_B, int)
     nsys, nsys_src = _env_num("GATE_PT0_NSYS_B", NSYS_B, int)
     rounds, rounds_src = _env_num("GATE_PT0_ROUNDS_B", ROUNDS_B, int)
+    if SMOKE and rounds != ROUNDS_B:
+        # smoke > env > default for ROUNDS too (2026-07-12 incident: an env
+        # ROUNDS silently overrode the smoke reduction and ran full-length
+        # mislabeled as smoke — second occurrence of the class; precedence is
+        # now uniform and the ignored env value is recorded loudly)
+        rounds_src = (f"SMOKE override {ROUNDS_B} [env GATE_PT0_ROUNDS_B "
+                      f"IGNORED; precedence smoke > env > default]")
+        rounds = ROUNDS_B
     ss_max, ssmax_src = _env_num("GATE_PT0_SSMAX", SS_MAX0, float)
     devar, devar_src = _env_num("GATE_PT0_DEVAR", DEVAR, float)
 
