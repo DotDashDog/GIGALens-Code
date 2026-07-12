@@ -85,9 +85,17 @@ U_REL_TOL = 1e-6                    # RELATIVE u-recovery gate (audit fixes 2+3)
                                     # max |u - u_direct| / (1 + |u_direct|)
 MIN_CLASS_N = 50                    # Arm A: min retained samples per (beta, class)
                                     # cell; below -> E missing, Delta truncated (fix 4)
-ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3, B5=4)
-                # checkpoint seeds (PT-0b/PT-1 arms override via GATE_PT0_SEED_B,
-                # e.g. seeds 10-13 for PT-0b, 20/21 for PT-1 C1/C2)
+ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3, B5=4, D1=5, D2=6)
+                # checkpoint seeds (PT-0b/PT-1/PT-2 arms override via
+                # GATE_PT0_SEED_B: 10-13 PT-0b, 20/21 PT-1, 30-33 PT-2)
+# PT-2 windowed mass-matrix adaptation (D arms; checkpoint "GATE PT-2")
+METRIC_WINDOWS = (100, 250, 500)    # expanding boundaries; metric FROZEN after last
+GENEIG_EVERY = 100                  # gen-eig ratio trace cadence (rounds)
+MAP_NPZ = os.path.join(DPIE, "map", "arrays.npz")   # D2 entry point (z_best)
+D2_INIT_SCALE = 1e-3                # stock no-SVI diagonal: init_scales=1e-3 STD
+                                    # in z (ModellingSequence.SVI default,
+                                    # gigalens/jax/inference.py:254,282-284;
+                                    # pipeline.py:1440) => seed cov = 1e-6 * I
 # Arm A
 BETAS_A = np.geomspace(0.01, 1.0, 10)
 NCH_A = 16                          # chains per basin group
@@ -129,13 +137,16 @@ def apply_smoke():
     Numbers are NOT the pre-registered measurement."""
     global SMOKE, STEPS_A, DISCARD_A
     global ROUNDS_B, SAVE_EVERY_B, PRINT_EVERY_B, LAST_OCC, RHAT_LAST
-    global CTRL_ROUNDS, CTRL_BURN
+    global CTRL_ROUNDS, CTRL_BURN, METRIC_WINDOWS, GENEIG_EVERY
     SMOKE = True
     STEPS_A, DISCARD_A = 60, 30
     ROUNDS_B = 20
     SAVE_EVERY_B, PRINT_EVERY_B = 10, 5   # SAVE_EVERY=10 so the npz path fires
     LAST_OCC, RHAT_LAST = 10, 20
     CTRL_ROUNDS, CTRL_BURN = 30, 10
+    # PT-2 D-arm smoke: boundaries scaled purely to exercise the window/freeze/
+    # save code paths at ROUNDS=20 (recorded in the model card)
+    METRIC_WINDOWS, GENEIG_EVERY = (5, 10, 15), 5
 
 
 def pr(*a):
@@ -263,6 +274,30 @@ def fresh_adapt2(n_rungs, nch, ss_max=SS_MAX0):
             jnp.full((n_rungs, nch), ss_max))
 
 
+def regularize_cov_np(cov, n):
+    """Host copy of the PRODUCTION _regularize_cov math (mclmc.py:154-164),
+    verbatim in numpy: symmetrize; Stan window shrinkage n/(n+5) with
+    1e-3*(5/(n+5))*I; PSD eigenvalue floor at the shrink level. (The production
+    code applies the shrinkage to the covariance directly -- no correlation
+    scaling -- and that code is the copied authority.)"""
+    cov = 0.5 * (cov + cov.T)
+    n = float(n)
+    eye = np.eye(cov.shape[-1])
+    shrink = 1e-3 * (5.0 / (n + 5.0))
+    reg = (n / (n + 5.0)) * cov + shrink * eye
+    w, V = np.linalg.eigh(reg)
+    w = np.clip(w, shrink, None)
+    return (V * w[None, :]) @ V.T
+
+
+def geneig_ratios(adapted, ref_chol):
+    """Generalized-eigenvalue ratios of (adapted vs reference) covariance:
+    eigvalsh of Lref^-1 adapted Lref^-T -- the solve(reference, adapted)-style
+    pencil spectrum (PT-2 internals instrument)."""
+    m = np.linalg.solve(ref_chol, np.linalg.solve(ref_chol, adapted).T).T
+    return np.linalg.eigvalsh(0.5 * (m + m.T))
+
+
 def make_runner_a(tf, path_kind, beta, invmasses, n_steps):
     """One jitted runner per beta (GATE L per-chunk-compile style): kernels for each
     metric group inside a single jit; init (momentum) + full n_steps scan; per-step
@@ -364,24 +399,29 @@ def make_fused_round_runner(spec):
     rungs with beta as a mapped (traced) argument -- removes the R sequential
     per-rung dispatches that dominated the round cost. tf and the kernel are
     built INSIDE the traced per_rung context (all construction is pure jax:
-    _build_kernel_shardmap composes jnp.where-based steps; the integrator does a
-    cholesky of the static inverse-mass matrix; beta enters only through the
-    logdensity closure). Inner chain vmap is unchanged, so the fused batch is
-    (R, NSYS). Math and per-rung/chain/step key semantics identical to
-    make_runner_b (verified by --equiv-check up to FP reordering)."""
+    _build_kernel_shardmap composes jnp.where-based steps; the integrator's
+    cholesky of the inverse-mass matrix runs in-trace; beta and -- since PT-2 --
+    the per-rung inv_mass are traced arguments, so host-side metric updates
+    change only VALUES, never the jit cache key). Inner chain vmap is
+    unchanged, so the fused batch is (R, NSYS). Math and per-rung/chain/step
+    key semantics identical to make_runner_b (verified by --equiv-check up to
+    FP reordering)."""
     dim, L, K = spec["dim"], spec["L"], spec["K"]
     devar = float(spec.get("devar", DEVAR))
-    imm = jnp.asarray(spec["inv_mass"])
     make_tf = spec["make_tf"]
 
     @jax.jit
-    def round_all(positions, ss, ast, init_keys, step_keys, betas):
+    def round_all(positions, ss, ast, init_keys, step_keys, betas, inv_mass):
         # positions (R,NSYS,dim); ss (R,NSYS); ast tuple of (R,NSYS);
-        # init_keys (R,NSYS); step_keys (R,K,NSYS); betas (R,)
-        def per_rung(pos_r, ss_r, ast_r, ik_r, sk_r, beta):
+        # init_keys (R,NSYS); step_keys (R,K,NSYS); betas (R,);
+        # inv_mass (R,dim,dim) TRACED, vmapped over rungs (PT-2: host-side
+        # windowed metric adaptation updates its VALUE between rounds; the
+        # shape/dtype are static, so jit's cache key is unchanged and no
+        # recompile occurs -- the Cholesky runs inside the trace).
+        def per_rung(pos_r, ss_r, ast_r, ik_r, sk_r, beta, im_r):
             tf = make_tf(beta)                    # beta TRACED here
             kern = _build_kernel_shardmap(
-                logdensity_fn=tf, inverse_mass_matrix=imm,
+                logdensity_fn=tf, inverse_mass_matrix=im_r,
                 integrator=isokinetic_mclachlan_smart)
             states = jax.vmap(lambda p, k: _single_init(p, tf, k))(pos_r, ik_r)
 
@@ -400,7 +440,8 @@ def make_fused_round_runner(spec):
                 sstep, (states, ss_r, ast_r), sk_r)
             return states.position, states.logdensity, sss, asts, ec2, ok
 
-        return jax.vmap(per_rung)(positions, ss, ast, init_keys, step_keys, betas)
+        return jax.vmap(per_rung)(positions, ss, ast, init_keys, step_keys,
+                                  betas, inv_mass)
 
     return round_all
 
@@ -806,11 +847,30 @@ def run_pt(tag, seed, spec):
 
     # runner: ONE fused jitted call per round (default; wall-clock fix) or the
     # legacy per-rung dispatch list (GATE_PT0_LEGACY_RUNNERS=1 / equiv guard)
+    adapt_metric = bool(spec.get("adapt_metric", False))
+    if adapt_metric and not fused:
+        raise RuntimeError("adaptive metric (PT-2 D arms) requires the fused "
+                           "runner; unset GATE_PT0_LEGACY_RUNNERS")
     if fused:
         round_all = make_fused_round_runner(spec)
         betas_j = jnp.asarray(betas)
     else:
         runners = make_legacy_runners(spec)
+    # per-rung metric stack (R, dim, dim); constant for non-adaptive arms,
+    # host-updated at window boundaries for adapt_metric arms (PT-2 M1/M2)
+    inv_rungs = np.broadcast_to(
+        np.asarray(spec["inv_mass"], dtype=np.float64), (R, dim, dim)).copy()
+    inv_rungs_j = jnp.asarray(inv_rungs)
+    windows = tuple(spec.get("metric_windows") or METRIC_WINDOWS)
+    n0 = float(spec.get("metric_n0") or (10 * NSYS))
+    metric_ref = spec.get("metric_ref")
+    ref_chol = (np.linalg.cholesky(np.asarray(metric_ref, dtype=np.float64))
+                if (adapt_metric and metric_ref is not None) else None)
+    w_n = 0                                       # Welford over ROUND-END pos
+    w_mean = np.zeros((R, dim))
+    w_M2 = np.zeros((R, dim, dim))
+    metric_frozen_flag = False
+    boundary_covs, geneig_trace, geneig_rounds = [], [], []
 
     pos = np.array(spec["init_pos"], dtype=np.float64)
     assert pos.shape == (R, NSYS, dim), pos.shape
@@ -852,6 +912,18 @@ def run_pt(tag, seed, spec):
     npz_path = os.path.join(OUT, f"arrays_{tag}.npz")
 
     def save_npz(t):
+        extra = {}
+        if adapt_metric:   # PT-2 metric-adaptation artifacts
+            extra = dict(
+                metric_frozen=inv_rungs,                    # per rung, current
+                metric_boundary_covs=(np.stack(boundary_covs)
+                                      if boundary_covs else np.zeros((0,))),
+                metric_geneig_trace=(np.stack(geneig_trace)
+                                     if geneig_trace else np.zeros((0,))),
+                metric_geneig_rounds=np.asarray(geneig_rounds, dtype=np.int64),
+                metric_windows=np.asarray(windows, dtype=np.int64),
+                metric_n0=n0,
+            )
         np.savez(npz_path, betas=betas, ind_thin=ind_thin[:t // THIN_B + 1],
                  wid_thin=wid_thin[:t // THIN_B + 1],
                  cold_ind=cold_ind[:t + 1], eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
@@ -862,7 +934,8 @@ def run_pt(tag, seed, spec):
                  round_trips_pocket=round_trips_pocket,
                  pocket_cold_arrivals=pocket_cold_arr,
                  main_cold_arrivals=main_cold_arr, n_revert=np.int64(n_revert),
-                 init_cold_occ=init_cold_occ, rounds_done=np.int64(t + 1))
+                 init_cold_occ=init_cold_occ, rounds_done=np.int64(t + 1),
+                 **extra)
 
     t0 = time.time()
     logd = np.zeros((R, NSYS))
@@ -871,7 +944,8 @@ def run_pt(tag, seed, spec):
         if fused:   # one jitted (R, NSYS)-wide call per round
             ik_all, sk_all = _round_keys(lks, R, NSYS, K)
             p2, ld, steps_all, adapt_all, ec2, ok = round_all(
-                jnp.asarray(pos), steps_all, adapt_all, ik_all, sk_all, betas_j)
+                jnp.asarray(pos), steps_all, adapt_all, ik_all, sk_all,
+                betas_j, inv_rungs_j)
             pos = np.array(p2)              # writable copy (host swaps mutate)
             logd = np.asarray(ld)
             ev[t] = np.asarray(ec2).mean(axis=(1, 2)) / dim
@@ -957,6 +1031,47 @@ def run_pt(tag, seed, spec):
         if t % THIN_B == 0:
             ind_thin[t // THIN_B] = ind_post
             wid_thin[t // THIN_B] = wid
+        if adapt_metric and not metric_frozen_flag:
+            # per-rung Welford over ROUND-END (post-swap) positions
+            for r in range(R):
+                batch = pos[r]                            # (NSYS, dim)
+                bmean = batch.mean(axis=0)
+                bctr = batch - bmean
+                bM2 = bctr.T @ bctr
+                if w_n == 0:
+                    w_mean[r], w_M2[r] = bmean, bM2
+                else:
+                    delta = bmean - w_mean[r]
+                    tot = w_n + NSYS
+                    w_M2[r] += bM2 + np.outer(delta, delta) * w_n * NSYS / tot
+                    w_mean[r] += delta * NSYS / tot
+            w_n += NSYS
+            if (t + 1) in windows:
+                # window boundary: previous metric = prior at weight n0; the
+                # window estimate REPLACES the metric (production-style),
+                # regularized by the copied _regularize_cov rule; Welford resets
+                n_w = w_n
+                for r in range(R):
+                    cov_w = w_M2[r] / max(n_w - 1, 1)
+                    comb = (n0 * inv_rungs[r] + n_w * cov_w) / (n0 + n_w)
+                    inv_rungs[r] = regularize_cov_np(comb, n0 + n_w)
+                boundary_covs.append(inv_rungs.copy())
+                inv_rungs_j = jnp.asarray(inv_rungs)
+                # step-size adapt running averages RESET (production
+                # behaviour); ss_max carried
+                adapt_all = (jnp.zeros_like(adapt_all[0]),
+                             jnp.zeros_like(adapt_all[1]), adapt_all[2])
+                w_n, w_mean[:], w_M2[:] = 0, 0.0, 0.0
+                if (t + 1) == windows[-1]:
+                    metric_frozen_flag = True     # FROZEN from here on
+                pr(f"[B {tag}] metric window boundary at round {t + 1}: "
+                   f"n_w={n_w}, n0={n0:.0f}"
+                   f"{' (METRIC FROZEN)' if metric_frozen_flag else ''}")
+        if adapt_metric and ref_chol is not None and (
+                t % GENEIG_EVERY == 0 or t == ROUNDS - 1):
+            geneig_rounds.append(t)
+            geneig_trace.append(np.stack(
+                [geneig_ratios(inv_rungs[r], ref_chol) for r in range(R)]))
         if t % PRINT_EVERY_B == 0 or t == ROUNDS - 1:
             pr(f"[B {tag}] round {t:5d}/{ROUNDS} cold occ={cold_ind[t].mean():.3f} "
                f"hot occ={ind_post[0].mean():.3f} RT={int(round_trips.sum())} "
@@ -1017,7 +1132,50 @@ def run_pt(tag, seed, spec):
        f"(cross attempts {att[:, 1].tolist()})")
     pr(f"  cold split-Rhat = {rhat}; EEVPD in [1e-4,2e-3]: {ev_in_band}; "
        f"NaN reverts {n_revert}")
+    if adapt_metric:
+        gfin = geneig_trace[-1] if geneig_trace else None   # (R, dim) ratios
+        summary["metric_adapt"] = dict(
+            windows=list(windows), n0=n0, frozen=bool(metric_frozen_flag),
+            n_boundaries_applied=len(boundary_covs),
+            reference=("pooled MAMS64 cov (reference-ONLY, PT-2 internals "
+                       "instrument)" if metric_ref is not None else None),
+            geneig_final_cold_min=(float(gfin[R - 1].min())
+                                   if gfin is not None else None),
+            geneig_final_cold_max=(float(gfin[R - 1].max())
+                                   if gfin is not None else None),
+            geneig_final_min_per_rung=(gfin.min(axis=1).tolist()
+                                       if gfin is not None else None),
+            geneig_final_max_per_rung=(gfin.max(axis=1).tolist()
+                                       if gfin is not None else None),
+            geneig_in_band_1_3rd_to_3_all_rungs=(
+                bool(np.all((gfin >= 1.0 / 3.0) & (gfin <= 3.0)))
+                if gfin is not None else None),
+        )
+        if gfin is not None:
+            pr(f"  metric adapt: {len(boundary_covs)} boundaries applied, "
+               f"frozen={metric_frozen_flag}; final gen-eig cold rung "
+               f"[{gfin[R - 1].min():.3f}, {gfin[R - 1].max():.3f}] "
+               f"(band [1/3, 3] all rungs: "
+               f"{summary['metric_adapt']['geneig_in_band_1_3rd_to_3_all_rungs']})")
     save_npz(ROUNDS - 1)
+
+    if adapt_metric and geneig_trace:
+        fig, ax = plt.subplots(figsize=(9, 4))
+        gt = np.stack(geneig_trace)                 # (n_snap, R, dim)
+        for a in range(dim):
+            ax.plot(geneig_rounds, gt[:, R - 1, a], lw=0.6, alpha=0.7)
+        for b in (1.0 / 3.0, 3.0):
+            ax.axhline(b, ls="--", color="k", lw=0.9)
+        for wb in windows:
+            ax.axvline(wb, ls=":", color="gray", lw=0.7)
+        ax.set_yscale("log")
+        ax.set_xlabel("round")
+        ax.set_ylabel("gen-eig ratio (adapted vs reference)")
+        ax.set_title(f"{tag}: cold-rung per-axis gen-eig ratios "
+                     f"(band [1/3, 3]; boundaries dotted)")
+        fig.tight_layout()
+        fig.savefig(os.path.join(OUT, f"pt0_{tag}_geneig.png"), dpi=120)
+        plt.close(fig)
 
     # ---------------------------------------------------------------------- plots
     xs = np.arange(0, ROUNDS, THIN_B)[:ind_thin.shape[0]]
@@ -1140,7 +1298,10 @@ def run_equiv_check(tag, seed, spec, n_rounds=3):
             pos_l[r] = np.asarray(p2)
             logd_l[r] = np.asarray(ld)
         pf, ldf, steps_f, adapt_f, _, _ = round_all(
-            jnp.asarray(pos_f), steps_f, adapt_f, ik_all, sk_all, betas_j)
+            jnp.asarray(pos_f), steps_f, adapt_f, ik_all, sk_all, betas_j,
+            jnp.asarray(np.broadcast_to(
+                np.asarray(spec["inv_mass"], dtype=np.float64),
+                (R, dim, dim))))
         pos_f = np.array(pf)
         logd_f = np.asarray(ldf)
         u_l = spec["u_from"](logd_l, pos_l)
@@ -1169,18 +1330,23 @@ def run_equiv_check(tag, seed, spec, n_rounds=3):
 
 
 def run_arm_b(arm, tag, equiv=False):
-    """dPIE PT arms B1..B5: build the target spec and route through run_pt.
+    """dPIE PT arms B1..B5 + D1/D2: build the target spec, route through run_pt.
     B4 (PT-0b) = POWER path, ALL-MAIN init at every rung/system, no prior draws.
     B5 (PT-1 C1, production composition) = POWER path, identical to B4 EXCEPT
     metric = SVI covariance (dpie/svi qz_scale_tril -> cov) and init = SVI draws
-    at every rung/system (the true point-and-go input state)."""
+    at every rung/system (the true point-and-go input state).
+    D1/D2 (PT-2 M1/M2): POWER path with host-side WINDOWED mass-matrix
+    adaptation (adapt_metric=True). D1: seed cov = SVI cov, inits = SVI draws
+    all rungs. D2: seed cov = the repo-discoverable stock no-SVI diagonal
+    (init_scales=1e-3 std => 1e-6*I), inits = MAP z_best + diagonal draws."""
     seed = ARM_SEED[arm]
     seed_source = "ARM_SEED default"
     env_seed = os.environ.get("GATE_PT0_SEED_B", "").strip()
-    if env_seed:   # PT-0b seeds 10-13; PT-1 C1/C2 seeds 20/21 per checkpoints
+    if env_seed:   # PT-0b 10-13; PT-1 20/21; PT-2 30-33 per checkpoints
         seed = int(env_seed)
         seed_source = f"env override GATE_PT0_SEED_B={env_seed}"
-    path_kind = "power" if arm in ("B1", "B4", "B5") else "lik"
+    path_kind = "power" if arm in ("B1", "B4", "B5", "D1", "D2") else "lik"
+    adaptive = arm in ("D1", "D2")
     rng = np.random.default_rng(seed)
 
     # PT-0b/PT-1 env overrides (B arms ONLY; control/Arm A never read these).
@@ -1196,15 +1362,32 @@ def run_arm_b(arm, tag, equiv=False):
     ss_max, ssmax_src = _env_num("GATE_PT0_SSMAX", SS_MAX0, float)
     devar, devar_src = _env_num("GATE_PT0_DEVAR", DEVAR, float)
 
-    # metric: pooled MAMS64 cov (B1-B4) or the production SVI cov (B5)
-    if arm == "B5":
+    # metric: pooled MAMS64 cov (B1-B4), production SVI cov (B5, D1 seed), or
+    # the stock no-SVI diagonal (D2 seed); D arms ADAPT from their seed.
+    d2_diag_provenance = None
+    if arm in ("B5", "D1"):
         svi = np.load(SVI_NPZ)
         svi_loc = np.asarray(svi["qz_loc"], dtype=np.float64).reshape(-1)
         svi_tril = np.asarray(svi["qz_scale_tril"],
                               dtype=np.float64).reshape(DIM, DIM)
         assert svi_loc.shape == (DIM,), svi_loc.shape
         inv_mass = svi_tril @ svi_tril.T
-        metric_desc = "SVI cov (dpie/svi)"
+        metric_desc = ("ADAPTIVE (windowed); seed = SVI cov (dpie/svi)"
+                       if arm == "D1" else "SVI cov (dpie/svi)")
+    elif arm == "D2":
+        map_npz = np.load(MAP_NPZ)
+        map_zbest = np.asarray(map_npz["z_best"],
+                               dtype=np.float64).reshape(-1)
+        assert map_zbest.shape == (DIM,), map_zbest.shape
+        inv_mass = (D2_INIT_SCALE ** 2) * np.eye(DIM)
+        d2_diag_provenance = (
+            f"stock no-SVI diagonal convention: init_scales={D2_INIT_SCALE} "
+            f"(STD in z) from ModellingSequence.SVI default "
+            f"(gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored "
+            f"gigalens_research/inference_utils/pipeline.py:1440) => seed cov "
+            f"= {D2_INIT_SCALE}^2 * I = {D2_INIT_SCALE**2:g}*I")
+        metric_desc = (f"ADAPTIVE (windowed); seed = diagonal "
+                       f"{D2_INIT_SCALE**2:g}*I (stock init_scales convention)")
     else:
         inv_mass = M["cov_pool"]
         metric_desc = "pooled MAMS64 empirical cov, all rungs (positions only)"
@@ -1235,8 +1418,11 @@ def run_arm_b(arm, tag, equiv=False):
 
     pos = np.zeros((R, nsys, DIM))
     for r in range(R):
-        if arm == "B5":           # SVI draws at EVERY rung/system (PT-1 C1)
+        if arm in ("B5", "D1"):   # SVI draws at EVERY rung/system
             pos[r] = svi_loc + rng.standard_normal((nsys, DIM)) @ svi_tril.T
+        elif arm == "D2":         # MAP z_best + stock-diagonal draws (PT-2 M2)
+            pos[r] = (map_zbest
+                      + D2_INIT_SCALE * rng.standard_normal((nsys, DIM)))
         elif arm in ("B3", "B4"):  # ALL-MAIN init (B4: power path, no prior)
             pos[r] = draw_pool(M["pool_M"], nsys)
         else:
@@ -1270,13 +1456,26 @@ def run_arm_b(arm, tag, equiv=False):
                 env_overrides=dict(K=k_src, NSYS=nsys_src, ROUNDS=rounds_src,
                                    ss_max=ssmax_src, devar=devar_src),
                 metric=metric_desc,
-                svi_npz=SVI_NPZ if arm == "B5" else None,
+                adapt_metric=adaptive,
+                metric_windows=(list(METRIC_WINDOWS) if adaptive else None),
+                metric_n0=(10 * nsys if adaptive else None),
+                metric_reference=("pooled MAMS64 cov (reference-ONLY)"
+                                  if adaptive else None),
+                metric_smoke_boundaries_note=(
+                    "SMOKE boundaries scaled to exercise window/freeze/save "
+                    "paths only" if (adaptive and SMOKE) else None),
+                d2_diag_provenance=d2_diag_provenance,
+                svi_npz=SVI_NPZ if arm in ("B5", "D1") else None,
+                map_npz=MAP_NPZ if arm == "D2" else None,
                 mams64=MAMS_NPZ, pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
                 init={"B1": "all rungs Bernoulli(0.5) main/pocket pool",
                       "B2": "rungs 1..R-1 Bernoulli(0.5); rung 0 prior draws",
                       "B3": "all main pool; rung 0 prior draws",
                       "B4": "ALL rungs/systems main pool (power; no prior draws)",
                       "B5": "SVI draws all rungs",
+                      "D1": "SVI draws all rungs (adaptive metric)",
+                      "D2": "MAP z_best + stock-diagonal draws all rungs "
+                            "(adaptive metric)",
                       }[arm],
                 u_def="log_prob = logdensity/beta" if path_kind == "power"
                       else "log_like = (logdensity - log_prior)/beta",
@@ -1287,7 +1486,11 @@ def run_arm_b(arm, tag, equiv=False):
                 make_tf=lambda b: make_tempered(path_kind, b),
                 u_from=u_from, u_direct=u_direct,
                 indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
-                init_pos=pos, card=card, ind_label="pocket")
+                init_pos=pos, card=card, ind_label="pocket",
+                adapt_metric=adaptive,
+                metric_windows=METRIC_WINDOWS if adaptive else None,
+                metric_n0=(10 * nsys if adaptive else None),
+                metric_ref=(M["cov_pool"] if adaptive else None))
     if equiv:
         return run_equiv_check(tag, seed, spec)
     return run_pt(tag, seed, spec)
@@ -1395,7 +1598,7 @@ def main():
     ap = argparse.ArgumentParser(description="GATE PT-0 (one arm per process)")
     ap.add_argument("--arm", required=True,
                     choices=["smoke", "control", "A_power", "A_lik",
-                             "B1", "B2", "B3", "B4", "B5"])
+                             "B1", "B2", "B3", "B4", "B5", "D1", "D2"])
     ap.add_argument("--equiv-check", action="store_true",
                     help="fused-vs-legacy runner equivalence guard: 3 rounds, "
                          "both implementations, identical inits/keys, SMOKE "
@@ -1419,8 +1622,9 @@ def main():
         return f"{arm}_smoke" if SMOKE else arm
 
     if equiv:
-        if args.arm not in ("control", "B1", "B2", "B3", "B4", "B5"):
-            ap.error("--equiv-check requires a PT arm (control/B1..B5)")
+        if args.arm not in ("control", "B1", "B2", "B3", "B4", "B5",
+                            "D1", "D2"):
+            ap.error("--equiv-check requires a PT arm (control/B1..B5/D1/D2)")
         if args.arm == "control":
             run_control(tag_of("control"), equiv=True)
         else:
@@ -1431,7 +1635,7 @@ def main():
         run_control(tag_of("control"))          # Arm 0 first (amendment ii)
         run_arm_a("power", tag_of("A_power"))
         run_arm_a("lik", tag_of("A_lik"))
-        for arm in ("B1", "B2", "B3", "B4", "B5"):
+        for arm in ("B1", "B2", "B3", "B4", "B5", "D1", "D2"):
             run_arm_b(arm, tag_of(arm))
     elif args.arm == "control":
         run_control(tag_of("control"))
