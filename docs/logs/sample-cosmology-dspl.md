@@ -213,6 +213,28 @@ reference assumes the T1 constancy argument transfers across the ~1σ noise-real
 shift (Run A's reconstruction supports this); (d) z2-ESS deficit mechanism is untested
 (correlational reading above). Grader: pending (inspect the two PNGs + summary JSON).
 
+**T5 — transverse-width verification (grader question: samples off-center, almost all
+inside the plotted 68% band, no outer spill — bijector bias?).** Verified and resolved as
+a PLOT artifact, not a sampler/bijector defect (code
+`dspl_ratio_ufirst_transverse_check.py`, `dspl_ratio_ufirst_overlay_fair.py`; evidence
+`ratio_ufirst_overlay_fair.png`):
+- Run D's transverse marginal (u, analytic from z1 — no solves) is Gaussian to the 2.3%/97.7%
+  quantiles: standardized quantiles [−1.98, −1.00, 0.00, 0.99, 2.00]; mean 1.3236072,
+  std 5.23e-4 over all 80k samples.
+- **Cross-parameterization check (the decisive one):** Run A sampled the SAME seed-0 dataset
+  with free r2 (no cosmology block, different coordinates entirely): mean 1.3235776,
+  std 5.56e-4 — Run D agrees to **+3.0e-5 = 0.04 σ** in the mean; widths within 6%
+  (≈2–3× the naive ESS-based scatter — borderline; single-seed caveat).
+- The original overlay's contours use the grid DISPLAY σ = 1.32e-3 (σ_frac=0.001), 2.5× the
+  actual per-dataset width ~5.2–5.6e-4 (same mismatch Run A's outcome noted), and this
+  realization's ML sits −5.58e-4 = −0.42 σ_display below r2_truth. Quantified against the
+  plotted 68% band: 93.0% of samples inside, 6.9% spill INNER side, 0.03% outer — exactly
+  the observed asymmetry. Against bands recomputed at Run A's independent (mean, σ)
+  (`ratio_ufirst_overlay_fair.png`) the cloud is centered and fills the 68% band
+  symmetrically along the whole arc.
+- Note for future overlays: the earlier σ_r,eff = 6.7e-4 (from the truncated baseline run's
+  cross-ridge width) is also ~20% wider than the per-dataset widths measured here.
+
 ---
 
 ## 2026-07-11 — Run C outcome: ratio-coordinates grouped prior — crest cured, but predictions FAILED; mirror truncation at the w0=−2 arm (proposed UNCERTIFIED)
