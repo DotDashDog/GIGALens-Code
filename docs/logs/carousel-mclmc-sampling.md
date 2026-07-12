@@ -456,6 +456,115 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-2 — SELF-CONTAINED PT-MCLMC: windowed mass-matrix adaptation
+  during PT burn-in (SVI-seed AND MAP-diagonal entry modes, per the HUMAN directives
+  2026-07-12: "make sure you're adapting the mass matrix during burnin" + "I also
+  often don't run SVI and just start MCLMC from MAP, with some small default diagonal
+  covariance… I'd like to be able to do that with PT-MCLMC as well") + the first
+  efficiency-frontier datapoints.**
+  **Status: awaiting approval.** Script: carousel_gate_pt0.py + one substantial
+  audited extension (adaptive-metric PT runner, below); outputs `*_pt2*`; one 4 h
+  allocation, 4 arms on 4 GPUs; seeds D1–D4 = 30–33.
+  **Claim + classification.** Stochastic-estimator behaviour; links: (M1) HOST-SIDE
+  windowed mass-matrix adaptation during PT burn-in converges the per-rung metric to
+  pooled-quality from PIPELINE-ONLY seeds, fixing PT-1's L1 failure (frozen raw-SVI
+  cov = ~3.5× pocket-transport cost) without MAMS64-derived inputs; (M2) the same
+  works from the user's no-SVI entry (MAP point + small default diagonal seed);
+  (E) the C-24 reference config still passes its clauses at HALF the budget (rounds
+  or chains) — the first frontier points. UNTESTED: other lenses; full frontier;
+  adjusted-kernel PT; within-basin parameter ESS.
+  **Cause hypothesis.** PT-1's L1 failure is a METRIC-QUALITY problem, not a
+  composition problem: the frozen SVI cov is main-basin-only and too narrow on the
+  pocket axes, throttling cross-basin exchange; the pooled empirical cov (which
+  worked) is exactly what windowed adaptation converges to once burn-in visits both
+  basins — and PT's hot rungs GUARANTEE both basins are visited early (PT-0b/PT-1
+  discovery ≤ ~100 rounds). Production MCLMC's own SVI-seeded windowed adaptation is
+  the proven mechanism (the user's stock MCLMC skips SVI routinely on its strength).
+  C-3/C-5 guard: a linear metric cannot fix the curvature — adaptation only needs to
+  MATCH the pooled metric, not beat it.
+  **Mechanism (the audited extension).** Host-side windowed adaptation: per-rung
+  Welford over ROUND-END positions (16 chains × rounds; K=10 kernel steps between
+  samples decorrelate partially — sample count per window derived below), seeded
+  production-style with the entry-mode prior (SVI cov or diagonal) at weight
+  n₀ = 10·NSYS pseudo-samples (mirrors svi_mass_matrix_weight = 10·n_chains);
+  window boundaries at rounds 100 / 250 / 500 (expanding, Stan-style; each window
+  REPLACES the metric estimate seeded anew from its predecessor as prior); metric
+  FROZEN from round 500; regularization = the production _regularize_cov rule
+  (symmetrize + Stan shrinkage + PSD floor). The fused runner takes inv_mass as a
+  TRACED argument (Cholesky inside jit; shapes static ⇒ no recompile on update);
+  step-size adaptation continues as-is and its running averages RESET at window
+  boundaries (production behaviour). Scoring windows for occupancy/health move to
+  rounds 1000–1500 (fully post-freeze; kept-phase clean).
+  **Sample-count derivation for the windows:** cold-rung IAT(u) ≈ 11 steps ⇒
+  round-end samples (10 steps apart) are ≈ 1-IAT spaced ⇒ window 3 (rounds 250–500)
+  holds ≥ 16 × 250 ≈ 4000 round-end samples ≈ ≥ 2000 effective — comfortably
+  conditioning a 33-dim covariance (61 dof per parameter pair); windows 1–2 are
+  coarse bootstraps, window 3 is the load-bearing estimate (same expanding-window
+  logic as production).
+  **Arms.** D1 (M1, SVI entry): adaptive metric, seed = SVI cov, inits = SVI draws
+  all rungs, seed 30. D2 (M2, MAP-diagonal entry): adaptive metric, seed = the
+  repo-discoverable stock diagonal default (build step MUST locate the user's no-SVI
+  MCLMC diagonal convention in the pipeline/notebooks and record it in the model
+  card; fallback if none found: 1e-2·I in z, recorded as such), inits = MAP z_best
+  + diagonal-seed draws, seed 31. Both: C-24 ladder/K/NSYS/ROUNDS (R=6, K=10, 16,
+  1500), ss_max 5. D3 (E, half-rounds): C-24 reference config (frozen pooled metric)
+  at ROUNDS = 750, seed 32. D4 (E, half-chains): C-24 config at NSYS = 8, ROUNDS =
+  1500, seed 33.
+  **Predictions (direction + magnitude).** D1/D2: pocket RTs recover to ≥ 175
+  (PT-1's SVI arm managed 117 with the BAD metric; the adapted metric should land
+  within 2× of the pooled-metric arms' 350–428); cold-rung last-500 occupancy in
+  (0.32, 0.49); INTERNALS (the sharp instrument): the frozen cold-rung adapted
+  covariance vs the pooled reference (MAMS64 positions, reference-ONLY) —
+  generalized-eigenvalue ratios within [1/3, 3] on ALL axes (the SVI seed starts
+  ≫ this on pocket axes; adaptation must close it; derivation: PT-0b ran in-band
+  with the pooled metric, and GATE L's floor rule showed ≥4× metric mismatch is
+  where dynamics degrade — 3 is the geometric midpoint inside that hazard bound).
+  D2 specifically: discovery (first pocket state at any rung) within ~150 rounds
+  (hot-rung kernel crossing at the PT-0b measured rates once steps adapt; the
+  diagonal-seed EEVPD controller needs ~1 window to find scale — allow 2× PT-0b's
+  ~40–100). D3: all PT-0b clauses at op-7-scaled floors (RT ≥ 175·750/1500 ≈ 88);
+  D4: RT ≥ 175/2 ≈ 88 (half the walkers) with occupancy in band — a PASS on either
+  is a ≥2× cost reduction datapoint.
+  **Win conditions (derived).** (W-M1) D1: RT_pocket ≥ 175 AND occupancy ∈
+  (0.32, 0.49) AND EEVPD medians in band AND gen-eig ratios ∈ [1/3, 3] all axes
+  post-freeze. (W-M2) D2: same four clauses. (W-E) D3 and D4 each: op-7-scaled
+  PT-0b clauses. Zones: RT ∈ (0, floor) with occupancy in band ⇒ flux-limited
+  (adaptation helped but insufficiently — report ratio vs PT-1's 117); gen-eig in
+  (3, 10] on ≤ 3 axes with transport passing ⇒ "adaptation partial — axes named,
+  next-gate decision"; D3/D4 single-clause misses ⇒ that frontier point costs more
+  than 0.5× (report which clause binds). Near-edge occupancy (±0.05) ⇒
+  corroboration rule as before.
+  **Falsifiers + routing.** F-M1: D1 gen-eig ratios stay > 10 on pocket axes OR
+  RT_pocket ≤ 117 (no better than the frozen-SVI arm) ⇒ host-side round-end
+  adaptation is the WRONG mechanism (samples too correlated / windows mis-sized) ⇒
+  diagnostic-first (window occupancy of Welford samples, per-axis convergence
+  traces — saved by design), no knob-turning. F-M2: D2 never discovers the pocket
+  in 1500 rounds ⇒ the no-SVI entry needs a hotter ladder or MAP-multistart seeding
+  — recorded, D2-scoped (does NOT invalidate M1). F-E: both D3 AND D4 fail multiple
+  clauses ⇒ the C-24 budget is already near-minimal (a real frontier finding, not a
+  failure). Every W-fail above has a named zone; anything else lands in
+  "report-to-human, no auto-lever".
+  **Blind spots.** (i) gen-eig convergence is judged against the MAMS64-positions
+  pooled reference — reference-only use, but a third mode absent from MAMS64 draws
+  would be invisible in the reference too; (ii) round-end Welford correlation is
+  IAT-model-based, not measured per-window (convergence traces saved to check);
+  (iii) D2's diagonal fallback (if no stock default is discoverable) is a choice,
+  recorded; (iv) frontier points at exactly 0.5× — the curve between is
+  uninterpolated; (v) all arms share the carousel/model/indicator as before.
+  **Pre-committed plots.** D1/D2: per-axis gen-eig ratio traces vs round (log-y)
+  collapsing into the [1/3, 3] band by round 500, flat after freeze — F-M1 shows
+  pocket axes plateauing high; worms/coldocc as PT-0b-class. D2 additionally: EEVPD
+  step traces finding scale within window 1. D3/D4: coldocc bands overlapping
+  (0.32, 0.49) at their reduced budgets.
+  **Cost.** Smoke (full shapes, both entry modes, ~15 min incl. compiles) then D1/D2
+  ≈ 3.3 h (7.8 s/round class), D3 ≈ 1.7 h, D4 ≈ 1500 rounds at 48-wide ≈ 6 s/round
+  ≈ 2.5 h — all parallel, one 4 h allocation, ≈ 14 GPU·h. Incremental saves + op-7
+  scaling as standing. MAMS lessons inherited (no MAMS arms this gate).
+  **Process.** Adaptive-runner extension diff-audited pre-launch (auditor + hash
+  recorded); scorer extension (gen-eig clause + D-arm tags) committed + audited
+  BEFORE unblinding (standing rule); model cards record entry mode, seed matrix
+  provenance, window/freeze config; boundary checks after log edits (standing).**
+
 - **Run: carousel GATE PT-1 — production composition + kernel-bias probe + MH-exact
   cross-method bracket (HUMAN-APPROVED direction 2026-07-11: "This looks very
   promising! Go ahead with Gate PT-1"; closes C-24's named blind spots and starts the
