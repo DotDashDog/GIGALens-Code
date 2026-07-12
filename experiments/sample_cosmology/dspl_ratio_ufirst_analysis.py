@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Post-run analysis for Run C (ratio-coordinates grouped prior) — pre-registered.
+"""Post-run analysis for Run D (banded u-first ratio coordinates) — pre-registered.
 
 Reads the completed pipeline's artifacts from
-`results/sample_cosmology/dspl_ratio_coords/` and evaluates the design
-checkpoint's predictions (docs/logs/sample-cosmology-dspl.md, "Run C"):
+`results/sample_cosmology/dspl_ratio_ufirst/` and evaluates the design
+checkpoint's predictions (docs/logs/sample-cosmology-dspl.md, "Run D"):
 
   P1  rank-R̂(Om0) and rank-R̂(w0) (PHYSICAL space) < 1.01
   P2  bulk-ESS of BOTH cosmology z-columns within 2x of the median nuisance ESS
@@ -22,7 +22,7 @@ Plots (the PRIMARY phenomenon check per the checkpoint's blind-spot (a)):
 
 Writes `ratio_ufirst_run_summary.json` (observed vs predicted, verdicts).
 Transforming 80k z-samples through the bisection map is GPU-cheap; run this
-inside the same allocation as the sampler (see run_dspl_ratio_coords.sh).
+inside the same allocation as the sampler (see run_dspl_ratio_ufirst.sh).
 """
 from __future__ import annotations
 
@@ -158,10 +158,10 @@ def main():
                colors=["#bbbbbb", "#888888", "#333333"], linewidths=1.0)
     idx = np.random.default_rng(0).choice(om.size, size=20000, replace=False)
     ax.scatter(om.ravel()[idx], w0.ravel()[idx], s=1.5, alpha=0.15,
-               color="tab:red", rasterized=True, label="Run C samples (20k of 80k)")
+               color="tab:red", rasterized=True, label="Run D samples (20k of 80k)")
     ax.axvline(OM0_EDGE, color="k", ls="--", lw=1)
     ax.set_xlabel("Om0"); ax.set_ylabel("w0")
-    ax.set_title("Run C samples vs grid posterior bands (99.7/95.5/68%)")
+    ax.set_title("Run D samples vs grid posterior bands (99.7/95.5/68%)")
     ax.legend(loc="lower right", fontsize=8)
     fig.tight_layout()
     overlay_png = os.path.join(ru.RESULTS_DIR, "ratio_ufirst_overlay.png")

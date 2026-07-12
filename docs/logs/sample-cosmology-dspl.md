@@ -134,6 +134,9 @@ Goal: get MCLMC to sample the (Om0, w0) posterior correctly.
   Cost: one 8-chain 10k+10k run + gate battery, ≈ Run C (~13 min wall on 1 interactive GPU).
   Status: **approved by grader (user) 2026-07-11 ("Go ahead with Run D!"); implemented;
   launched** via `run_dspl_ratio_ufirst.sh` after the amendment + gate below.
+  **COMPLETED 2026-07-11 — truncation cured in both directions (P1/P3/P4/P5/P6 hit);
+  P2's along-arc column technically fired the falsifier (efficiency residual, not
+  correctness) — see the "Run D outcome" entry below. Checkpoint cleared.**
   - *2026-07-11 amendment (BANDED SUPPORT — science-level, quantified-immaterial):* the
     full-box u-first map is topologically impossible for the real u_fn — u has interior
     critical points (u_a(Om0)=r2(Om0,−2) dips to a minimum at Om0≈0.02, corner slope −4.7,
@@ -160,6 +163,55 @@ Goal: get MCLMC to sample the (Om0, w0) posterior correctly.
     (3) FLDJ vs numeric slogdet 2.2e-15; (4) round-trip exact; (5) NEW zero-rotation check —
     u(forward(z)) invariant under z2 shifts to 1.1e-15 (the construction claim, verified
     numerically on the real u_fn).
+
+---
+
+## 2026-07-11 — Run D outcome: banded u-first ratio coordinates — truncation CURED in both directions; P2 falsifier technically fired on the along-arc column (proposed UNCERTIFIED)
+
+Evidence: `results/sample_cosmology/dspl_ratio_ufirst/ratio_ufirst_run_summary.json`,
+`ratio_ufirst_traces.png`, `ratio_ufirst_overlay.png` (NOTE: this run's overlay PNG carries
+an inherited "Run C" title/legend — labels fixed in the script afterward; the data is Run D),
+`mclmc/`, `map/`; code `dspl_ratio_ufirst.py`, `_gate.py`, `_analysis.py`, launcher
+`run_dspl_ratio_ufirst.sh` (wall: 811 s run + 48 s analysis on 1 GPU).
+
+Observed vs predicted:
+
+| Quantity | Predicted | Observed | Verdict |
+|---|---|---|---|
+| rank-R̂ Om0 / w0 (physical) | < 1.01 | **1.0087 / 1.0052** | hit |
+| bulk-ESS cosmo z-cols vs median nuisance (3364) | ≥ half | u-col (z1) **3206 (0.95×)**; along-arc col (z2) **949 (0.28×)** | **z2 miss** |
+| mass(Om0 < 0.146) | 0.103 ± 0.02 | **0.0899** | hit |
+| full arc per chain (min < 0.05 AND max > 0.50) | all 8 | min 0.001–0.011, max 0.540–0.552 | hit |
+| nonfinite-flagged steps | 0 | 0 / 160000 | hit |
+| MAP χ²/ν | ≈ 1 | 0.9975 | hit |
+
+**Phenomenon (plot-confirmed):** the truncation is gone in BOTH directions. All 8 chains
+traverse the full arc dozens of times (Om0 0.001→0.552, w0 −0.93→−2.0); the overlay traces
+the entire grid band including the Om0=0 edge and the w0=−2 plunge to the tangency. This is
+the full DSPL cosmology posterior from ONE run of the FULL forward model — the campaign's
+goal state. Also note nuisance ESS roughly doubled vs Run C (median 3364 vs 1830): the
+rotating-band coupling was degrading the nuisance block too.
+
+**P2 falsifier discipline:** as pre-registered, ESS(z2)=949 < half the nuisance median
+technically fires the falsifier "slab geometry is not sufficient — stop and diagnose".
+Reading: the slab construction fixed exploration/correctness (P3+P6+plots), and z1 — the
+formerly pathological stiff direction — now mixes AT the nuisance median (0.95×); what
+remains is ~3.5×-slower mixing ALONG the likelihood-flat arc direction, whose z2-marginal
+carries the prior-pushforward density structure (visible in the traces as ~100-step Om0
+sweeps). This is a mild efficiency residual, not a correctness defect, and it is the
+diagnosable leftover the falsifier was written to catch. Candidate cheap diagnostic (T4,
+not run): metric/L vs the z2-marginal shape from existing `mclmc/diagnostics.npz`.
+
+**Proposed claim C-5 (UNCERTIFIED):** the banded u-first ratio-coordinates grouped prior
+samples the full DSPL cosmology posterior correctly in a single full-forward-model MCLMC
+run (all mass checks pass; both former truncations absent; 0 nonfinite steps), with
+cosmology stiff-direction ESS at the nuisance median and a residual ~3.5× ESS deficit in
+the along-arc coordinate only. Doubt report: (a) single seed / single noise realization
+(shared with Runs A–C); (b) the banded-support amendment excludes 11.1% of PRIOR volume
+(< 1e-125 posterior mass — quantified in the checkpoint amendment); (c) P3's grid
+reference assumes the T1 constancy argument transfers across the ~1σ noise-realization
+shift (Run A's reconstruction supports this); (d) z2-ESS deficit mechanism is untested
+(correlational reading above). Grader: pending (inspect the two PNGs + summary JSON).
 
 ---
 

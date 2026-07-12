@@ -655,7 +655,12 @@ class UFirstRatioCoordsBijector(tfb.Bijector):
         activity test keeps clamped-root garbage gradients out of the graph
         (the solver's edge mask is the second line of defense)."""
         dt = jnp.result_type(u)
-        r_a = self._solve_om(jnp.asarray(self._w_lo, dt), u)
+        # Seed w_end FROM u (u*0 + const) so it inherits u's sharding/varying
+        # type: under shard_map a plain-constant custom_vjp argument makes the
+        # bwd rule's cotangent type (varying) mismatch the primal input type
+        # (unvarying) — the same class of failure as the bisection carry.
+        w_end = u * 0 + jnp.asarray(self._w_lo, dt)
+        r_a = self._solve_om(w_end, u)
         lo = jnp.full_like(u, self._om_lo)
         hi = jnp.full_like(u, self._om_hi)
         if self._sign_a > 0:
