@@ -475,7 +475,21 @@ multimodality, conditioning, or the NFW profile.
   added with the out-of-band Σ_ref(0.42) reporting rule; standing conditions:
   smoke incl. one --equiv-check arm, pt2 scorer (with metric_windows/smoke/frozen
   asserts) committed + audited BEFORE unblinding, env pins recorded. LAUNCHING on
-  an interactive node per the standing directive.**
+  an interactive node per the standing directive.
+  LAUNCH RECORD: allocation 55823792; smoke PASS (window/freeze/save paths, D-1
+  labels verified in output) + --equiv-check PASS (u0_rel 1.7e-11/6.4e-11 both
+  impls — traced-inv_mass refactor run-validated); arms D1–D4 launched seeds 30–33,
+  env pins in model cards. pt2 scorer audits: rd-1 DEFECTS (2 blocking: W-E clause
+  set silently narrowed — pair-acc + split-R̂ restored; flux-limited zone missing
+  the in-band conjunct — restored with UNROUTED→report-to-human else-branch) + 7
+  advisory, ALL applied @aca0ec9; rd-2 (pre-unblinding): CERTIFY-RECOMMENDED as
+  the adjudication instrument, split-R̂ numerically identical to the pt0b lineage;
+  residuals recorded (R1: (1.05,1.2]+transport zone scores FAIL-but-routed —
+  adjudicator applies the PT-0b 'not failure' reading + reports occupancy-ESS
+  manually; R2: F-M1 PRIMARY banner side-agnostic — confirm the >10 side from
+  geneig_full before declaring; R3: non-adapt smoke guard = tag separation +
+  INCOMPLETE banner). Auditor blind status disclosed: only rounds_done=1 and key
+  lists read mid-run. Adjudication conditional on complete runs.**
   Script: carousel_gate_pt0.py + one substantial audited extension (adaptive-metric
   PT runner, below); outputs `*_pt2*`; one 4 h allocation, 4 arms on 4 GPUs; seeds
   D1–D4 = 30–33.
