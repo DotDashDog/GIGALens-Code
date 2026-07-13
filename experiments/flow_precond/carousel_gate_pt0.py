@@ -555,10 +555,16 @@ def cum_trapz_from_cold(betas, d, var_d):
 
 def run_arm_a(path_kind, tag):
     seed = ARM_SEED["A_power" if path_kind == "power" else "A_lik"]
+    seed_source = "ARM_SEED default"
+    env_seed = os.environ.get("GATE_PT0_SEED_A", "").strip()
+    if env_seed:   # PT-4 probe: seed 54 per checkpoint (L2 fresh-probe arm)
+        seed = int(env_seed)
+        seed_source = f"env override GATE_PT0_SEED_A={env_seed}"
     rng = np.random.default_rng(seed)
     key = jax.random.key(seed)
     betas = BETAS_A
-    card = dict(arm=tag, path=path_kind, seed=seed, smoke=SMOKE,
+    card = dict(arm=tag, path=path_kind, seed=seed, seed_source=seed_source,
+                smoke=SMOKE,
                 script=os.path.abspath(__file__), jax=jax.__version__,
                 devices=[str(d) for d in jax.devices()],
                 x64=bool(jax.config.jax_enable_x64), dim=DIM,
