@@ -459,6 +459,12 @@ multimodality, conditioning, or the NFW profile.
 - **Does NOT cover:** other lenses; band-converged no-SVI occupancy (D2 occ 0.291 below band, split-R̂ 1.104 at this budget); certified production config; whether D2's extra under-inflated axis is seed-specific; z-col → parameter-name mapping (C-8: owed before physical interpretation).
 - **Downstream:** PT-3 = later-freeze/robust-shrink metric refinement + point-and-go certification (~R6/K10/NSYS 8–16/ROUNDS 750–1000 ≈ 1–1.7 h single-A100 target); everything remains downstream of UNCERTIFIED C-24/C-25.
 
+### C-27 — GATE PT-3: later freeze does NOT fix adaptive-metric ridge-axis inflation (predicted ≤ 8, observed 20.2–53.8 vs Σ_ref(ŵ), F-R all four MAP-entry arms; 3 of 4 exceed PT-2's freeze-500 scored range, E3 matches it — "worse" not separable from seed spread); within-run traces show a large slowly-decaying window-2 TRANSIENT (104–126 → 20–54), NOT growth-with-duration, with a window-3 feedback confound
+- **Status:** `proposed (UNCERTIFIED)` — 2026-07-12; scorer @198f8b1 (audit-certified); artifacts `carousel_gate_pt0_out/*pt3*`; result-grader CERTIFY-RECOMMENDED conditional on B1–B3 (applied). Same {19,2,3,20} inflated family, ⊥ Δμ, both gates.
+- **INFERENCE (labeled):** no tried fixed-freeze schedule converges at feasible budgets; fix family = BOUND/SHRINK the estimate (PT-4; cap to be derived — no anchor number).
+- **Also:** F-S no-fire under the pinned E1/E2 test (E4 near-threshold alignment |cos| 0.756 = watch item); F-P fired (E4 fails W-t+W-o; moot routing — E2 fails too); W-p NOT assembled; E1/E2 2σ-consistent yet clause-flipping ⇒ single-run certification unsupportable at 1500 rounds.
+- **Scope:** this posterior, unadjusted kernel, MAP entry; chain UNCERTIFIED (C-24/C-25 basis; 1e-6·I ratification pending).
+
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: carousel GATE PT-3 — later-freeze metric refinement + MAP-entry point-and-go
@@ -491,8 +497,14 @@ multimodality, conditioning, or the NFW profile.
   FIRED ON ALL ARMS — later freeze WORSENED inflation (direction miss; mechanism
   revised to transit-dominated variance growth ⇒ bounded/shrunk estimation
   required, not longer windows); W-p NOT assembled; S-link closed
-  (seed-specific); PT-4 = robust-shrink checkpoint routed. Awaiting
-  result-grader pass.**
+  (seed-specific); PT-4 = robust-shrink checkpoint routed. Result-grader
+  rd-1: CERTIFY-RECOMMENDED (F-R falsification scope only) conditional on B1–B3
+  — APPLIED (mechanism sentence rewritten to the artifact-supported statement;
+  within-run window-2 transient + feedback confound disclosed — the saved
+  diagnostic the producer failed to consult, named as a producer-honesty gap;
+  like-for-like ratios 1.35/2.35/0.88/2.28 with E3 inside the PT-2 range;
+  "worsened" downgraded; F-P recorded as fired-and-moot). C-27 registered.
+  Awaiting human certification.**
   OP-INCIDENT (2026-07-12, recorded before relaunch): the first smoke launch set
   GATE_PT0_ROUNDS_B=1500 alongside GATE_PT0_SMOKE=1; the env override silently
   beat the smoke ROUNDS reduction (SECOND occurrence of this class — PT-0b's
@@ -2393,38 +2405,62 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   RT 109 ≥ 88, gen-eig [0.51, 20.2] — F-R. E4 (8, 43): occ 0.2630 below, RT 61 <
   88, gen-eig [0.19, 52.4] — F-R; its single low-side axis has |cos(stored)| =
   0.756 < 0.8 ⇒ F-S does NOT fire (E3/E4 report-only anyway; E1/E2 had NO
-  low-side exits ⇒ the PT-2 D2 under-inflated axis did not recur in the pinned
-  sense — S-link reads SEED-SPECIFIC, closed at this budget). W-s passes both
+  low-side exits ⇒ no recurrence under the PINNED E1/E2 test at this budget;
+  A4 caveat: E4 — a report-only arm — showed a strongly ALIGNED low-side axis
+  (|cos| 0.756 vs threshold 0.8, shared top cols {10,11} with the stored
+  {10,4,11,1}) — a WATCH ITEM for PT-4, so the S-link is "not recurred under
+  the pinned test," not "closed" bare). W-s passes both
   pairs (E1/E2 at 0.83×lim — genuinely consistent; E3/E4 trivially at the weak
   MDE). EEVPD medians in band everywhere; B3 tail fractions 7.8–19% per rung
   (same class as PT-2 — the tail is freeze-schedule-INSENSITIVE, a datum for the
   kernel-bias file). W-p: NOT assembled (candidate arms fail occ/geneig).
-  **Magnitude/direction accounting (the discipline's core duty):** prediction
-  was max gen-eig ≤ 8 via decay extrapolation; observed 20–54, i.e. the
-  DIRECTION of the freeze-timing effect was WRONG — more adaptation time
-  increased inflation by 1.5–2.3× over freeze-500. The pre-registered heuristic
-  label and the (8,10] routing do not rescue this: the hypothesis FAILED, and
-  the D2 non-monotone trace disclosed at rd-1 (48.6 → 126.4 → 24.9) was the
-  early warning. REVISED mechanism (INFERENCE, now with 8 supporting arms
-  across PT-2/PT-3): ridge-axis position variance is transit-dominated and
-  grows ~linearly with window duration; NO fixed-freeze empirical schedule
-  converges at feasible budgets; the fix family must BOUND the estimate
-  (robust-shrink: per-axis cap on metric growth vs the seed/previous window —
-  the lever the F-R routing pre-named), not extend it.
+  **Magnitude/direction accounting (result-grader-corrected, B1/B2):** prediction
+  was max gen-eig ≤ 8; observed 20.2–53.8 — the hypothesis FAILED (miss ≥ 2.5×;
+  the heuristic label does not rescue it; rd-1's D2 non-monotone disclosure was
+  the early warning). LIKE-FOR-LIKE vs PT-2's SCORED values (D2 22.94): ratios
+  1.35 / 2.35 / 0.88 / 2.28 — E3 sits INSIDE PT-2's freeze-500 range, so "later
+  freeze WORSENED" is downgraded to "failed to improve and typically worsened —
+  NOT separable from seed spread given a 1-seed-per-mode PT-2 baseline and
+  PT-3's own 20–54 spread." WITHIN-RUN boundary traces (the saved diagnostic,
+  consulted at grading — grader recount, producer miss): window maxima
+  19–37 → **104–126** → 20–54 on ALL FOUR arms — a large slowly-decaying
+  TRANSIENT at window 2, with the 2×-LONGER window 3 producing 2–6× LESS
+  inflation, contradicting any growth-with-duration law; AND window 3 was
+  collected under the ~100×-inflated window-2 metric (feedback confound,
+  recorded). SUPPORTED statement: ridge-axis window variance remains ≥ 20×
+  inflated at every window placement tried (starts 250–500, durations 250–500,
+  8 arms / 2 gates); INFERENCE (labeled): no tried fixed-freeze schedule
+  converges at feasible budgets; the fix family must BOUND/SHRINK the estimate
+  (the F-R-routed lever), whether the underlying process is noisy transients,
+  duration growth, or feedback.
+  **Falsifier table closure (B3):** F-P FIRED — E4 fails W-t (61 < 88) AND W-o
+  (0.263 beyond near-edge); its routing ("product needs NSYS 16") is MOOT
+  because E2 (NSYS 16) also fails both — no width rescues the MAP-entry mode at
+  this budget. F-eq did not fire (W-s 0.83× lim). F-S did not fire (pinned
+  test).
   **Additional decision-relevant findings:** (i) seed spread at these budgets is
   LARGE in the MAP-entry mode (E1 vs E2: occ 0.34 vs 0.24, RT 229 vs 146; same
-  config) — single-run certification of the no-SVI mode at 1500 rounds is not
-  supportable regardless of the metric fix; (ii) PT-2's freeze-500 arms remain
+  config; A6 reconciliation: the pair is 2σ-CONSISTENT at 0.83× the W-s limit
+  AND clause-flipping — i.e. the clause thresholds sit INSIDE the seed-noise
+  band at this budget, which is precisely why single-run certification is
+  unsupportable; two seeds suffice for that decision-level conclusion); (i-b,
+  A7, C-8 duty discharged) the >10 axes are the {19,2,3,20} family in ALL FOUR
+  arms with |cos Δμ| = 0.000 — z_param_names for these columns are in every
+  full_E*_pt3.log model-card block (physical reading deferred to the write-up); (ii) PT-2's freeze-500 arms remain
   the BEST adaptive-metric results to date (occ in/near band, RT 228–253, max
   gen-eig 20–23) — earlier freeze + shrinkage is the indicated combination;
-  (iii) the certified pooled-metric config (C-24) remains unaffected and fully
-  functional — the production gap is metric PROVENANCE only.
+  (iii) the certified pooled-metric config (C-24) is UNAFFECTED BY THIS RESULT
+  (different metric path; not re-measured this gate — A8) — the production gap
+  is metric PROVENANCE only; (iv, A8) the tail-fraction comparison cites the
+  PT-0b/PT-1 lineage figures (11–20% per rung), not PT-2's scored json (which
+  carried no tail_rung).
   **Routing (pre-committed):** F-R ⇒ robust-shrink lever goes to a NEW
   checkpoint (PT-4), no in-gate knobs — design sketch for the record: freeze at
   500 (the better-performing schedule), then apply a per-axis generalized-
-  eigenvalue CAP of the window estimate against the SEED metric (e.g. clip axes
-  beyond ×9 — half a decade below the smallest observed harmful inflation — the
-  exact cap to be DERIVED in the checkpoint from the PT-2/PT-3 spectra);
+  eigenvalue CAP of the window estimate against the SEED metric — the cap value
+  is TO BE DERIVED in the checkpoint from the PT-2/PT-3 spectra (A5: the draft
+  "×9" gloss was arithmetically wrong and is withdrawn; no round number may
+  anchor the derivation);
   alternatively evaluate whether the (3,10]-zone inflation at freeze-500 is
   simply ACCEPTED for the product (PT-2's B3-caveated decision) with the
   robust-shrink as belt-and-braces. Scope: all UNCERTIFIED; 1e-6·I ratification
