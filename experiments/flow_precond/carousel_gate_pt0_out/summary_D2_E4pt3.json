@@ -1,0 +1,230 @@
+{
+ "model_card": {
+  "arm": "D2_E4pt3",
+  "path": "power",
+  "seed": 43,
+  "seed_source": "env override GATE_PT0_SEED_B=43",
+  "swap_seed": 10043,
+  "prior_init_seed": null,
+  "smoke": false,
+  "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+  "jax": "0.10.0.dev20260712",
+  "devices": [
+   "cuda:0"
+  ],
+  "x64": true,
+  "dim": 33,
+  "R": 6,
+  "NSYS": 8,
+  "K": 10,
+  "ROUNDS": 1500,
+  "thin": 5,
+  "betas": [
+   0.3594,
+   0.4388,
+   0.5373,
+   0.6598,
+   0.8116,
+   1.0
+  ],
+  "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+  "L": 5.744562646538029,
+  "ss_init": 0.05,
+  "ss_max": 5.0,
+  "devar": 0.0005,
+  "env_overrides": {
+   "K": "env override GATE_PT0_K_B=10",
+   "NSYS": "env override GATE_PT0_NSYS_B=8",
+   "ROUNDS": "env override GATE_PT0_ROUNDS_B=1500",
+   "ss_max": "env override GATE_PT0_SSMAX=5.0",
+   "devar": "default",
+   "metric_windows": "env override GATE_PT0_METRIC_WINDOWS=250,500,1000 (freeze = last entry, round 1000)"
+  },
+  "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
+  "adapt_metric": true,
+  "metric_windows": [
+   250,
+   500,
+   1000
+  ],
+  "metric_windows_source": "env override GATE_PT0_METRIC_WINDOWS=250,500,1000 (freeze = last entry, round 1000)",
+  "metric_n0": 80,
+  "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+  "metric_smoke_boundaries_note": null,
+  "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
+  "svi_npz": null,
+  "map_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/map/arrays.npz",
+  "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+  "pocket_indicator": "z[6] > -22.35",
+  "init": "MAP z_best + stock-diagonal draws all rungs (adaptive metric)",
+  "u_def": "log_prob = logdensity/beta",
+  "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+  "sep_check_max_abs": 0.0,
+  "runner_impl": "fused-vmap-over-rungs"
+ },
+ "end_stats": {
+  "indicator_label": "pocket",
+  "last_rounds": 500,
+  "cold_occ_per_system": [
+   0.636,
+   0.332,
+   0.456,
+   0.236,
+   0.258,
+   0.134,
+   0.018,
+   0.034
+  ],
+  "cold_occ_mean": 0.263,
+  "cold_occ_sd": 0.21078086115340605,
+  "init_cold_occ": 0.0,
+  "round_trips_per_system": [
+   77,
+   70,
+   68,
+   84,
+   55,
+   68,
+   80,
+   75
+  ],
+  "round_trips_total": 577,
+  "round_trips_median_per_system": 72.5,
+  "round_trips_main_per_system": [
+   61,
+   57,
+   54,
+   73,
+   54,
+   65,
+   79,
+   73
+  ],
+  "round_trips_main_total": 516,
+  "round_trips_pocket_per_system": [
+   16,
+   13,
+   14,
+   11,
+   1,
+   3,
+   1,
+   2
+  ],
+  "round_trips_pocket_total": 61,
+  "down_traverses_per_system": [
+   81,
+   73,
+   71,
+   87,
+   58,
+   71,
+   83,
+   77
+  ],
+  "pocket_cold_arrivals_per_system": [
+   18,
+   14,
+   15,
+   11,
+   2,
+   4,
+   2,
+   3
+  ],
+  "pocket_cold_arrivals_total": 69,
+  "main_cold_arrivals_total": 532,
+  "swap_attempts_same": [
+   4333,
+   4548,
+   4742,
+   4898,
+   4975
+  ],
+  "swap_attempts_cross": [
+   1667,
+   1452,
+   1258,
+   1102,
+   1025
+  ],
+  "swap_acc_same": [
+   0.5345026540503116,
+   0.5463940193491644,
+   0.5447068747363981,
+   0.5536953858717844,
+   0.5342713567839196
+  ],
+  "swap_acc_cross": [
+   0.48110377924415115,
+   0.49173553719008267,
+   0.5031796502384738,
+   0.4945553539019964,
+   0.47804878048780486
+  ],
+  "cold_indicator_split_rhat": 1.161264492886044,
+  "rhat_last_rounds": 1000,
+  "eevpd_last_per_rung": [
+   0.10454253872575077,
+   0.19322553235848036,
+   0.004667157028977577,
+   0.00966950234956788,
+   0.06185045881149709,
+   0.07525869849327535
+  ],
+  "eevpd_in_band": [
+   false,
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "eevpd_band": [
+   0.0001,
+   0.002
+  ],
+  "step_mean_last_per_rung": [
+   0.30661887795633863,
+   0.34163116831968915,
+   0.40791499106136714,
+   0.44753088513473055,
+   0.4564548505876644,
+   0.41497863834540205
+  ],
+  "n_nan_reverts": 0,
+  "u0_verify_rel": 2.143000487351755e-11,
+  "u0_verify_max_abs": 6.243179086595774e-06
+ },
+ "metric_adapt": {
+  "windows": [
+   250,
+   500,
+   1000
+  ],
+  "n0": 80.0,
+  "frozen": true,
+  "n_boundaries_applied": 3,
+  "reference": "pooled MAMS64 cov \u2014 DIAGNOSTIC ONLY, NOT the scored clause instrument)",
+  "geneig_final_cold_min": 0.40796720528206726,
+  "geneig_final_cold_max": 50.28575955521623,
+  "geneig_final_min_per_rung": [
+   0.5811871141028875,
+   0.58351677247862,
+   0.6220994672920912,
+   0.48926103627079376,
+   0.4827808032012925,
+   0.40796720528206726
+  ],
+  "geneig_final_max_per_rung": [
+   460.3696246308251,
+   186.79880517887426,
+   49.719208245414805,
+   25.206972541096036,
+   32.89270822644388,
+   50.28575955521623
+  ],
+  "geneig_pooledref_DIAGNOSTIC_in_band": false
+ },
+ "total_wall_s": 6006.420344829559
+}

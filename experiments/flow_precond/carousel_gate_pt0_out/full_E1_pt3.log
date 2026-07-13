@@ -100,3 +100,44 @@ MODEL CARD: {
 [B D2_E1pt3] round-0 u identity: rel = 3.380e-11 (abs = 9.848e-06)
 [B D2_E1pt3] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.9e-07/3.7e-06/1.4e-05 reverts=0 wall=75s
 [B D2_E1pt3] round    50/1500 cold occ=0.000 hot occ=0.000 RT=54 pocketCA=0 EEVPD[h/m/c]=2.9e-04/4.4e-04/4.8e-04 reverts=0 wall=512s
+[B D2_E1pt3] round   100/1500 cold occ=0.000 hot occ=0.000 RT=147 pocketCA=0 EEVPD[h/m/c]=3.2e-04/4.2e-04/5.8e-04 reverts=0 wall=901s
+[B D2_E1pt3] round   150/1500 cold occ=0.000 hot occ=0.000 RT=205 pocketCA=0 EEVPD[h/m/c]=1.0e-03/4.5e-04/4.8e-04 reverts=0 wall=1289s
+[B D2_E1pt3] round   200/1500 cold occ=0.000 hot occ=0.000 RT=274 pocketCA=0 EEVPD[h/m/c]=5.3e-04/1.1e-03/7.2e-04 reverts=0 wall=1678s
+[B D2_E1pt3] metric window boundary at round 250: n_w=4000, n0=160
+[B D2_E1pt3] round   250/1500 cold occ=0.000 hot occ=0.000 RT=347 pocketCA=0 EEVPD[h/m/c]=4.2e-03/1.4e-02/1.1e-01 reverts=0 wall=2066s
+[B D2_E1pt3] round   300/1500 cold occ=0.062 hot occ=0.188 RT=400 pocketCA=8 EEVPD[h/m/c]=3.1e-04/9.6e-05/1.1e-03 reverts=0 wall=2455s
+[B D2_E1pt3] round   350/1500 cold occ=0.062 hot occ=0.438 RT=436 pocketCA=16 EEVPD[h/m/c]=7.9e-05/7.2e-04/8.4e-05 reverts=0 wall=2843s
+[B D2_E1pt3] round   400/1500 cold occ=0.062 hot occ=0.562 RT=457 pocketCA=17 EEVPD[h/m/c]=2.3e-05/9.6e-04/5.2e-04 reverts=0 wall=3232s
+[B D2_E1pt3] round   450/1500 cold occ=0.125 hot occ=0.250 RT=466 pocketCA=21 EEVPD[h/m/c]=1.0e-04/1.4e-04/7.9e-04 reverts=0 wall=3620s
+[B D2_E1pt3] metric window boundary at round 500: n_w=4000, n0=160
+[B D2_E1pt3] round   500/1500 cold occ=0.000 hot occ=0.188 RT=473 pocketCA=23 EEVPD[h/m/c]=7.3e+00/1.0e+00/4.9e+00 reverts=0 wall=4009s
+[B D2_E1pt3] round   550/1500 cold occ=0.062 hot occ=0.250 RT=487 pocketCA=26 EEVPD[h/m/c]=3.1e-04/9.1e-04/5.8e-04 reverts=0 wall=4398s
+[B D2_E1pt3] round   600/1500 cold occ=0.062 hot occ=0.000 RT=519 pocketCA=29 EEVPD[h/m/c]=7.2e-05/3.4e-04/1.9e-04 reverts=0 wall=4786s
+[B D2_E1pt3] round   650/1500 cold occ=0.188 hot occ=0.250 RT=549 pocketCA=30 EEVPD[h/m/c]=1.2e-03/5.1e-05/2.2e-04 reverts=0 wall=5175s
+[B D2_E1pt3] round   700/1500 cold occ=0.125 hot occ=0.062 RT=589 pocketCA=36 EEVPD[h/m/c]=5.4e-04/4.4e-05/1.4e-03 reverts=0 wall=5563s
+[B D2_E1pt3] round   750/1500 cold occ=0.125 hot occ=0.312 RT=627 pocketCA=39 EEVPD[h/m/c]=3.7e-03/2.3e-04/2.1e-03 reverts=0 wall=5952s
+[B D2_E1pt3] round   800/1500 cold occ=0.062 hot occ=0.188 RT=676 pocketCA=49 EEVPD[h/m/c]=2.5e-04/1.1e-04/1.6e-04 reverts=0 wall=6340s
+[B D2_E1pt3] round   850/1500 cold occ=0.250 hot occ=0.188 RT=717 pocketCA=57 EEVPD[h/m/c]=6.4e-04/1.4e-04/3.2e-04 reverts=0 wall=6729s
+[B D2_E1pt3] round   900/1500 cold occ=0.188 hot occ=0.250 RT=762 pocketCA=66 EEVPD[h/m/c]=6.5e-04/2.1e-03/9.7e-04 reverts=0 wall=7117s
+[B D2_E1pt3] round   950/1500 cold occ=0.250 hot occ=0.188 RT=796 pocketCA=71 EEVPD[h/m/c]=5.3e-04/7.3e-05/2.3e-04 reverts=0 wall=7506s
+[B D2_E1pt3] metric window boundary at round 1000: n_w=8000, n0=160 (METRIC FROZEN)
+[B D2_E1pt3] round  1000/1500 cold occ=0.250 hot occ=0.250 RT=837 pocketCA=85 EEVPD[h/m/c]=5.3e+00/3.3e+00/4.8e+00 reverts=0 wall=7894s
+[B D2_E1pt3] round  1050/1500 cold occ=0.500 hot occ=0.188 RT=885 pocketCA=99 EEVPD[h/m/c]=7.0e-04/5.7e-04/5.5e-04 reverts=0 wall=8282s
+[B D2_E1pt3] round  1100/1500 cold occ=0.250 hot occ=0.312 RT=930 pocketCA=113 EEVPD[h/m/c]=8.8e-04/2.6e-04/9.9e-04 reverts=0 wall=8671s
+[B D2_E1pt3] round  1150/1500 cold occ=0.312 hot occ=0.312 RT=975 pocketCA=132 EEVPD[h/m/c]=3.0e-02/2.0e-03/2.2e-04 reverts=0 wall=9059s
+[B D2_E1pt3] round  1200/1500 cold occ=0.188 hot occ=0.500 RT=1017 pocketCA=144 EEVPD[h/m/c]=2.0e-04/1.4e-04/1.7e-03 reverts=0 wall=9447s
+[B D2_E1pt3] round  1250/1500 cold occ=0.438 hot occ=0.312 RT=1054 pocketCA=159 EEVPD[h/m/c]=2.7e-04/3.7e-04/2.2e-04 reverts=0 wall=9836s
+[B D2_E1pt3] round  1300/1500 cold occ=0.438 hot occ=0.312 RT=1099 pocketCA=178 EEVPD[h/m/c]=6.6e-05/8.8e-05/6.1e-05 reverts=0 wall=10224s
+[B D2_E1pt3] round  1350/1500 cold occ=0.500 hot occ=0.250 RT=1158 pocketCA=200 EEVPD[h/m/c]=1.1e-02/8.7e-04/8.9e-05 reverts=0 wall=10613s
+[B D2_E1pt3] round  1400/1500 cold occ=0.438 hot occ=0.375 RT=1200 pocketCA=219 EEVPD[h/m/c]=6.0e-04/6.9e-05/3.6e-04 reverts=0 wall=11001s
+[B D2_E1pt3] round  1450/1500 cold occ=0.375 hot occ=0.500 RT=1239 pocketCA=235 EEVPD[h/m/c]=1.9e-04/6.0e-04/4.9e-04 reverts=0 wall=11389s
+[B D2_E1pt3] round  1499/1500 cold occ=0.250 hot occ=0.375 RT=1280 pocketCA=248 EEVPD[h/m/c]=8.0e-03/1.3e-04/1.5e-04 reverts=0 wall=11770s
+
+[B D2_E1pt3] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 500 rounds: 0.3410 +- 0.1547 (per-sys [0.344, 0.218, 0.246, 0.488, 0.36, 0.594, 0.414, 0.7, 0.36, 0.248, 0.078, 0.254, 0.212, 0.32, 0.24, 0.38]; init 0.000)
+  round trips total 1280 (median/sys 82.0; pocket-classified 229 [W-2], main-classified 1051); pocket cold-arrivals 248, main 1080
+  swap acc same=[0.563, 0.552, 0.547, 0.543, 0.534]
+  swap acc cross=[0.527, 0.528, 0.511, 0.512, 0.466] (cross attempts [3996, 3651, 3543, 3416, 3438])
+  cold split-Rhat = 1.0870026374782835; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
+  metric adapt: 3 boundaries applied, frozen=True; final gen-eig cold rung [0.699, 28.792] (band [1/3, 3] all rungs: False [DIAGNOSTIC vs pooled ref — scored clause is vs Sigma_ref(w-hat), pt2 scorer])
+[B D2_E1pt3] DONE in 11830s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

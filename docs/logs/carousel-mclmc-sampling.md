@@ -487,6 +487,12 @@ multimodality, conditioning, or the NFW profile.
   report-only, strict both-pairs W-s adopted as the conservative reading of the
   unqualified pinned letter, swap-array axis semantics inherited from the
   certified pt2 lineage). Auditor blind status maintained.
+  RAN 2026-07-12, all four arms complete; result in Log ("GATE PT-3 RAN"): F-R
+  FIRED ON ALL ARMS — later freeze WORSENED inflation (direction miss; mechanism
+  revised to transit-dominated variance growth ⇒ bounded/shrunk estimation
+  required, not longer windows); W-p NOT assembled; S-link closed
+  (seed-specific); PT-4 = robust-shrink checkpoint routed. Awaiting
+  result-grader pass.**
   OP-INCIDENT (2026-07-12, recorded before relaunch): the first smoke launch set
   GATE_PT0_ROUNDS_B=1500 alongside GATE_PT0_SMOKE=1; the env override silently
   beat the smoke ROUNDS reduction (SECOND occurrence of this class — PT-0b's
@@ -2368,6 +2374,62 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-12 (carousel GATE PT-3 RAN — F-R FIRES ON ALL FOUR ARMS: the
+  later-freeze hypothesis is FALSIFIED IN DIRECTION — freeze-1000 made the
+  ridge-axis inflation WORSE (max gen-eig 30.9 / 53.8 / 20.2 / 52.4 vs PT-2's
+  20–23 at freeze-500); mechanism REVISED: Welford variance on the ridge axes
+  GROWS with window length (chains still transiting at any feasible window ⇒
+  empirical metric adaptation DIVERGES on those axes — the C-3/C-5 warning
+  vindicated quantitatively); W-p NOT assembled; PROPOSED (UNCERTIFIED)):**
+  allocation 55835269 (fresh, after the recorded op-incident), code @a43178c
+  lineage, scorer @198f8b1 (audit-certified pre-unblinding, run to completion,
+  stdout archived, `pt3_score.json` written); all four arms complete at 1500
+  rounds; corrected smoke + precedence fix on the record.
+  **Scored results (certified scorer, pinned formulas):** E1 (NSYS 16, seed 40):
+  occ 0.3410 ± 0.0387 in band (near-edge), RT 229 ≥ 175, health clean, gen-eig
+  [0.51, 30.9] — F-R. E2 (16, 41): occ 0.2396 below band (beyond near-edge), RT
+  146 < 175, gen-eig [0.59, 53.8] — F-R. E3 (8, 42): occ 0.3138 (near-edge low),
+  RT 109 ≥ 88, gen-eig [0.51, 20.2] — F-R. E4 (8, 43): occ 0.2630 below, RT 61 <
+  88, gen-eig [0.19, 52.4] — F-R; its single low-side axis has |cos(stored)| =
+  0.756 < 0.8 ⇒ F-S does NOT fire (E3/E4 report-only anyway; E1/E2 had NO
+  low-side exits ⇒ the PT-2 D2 under-inflated axis did not recur in the pinned
+  sense — S-link reads SEED-SPECIFIC, closed at this budget). W-s passes both
+  pairs (E1/E2 at 0.83×lim — genuinely consistent; E3/E4 trivially at the weak
+  MDE). EEVPD medians in band everywhere; B3 tail fractions 7.8–19% per rung
+  (same class as PT-2 — the tail is freeze-schedule-INSENSITIVE, a datum for the
+  kernel-bias file). W-p: NOT assembled (candidate arms fail occ/geneig).
+  **Magnitude/direction accounting (the discipline's core duty):** prediction
+  was max gen-eig ≤ 8 via decay extrapolation; observed 20–54, i.e. the
+  DIRECTION of the freeze-timing effect was WRONG — more adaptation time
+  increased inflation by 1.5–2.3× over freeze-500. The pre-registered heuristic
+  label and the (8,10] routing do not rescue this: the hypothesis FAILED, and
+  the D2 non-monotone trace disclosed at rd-1 (48.6 → 126.4 → 24.9) was the
+  early warning. REVISED mechanism (INFERENCE, now with 8 supporting arms
+  across PT-2/PT-3): ridge-axis position variance is transit-dominated and
+  grows ~linearly with window duration; NO fixed-freeze empirical schedule
+  converges at feasible budgets; the fix family must BOUND the estimate
+  (robust-shrink: per-axis cap on metric growth vs the seed/previous window —
+  the lever the F-R routing pre-named), not extend it.
+  **Additional decision-relevant findings:** (i) seed spread at these budgets is
+  LARGE in the MAP-entry mode (E1 vs E2: occ 0.34 vs 0.24, RT 229 vs 146; same
+  config) — single-run certification of the no-SVI mode at 1500 rounds is not
+  supportable regardless of the metric fix; (ii) PT-2's freeze-500 arms remain
+  the BEST adaptive-metric results to date (occ in/near band, RT 228–253, max
+  gen-eig 20–23) — earlier freeze + shrinkage is the indicated combination;
+  (iii) the certified pooled-metric config (C-24) remains unaffected and fully
+  functional — the production gap is metric PROVENANCE only.
+  **Routing (pre-committed):** F-R ⇒ robust-shrink lever goes to a NEW
+  checkpoint (PT-4), no in-gate knobs — design sketch for the record: freeze at
+  500 (the better-performing schedule), then apply a per-axis generalized-
+  eigenvalue CAP of the window estimate against the SEED metric (e.g. clip axes
+  beyond ×9 — half a decade below the smallest observed harmful inflation — the
+  exact cap to be DERIVED in the checkpoint from the PT-2/PT-3 spectra);
+  alternatively evaluate whether the (3,10]-zone inflation at freeze-500 is
+  simply ACCEPTED for the product (PT-2's B3-caveated decision) with the
+  robust-shrink as belt-and-braces. Scope: all UNCERTIFIED; 1e-6·I ratification
+  still pending; z-col names now in every run log (C-8 closed operationally).
+  Cost: 4 arms ≈ 13 GPU·h + the op-incident's ~3 h wall (recorded).
 
 - **2026-07-12 (carousel GATE PT-2 RAN — BOTH ENTRY MODES TRANSPORT (SVI-seed RT 253,
   MAP+1e-6·I-diagonal RT 228, floors 175 — the user's no-SVI workflow WORKS on

@@ -1,0 +1,36 @@
+
+[E1] rounds=1500 m=0.3410±0.0387 RTpocket=229 (floor 175) geneig [0.507, 30.850] out=4 soft-hi=2 split-Rhat=1.0801 NaN=0
+  eevpd_med=['4.4e-04', '4.0e-04', '3.9e-04', '4.1e-04', '3.6e-04', '4.1e-04']; tail>2e-3 per rung [np.float64(0.182), np.float64(0.182), np.float64(0.15), np.float64(0.156), np.float64(0.142), np.float64(0.104)] (B3 report); pair acc [0.551, 0.545, 0.536, 0.534, 0.515]
+  *** NEAR-EDGE (±0.05): corroboration rule applies ***
+  *** F-R: axis > 10 post-freeze — freeze-timing fix insufficient ***
+  split-Rhat 1.080 in (1.05,1.2] with transport: budget-limited reading (report-only diagnostic this gate)
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False}
+
+[E2] rounds=1500 m=0.2396±0.0473 RTpocket=146 (floor 175) geneig [0.592, 53.821] out=5 soft-hi=2 split-Rhat=1.1537 NaN=0
+  eevpd_med=['3.7e-04', '3.5e-04', '4.1e-04', '4.1e-04', '4.3e-04', '4.5e-04']; tail>2e-3 per rung [np.float64(0.18), np.float64(0.19), np.float64(0.166), np.float64(0.144), np.float64(0.128), np.float64(0.078)] (B3 report); pair acc [0.531, 0.543, 0.536, 0.521, 0.503]
+  blind-spot ix: gen-eig vs Sigma_ref(0.42) [0.431, 59.118]
+  *** F-R: axis > 10 post-freeze — freeze-timing fix insufficient ***
+  clauses: {'rt': False, 'occ': False, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False}
+
+[E3] rounds=1500 m=0.3138±0.0597 RTpocket=109 (floor 88) geneig [0.505, 20.247] out=3 soft-hi=2 split-Rhat=1.0889 NaN=0
+  eevpd_med=['1.8e-04', '2.1e-04', '2.5e-04', '2.2e-04', '2.7e-04', '3.1e-04']; tail>2e-3 per rung [np.float64(0.136), np.float64(0.138), np.float64(0.13), np.float64(0.136), np.float64(0.116), np.float64(0.086)] (B3 report); pair acc [0.529, 0.543, 0.54, 0.538, 0.527]
+  *** NEAR-EDGE (±0.05): corroboration rule applies ***
+  blind-spot ix: gen-eig vs Sigma_ref(0.42) [0.432, 19.927]
+  *** F-R: axis > 10 post-freeze — freeze-timing fix insufficient ***
+  split-Rhat 1.089 in (1.05,1.2] with transport: budget-limited reading (report-only diagnostic this gate)
+  clauses: {'rt': True, 'occ': False, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False}
+  [F-S check E4] low-side axis g=0.191: |cos(stored)| = 0.756 (distinct direction)
+
+[E4] rounds=1500 m=0.2630±0.0745 RTpocket=61 (floor 88) geneig [0.191, 52.370] out=5 soft-hi=2 split-Rhat=1.1588 NaN=0
+  eevpd_med=['2.0e-04', '1.8e-04', '1.8e-04', '2.4e-04', '3.0e-04', '3.3e-04']; tail>2e-3 per rung [np.float64(0.162), np.float64(0.146), np.float64(0.142), np.float64(0.13), np.float64(0.106), np.float64(0.094)] (B3 report); pair acc [0.52, 0.533, 0.536, 0.543, 0.525]
+  blind-spot ix: gen-eig vs Sigma_ref(0.42) [0.147, 55.487]
+  *** F-R: axis > 10 post-freeze — freeze-timing fix insufficient ***
+  clauses: {'rt': False, 'occ': False, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False}
+
+W-s [E1/E2]: |0.3410-0.2396|=0.1014 <= 0.1221: True
+
+W-s [E3/E4]: |0.3138-0.2630|=0.0508 <= 0.1910: True
+
+W-p (certification): NSYS-8 clauses+geneig+health False; W-s both pairs True (16: True, 8: True); NSYS-16 guard False -> NOT assembled (see zones)
+
+-> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/pt3_score.json
