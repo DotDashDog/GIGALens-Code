@@ -494,7 +494,24 @@ multimodality, conditioning, or the NFW profile.
   re-audit route). Advisory wording applied with this update: prediction-M
   window-2 anchor → schedule-matched PT-2 D2 126.4; "L1–L3" → "L1/L1b/L2/L3".
   LAUNCHING (prep: estimator diff + recipe module + scorer, all audited
-  pre-unblinding; then alloc A smoke/probe, alloc B arms).**
+  pre-unblinding; then alloc A smoke/probe, alloc B arms).
+  CODE AUDITS rd-1 (2026-07-13, independent auditor, adversarial): estimator
+  diff CERTIFIED (pooled path bitwise intact; identity verified at 8.9e-16
+  against the code's exact update sequence; T<2 guard fail-closed; knob inert
+  on non-adaptive arms); recipe CERTIFIED w/ advisories (L1/L1b reproduce the
+  certified R6 chain at 0.0 deviation from the machine-loaded leakage table;
+  A2-1 min(own, neighbor) form is restrictive-direction on non-monotone
+  tables — benign; A2-2 circular W-L delegation FIXED: validator now applies
+  L3 and assembles W-L, exit code covers all evaluated criteria); scorer 1
+  BLOCKING B3-1 (flat verdict string dropped zone/F-S qualifiers — the one
+  channel through which a zone-occupied result could enter the record
+  unqualified) FIXED: verdict now ZONE-QUALIFIED with per-arm
+  IMPROVED-PARTIAL / certifiable-with-caveat / F-S-systematic notes +
+  blind-spot-(viii) attach; A3-1 empty-W/B on a scored arm now RAISES
+  (fail-closed); A3-2 clipped-arm trace-bias pre-registration added to W-o;
+  A3-3 stray pt4_score.json kept untracked. Ten adversarial scenarios passed
+  (missing-arm, F-M-on-G4-only, F-R'/F-U blocking, A6 both edges, op-7 clip,
+  F-S 2-of-3). Fix re-verification by the same auditor before alloc A.**
   **Claim + classification.** Stochastic-estimator behaviour (covariance estimation
   under non-stationary burn-in) + a distributional claim (occupancy). Links: (M,
   mechanism) the pooled-Welford ridge-axis inflation (PT-2/PT-3: 20–126× on z-cols
@@ -552,11 +569,20 @@ multimodality, conditioning, or the NFW profile.
   PT-0b rules verbatim: (i) probe → per-β sd(u) → log-log-interpolated cost
   integral ∫sd(u)dβ → equal-cost knots; (ii) target nats/pair from desired
   adjacent acceptance via the VALIDATED Gaussian swap model a = erfc(s/2) (0.894
-  nats → 0.527 predicted vs 0.52–0.54 measured); (iii) β_min = coldest probe β
-  whose measured per-chain basin-class leakage rate p̂ (conservative direction)
-  satisfies NSYS·p̂·(budget_steps/probe_steps) ≥ ln(100) ≈ 4.6, i.e. ≥ 99%
-  discovery probability within budget (carousel check: 16 × 0.256 × 11 = 45 ≫
-  4.6 at β = 0.3594; even the conservative β = 0.6 figure 0.176 gives 31) —
+  nats → 0.527 predicted vs 0.52–0.54 measured); (iii) β_min from the discovery
+  criterion NSYS·p̂·(budget_steps/probe_steps) ≥ ln(100) ≈ 4.6, i.e. ≥ 99%
+  discovery probability within budget — PRE-LAUNCH AMENDMENT (2026-07-13,
+  found at implementation, BEFORE any run/unblinding): the draft's loose
+  "coldest β whose measured rate satisfies" does NOT reproduce the certified
+  0.3594 on the archived table; the pinned form, which does, and which matches
+  PT-0b's recorded conservative logic (its grader advisory 7: "the β = 0.6
+  figure is the conservative one"), is **β_min = the LARGEST probe-grid β
+  whose criterion passes with p̂ = the NEXT-LARGER-β grid point's
+  conservative-direction (min over init classes) leakage rate** — leakage
+  falls monotonically in β, so the neighbor rate under-reads and the threshold
+  crossing is well-defined (archived `summary_A_power.json` per_beta leak
+  table, machine-readable: 0.5995 fails via β = 1.0's 0.008 → 1.4 < 4.6;
+  0.3594 passes via 0.5995's 0.176 → 31; own-rate at 0.3594 gives 45) —
   pinned choices, stated not tuned (A3): the 99% discovery level (new, this
   checkpoint) and TARGET = 1.0 nat/pair (inherited from PT-0b, ⇒ desired
   adjacent acceptance erfc(0.5) ≈ 0.48, validated by the measured 0.52–0.54);
@@ -617,7 +643,11 @@ multimodality, conditioning, or the NFW profile.
   trace to be flat-or-falling toward band, pinned now; A4: pt4_score.py
   computes the pooled se from the realized 48 per-system means and REPORTS the
   between-arm variance component — the 0.022 assumes none, and PT-3's E1/E2
-  spread 0.101 hints one may exist); per-arm occ reported. (W-h) per arm: EEVPD medians ∈ [1e-4, 2e-3],
+  spread 0.101 hints one may exist; audit A3-2 pre-registration: if any arm
+  clips below ~1000 rounds, the near-edge trace corroboration must be read
+  from the pre-committed cold-occ overlay PLOT, not the scalar — a clipped
+  arm's pre-lo window includes the burn-in ramp, deflating "prev" and making
+  RISING trivially true on the low side); per-arm occ reported. (W-h) per arm: EEVPD medians ∈ [1e-4, 2e-3],
   pair acc ∈ [0.25, 0.65], NaN = 0; tail fractions reported (hot-rung clause
   deferred, standing). (W-s) all three G1/G2/G3 pairs |Δm| ≤ 2·√(se_i²+se_j²)
   (per-pair 2σ ≈ 0.11). (W-L) L1 ∧ L1b ∧ L2 ∧ L3. (W-p, certification; B2

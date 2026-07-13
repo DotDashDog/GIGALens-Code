@@ -874,11 +874,21 @@ def run_pt(tag, seed, spec):
     metric_ref = spec.get("metric_ref")
     ref_chol = (np.linalg.cholesky(np.asarray(metric_ref, dtype=np.float64))
                 if (adapt_metric and metric_ref is not None) else None)
+    metric_est = str(spec.get("metric_estimator") or "pooled")
+    assert metric_est in ("pooled", "within"), metric_est
     w_n = 0                                       # Welford over ROUND-END pos
     w_mean = np.zeros((R, dim))
     w_M2 = np.zeros((R, dim, dim))
+    # PT-4 within/between decomposition: s_C sums the per-round cross-chain
+    # ddof-1 cov C_t; bm_* = Welford over the round ensemble-means. Recorded
+    # at every boundary in BOTH estimator modes.
+    s_C = np.zeros((R, dim, dim))
+    bm_n = 0
+    bm_mean = np.zeros((R, dim))
+    bm_M2 = np.zeros((R, dim, dim))
     metric_frozen_flag = False
     boundary_covs, geneig_trace, geneig_rounds = [], [], []
+    within_covs, between_covs = [], []
 
     pos = np.array(spec["init_pos"], dtype=np.float64)
     assert pos.shape == (R, NSYS, dim), pos.shape
@@ -926,11 +936,16 @@ def run_pt(tag, seed, spec):
                 metric_frozen=inv_rungs,                    # per rung, current
                 metric_boundary_covs=(np.stack(boundary_covs)
                                       if boundary_covs else np.zeros((0,))),
+                metric_within_covs=(np.stack(within_covs)
+                                    if within_covs else np.zeros((0,))),
+                metric_between_covs=(np.stack(between_covs)
+                                     if between_covs else np.zeros((0,))),
                 metric_geneig_trace=(np.stack(geneig_trace)
                                      if geneig_trace else np.zeros((0,))),
                 metric_geneig_rounds=np.asarray(geneig_rounds, dtype=np.int64),
                 metric_windows=np.asarray(windows, dtype=np.int64),
                 metric_n0=n0,
+                metric_estimator=np.array(metric_est),
             )
         np.savez(npz_path, betas=betas, ind_thin=ind_thin[:t // THIN_B + 1],
                  wid_thin=wid_thin[:t // THIN_B + 1],
@@ -1053,27 +1068,44 @@ def run_pt(tag, seed, spec):
                     tot = w_n + NSYS
                     w_M2[r] += bM2 + np.outer(delta, delta) * w_n * NSYS / tot
                     w_mean[r] += delta * NSYS / tot
+                # PT-4: within (C_t reuses bM2) + between (Welford over bmean)
+                s_C[r] += bM2 / (NSYS - 1)
+                delta_b = bmean - bm_mean[r]
+                bm_mean[r] += delta_b / (bm_n + 1)
+                bm_M2[r] += np.outer(delta_b, bmean - bm_mean[r])
             w_n += NSYS
+            bm_n += 1
             if (t + 1) in windows:
                 # window boundary: previous metric = prior at weight n0; the
                 # window estimate REPLACES the metric (production-style),
                 # regularized by the copied _regularize_cov rule; Welford resets
                 n_w = w_n
+                T = bm_n                    # rounds this window (= w_n // NSYS)
+                if T < 2:
+                    raise RuntimeError(
+                        f"metric window boundary at round {t + 1}: only T={T} "
+                        f"round(s) accumulated; B needs T >= 2 (never default)")
+                W_win = s_C / T             # PT-4 within: mean cross-chain C_t
+                B_win = bm_M2 / (T - 1)     # PT-4 between: ddof-1 over bmean
                 for r in range(R):
-                    cov_w = w_M2[r] / max(n_w - 1, 1)
+                    cov_w = (W_win[r] if metric_est == "within"
+                             else w_M2[r] / max(n_w - 1, 1))
                     comb = (n0 * inv_rungs[r] + n_w * cov_w) / (n0 + n_w)
                     inv_rungs[r] = regularize_cov_np(comb, n0 + n_w)
                 boundary_covs.append(inv_rungs.copy())
+                within_covs.append(W_win)   # recorded in BOTH estimator modes
+                between_covs.append(B_win)
                 inv_rungs_j = jnp.asarray(inv_rungs)
                 # step-size adapt running averages RESET (production
                 # behaviour); ss_max carried
                 adapt_all = (jnp.zeros_like(adapt_all[0]),
                              jnp.zeros_like(adapt_all[1]), adapt_all[2])
                 w_n, w_mean[:], w_M2[:] = 0, 0.0, 0.0
+                bm_n, s_C[:], bm_mean[:], bm_M2[:] = 0, 0.0, 0.0, 0.0
                 if (t + 1) == windows[-1]:
                     metric_frozen_flag = True     # FROZEN from here on
                 pr(f"[B {tag}] metric window boundary at round {t + 1}: "
-                   f"n_w={n_w}, n0={n0:.0f}"
+                   f"n_w={n_w}, n0={n0:.0f}, est={metric_est}"
                    f"{' (METRIC FROZEN)' if metric_frozen_flag else ''}")
         if adapt_metric and ref_chol is not None and (
                 t % GENEIG_EVERY == 0 or t == ROUNDS - 1):
@@ -1143,7 +1175,8 @@ def run_pt(tag, seed, spec):
     if adapt_metric:
         gfin = geneig_trace[-1] if geneig_trace else None   # (R, dim) ratios
         summary["metric_adapt"] = dict(
-            windows=list(windows), n0=n0, frozen=bool(metric_frozen_flag),
+            windows=list(windows), n0=n0, estimator=metric_est,
+            frozen=bool(metric_frozen_flag),
             n_boundaries_applied=len(boundary_covs),
             reference=("pooled MAMS64 cov — DIAGNOSTIC ONLY, NOT the scored clause "
                        "instrument)" if metric_ref is not None else None),
@@ -1409,6 +1442,15 @@ def run_arm_b(arm, tag, equiv=False):
         pr(f"[B {tag}] WARNING: freeze boundary {metric_windows[-1]} >= "
            f"ROUNDS {rounds} -- the metric will NEVER freeze in this run")
 
+    # PT-4: window-covariance estimator. NOT smoke-overridden (smoke may set
+    # it freely to exercise the within path); pooled = bitwise status quo.
+    env_est = os.environ.get("GATE_PT0_METRIC_EST", "").strip()
+    metric_est = env_est or "pooled"
+    assert metric_est in ("pooled", "within"), \
+        f"GATE_PT0_METRIC_EST must be 'pooled' or 'within', got {metric_est!r}"
+    est_src = (f"env override GATE_PT0_METRIC_EST={env_est}" if env_est
+               else "default")
+
     # metric: pooled MAMS64 cov (B1-B4), production SVI cov (B5, D1 seed), or
     # the stock no-SVI diagonal (D2 seed); D arms ADAPT from their seed.
     d2_diag_provenance = None
@@ -1507,6 +1549,8 @@ def run_arm_b(arm, tag, equiv=False):
                 adapt_metric=adaptive,
                 metric_windows=(list(metric_windows) if adaptive else None),
                 metric_windows_source=mw_src,
+                metric_estimator=metric_est,
+                metric_estimator_source=est_src,
                 metric_n0=(10 * nsys if adaptive else None),
                 metric_reference=("pooled MAMS64 cov (reference-ONLY)"
                                   if adaptive else None),
@@ -1539,6 +1583,7 @@ def run_arm_b(arm, tag, equiv=False):
                 adapt_metric=adaptive,
                 metric_windows=metric_windows if adaptive else None,
                 metric_n0=(10 * nsys if adaptive else None),
+                metric_estimator=metric_est,
                 metric_ref=(M["cov_pool"] if adaptive else None))
     if equiv:
         return run_equiv_check(tag, seed, spec)
