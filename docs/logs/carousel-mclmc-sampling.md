@@ -467,6 +467,229 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-4 — drift-free metric estimator (system-agnostic, zero tuned
+  constants) + multi-seed MAP-entry certification + automated ladder recipe
+  (HUMAN-APPROVED to proceed 2026-07-13: "Okay, go ahead with PT-4"; design per the
+  2026-07-13 plan reshape — the carousel is a TEST CASE, generality is the goal, so
+  NO carousel-derived constants may enter the fix).**
+  **Status: grader rd-1 NEEDS-MORE (2026-07-13) — 4 blocking + 7 advisory, ALL
+  APPLIED (B1 L1b certified-R6 end-to-end reproduction incl. β_min from the
+  pinned rule; B2 W-p entry-mode scope now conditional on G4 clauses with a
+  MAP-only fallback; B3 smoke pinned to METRIC_EST=within with new-key
+  verification; B4 plan-reshape directive recorded as a dated Log entry; A1
+  E[B] stationary expectation corrected; A2 schedule-matched plot anchor; A3
+  pinned-choice count corrected; A4 pooled-se computation pinned; A5 0.1 floor
+  labeled heuristic + no-migration; A6 pooled near-edge high-side reading
+  pinned; A7 scorer asserts + UNCERTIFIED-basis blind spot). Grader
+  independently recomputed the identity, all clause arithmetic, and the full
+  ladder/erfc/discovery chain (R6 knots + 0.894 nats/pair reproduced exact).
+  Awaiting rd-2.**
+  **Claim + classification.** Stochastic-estimator behaviour (covariance estimation
+  under non-stationary burn-in) + a distributional claim (occupancy). Links: (M,
+  mechanism) the pooled-Welford ridge-axis inflation (PT-2/PT-3: 20–126× on z-cols
+  {19,2,3,20}, |cos Δμ| ≈ 0) is dominated by the BETWEEN-ROUND ensemble-mean drift
+  term, not the within-round cross-chain spread; (R, the fix) an estimator that
+  discards the drift term brings the post-freeze cold-rung metric into/near the
+  gen-eig band; (C, certification) transport/occupancy/health are preserved and
+  multi-seed reproducible, with a POOLED-across-seeds occupancy clause (the PT-3
+  lesson: clause thresholds sit inside single-run seed noise); (L, recipe) the
+  PT-0b ladder recipe is automated as code and reproduces the certified carousel
+  ladder from both archived and fresh probe data. UNTESTED by this gate: other
+  lenses (PT-5), within-basin ESS, adjusted-kernel PT, hot-rung metric quality.
+  **Cause hypothesis (M).** The current window estimator pools all (round, chain)
+  positions into one Welford covariance. Law of total variance (exact identity):
+  Σ_pool·(TN−1) = (N−1)·T·W + N·(T−1)·B, where W = mean over the T window rounds
+  of the ddof-1 cross-chain covariance C_t (N = NSYS independent ladders) and
+  B = ddof-1 covariance of the round ensemble-means m_t. For independent
+  identically-initialized ladders, E[C_t] = the marginal covariance at round t
+  REGARDLESS of autocorrelation, so at stationarity E[W] = Σ exactly and
+  E[B] = Σ/N for uncorrelated round means (A1: with ridge IAT ≫ window length
+  E[B] < Σ/N — favorable, dropping B loses even less than 1/N; the M-link
+  B-share reading is calibrated to the identity, not to this expectation);
+  during burn-in transit, B additionally carries the FULL squared
+  drift of the ensemble mean along the ridge — the hypothesized 20–126×. The fix:
+  use W alone (drift-immune by construction, unbiased at stationarity, cost = the
+  ~1/N information in B). ZERO tuned constants — this is the system-agnostic
+  realization of the "stationary-chain bound" rule (B's stationary share is W/N;
+  rather than cap B, drop it). PT-3's saved boundary covariances cannot
+  retro-decompose this (positions not archived), so the M-link is tested IN-RUN:
+  both W and B are recorded per window boundary per rung, and the pooled
+  counterfactual is reconstructed offline by the exact identity — one run yields
+  both estimators' spectra.
+  **Estimator + implementation (single change, pinned).** At each unfrozen round,
+  per rung: accumulate C_t and the Welford over m_t. At a window boundary:
+  cov_w := W = (1/T)ΣC_t; blend and regularization UNCHANGED (comb = (n0·prev +
+  n_w·W)/(n0+n_w), n_w = T·NSYS as before — W's true dof (N−1)T = 0.94·n_w,
+  immaterial vs the 20–50× effect; recorded approximation, isolates ONE change).
+  New env knob GATE_PT0_METRIC_EST ∈ {pooled, within}, default pooled (no
+  behavior change without the knob); new npz keys metric_within_covs,
+  metric_between_covs (n_windows, R, dim, dim). Windows (100, 250, 500),
+  freeze-500 — the PT-2-best schedule (PT-3 falsified later freezes). Carried-
+  contamination note: the prior enters each blend at n0 = 160 vs n_w ≥ 1600, so
+  any window-1/2 residue decays ≥ 10× per boundary — if scored inflation persists
+  WITHOUT F-M firing, the blend/regularize path is implicated, not the data term
+  (named diagnostic split below).
+  **Arms (one 4-GPU interactive allocation; C-24 reference ladder/K/ss_max/DEVAR
+  = R6 measured ladder / 10 / 5.0 / 5e-4; NSYS 16; ROUNDS 1500; scoring window =
+  post-freeze rounds 1000–1500, PT-2 lineage lo = max(500, rounds−500)):**
+  G1/G2/G3 = MAP + 1e-6·I entry (z_best + 1e-3·N(0,1); PENDING HUMAN RATIFICATION,
+  standing), seeds 50/51/52 — the multi-seed certification set; G4 = SVI entry,
+  seed 53 — estimator generality across entry modes (PT-2 D1 gen-eig was 20.18).
+  All within-estimator. Probe arm (allocation A): fresh Arm-A power-path run,
+  seed 54, for recipe validation L2.
+  **Recipe automation (L; ladder_recipe.py, importable + CLI).** Codifies the
+  PT-0b rules verbatim: (i) probe → per-β sd(u) → log-log-interpolated cost
+  integral ∫sd(u)dβ → equal-cost knots; (ii) target nats/pair from desired
+  adjacent acceptance via the VALIDATED Gaussian swap model a = erfc(s/2) (0.894
+  nats → 0.527 predicted vs 0.52–0.54 measured); (iii) β_min = coldest probe β
+  whose measured per-chain basin-class leakage rate p̂ (conservative direction)
+  satisfies NSYS·p̂·(budget_steps/probe_steps) ≥ ln(100) ≈ 4.6, i.e. ≥ 99%
+  discovery probability within budget (carousel check: 16 × 0.256 × 11 = 45 ≫
+  4.6 at β = 0.3594; even the conservative β = 0.6 figure 0.176 gives 31) —
+  pinned choices, stated not tuned (A3): the 99% discovery level (new, this
+  checkpoint) and TARGET = 1.0 nat/pair (inherited from PT-0b, ⇒ desired
+  adjacent acceptance erfc(0.5) ≈ 0.48, validated by the measured 0.52–0.54);
+  NSYS and budget enter β_min as run parameters;
+  (iv) basin classifier for (iii) on a NEW system = nearest known mode center
+  (multi-start MAP output, a pipeline stage that already exists) in
+  pooled-metric whitened distance — validated HERE against the pinned z[6]
+  indicator. Validation criteria (derived): L1 (code port) knots reproduce
+  `ladder_design_power.json` to 1e-9 on archived inputs (same math, same data);
+  L1b (B1 — the CERTIFIED-ladder end-to-end test; L1 alone tests only the
+  21-knot intermediate, and the restriction/re-knot/β_min step is exactly where
+  a port bug would live, unreachable by L2's shared-systematic-blind se
+  tolerance): ladder_recipe.py run end-to-end on archived inputs must output
+  [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0] and 0.894 nats/pair to 1e-9,
+  with β_min = 0.3594 EMERGING from the pinned ln(100) rule applied to the
+  archived leakage table (grader pre-verified deterministic reproducibility);
+  L2 (fresh probe, seed 54) same rung count AND every knot within 3× the
+  propagated knot-position se (delta method through the cost integral from
+  per-β sd standard errors, computed in-script — no invented tolerance); L3
+  (classifier) disagreement with the pinned indicator on the MAMS64 position
+  pool ≤ 0.045 = the NSYS-16 occupancy se (classifier error must sit below the
+  smallest occupancy effect the gate can resolve).
+  **Predictions (direction + magnitude).** (M) reconstructed POOLED window-2
+  cold-rung max gen-eig (diagnostic ref) reproduces the PT-3 class (≥ 50;
+  PT-3 measured 104–126); W-only window-2 max ≤ 10 with ≤ 3 expected; on the
+  {19,2,3,20} family at window 2 the identity-attributed B-term share is ≥ 10×
+  the W-term share. (R) scored post-freeze gen-eig vs Σ_ref(ŵ): ALL axes ∈
+  [1/3, 3] predicted (from 20–54 → ≤ 3, a ≥ 7× reduction); LOW-side exits to
+  ~0.1 on the slowest axes are EXPECTED (W under-reads un-equilibrated ridge
+  spread from below — the OPPOSITE sign of the old failure; see zones). (C)
+  pooled 3-seed occupancy ∈ (0.32, 0.49), point prediction 0.30–0.42; per-arm
+  RT_pocket 180–300 vs floor 175 (better-conditioned metric ⇒ ≥ PT-2 D2's 228
+  class; PT-3 E2's 146 was under a 54×-inflated metric); W-s all three pairs;
+  G4: occ in band (D1 precedent 0.3226), RT ≥ 175 (D1: 253). (L) L1–L3 pass.
+  **Win conditions (formulas from the certified pt2/pt3 scorer lineage; scorer =
+  pt4_score.py, committed + audited BEFORE unblinding).** (W-M) mechanism: on the
+  cold rung, reconstructed-pooled max gen-eig > 10 in some window while W-only
+  stays ≤ 10 in EVERY window. (W-g) post-freeze cold gen-eig vs Σ_ref(ŵ) all ∈
+  [1/3, 3]; ROUTED ZONES: (3, 10] on ≤ 4 axes with W-t/W-o/W-h passing ⇒
+  IMPROVED-PARTIAL (PT-2's product decision, B3 caveats attach); [0.1, 1/3) any
+  count with W-t/W-o/W-h passing ⇒ certifiable-with-caveat (budget-limited ridge
+  equilibration, the predicted signature; 0.1 floor: per-axis whitened step
+  compression √(1/g) ≤ 3.2×, mapped onto the scale at which PT-1 MEASURED
+  whole-metric misfit transport damage 3.5× — A5: a HEURISTIC bridge
+  (per-axis vs whole-metric), acceptable only because the zone sits behind the
+  W-t/W-o/W-h conjuncts; it is carousel-derived and MUST NOT migrate into
+  recipe v1);
+  blind-spot ix Σ_ref(0.42) reporting when ŵ out of band (standing). (W-t)
+  per-arm RT_pocket ≥ 175 (op-7 scaled). (W-o) POOLED occupancy over G1–G3's 48
+  systems ∈ (0.32, 0.49) with the near-edge ±0.05 corroboration rule applied to
+  the pooled value (pooled se ≈ 0.155/√48 ≈ 0.022, 2σ MDE 0.045 < band
+  half-width 0.085 — the first adequately-powered occupancy test of the
+  engagement; A6: at this power ±0.05 ≈ 2.2σ, and a rising coldocc trace
+  corroborates LOW-side proximity only — a high-side near-edge requires the
+  trace to be flat-or-falling toward band, pinned now; A4: pt4_score.py
+  computes the pooled se from the realized 48 per-system means and REPORTS the
+  between-arm variance component — the 0.022 assumes none, and PT-3's E1/E2
+  spread 0.101 hints one may exist); per-arm occ reported. (W-h) per arm: EEVPD medians ∈ [1e-4, 2e-3],
+  pair acc ∈ [0.25, 0.65], NaN = 0; tail fractions reported (hot-rung clause
+  deferred, standing). (W-s) all three G1/G2/G3 pairs |Δm| ≤ 2·√(se_i²+se_j²)
+  (per-pair 2σ ≈ 0.11). (W-L) L1 ∧ L1b ∧ L2 ∧ L3. (W-p, certification; B2
+  entry-mode scope repaired) W-t on ALL FOUR arms ∧ pooled W-o ∧ W-h all ∧ W-g
+  in band-or-routed-zone on G1–G3 (any F-R'/F-U on a candidate arm blocks) ∧
+  W-s ⇒ PROPOSED point-and-go recipe v1 (windows 100/250/500 freeze-500
+  within-estimator + auto-ladder + R6/K10/NSYS16/ROUNDS1500; UNCERTIFIED;
+  1e-6·I pending; single-posterior scope; PT-5 = generalization gate) — with
+  ENTRY-MODE SCOPE CONDITIONAL: the "either entry mode" wording attaches ONLY
+  if additionally G4's occ is in band (or near-edge-corroborated) AND G4's
+  gen-eig is in band-or-routed-zone; otherwise W-p proposes the recipe
+  MAP-ENTRY-SCOPED with G4 reported (a G4-only failure narrows scope, it does
+  not block). W-L failing alone does NOT block W-p (independent link; blocks
+  PT-5 recipe use until fixed).
+  **Falsifiers + routing.** F-M: W-only cold-rung max gen-eig > 10 in ANY window
+  ⇒ within-round spread is itself transit-inflated — the drift hypothesis is
+  WRONG and the whole drop-B family cannot fix adaptation ⇒ report-to-human with
+  the two remaining options (explicit shrink-to-prior bounding; or ACCEPT PT-2's
+  freeze-500 (3, 10] inflation as the product, per its recorded decision) — no
+  in-gate knob. F-R': any scored post-freeze axis > 10; if WITH F-M, same
+  routing; if WITHOUT F-M (W clean, scored metric inflated), the blend/
+  regularize path is implicated — diagnostic finding, report. F-U: any scored
+  axis < 0.1 (estimator pathology beyond finite-window under-read). F-C: pooled
+  occ out of band beyond near-edge OR any arm RT < floor — with rising coldocc
+  trace ⇒ A1-style budget-limited zone (routed to extend-ROUNDS decision), else
+  report. F-eq: any seed pair > 3σ (≈ 0.16) ⇒ seed pooling invalid at this
+  budget — report, no auto-lever. F-L: L1 fail = port bug (fix, re-audit); L2/L3
+  fail = probe/classifier instability — a CODE/RECIPE finding, does not
+  contaminate M/R/C. F-S watch item (PT-3 A4 carried): a low-side exit with
+  |cos| ≥ 0.8 vs pt3_fs_reference on ≥ 2 of 3 MAP seeds ⇒ the {10,4,11,1}
+  under-inflation direction is SYSTEMATIC — expected under the W mechanism,
+  folds into the [0.1, 1/3) zone reading, recorded not fatal.
+  **Blind spots.** (i) Σ_ref(ŵ) circularity (standing PT-2 ix). (ii) occupancy
+  is blind along the |cos Δμ| ≈ 0 axes; within-basin bias/ESS remain
+  UNCONSTRAINED (standing B3). (iii) W's per-axis effective count on the slowest
+  axes ≈ (N−1)·T/IAT ~ 4–40 in window 3 ⇒ χ²-class scatter (factor ~2) around
+  the under-read — the n0 blend + regularize is the stabilizer; this is why the
+  zones are bands, not knife-edges. (iv) hot-rung metric unscored (standing;
+  tail report is the partial guard). (v) single posterior — generality is PT-5's
+  claim, not this gate's. (vi) pooled occupancy can mask one deviant seed —
+  guarded by per-arm W-t floors, per-arm reporting, and all-pairs W-s. (vii) the
+  M-link decomposition is exact arithmetic, but its INTERPRETATION (drift =
+  transit) assumes the ensemble mean at stationarity is static up to Σ/N noise —
+  a persistent cold-rung mean CYCLE (e.g. basin exchange) would also load B;
+  the round-mean traces are archived for exactly this check before any
+  mechanism sentence (memory rule: consult saved diagnostics first). (viii,
+  grader's strongest-case doubt, recorded verbatim in spirit: the predicted
+  signature and the permissive low-side zone COINCIDE — if the ridge axes
+  simply never equilibrate at feasible budgets, this gate would relabel the
+  same pathology as an expected under-read and still propose a recipe; the
+  external checks are occupancy (blind on these axes) and op-7 floors on the
+  UNCERTIFIED C-24/C-25 basis (A7: restated here as a blind spot, not only
+  inside W-p). The discriminating test — W-spectrum convergence under a longer
+  run — is OUT of this gate; any W-p proposal carries this residual
+  explicitly.)
+  **Pre-committed plots.** Cold-rung gen-eig window-max traces, W-estimator vs
+  reconstructed-pooled overlay: pooled reproduces the schedule-matched PT-2 D2
+  anchor class 48.6 → 126.4 → 24.9 (A2: PT-3's 19–37 → 104–126 → 20–54 ran
+  windows 250/500/1000, NOT this gate's 100/250/500 — a reconstructed window-1
+  near ~49 is in-class, not anomalous)
+  while the W trace stays ≤ 10 throughout and lands in/near [1/3, 3]
+  post-freeze (F-M shows the W trace itself spiking > 10; F-R'-without-F-M shows
+  W clean but the frozen blend inflated). Per-axis W vs B bars on {19,2,3,20} at
+  window 2 (drift dominance made visible). Cold-occ overlay, 4 arms, rising into
+  a common band by ~round 1000 and holding (F-C: an arm plateauing below 0.27).
+  Round-mean trace along the top ridge axis (blind spot vii check).
+  **Cost (interactive-only, wall-minimized, standing).** Allocation A (≤ 90
+  min): smoke (SMOKE=1 with GATE_PT0_METRIC_EST=within — B3: METRIC_EST is not
+  smoke-overridden so this is NOT a precedence conflict, and the smoke MUST
+  exercise the new estimator path: verify metric_within_covs /
+  metric_between_covs presence + shapes and the boundary print in the smoke
+  artifact before production; NO other env set), fused
+  --equiv-check, fresh Arm-A probe (seed 54, ~25 min measured class). Allocation
+  B (240 min): G1–G4 at 96-wide, measured 7.83 s/round × 1500 ≈ 3.26 h each,
+  parallel on 4 GPUs; ~12 min compile startup; margin ≈ 20 min; incremental
+  saves + op-7 scaling are the clip contingency (PT-3 precedent). Login-node:
+  recipe L1/L3 + scorer. Total ≈ 15 GPU·h.
+  **Process.** Estimator diff + ladder_recipe.py subagent-audited pre-launch;
+  pt4_score.py from the certified pt3 lineage (pooled-occ clause with realized
+  pooled se + between-arm component, low-side zone, W-M mechanism clause, F-S
+  watch; A7: asserts windows (100, 250, 500) AND estimator == within on
+  production arrays, pt3-assert style) committed + audited BEFORE unblinding;
+  model cards record estimator source (smoke AND production)/windows/seeds/
+  entry; z_param_names printed (C-8); boundary check after every log edit;
+  smoke without conflicting env beyond the pinned METRIC_EST=within.**
+
 - **Run: carousel GATE PT-3 — later-freeze metric refinement + MAP-entry point-and-go
   certification, multi-seed (HUMAN-APPROVED 2026-07-12: "Can you go ahead with
   PT-3?"; the assembly gate for the engagement deliverable).**
@@ -2386,6 +2609,29 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-13 (HUMAN DIRECTIVE — plan reshape; recorded per PT-4 grader rd-1
+  B4: the record, not agent memory, is the source of truth):** the human
+  clarified, in response to the "derived per-axis cap" proposal after PT-3:
+  "When you say a 'derived' per-axis cap, do you mean it will be specific to
+  this system? I don't care about modeling results for this system in
+  particular, I'm just using it since it's an accessible, difficult test case
+  that exhibits multimodality." Consequences, now governing: (a) any metric
+  bound/fix must be SYSTEM-AGNOSTIC — no carousel-derived constants (the PT-3
+  result-grader had independently killed the spectra-derived "×9" cap on
+  arithmetic grounds; the two constraints coincide); (b) the certified 6-rung
+  ladder is carousel NUMBERS from a GENERAL recipe — PT-4 must automate the
+  recipe (probe → sd(u) cost integral → equal-cost knots + β_min) as code;
+  (c) PT-5 = generalization gate on a SECOND multimodal lensing posterior,
+  where the engagement goal ("a set pipeline configuration that you can just
+  point and go on lensing posteriors") is won or lost. Also answered to the
+  human, from the record: the adaptive metric's current speed cost is 0×
+  per-step, ~1.8× pocket transport (adaptive RT 146–253 vs pooled 350–428 at
+  matched config), ~2× time-to-band (pooled certifiable at 750 rounds ≈ 1.7 h
+  vs adaptive still climbing at 1350 ≈ 3.3 h), net ≈ 2× budget; within-basin
+  component unmeasured. Human then approved proceeding: "Okay, go ahead with
+  PT-4" (2026-07-13). Open on the human side, unchanged: 1e-6·I ratification;
+  certification of the C-24…C-27 chain.
 
 - **2026-07-12 (carousel GATE PT-3 RAN — F-R FIRES ON ALL FOUR ARMS: the
   later-freeze hypothesis is FALSIFIED IN DIRECTION — freeze-1000 made the
