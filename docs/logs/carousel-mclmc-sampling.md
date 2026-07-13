@@ -483,7 +483,18 @@ multimodality, conditioning, or the NFW profile.
   pinned; A7 scorer asserts + UNCERTIFIED-basis blind spot). Grader
   independently recomputed the identity, all clause arithmetic, and the full
   ladder/erfc/discovery chain (R6 knots + 0.894 nats/pair reproduced exact).
-  Awaiting rd-2.**
+  rd-2 (2026-07-13): CERTIFY-RECOMMENDED to LAUNCH — all rd-1 B/A items
+  verified in-file at 3fcdb98 (pure 246-line insertion vs parent, boundaries
+  intact); pre-unblinding conditions: pt4_score.py pins (1) candidate arms =
+  G1–G3, with a MAP-scoped W-p proposal REQUIRED to attach the G4 outcome as a
+  caveat (a 1-of-4 R-link failure on the same estimator is an open
+  estimator-generality finding even when scope-narrowing is legitimate); (2)
+  F-M(evaluated on ANY arm incl. G4)/W-p mutual exclusion (the pt3 "F-R/W-p
+  exclusion" analogue); (3) F-L routing names L1b as port-bug class (fix +
+  re-audit route). Advisory wording applied with this update: prediction-M
+  window-2 anchor → schedule-matched PT-2 D2 126.4; "L1–L3" → "L1/L1b/L2/L3".
+  LAUNCHING (prep: estimator diff + recipe module + scorer, all audited
+  pre-unblinding; then alloc A smoke/probe, alloc B arms).**
   **Claim + classification.** Stochastic-estimator behaviour (covariance estimation
   under non-stationary burn-in) + a distributional claim (occupancy). Links: (M,
   mechanism) the pooled-Welford ridge-axis inflation (PT-2/PT-3: 20–126× on z-cols
@@ -569,8 +580,10 @@ multimodality, conditioning, or the NFW profile.
   pool ≤ 0.045 = the NSYS-16 occupancy se (classifier error must sit below the
   smallest occupancy effect the gate can resolve).
   **Predictions (direction + magnitude).** (M) reconstructed POOLED window-2
-  cold-rung max gen-eig (diagnostic ref) reproduces the PT-3 class (≥ 50;
-  PT-3 measured 104–126); W-only window-2 max ≤ 10 with ≤ 3 expected; on the
+  cold-rung max gen-eig (diagnostic ref) reproduces the inflated class (≥ 50;
+  schedule-matched anchor = PT-2 D2's window-2 126.4 — PT-3's 104–126 ran
+  windows 250/500/1000, rd-2 advisory); W-only window-2 max ≤ 10 with ≤ 3
+  expected; on the
   {19,2,3,20} family at window 2 the identity-attributed B-term share is ≥ 10×
   the W-term share. (R) scored post-freeze gen-eig vs Σ_ref(ŵ): ALL axes ∈
   [1/3, 3] predicted (from 20–54 → ≤ 3, a ≥ 7× reduction); LOW-side exits to
@@ -579,7 +592,8 @@ multimodality, conditioning, or the NFW profile.
   pooled 3-seed occupancy ∈ (0.32, 0.49), point prediction 0.30–0.42; per-arm
   RT_pocket 180–300 vs floor 175 (better-conditioned metric ⇒ ≥ PT-2 D2's 228
   class; PT-3 E2's 146 was under a 54×-inflated metric); W-s all three pairs;
-  G4: occ in band (D1 precedent 0.3226), RT ≥ 175 (D1: 253). (L) L1–L3 pass.
+  G4: occ in band (D1 precedent 0.3226), RT ≥ 175 (D1: 253). (L) L1/L1b/L2/L3
+  pass.
   **Win conditions (formulas from the certified pt2/pt3 scorer lineage; scorer =
   pt4_score.py, committed + audited BEFORE unblinding).** (W-M) mechanism: on the
   cold rung, reconstructed-pooled max gen-eig > 10 in some window while W-only
