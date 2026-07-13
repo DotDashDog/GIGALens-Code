@@ -479,6 +479,14 @@ multimodality, conditioning, or the NFW profile.
   (whitened-space |cos| ≈ 0.095 — wrong convention silently disables F-S) +
   asserts windows [250, 500, 1000]; pt3_fs_reference.npz force-committed; launch
   pins GATE_PT0_ROUNDS_B=1500 + --arm D2. LAUNCHING.
+  pt3 SCORER AUDITS: rd-1 DEFECTS (5 blocking, all permissive-direction —
+  blind-spot-ix crash, zone/wg_ok low-side admission, W-h under-scored incl.
+  no-health W-p cand, one-sided guard16) + 7 advisory, ALL FIXED @198f8b1; rd-2:
+  CERTIFY-RECOMMENDED as adjudication instrument (counterexamples re-run;
+  F-R/W-p exclusion preserved; residuals: 500-round post-freeze split-R̂ window
+  report-only, strict both-pairs W-s adopted as the conservative reading of the
+  unqualified pinned letter, swap-array axis semantics inherited from the
+  certified pt2 lineage). Auditor blind status maintained.
   OP-INCIDENT (2026-07-12, recorded before relaunch): the first smoke launch set
   GATE_PT0_ROUNDS_B=1500 alongside GATE_PT0_SMOKE=1; the env override silently
   beat the smoke ROUNDS reduction (SECOND occurrence of this class — PT-0b's

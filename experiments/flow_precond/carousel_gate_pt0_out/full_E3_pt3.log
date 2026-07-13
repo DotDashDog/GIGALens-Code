@@ -100,3 +100,4 @@ MODEL CARD: {
 [B D2_E3pt3] round-0 u identity: rel = 4.469e-11 (abs = 1.302e-05)
 [B D2_E3pt3] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=8.9e-07/5.0e-07/5.6e-06 reverts=0 wall=62s
 [B D2_E3pt3] round    50/1500 cold occ=0.000 hot occ=0.000 RT=22 pocketCA=0 EEVPD[h/m/c]=4.9e-04/1.7e-04/4.3e-04 reverts=0 wall=304s
+[B D2_E3pt3] round   100/1500 cold occ=0.000 hot occ=0.000 RT=54 pocketCA=0 EEVPD[h/m/c]=3.5e-04/3.6e-04/4.2e-04 reverts=0 wall=500s

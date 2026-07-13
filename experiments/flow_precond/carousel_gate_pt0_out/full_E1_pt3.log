@@ -99,3 +99,4 @@ MODEL CARD: {
 [B D2_E1pt3] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 [B D2_E1pt3] round-0 u identity: rel = 3.380e-11 (abs = 9.848e-06)
 [B D2_E1pt3] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.9e-07/3.7e-06/1.4e-05 reverts=0 wall=75s
+[B D2_E1pt3] round    50/1500 cold occ=0.000 hot occ=0.000 RT=54 pocketCA=0 EEVPD[h/m/c]=2.9e-04/4.4e-04/4.8e-04 reverts=0 wall=512s
