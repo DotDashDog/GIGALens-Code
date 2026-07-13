@@ -2,9 +2,9 @@
  "model_card": {
   "arm": "D2_smoke",
   "path": "power",
-  "seed": 6,
-  "seed_source": "ARM_SEED default",
-  "swap_seed": 10006,
+  "seed": 40,
+  "seed_source": "env override GATE_PT0_SEED_B=40",
+  "swap_seed": 10040,
   "prior_init_seed": null,
   "smoke": true,
   "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
@@ -15,7 +15,7 @@
   "x64": true,
   "dim": 33,
   "R": 6,
-  "NSYS": 16,
+  "NSYS": 8,
   "K": 10,
   "ROUNDS": 20,
   "thin": 5,
@@ -34,10 +34,11 @@
   "devar": 0.0005,
   "env_overrides": {
    "K": "env override GATE_PT0_K_B=10",
-   "NSYS": "env override GATE_PT0_NSYS_B=16",
+   "NSYS": "default",
    "ROUNDS": "default",
    "ss_max": "env override GATE_PT0_SSMAX=5.0",
-   "devar": "default"
+   "devar": "default",
+   "metric_windows": "SMOKE override (5, 10, 15) [env GATE_PT0_METRIC_WINDOWS=250,500,1000 IGNORED; precedence smoke > env > default]"
   },
   "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
   "adapt_metric": true,
@@ -46,7 +47,8 @@
    10,
    15
   ],
-  "metric_n0": 160,
+  "metric_windows_source": "SMOKE override (5, 10, 15) [env GATE_PT0_METRIC_WINDOWS=250,500,1000 IGNORED; precedence smoke > env > default]",
+  "metric_n0": 80,
   "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
   "metric_smoke_boundaries_note": "SMOKE boundaries scaled to exercise window/freeze/save paths only",
   "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
@@ -71,67 +73,35 @@
    0.0,
    0.0,
    0.0,
-   0.0,
-   0.0,
-   0.0,
-   0.0,
-   0.0,
-   0.0,
-   0.0,
-   0.0,
    0.0
   ],
   "cold_occ_mean": 0.0,
   "cold_occ_sd": 0.0,
   "init_cold_occ": 0.0,
   "round_trips_per_system": [
-   1,
-   0,
-   0,
-   2,
-   0,
-   1,
-   0,
-   0,
    0,
    0,
    1,
    0,
    1,
+   1,
    0,
-   0,
-   0
+   1
   ],
-  "round_trips_total": 6,
-  "round_trips_median_per_system": 0.0,
+  "round_trips_total": 4,
+  "round_trips_median_per_system": 0.5,
   "round_trips_main_per_system": [
-   1,
-   0,
-   0,
-   2,
-   0,
-   1,
-   0,
-   0,
    0,
    0,
    1,
    0,
    1,
+   1,
    0,
-   0,
-   0
+   1
   ],
-  "round_trips_main_total": 6,
+  "round_trips_main_total": 4,
   "round_trips_pocket_per_system": [
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
    0,
    0,
    0,
@@ -144,31 +114,15 @@
   "round_trips_pocket_total": 0,
   "down_traverses_per_system": [
    2,
-   2,
-   1,
    3,
    3,
-   2,
+   4,
    2,
    3,
-   1,
-   0,
    3,
-   1,
-   2,
-   1,
-   2,
-   2
+   3
   ],
   "pocket_cold_arrivals_per_system": [
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
    0,
    0,
    0,
@@ -179,13 +133,13 @@
    0
   ],
   "pocket_cold_arrivals_total": 0,
-  "main_cold_arrivals_total": 30,
+  "main_cold_arrivals_total": 23,
   "swap_attempts_same": [
-   160,
-   160,
-   160,
-   160,
-   160
+   80,
+   80,
+   80,
+   80,
+   80
   ],
   "swap_attempts_cross": [
    0,
@@ -195,11 +149,11 @@
    0
   ],
   "swap_acc_same": [
-   0.7875,
-   0.74375,
-   0.75,
-   0.73125,
-   0.7125
+   0.8,
+   0.725,
+   0.7625,
+   0.7625,
+   0.7875
   ],
   "swap_acc_cross": [
    NaN,
@@ -211,12 +165,12 @@
   "cold_indicator_split_rhat": NaN,
   "rhat_last_rounds": 20,
   "eevpd_last_per_rung": [
-   19.396793676396328,
-   34.65038403446692,
-   0.033674458742529854,
-   2.920100531602931,
-   14.34677228755117,
-   0.03034307624324823
+   2.8483982035883217,
+   14.89393120384361,
+   0.21533729696827425,
+   806.1737155091407,
+   0.008270946065769625,
+   0.3592327218515609
   ],
   "eevpd_in_band": [
    false,
@@ -231,16 +185,16 @@
    0.002
   ],
   "step_mean_last_per_rung": [
-   0.5153734082646733,
-   0.5281927301454482,
-   0.5009923449921196,
-   0.3997694122215732,
-   0.41511049857559124,
-   0.3764912818097505
+   0.4009128288379268,
+   0.32725184589320555,
+   0.3287957062266479,
+   0.3140356561239877,
+   0.2953016207911016,
+   0.25661363174669316
   ],
   "n_nan_reverts": 0,
-  "u0_verify_rel": 3.185335253268298e-11,
-  "u0_verify_max_abs": 9.279814548790455e-06
+  "u0_verify_rel": 3.089733172018337e-11,
+  "u0_verify_max_abs": 9.00158192962408e-06
  },
  "metric_adapt": {
   "windows": [
@@ -248,29 +202,29 @@
    10,
    15
   ],
-  "n0": 160.0,
+  "n0": 80.0,
   "frozen": true,
   "n_boundaries_applied": 3,
   "reference": "pooled MAMS64 cov \u2014 DIAGNOSTIC ONLY, NOT the scored clause instrument)",
-  "geneig_final_cold_min": 5.6288350842397764e-05,
-  "geneig_final_cold_max": 689.0561372638349,
+  "geneig_final_cold_min": 6.100945371917585e-05,
+  "geneig_final_cold_max": 1326.1335312727715,
   "geneig_final_min_per_rung": [
-   4.991784050310428e-05,
-   5.200047969460341e-05,
-   6.33610059293669e-05,
-   6.53273460338807e-05,
-   5.682248477979593e-05,
-   5.6288350842397764e-05
+   6.865360868083715e-05,
+   6.489539567836375e-05,
+   6.0857233894932214e-05,
+   5.956666012701924e-05,
+   6.187916425188856e-05,
+   6.100945371917585e-05
   ],
   "geneig_final_max_per_rung": [
-   691.4414132743332,
-   690.5596740630442,
-   690.1044454887115,
-   689.5491568521854,
-   689.3483334702175,
-   689.0561372638349
+   1328.284649654649,
+   1329.649530032441,
+   1330.5435077024263,
+   1326.9669870419725,
+   1325.9900850924187,
+   1326.1335312727715
   ],
   "geneig_pooledref_DIAGNOSTIC_in_band": false
  },
- "total_wall_s": 279.2043626308441
+ "total_wall_s": 218.95918893814087
 }

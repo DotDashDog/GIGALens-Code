@@ -1,0 +1,117 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+[setup] z_param_names (33 columns; C-8 column->name map):
+  z[ 0] = planes/0/mass/0/center_x
+  z[ 1] = planes/0/mass/0/center_y
+  z[ 2] = planes/0/mass/0/e1
+  z[ 3] = planes/0/mass/0/e2
+  z[ 4] = planes/0/mass/0/s_E
+  z[ 5] = planes/0/mass/0/theta_E
+  z[ 6] = planes/0/mass/1/center_x
+  z[ 7] = planes/0/mass/1/center_y
+  z[ 8] = planes/0/mass/1/e1
+  z[ 9] = planes/0/mass/1/e2
+  z[10] = planes/0/mass/1/gamma
+  z[11] = planes/0/mass/1/theta_E
+  z[12] = planes/0/mass/2/center_x
+  z[13] = planes/0/mass/2/center_y
+  z[14] = planes/0/mass/2/e1
+  z[15] = planes/0/mass/2/e2
+  z[16] = planes/0/mass/2/r_core
+  z[17] = planes/0/mass/2/r_cut
+  z[18] = planes/0/mass/2/theta_E
+  z[19] = planes/0/mass/3/gamma1
+  z[20] = planes/0/mass/3/gamma2
+  z[21] = planes/1/light/0/beta
+  z[22] = planes/1/light/0/center_x
+  z[23] = planes/1/light/0/center_y
+  z[24] = planes/1/light/1/beta
+  z[25] = planes/1/light/1/center_x
+  z[26] = planes/1/light/1/center_y
+  z[27] = planes/2/light/0/R_sersic
+  z[28] = planes/2/light/0/center_x
+  z[29] = planes/2/light/0/center_y
+  z[30] = planes/2/light/0/e1
+  z[31] = planes/2/light/0/e2
+  z[32] = planes/2/light/0/n_sersic
+MODEL CARD: {
+ "arm": "D2_smoke",
+ "path": "power",
+ "seed": 40,
+ "seed_source": "env override GATE_PT0_SEED_B=40",
+ "swap_seed": 10040,
+ "prior_init_seed": null,
+ "smoke": true,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260712",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 8,
+ "K": 10,
+ "ROUNDS": 20,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "default",
+  "ROUNDS": "default",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "default",
+  "metric_windows": "SMOKE override (5, 10, 15) [env GATE_PT0_METRIC_WINDOWS=250,500,1000 IGNORED; precedence smoke > env > default]"
+ },
+ "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
+ "adapt_metric": true,
+ "metric_windows": [
+  5,
+  10,
+  15
+ ],
+ "metric_windows_source": "SMOKE override (5, 10, 15) [env GATE_PT0_METRIC_WINDOWS=250,500,1000 IGNORED; precedence smoke > env > default]",
+ "metric_n0": 80,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": "SMOKE boundaries scaled to exercise window/freeze/save paths only",
+ "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
+ "svi_npz": null,
+ "map_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/map/arrays.npz",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "MAP z_best + stock-diagonal draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D2_smoke] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D2_smoke] round-0 u identity: rel = 3.090e-11 (abs = 9.002e-06)
+[B D2_smoke] round     0/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=7.5e-08/2.5e-07/6.1e-06 reverts=0 wall=60s
+[B D2_smoke] metric window boundary at round 5: n_w=40, n0=80
+[B D2_smoke] round     5/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=2.3e+01/2.4e+01/4.5e+01 reverts=0 wall=125s
+[B D2_smoke] metric window boundary at round 10: n_w=40, n0=80
+[B D2_smoke] round    10/20 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=2.8e+01/8.1e+03/3.5e+00 reverts=0 wall=145s
+[B D2_smoke] metric window boundary at round 15: n_w=40, n0=80 (METRIC FROZEN)
+[B D2_smoke] round    15/20 cold occ=0.000 hot occ=0.000 RT=1 pocketCA=0 EEVPD[h/m/c]=2.0e-03/1.7e-03/8.4e-02 reverts=0 wall=164s
+[B D2_smoke] round    19/20 cold occ=0.000 hot occ=0.000 RT=4 pocketCA=0 EEVPD[h/m/c]=2.6e-04/6.2e-04/4.7e-04 reverts=0 wall=180s
+
+[B D2_smoke] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 10 rounds: 0.0000 +- 0.0000 (per-sys [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; init 0.000)
+  round trips total 4 (median/sys 0.5; pocket-classified 0 [W-2], main-classified 4); pocket cold-arrivals 0, main 23
+  swap acc same=[0.8, 0.725, 0.762, 0.762, 0.788]
+  swap acc cross=[nan, nan, nan, nan, nan] (cross attempts [0, 0, 0, 0, 0])
+  cold split-Rhat = nan; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.False_, np.False_]; NaN reverts 0
+  metric adapt: 3 boundaries applied, frozen=True; final gen-eig cold rung [0.000, 1326.134] (band [1/3, 3] all rungs: False [DIAGNOSTIC vs pooled ref — scored clause is vs Sigma_ref(w-hat), pt2 scorer])
+[B D2_smoke] DONE in 219s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out
