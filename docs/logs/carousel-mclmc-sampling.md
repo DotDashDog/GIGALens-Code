@@ -720,7 +720,11 @@ multimodality, conditioning, or the NFW profile.
   exercise the new estimator path: verify metric_within_covs /
   metric_between_covs presence + shapes and the boundary print in the smoke
   artifact before production; NO other env set), fused
-  --equiv-check, fresh Arm-A probe (seed 54, ~25 min measured class). Allocation
+  --equiv-check, fresh Arm-A probe (seed 54; COST CORRECTION at launch: the
+  draft's "~25 min measured class" was WRONG ~5× — measured 2026-07-13:
+  ~800 s/β × 10 β ≈ 2.2 h; the figure had not been re-read from the archived
+  arm-A artifact — the memory-for-artifact failure class, this time in a cost
+  line; probe moved to its own 150-min allocation). Allocation
   B (240 min): G1–G4 at 96-wide, measured 7.83 s/round × 1500 ≈ 3.26 h each,
   parallel on 4 GPUs; ~12 min compile startup; margin ≈ 20 min; incremental
   saves + op-7 scaling are the clip contingency (PT-3 precedent). Login-node:
@@ -2653,6 +2657,28 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-13 (GATE PT-4 LAUNCHED — pre-launch verifications PASSED; arms
+  running BLIND):** instruments committed + audited (da63b53 certified after
+  B3-1 fix; b4dcda0 SEED_A knob certified). Allocation A (55869274, 90 min):
+  (1) SMOKE D2 + GATE_PT0_METRIC_EST=within PASSED the B3 pin — est=within at
+  all 3 boundaries, card records estimator + env source, metric_within_covs/
+  metric_between_covs (3, R, 33, 33) finite + symmetric, pooled reconstruction
+  finite; (2) control --equiv-check fused-vs-legacy max|dpos| 6.2e-15
+  (PT-0b bitwise class); (3) Arm-A probe seed 54 card verified
+  (seed_source = env override GATE_PT0_SEED_A=54, auditor's condition) but
+  CLIPPED at 5/10 β — OP-NOTE: the checkpoint's "~25 min" probe cost was a 5×
+  MISESTIMATE (measured ~800 s/β ≈ 2.2 h total; not re-read from the archived
+  artifact — memory-for-artifact class, cost line; corrected in-checkpoint);
+  no incremental save, run discarded, no scientific content unblinded (probe
+  is recipe-input only). Allocation B (55872620, 240 min): G1/G2/G3 = D2 MAP
+  entry seeds 50/51/52, G4 = D1 SVI entry seed 53, all
+  GATE_PT0_METRIC_EST=within GATE_PT0_ROUNDS_B=1500, tags D2_G{1,2,3}pt4 /
+  D1_G4pt4, one arm per GPU, launched ~16:xx, all 4 model cards clean, srun
+  steps .0–.3 RUNNING. Allocation C (55872726, 150 min): probe rerun seed 54
+  tag probe54 (margin ~15 min — thin, accepted; a clip costs only recipe-L2
+  latency, not gate integrity). Results remain BLIND until pt4_score.py +
+  pt4_recipe_validate.py run per process pins.
 
 - **2026-07-13 (HUMAN DIRECTIVE — plan reshape; recorded per PT-4 grader rd-1
   B4: the record, not agent memory, is the source of truth):** the human
