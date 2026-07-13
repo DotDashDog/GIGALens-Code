@@ -1,0 +1,440 @@
+=== DC-7.2 launch Mon Jul  6 08:59:08 PM PDT 2026 job 55615610 ===
+--- diag_chaintraj.py (D1, lens, seeds 0/1) ---
+jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim: 22
+Final Chi-squared: 0.98602
+MAP best_chisq (min): 0.986017758610098
+SVI done.
+HMC ref: (72000, 8), std=[0.00140085 0.08108756 0.00745805 0.00642923 0.00189458 0.00197442
+ 0.0041245  0.00602023]
+
+=== D1 v2: prior-init 512 chains, 300/200, early_stop=False, seed 0, track_chains=True ===
+[seed0] snapshots: phase1 (13, 512) (incl. initial), phase2 (25, 512)
+saved lens_spaghetti_seed0.png
+saved lens_rates_seed0.png
+[seed0] final_core plain=0.396 hyst=0.404  pos_control_late_cross=0.1202  tie_breaker tail_disp=0.1249824933053226 core_disp=0.11999042696631934 ratio=1.041603871785576
+DIAG DONE seed 0
+
+=== D1 v2: prior-init 512 chains, 300/200, early_stop=False, seed 1, track_chains=True ===
+[seed1] snapshots: phase1 (13, 512) (incl. initial), phase2 (25, 512)
+saved lens_spaghetti_seed1.png
+saved lens_rates_seed1.png
+[seed1] final_core plain=0.393 hyst=0.398  pos_control_late_cross=0.1261  tie_breaker tail_disp=0.13875296160500525 core_disp=0.12401624219720991 ratio=1.1188289464888082
+DIAG DONE seed 1
+
+SUMMARY: {
+  "seed0": {
+    "config": {
+      "init_mode": "prior",
+      "num_chains": 512,
+      "num_unadjusted_steps": 300,
+      "num_adjusted_steps": 200,
+      "early_stop": false,
+      "seed": 0,
+      "core_logp_threshold": 150.0,
+      "hyst_enter": 152.0,
+      "hyst_exit": 0.0,
+      "pos_control_logp": 160.0
+    },
+    "snapshots": {
+      "n_phase1": 13,
+      "n_phase2": 25,
+      "total": 38,
+      "phase_boundary_index": 12
+    },
+    "run": {
+      "phase1_len": 300,
+      "switched": false,
+      "switch_index": 300,
+      "switch_index_paper": 300,
+      "p2_final_eps": 0.011776456921353038,
+      "p2_accept_last": 0.7425803128798749
+    },
+    "membership_plain": {
+      "final_core_frac": 0.396484375,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.03298611111111111,
+        "mean_entered_per_chunk": 0.021918402777777776,
+        "mean_exited_per_chunk": 0.011067708333333334,
+        "churn_frac_chains_changed": 0.158203125,
+        "core_union_frac": 0.40625,
+        "core_mean_frac": 0.3630642361111111,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 0.6551724137931034
+      }
+    },
+    "membership_hysteresis": {
+      "final_core_frac": 0.404296875,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.010199652777777778,
+        "mean_entered_per_chunk": 0.010199652777777778,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.091796875,
+        "core_union_frac": 0.404296875,
+        "core_mean_frac": 0.3697916666666667,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 0.6570048309178744
+      }
+    },
+    "positive_control_crossing_late": 0.12022569444444445,
+    "frac_final_core_hyst_already_core_at_p2_mid": 0.6570048309178744,
+    "tie_breaker": {
+      "tail": {
+        "n": 305,
+        "drift_median": 1.9688210999811417,
+        "drift_iqr": 14.47661580129261,
+        "disp_median": 0.1249824933053226
+      },
+      "core": {
+        "n": 207,
+        "drift_median": 0.5289343256927452,
+        "drift_iqr": 1.7775770389265801,
+        "disp_median": 0.11999042696631934
+      },
+      "tail_over_core_disp_ratio": 1.041603871785576,
+      "n_late_transitions": 9
+    },
+    "spearman": {
+      "late_mean": 0.9719045381878085,
+      "late_min": 0.9603441931026195,
+      "late_tail_mean": 0.9958731138894057
+    },
+    "tail_evolution": {
+      "n_tail": 305,
+      "dlogp_quantiles": {
+        "q05": 716.120918990689,
+        "q25": 7563.842959671865,
+        "q50": 16608.25896625616,
+        "q75": 29888.65122899009,
+        "q95": 53861.15166069004
+      },
+      "dlogp_mean": 20949.66454491942,
+      "frac_abs_dlogp_lt1": 0.04262295081967213
+    }
+  },
+  "seed1": {
+    "config": {
+      "init_mode": "prior",
+      "num_chains": 512,
+      "num_unadjusted_steps": 300,
+      "num_adjusted_steps": 200,
+      "early_stop": false,
+      "seed": 1,
+      "core_logp_threshold": 150.0,
+      "hyst_enter": 152.0,
+      "hyst_exit": 0.0,
+      "pos_control_logp": 160.0
+    },
+    "snapshots": {
+      "n_phase1": 13,
+      "n_phase2": 25,
+      "total": 38,
+      "phase_boundary_index": 12
+    },
+    "run": {
+      "phase1_len": 300,
+      "switched": false,
+      "switch_index": 300,
+      "switch_index_paper": 300,
+      "p2_final_eps": 0.012061656805864884,
+      "p2_accept_last": 0.741925470530103
+    },
+    "membership_plain": {
+      "final_core_frac": 0.392578125,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.029947916666666668,
+        "mean_entered_per_chunk": 0.01953125,
+        "mean_exited_per_chunk": 0.010416666666666666,
+        "churn_frac_chains_changed": 0.13671875,
+        "core_union_frac": 0.40625,
+        "core_mean_frac": 0.3630642361111111,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 0.6517412935323383
+      }
+    },
+    "membership_hysteresis": {
+      "final_core_frac": 0.3984375,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.009548611111111112,
+        "mean_entered_per_chunk": 0.009548611111111112,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.0859375,
+        "core_union_frac": 0.3984375,
+        "core_mean_frac": 0.3680555555555556,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 0.6519607843137255
+      }
+    },
+    "positive_control_crossing_late": 0.12608506944444445,
+    "frac_final_core_hyst_already_core_at_p2_mid": 0.6519607843137255,
+    "tie_breaker": {
+      "tail": {
+        "n": 308,
+        "drift_median": 3.157179649801037,
+        "drift_iqr": 30.31370335883082,
+        "disp_median": 0.13875296160500525
+      },
+      "core": {
+        "n": 204,
+        "drift_median": 0.42089471651078725,
+        "drift_iqr": 1.890067128494067,
+        "disp_median": 0.12401624219720991
+      },
+      "tail_over_core_disp_ratio": 1.1188289464888082,
+      "n_late_transitions": 9
+    },
+    "spearman": {
+      "late_mean": 0.9714838867367556,
+      "late_min": 0.9625898364633043,
+      "late_tail_mean": 0.9965189717885712
+    },
+    "tail_evolution": {
+      "n_tail": 308,
+      "dlogp_quantiles": {
+        "q05": 1969.0555023259117,
+        "q25": 8635.456229855756,
+        "q50": 16639.265137771406,
+        "q75": 28520.24646526087,
+        "q95": 54931.88054408394
+      },
+      "dlogp_mean": 21939.878498136164,
+      "frac_abs_dlogp_lt1": 0.04220779220779221
+    }
+  },
+  "thresholds": {
+    "core_logp_plain": 150.0,
+    "hyst_enter": 152.0,
+    "hyst_exit": 0.0,
+    "pos_control_logp": 160.0
+  }
+}
+DIAG DONE
+--- strand_bed.py (D2, bed, seeds 0/1) ---
+devices [CudaDevice(id=0)] ... 4 total
+
+=== D2 seed 0: N(0,1)-init 512 chains, 300/200, early_stop=False, track_chains=True ===
+snapshots: phase1 (13, 512, 22) (incl. initial), phase2 (25, 512, 22)
+saved strand_bed_seed0_spaghetti.png / _rates.png
+[seed0] core_frac box=1.000 logp=1.000 box_hyst=1.000  std ratio median=1.01 max=1.05  late cross box=0.0000 tie_breaker disp_ratio=None bimodality frac_in_gap=0.0000
+BED DONE seed 0
+
+=== D2 seed 1: N(0,1)-init 512 chains, 300/200, early_stop=False, track_chains=True ===
+snapshots: phase1 (13, 512, 22) (incl. initial), phase2 (25, 512, 22)
+saved strand_bed_seed1_spaghetti.png / _rates.png
+[seed1] core_frac box=1.000 logp=1.000 box_hyst=1.000  std ratio median=1.00 max=1.05  late cross box=0.0000 tie_breaker disp_ratio=None bimodality frac_in_gap=0.0000
+BED DONE seed 1
+
+SUMMARY: {
+  "seed0": {
+    "snapshots": {
+      "n_phase1": 13,
+      "n_phase2": 25,
+      "total": 38,
+      "phase_boundary_index": 12
+    },
+    "run": {
+      "phase1_len": 300,
+      "switched": false,
+      "switch_index_paper": 300,
+      "p2_final_eps": 0.5584133053032931,
+      "p2_accept_last": 0.7147631743397155
+    },
+    "final_core_frac_box": 1.0,
+    "final_core_frac_logp": 1.0,
+    "final_core_frac_box_hysteresis": 1.0,
+    "std_ratio_median": 1.0069413717843483,
+    "std_ratio_max": 1.0454202852713248,
+    "membership_box": {
+      "final_core_frac": 1.0,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.0,
+        "mean_entered_per_chunk": 0.0,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.0,
+        "core_union_frac": 1.0,
+        "core_mean_frac": 1.0,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 1.0
+      }
+    },
+    "membership_logp": {
+      "final_core_frac": 1.0,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.00043402777777777775,
+        "mean_entered_per_chunk": 0.00021701388888888888,
+        "mean_exited_per_chunk": 0.00021701388888888888,
+        "churn_frac_chains_changed": 0.001953125,
+        "core_union_frac": 1.0,
+        "core_mean_frac": 0.9997829861111112,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 1.0
+      }
+    },
+    "membership_box_hysteresis": {
+      "final_core_frac": 1.0,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.0,
+        "mean_entered_per_chunk": 0.0,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.0,
+        "core_union_frac": 1.0,
+        "core_mean_frac": 1.0,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 1.0
+      }
+    },
+    "tie_breaker": {
+      "tail": {
+        "n": 0,
+        "drift_median": null,
+        "drift_iqr": null,
+        "disp_median": null
+      },
+      "core": {
+        "n": 512,
+        "drift_median": -0.08066189829502868,
+        "drift_iqr": 1.5565975981536393,
+        "disp_median": 0.8593876812432126
+      },
+      "tail_over_core_disp_ratio": null,
+      "n_late_transitions": 9
+    },
+    "tail_rms_beyond_6": {
+      "n_tail": 0,
+      "frac_tail_max_ratio_gt6": null,
+      "median_tail_max_ratio": null,
+      "median_tail_rms_ratio": null
+    },
+    "bimodality": {
+      "gap_upper": -28.6332495807108,
+      "gap_lower": -200.0,
+      "frac_in_gap": 0.0,
+      "note": "thin bridge (frac_in_gap near 0) => bimodal core/tail separation"
+    }
+  },
+  "seed1": {
+    "snapshots": {
+      "n_phase1": 13,
+      "n_phase2": 25,
+      "total": 38,
+      "phase_boundary_index": 12
+    },
+    "run": {
+      "phase1_len": 300,
+      "switched": false,
+      "switch_index_paper": 300,
+      "p2_final_eps": 0.559938693490163,
+      "p2_accept_last": 0.7290956242027127
+    },
+    "final_core_frac_box": 1.0,
+    "final_core_frac_logp": 1.0,
+    "final_core_frac_box_hysteresis": 1.0,
+    "std_ratio_median": 0.9980618855863066,
+    "std_ratio_max": 1.0511736236089488,
+    "membership_box": {
+      "final_core_frac": 1.0,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.0,
+        "mean_entered_per_chunk": 0.0,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.0,
+        "core_union_frac": 1.0,
+        "core_mean_frac": 1.0,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 1.0
+      }
+    },
+    "membership_logp": {
+      "final_core_frac": 1.0,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.0,
+        "mean_entered_per_chunk": 0.0,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.0,
+        "core_union_frac": 1.0,
+        "core_mean_frac": 1.0,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 1.0
+      }
+    },
+    "membership_box_hysteresis": {
+      "final_core_frac": 1.0,
+      "late_phase": {
+        "window_first_snapshot": 29,
+        "window_last_snapshot": 37,
+        "n_transitions": 9,
+        "mean_cross_per_chunk": 0.0,
+        "mean_entered_per_chunk": 0.0,
+        "mean_exited_per_chunk": 0.0,
+        "churn_frac_chains_changed": 0.0,
+        "core_union_frac": 1.0,
+        "core_mean_frac": 1.0,
+        "p2_mid_snapshot": 25,
+        "frac_final_core_already_core_at_p2_mid": 1.0
+      }
+    },
+    "tie_breaker": {
+      "tail": {
+        "n": 0,
+        "drift_median": null,
+        "drift_iqr": null,
+        "disp_median": null
+      },
+      "core": {
+        "n": 512,
+        "drift_median": -0.05780400860183965,
+        "drift_iqr": 1.337193734879172,
+        "disp_median": 0.8233747333121142
+      },
+      "tail_over_core_disp_ratio": null,
+      "n_late_transitions": 9
+    },
+    "tail_rms_beyond_6": {
+      "n_tail": 0,
+      "frac_tail_max_ratio_gt6": null,
+      "median_tail_max_ratio": null,
+      "median_tail_rms_ratio": null
+    },
+    "bimodality": {
+      "gap_upper": -28.6332495807108,
+      "gap_lower": -200.0,
+      "frac_in_gap": 0.0,
+      "note": "thin bridge (frac_in_gap near 0) => bimodal core/tail separation"
+    }
+  },
+  "thresholds": {
+    "logp_typical": -11.0,
+    "logp_thresh": -28.6332495807108,
+    "r2_thresh": 57.2664991614216,
+    "box_k_sigma": 6.0
+  }
+}
+BED DONE
+=== ALL DONE Mon Jul  6 09:11:52 PM PDT 2026 ===

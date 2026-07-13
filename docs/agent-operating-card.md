@@ -15,6 +15,9 @@ easiest person to fool**, and "the first principle is that you must not fool you
 rule below is a specific instance of that principle; when a rule's letter and its spirit
 conflict, the spirit wins.
 
+If you spawn subagents, tune the model choice to the task. Don't use expensive models for rote tasks.
+But make sure the model's ability is up to the task.
+
 ---
 
 ## Non-negotiables (trigger → required action)

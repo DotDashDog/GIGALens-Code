@@ -1,0 +1,53 @@
+{
+  "arrays": [
+    "samples_z"
+  ],
+  "class": "MAMSStage",
+  "config": {
+    "debug": true,
+    "frac_tune1": 0.2,
+    "frac_tune2": 0.6,
+    "frac_tune3": 0.2,
+    "init_L": null,
+    "init_step_size": null,
+    "n_chains": 8,
+    "num_burnin_steps": 1000,
+    "num_results": 500,
+    "progress_bar": true,
+    "regularize_mass_matrix": true,
+    "target_acceptance": 0.9
+  },
+  "diagnostics": [
+    "L",
+    "acceptance_rate",
+    "inverse_mass_matrix",
+    "nonan",
+    "num_integration_steps",
+    "samples_cov",
+    "samples_z",
+    "step_size"
+  ],
+  "diagnostics_config": {
+    "frac_tune1": 0.2,
+    "frac_tune2": 0.6,
+    "frac_tune3": 0.2,
+    "num_burnin_steps": 1000,
+    "num_results": 500,
+    "target_acceptance": 0.9
+  },
+  "input_hash": "fa7071ca157d6eb0",
+  "metadata": {
+    "debug": true,
+    "n_params": 32,
+    "num_chains": 8,
+    "num_steps": 500,
+    "wall_time_s": 1471.8344442779198
+  },
+  "schema_version": 1,
+  "seed": 42,
+  "stage": "mams",
+  "timestamp": "2026-07-07T22:30:11.126276+00:00",
+  "upstream_hashes": {
+    "qz": "42517d4e65b6585b"
+  }
+}

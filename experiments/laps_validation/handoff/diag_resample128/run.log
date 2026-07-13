@@ -1,0 +1,502 @@
+=== DC-7.4 arms launch Mon Jul  6 10:30:00 PM PDT 2026 job 55615610 ===
+jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim: 22
+Final Chi-squared: 0.98602
+MAP best_chisq (min): 0.986017758610098
+SVI done.
+HMC ref: (72000, 8), std=[0.00140085 0.08108756 0.00745805 0.00642923 0.00189458 0.00197442
+ 0.0041245  0.00602023]
+
+=== R128a: num_chains=128, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'prior', 'num_chains': 128, 'seed': 0, 'num_adjusted_steps': 248, 'p2_resample_at_chunk': 13, 'p2_resample_min_survivors': 24} ===
+[LAPS] resample mode=replace: 97 stragglers / 31 survivors at chunk 13 (cut=142.88, eps0_rs=4.887e-02)
+[R128a] ratio med/min/max=1.056/0.997/1.130  |offset|max=0.154  core_frac=1.000  n_survivors=31  eps=2.500e-01  accept=0.691  n_unique=31 (ratio_noise~0.129)  resample={'chunk': 13, 'skipped': False, 'mode': 'replace', 'n_survivors': 31, 'n_stragglers': 97, 'cut': 142.8755398244035, 'eps0_rs': 0.0488664541255051}
+
+=== R128b: num_chains=128, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'prior', 'num_chains': 128, 'seed': 1, 'num_adjusted_steps': 248, 'p2_resample_at_chunk': 13, 'p2_resample_min_survivors': 24} ===
+[LAPS] resample mode=replace: 77 stragglers / 51 survivors at chunk 13 (cut=142.08, eps0_rs=5.970e-02)
+[R128b] ratio med/min/max=1.022/0.871/1.110  |offset|max=0.207  core_frac=1.000  n_survivors=51  eps=2.108e-01  accept=0.706  n_unique=51 (ratio_noise~0.100)  resample={'chunk': 13, 'skipped': False, 'mode': 'replace', 'n_survivors': 51, 'n_stragglers': 77, 'cut': 142.08204792976707, 'eps0_rs': 0.05969542649499601}
+
+=== R128c: num_chains=128, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'prior', 'num_chains': 128, 'seed': 2, 'num_adjusted_steps': 248, 'p2_resample_at_chunk': 13, 'p2_resample_min_survivors': 24} ===
+[LAPS] resample mode=replace: 81 stragglers / 47 survivors at chunk 13 (cut=143.38, eps0_rs=5.837e-02)
+[R128c] ratio med/min/max=1.079/0.978/1.150  |offset|max=0.168  core_frac=1.000  n_survivors=47  eps=2.183e-01  accept=0.711  n_unique=47 (ratio_noise~0.104)  resample={'chunk': 13, 'skipped': False, 'mode': 'replace', 'n_survivors': 47, 'n_stragglers': 81, 'cut': 143.38054186997735, 'eps0_rs': 0.058369787316836196}
+
+=== W128: num_chains=128, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'warm', 'num_chains': 128, 'seed': 0, 'num_adjusted_steps': 248} ===
+[W128] ratio med/min/max=1.043/0.978/1.081  |offset|max=0.109  core_frac=1.000  n_survivors=None  eps=5.764e-01  accept=0.631  n_unique=128 (ratio_noise~0.063)  resample=None
+
+=== R128k: num_chains=128, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'prior', 'num_chains': 128, 'seed': 0, 'num_adjusted_steps': 248, 'p2_resample_at_chunk': 13, 'p2_resample_min_survivors': 24, 'p2_keep_per_chain': 4, 'p2_thin': 5} ===
+[LAPS] resample mode=replace: 97 stragglers / 31 survivors at chunk 13 (cut=142.88, eps0_rs=4.887e-02)
+[R128k] ratio med/min/max=1.008/0.968/1.089  |offset|max=0.097  core_frac=1.000  n_survivors=31  eps=2.500e-01  accept=0.691  n_unique=31 (ratio_noise~0.129)  resample={'chunk': 13, 'skipped': False, 'mode': 'replace', 'n_survivors': 31, 'n_stragglers': 97, 'cut': 142.8755398244035, 'eps0_rs': 0.0488664541255051}
+
+=== Rtrim: num_chains=512, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'prior', 'num_chains': 512, 'seed': 0, 'num_unadjusted_steps': 200, 'num_adjusted_steps': 248, 'p2_resample_at_chunk': 13} ===
+[LAPS] resample mode=replace: 323 stragglers / 189 survivors at chunk 13 (cut=144.40, eps0_rs=5.425e-02)
+[Rtrim] ratio med/min/max=1.004/0.977/1.052  |offset|max=0.077  core_frac=1.000  n_survivors=189  eps=2.328e-01  accept=0.716  n_unique=189 (ratio_noise~0.052)  resample={'chunk': 13, 'skipped': False, 'mode': 'replace', 'n_survivors': 189, 'n_stragglers': 323, 'cut': 144.4039504683539, 'eps0_rs': 0.054246566429368245}
+
+=== A0r128: num_chains=128, num_adjusted_steps=248, early_stop=False, track_chains=True, {'init_mode': 'prior', 'num_chains': 128, 'seed': 0, 'num_adjusted_steps': 248} ===
+[A0r128] ratio med/min/max=25.283/3.501/399.911  |offset|max=185.133  core_frac=0.344  n_survivors=None  eps=1.133e-02  accept=0.692  n_unique=128 (ratio_noise~0.063)  resample=None
+R128k res.samples shape: (128, 4, 22)  (mass_by_chain: (128, 4, 8))
+[R128k] split-Rhat (m=128,n=4): max=1.6431  per-param=['1.2575', '1.6431', '1.2755', '1.3541', '1.1348', '1.4873', '1.3886', '1.4341']
+[R128k] crude ESS (=M*K/Rhat^2): min=189.6  per-param=['323.8', '189.6', '314.7', '279.2', '397.6', '231.5', '265.5', '249.0']
+[R128a]
+   vs_W128: min=0.964 max=1.100 ['1.000', '1.061', '1.008', '0.964', '1.048', '0.976', '1.100', '1.045']
+[R128b]
+   vs_W128: min=0.834 max=1.038 ['1.031', '1.026', '0.834', '1.006', '0.882', '0.969', '1.038', '1.027']
+[R128c]
+   vs_W128: min=0.940 max=1.101 ['1.101', '1.030', '1.074', '1.056', '1.088', '0.946', '1.009', '0.940']
+[R128k]
+   vs_W128: min=0.936 max=1.035 ['0.980', '1.035', '0.939', '1.005', '1.000', '0.936', '1.034', '1.007']
+[R128a] dup_decorr: 19 pts, final=0.3668  saturation_ref=0.406  saturated=True
+[R128b] dup_decorr: 19 pts, final=0.3946  saturation_ref=0.4211  saturated=True
+[R128c] dup_decorr: 19 pts, final=0.4074  saturation_ref=0.4106  saturated=True
+[Rtrim] dup_decorr: 19 pts, final=0.3821  saturation_ref=0.3838  saturated=True
+saved dup_decorr128.png
+saved corner128_full.png
+saved corner128_zoom.png
+saved eps128.png
+
+SUMMARY: {
+  "R128a": {
+    "num_chains": 128,
+    "kwargs": {
+      "init_mode": "prior",
+      "num_chains": "128",
+      "seed": "0",
+      "num_adjusted_steps": "248",
+      "p2_resample_at_chunk": "13",
+      "p2_resample_min_survivors": "24"
+    },
+    "ratio": [
+      0.9973070926804338,
+      1.1159364182462872,
+      1.0793955268485302,
+      1.014158077191777,
+      1.0349394752627599,
+      1.0085272405930874,
+      1.0765704909187173,
+      1.1299049743806955
+    ],
+    "ratio_median": 1.0557549830907385,
+    "ratio_min": 0.9973070926804338,
+    "ratio_max": 1.1299049743806955,
+    "offset": [
+      0.09109179010313963,
+      -0.07959773577571827,
+      0.0953062913730117,
+      0.055398945547681495,
+      -0.004507614791960866,
+      -0.14515606813376775,
+      0.13627404420866054,
+      0.15392182324814943
+    ],
+    "offset_max_abs": 0.15392182324814943,
+    "core_frac": 1.0,
+    "logp_median": 162.43149695525642,
+    "logp_max": 168.2744626061495,
+    "p2_final_step_size": 0.24997123954188008,
+    "p2_accept_last": 0.6912845119616131,
+    "phase1_len": 300,
+    "switched": false,
+    "resample_info": {
+      "chunk": 13,
+      "skipped": false,
+      "mode": "replace",
+      "n_survivors": 31,
+      "n_stragglers": 97,
+      "cut": 142.8755398244035,
+      "eps0_rs": 0.0488664541255051
+    },
+    "n_unique_ancestors": 31,
+    "ratio_noise_bar_neff": 0.12909944487358055,
+    "ratio_vs_w128": [
+      1.0001667536570618,
+      1.0609701062409973,
+      1.0084817358448233,
+      0.963889900731138,
+      1.04833293228116,
+      0.9755987248171962,
+      1.1004636899034448,
+      1.0453272523462993
+    ],
+    "ratio_vs_w128_min": 0.963889900731138,
+    "ratio_vs_w128_max": 1.1004636899034448,
+    "dup_decorr_saturation": 0.4059992604357671,
+    "dup_decorr_saturated": true
+  },
+  "R128b": {
+    "num_chains": 128,
+    "kwargs": {
+      "init_mode": "prior",
+      "num_chains": "128",
+      "seed": "1",
+      "num_adjusted_steps": "248",
+      "p2_resample_at_chunk": "13",
+      "p2_resample_min_survivors": "24"
+    },
+    "ratio": [
+      1.02762837963564,
+      1.0792185970651964,
+      0.8922039289453292,
+      1.0583876964943746,
+      0.8705511576964674,
+      1.0016287356161864,
+      1.0154512030015717,
+      1.1098057407167676
+    ],
+    "ratio_median": 1.021539791318606,
+    "ratio_min": 0.8705511576964674,
+    "ratio_max": 1.1098057407167676,
+    "offset": [
+      -0.20680084025089812,
+      0.10775316256073858,
+      0.031294458796714185,
+      -0.0023457318307044447,
+      -0.17103573525273053,
+      -0.045259930508123346,
+      -0.16466721261253198,
+      -0.12613870759498472
+    ],
+    "offset_max_abs": 0.20680084025089812,
+    "core_frac": 1.0,
+    "logp_median": 161.31312999215024,
+    "logp_max": 168.4416100607179,
+    "p2_final_step_size": 0.21080737377287312,
+    "p2_accept_last": 0.706466218587064,
+    "phase1_len": 300,
+    "switched": false,
+    "resample_info": {
+      "chunk": 13,
+      "skipped": false,
+      "mode": "replace",
+      "n_survivors": 51,
+      "n_stragglers": 77,
+      "cut": 142.08204792976707,
+      "eps0_rs": 0.05969542649499601
+    },
+    "n_unique_ancestors": 51,
+    "ratio_noise_bar_neff": 0.1,
+    "ratio_vs_w128": [
+      1.0305749833420481,
+      1.0260608497614385,
+      0.8335881932153129,
+      1.005927216528106,
+      0.8818172170087435,
+      0.9689254567211832,
+      1.037987932233201,
+      1.0267325234296523
+    ],
+    "ratio_vs_w128_min": 0.8335881932153129,
+    "ratio_vs_w128_max": 1.037987932233201,
+    "dup_decorr_saturation": 0.42112113139565893,
+    "dup_decorr_saturated": true
+  },
+  "R128c": {
+    "num_chains": 128,
+    "kwargs": {
+      "init_mode": "prior",
+      "num_chains": "128",
+      "seed": "2",
+      "num_adjusted_steps": "248",
+      "p2_resample_at_chunk": "13",
+      "p2_resample_min_survivors": "24"
+    },
+    "ratio": [
+      1.0981588291280864,
+      1.0836795564346535,
+      1.1500356776022886,
+      1.110888922314068,
+      1.074379599732484,
+      0.9779892588770738,
+      0.9866110417278637,
+      1.0164580634527658
+    ],
+    "ratio_median": 1.0790295780835688,
+    "ratio_min": 0.9779892588770738,
+    "ratio_max": 1.1500356776022886,
+    "offset": [
+      -0.1679076661929225,
+      0.02823290483051957,
+      0.05252092708677966,
+      -0.013982742147782438,
+      0.0787126370378548,
+      -0.07781257502951192,
+      -0.06535712813391013,
+      -0.017698164113058922
+    ],
+    "offset_max_abs": 0.1679076661929225,
+    "core_frac": 1.0,
+    "logp_median": 161.3561209945412,
+    "logp_max": 168.66453732383013,
+    "p2_final_step_size": 0.218275051777066,
+    "p2_accept_last": 0.7108179046689793,
+    "phase1_len": 300,
+    "switched": false,
+    "resample_info": {
+      "chunk": 13,
+      "skipped": false,
+      "mode": "replace",
+      "n_survivors": 47,
+      "n_stragglers": 81,
+      "cut": 143.38054186997735,
+      "eps0_rs": 0.058369787316836196
+    },
+    "n_unique_ancestors": 47,
+    "ratio_noise_bar_neff": 0.10425720702853739,
+    "ratio_vs_w128": [
+      1.1013076706161746,
+      1.0303020811244112,
+      1.0744809919844935,
+      1.0558261449907522,
+      1.0882834630350309,
+      0.9460578112736875,
+      1.0085076979518481,
+      0.9403722779224836
+    ],
+    "ratio_vs_w128_min": 0.9403722779224836,
+    "ratio_vs_w128_max": 1.1013076706161746,
+    "dup_decorr_saturation": 0.41055424508599714,
+    "dup_decorr_saturated": true
+  },
+  "W128": {
+    "num_chains": 128,
+    "kwargs": {
+      "init_mode": "warm",
+      "num_chains": "128",
+      "seed": "0",
+      "num_adjusted_steps": "248"
+    },
+    "ratio": [
+      0.9971408158027933,
+      1.0518075972941732,
+      1.0703173775817578,
+      1.0521513675187482,
+      0.9872240424716449,
+      1.0337521103075051,
+      0.9782880623832086,
+      1.080910281296653
+    ],
+    "ratio_median": 1.0427798538008393,
+    "ratio_min": 0.9782880623832086,
+    "ratio_max": 1.080910281296653,
+    "offset": [
+      0.10949321889501962,
+      -0.01656884236834103,
+      0.09391730249177191,
+      0.03563656663405345,
+      0.03173619570570762,
+      -0.005386147795856346,
+      0.02972890390846613,
+      0.07155201958764561
+    ],
+    "offset_max_abs": 0.10949321889501962,
+    "core_frac": 1.0,
+    "logp_median": 161.61150212412065,
+    "logp_max": 168.01420618601892,
+    "p2_final_step_size": 0.5764337434260131,
+    "p2_accept_last": 0.6314934085794492,
+    "phase1_len": 300,
+    "switched": false,
+    "resample_info": null,
+    "n_unique_ancestors": 128,
+    "ratio_noise_bar_neff": 0.06274558051381586
+  },
+  "R128k": {
+    "num_chains": 128,
+    "kwargs": {
+      "init_mode": "prior",
+      "num_chains": "128",
+      "seed": "0",
+      "num_adjusted_steps": "248",
+      "p2_resample_at_chunk": "13",
+      "p2_resample_min_survivors": "24",
+      "p2_keep_per_chain": "4",
+      "p2_thin": "5"
+    },
+    "ratio": [
+      0.9771461836108973,
+      1.0881511384604188,
+      1.004653225953047,
+      1.0572541255290846,
+      0.9870897239701903,
+      0.9678747550350861,
+      1.011089492026491,
+      1.0888872756886399
+    ],
+    "ratio_median": 1.007871358989769,
+    "ratio_min": 0.9678747550350861,
+    "ratio_max": 1.0888872756886399,
+    "offset": [
+      0.09664647653277812,
+      -0.029486340214120138,
+      0.007832505307885627,
+      0.041880898455779865,
+      -0.023397085908660773,
+      -0.05281434620973262,
+      0.0834776814417312,
+      0.038504665047303446
+    ],
+    "offset_max_abs": 0.09664647653277812,
+    "core_frac": 1.0,
+    "logp_median": 161.7450241339371,
+    "logp_max": 168.6647319999179,
+    "p2_final_step_size": 0.24997123954188008,
+    "p2_accept_last": 0.6912845119616131,
+    "phase1_len": 300,
+    "switched": false,
+    "resample_info": {
+      "chunk": 13,
+      "skipped": false,
+      "mode": "replace",
+      "n_survivors": 31,
+      "n_stragglers": 97,
+      "cut": 142.8755398244035,
+      "eps0_rs": 0.0488664541255051
+    },
+    "n_unique_ancestors": 31,
+    "ratio_noise_bar_neff": 0.12909944487358055,
+    "rhat_128x4": {
+      "labels": [
+        "$\\theta_E$",
+        "$\\gamma$",
+        "$\\epsilon_2$",
+        "$\\epsilon_1$",
+        "$y$",
+        "$x$",
+        "$\\gamma_{2,ext}$",
+        "$\\gamma_{1,ext}$"
+      ],
+      "rhat_per_param": [
+        1.2575180788934897,
+        1.6431467827431603,
+        1.2755238026008995,
+        1.3541163428662826,
+        1.1348462114823952,
+        1.4872555846663063,
+        1.3885978539670132,
+        1.4340528419991698
+      ],
+      "rhat_max": 1.6431467827431603,
+      "ess_per_param": [
+        323.77363867329177,
+        189.63445128648195,
+        314.6971618408546,
+        279.22738023581695,
+        397.55382531161206,
+        231.47214928499557,
+        265.5320702523707,
+        248.9657765138264
+      ],
+      "ess_min": 189.63445128648195,
+      "note": "Split-R-hat (un-split variant, m=128 chains x n=4 draws; K=4 is too short to split further) and a CRUDE ESS (= M*K/Rhat^2, a variance-inflation heuristic, NOT the autocorrelation/rank-normalized estimator) over the CHANGE-B thinned collection (p2_keep_per_chain=4, p2_thin=5). Reported as a complement to the flattened (512, dim) width/offset stats above, since within-chain thinned samples may still be correlated at K=4."
+    },
+    "ratio_vs_w128": [
+      0.9799480355482205,
+      1.034553411916534,
+      0.9386498313452871,
+      1.0048498326076125,
+      0.9998639432431992,
+      0.9362735469987842,
+      1.033529418281334,
+      1.0073798857592675
+    ],
+    "ratio_vs_w128_min": 0.9362735469987842,
+    "ratio_vs_w128_max": 1.034553411916534
+  },
+  "Rtrim": {
+    "num_chains": 512,
+    "kwargs": {
+      "init_mode": "prior",
+      "num_chains": "512",
+      "seed": "0",
+      "num_unadjusted_steps": "200",
+      "num_adjusted_steps": "248",
+      "p2_resample_at_chunk": "13"
+    },
+    "ratio": [
+      0.9853969351568348,
+      0.9981027436374579,
+      0.9770800860377384,
+      1.0094889506659395,
+      1.0515147734859156,
+      1.0419798851199245,
+      1.0178483101015752,
+      0.9980861518983758
+    ],
+    "ratio_median": 1.0037958471516988,
+    "ratio_min": 0.9770800860377384,
+    "ratio_max": 1.0515147734859156,
+    "offset": [
+      -0.0063619214959837606,
+      0.007592868441749961,
+      -0.006444445208581994,
+      0.07698903352126972,
+      -0.006328365872680622,
+      -0.021902599891931888,
+      0.06501723258538473,
+      -0.015251081020126523
+    ],
+    "offset_max_abs": 0.07698903352126972,
+    "core_frac": 1.0,
+    "logp_median": 161.95693702781097,
+    "logp_max": 168.70260016957627,
+    "p2_final_step_size": 0.23282772258726744,
+    "p2_accept_last": 0.7156502810610548,
+    "phase1_len": 200,
+    "switched": false,
+    "resample_info": {
+      "chunk": 13,
+      "skipped": false,
+      "mode": "replace",
+      "n_survivors": 189,
+      "n_stragglers": 323,
+      "cut": 144.4039504683539,
+      "eps0_rs": 0.054246566429368245
+    },
+    "n_unique_ancestors": 189,
+    "ratio_noise_bar_neff": 0.05157106231293967,
+    "dup_decorr_saturation": 0.383785299923403,
+    "dup_decorr_saturated": true
+  },
+  "A0r128": {
+    "num_chains": 128,
+    "kwargs": {
+      "init_mode": "prior",
+      "num_chains": "128",
+      "seed": "0",
+      "num_adjusted_steps": "248"
+    },
+    "ratio": [
+      399.91053802749065,
+      3.5014665298544583,
+      23.925867425505544,
+      17.88638012551518,
+      97.60476291169789,
+      119.73706814869307,
+      25.336641067967843,
+      25.229158691850632
+    ],
+    "ratio_median": 25.282899879909237,
+    "ratio_min": 3.5014665298544583,
+    "ratio_max": 399.91053802749065,
+    "offset": [
+      185.1329994790843,
+      0.4704510267249697,
+      -13.688718805477166,
+      -9.75959935820578,
+      -23.714616895592343,
+      -37.84106277508408,
+      -7.610147246386475,
+      -8.097278560257488
+    ],
+    "offset_max_abs": 185.1329994790843,
+    "core_frac": 0.34375,
+    "logp_median": 40.732499791998976,
+    "logp_max": 168.48665010972135,
+    "p2_final_step_size": 0.01133088594184204,
+    "p2_accept_last": 0.6916981857684505,
+    "phase1_len": 300,
+    "switched": false,
+    "resample_info": null,
+    "n_unique_ancestors": 128,
+    "ratio_noise_bar_neff": 0.06274558051381586
+  }
+}
+DIAG DONE
+=== ALL DONE Mon Jul  6 10:52:22 PM PDT 2026 ===

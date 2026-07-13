@@ -543,6 +543,14 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   ≥0.8; per-param ESS bars lifting. **Cost:** one short GPU run, ~3–4× the ss=1 wall (~10–15 min
   on a node). **Status:** awaiting approval (pre-registration only).
 
+### C-20 — GPU carousel PT: mechanism confirmed in stages but COMPUTE-INEFFICIENT on the ~415-nat barrier; hot crosses only at β≈0.005 and propagates too slowly to drain the cold replica in a feasible run
+- **Status:** `proposed (UNCERTIFIED)`. Orchestrator GPU runs (`carousel_pt.py`; per-level EEVPD-adaptive step = user's `step_size_adapt`; incremental saves; per-level occ tracked). Three configs, all NSYS=16, K=10, 90 rounds.
+- **Barrier height quantified:** from the burn-in crossing rate at β=0.02 (~2.5e-4/step) the secondary→global barrier is **~415 nats** — very high.
+- **Run 1 (all-sec, β∈[0.02,1], R=10):** cold occ=0.000 all 90 rounds; swaps healthy (0.47–0.70); EEVPD faithful. Hot level NEVER crossed (K=10 at β=0.02 gives ~2.5e-3 crossing/round; barely 1–2 of 8 sec-systems would cross in 90 rounds). PT swaps are WITHIN a system (across T), not across systems ⇒ a sec-init system only becomes global if ITS OWN hot level crosses.
+- **Run 2 (balanced 0.5 init, same ladder):** cold STAYED 0.500; hot ~0.4–0.5. Per-system ladders frozen at their init basin (sec-systems all-secondary, glob-systems all-global) — same non-crossing cause.
+- **Run 3 (all-sec, β∈[0.005,1], R=12):** **hot level NOW crosses** (occ 0→~0.15–0.31) — β=0.005 flattens the 415-nat barrier enough for K=10 bursts. BUT mid≈0, cold=0.000: the crossed configs don't propagate down — (i) hot crossing still slow (occ ~0.15 ≪ its equilibrium), (ii) tiny β-gaps at the hot end ⇒ weak per-swap driving ⇒ diffusive descent across 12 levels needs ≫90 rounds (~144 min).
+- **Verdict:** PT is NOT broken (hot crosses, swaps accept, steps faithful) but is COMPUTE-INEFFICIENT here; draining would likely need β_min~0.002, ≳250 rounds, and/or a non-geometric ladder (bigger hot-end gaps) — an expensive brute-force on a node that times out every few hrs. Tempered BURN-IN (long sequential per-β stages) is the better DISCOVERY tool on this barrier (crossed to 0.63, C-19) than PT's short interleaved bursts. ADAPTIVE path-sampling (Yao et al., other agent building it) adapts the schedule to the barrier ⇒ expected far more efficient; the natural next bet.
+
 ---
 
 ## Log (newest first)

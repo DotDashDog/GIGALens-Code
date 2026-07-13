@@ -1,0 +1,191 @@
+=== DC-7.1 launch Mon Jul  6 03:06:31 PM PDT 2026 blob be0ab48c job 55600450 ===
+--- pytest transcript ---
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                                                 [100%][0m
+[32m[32m[1m24 passed[0m[32m in 184.49s (0:03:04)[0m[0m
+--- diag_levers.py (arms A0/A1/A1b/A1c/A2) ---
+jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim: 22
+Final Chi-squared: 0.98602
+MAP best_chisq (min): 0.986017758610098
+SVI done.
+HMC ref: (72000, 8), std=[0.00140085 0.08108756 0.00745805 0.00642923 0.00189458 0.00197442
+ 0.0041245  0.00602023]
+
+=== A0_baseline: prior-init 512 chains, 300/200, early_stop=False, {'seed': 0} ===
+[A0_baseline] ratio median=24.02 max=335.86  logp median=43.94 max=166.8  nan_frac max=0.0000  switch_paper@300  p2_eps=1.178e-02  p2_acc_last=0.743
+
+=== A1_f1: prior-init 512 chains, 300/200, early_stop=False, {'seed': 0, 'velocity_init': 'gradient'} ===
+[A1_f1] ratio median=24.10 max=337.87  logp median=43.71 max=168.1  nan_frac max=0.0000  switch_paper@300  p2_eps=1.178e-02  p2_acc_last=0.755
+
+=== A1b_f1_seed1: prior-init 512 chains, 300/200, early_stop=False, {'seed': 1, 'velocity_init': 'gradient'} ===
+[A1b_f1_seed1] ratio median=26.42 max=255.02  logp median=38.93 max=167.4  nan_frac max=0.0000  switch_paper@300  p2_eps=1.206e-02  p2_acc_last=0.740
+
+=== A1c_f1_Linf: prior-init 512 chains, 300/200, early_stop=False, {'seed': 0, 'velocity_init': 'gradient', 'L0_inf': True} ===
+[A1c_f1_Linf] ratio median=23.96 max=336.66  logp median=42.23 max=167.8  nan_frac max=0.0000  switch_paper@300  p2_eps=1.178e-02  p2_acc_last=0.739
+
+=== A2_all: prior-init 512 chains, 300/200, early_stop=False, {'seed': 0, 'velocity_init': 'gradient', 'L0_inf': True, 'nan_eps_halving': True, 'precond_source': 'final'} ===
+[A2_all] ratio median=24.41 max=336.73  logp median=39.54 max=167.8  nan_frac max=0.0000  switch_paper@300  p2_eps=1.178e-02  p2_acc_last=0.750
+saved levers_corner_full.png
+saved levers_corner_zoom.png
+saved levers_p1_std.png
+
+SUMMARY: {
+  "A0_baseline": {
+    "kwargs": {
+      "seed": "0"
+    },
+    "ratio": [
+      335.8551581060173,
+      3.146450036068585,
+      22.187950578169,
+      17.25220978799163,
+      92.38635761099866,
+      98.83468934264012,
+      25.387661291763155,
+      22.643742282845817
+    ],
+    "ratio_median": 24.015701787304486,
+    "ratio_max": 335.8551581060173,
+    "logp_median": 43.944424422596654,
+    "logp_max": 166.78638025385888,
+    "nan_frac_max": 0.0,
+    "nan_frac_mean": 0.0,
+    "switch_index_paper": 300,
+    "switched": false,
+    "switch_index": 300,
+    "phase1_len": 300,
+    "p2_final_eps": 0.011776456921353038,
+    "p2_accept_last": 0.7425803128798749
+  },
+  "A1_f1": {
+    "kwargs": {
+      "seed": "0",
+      "velocity_init": "gradient"
+    },
+    "ratio": [
+      337.8654951901346,
+      3.148332810515943,
+      22.354323856127124,
+      17.495968332781608,
+      91.9940664399729,
+      99.0638139546873,
+      25.38272149446833,
+      22.81463649977174
+    ],
+    "ratio_median": 24.098678997120036,
+    "ratio_max": 337.8654951901346,
+    "logp_median": 43.708955322726354,
+    "logp_max": 168.06530031166972,
+    "nan_frac_max": 0.0,
+    "nan_frac_mean": 0.0,
+    "switch_index_paper": 300,
+    "switched": false,
+    "switch_index": 300,
+    "phase1_len": 300,
+    "p2_final_eps": 0.011775970915029379,
+    "p2_accept_last": 0.7545907561210777
+  },
+  "A1b_f1_seed1": {
+    "kwargs": {
+      "seed": "1",
+      "velocity_init": "gradient"
+    },
+    "ratio": [
+      255.01602562950188,
+      2.9853759989531907,
+      21.592420864030824,
+      17.99010932938921,
+      99.6720568788447,
+      110.5974278985165,
+      27.782537618921214,
+      25.06551104855535
+    ],
+    "ratio_median": 26.42402433373828,
+    "ratio_max": 255.01602562950188,
+    "logp_median": 38.925837162672906,
+    "logp_max": 167.3912988944263,
+    "nan_frac_max": 0.0,
+    "nan_frac_mean": 0.0,
+    "switch_index_paper": 300,
+    "switched": false,
+    "switch_index": 300,
+    "phase1_len": 300,
+    "p2_final_eps": 0.012061841771951163,
+    "p2_accept_last": 0.7404570786878372
+  },
+  "A1c_f1_Linf": {
+    "kwargs": {
+      "seed": "0",
+      "velocity_init": "gradient",
+      "L0_inf": "True"
+    },
+    "ratio": [
+      336.66470259887944,
+      3.1579671288824507,
+      22.301423520628944,
+      17.849667349903317,
+      92.07185997070575,
+      98.18800088146571,
+      25.245893223766036,
+      22.665589604725078
+    ],
+    "ratio_median": 23.95574141424556,
+    "ratio_max": 336.66470259887944,
+    "logp_median": 42.22918562627431,
+    "logp_max": 167.80571330594873,
+    "nan_frac_max": 0.0,
+    "nan_frac_mean": 0.0,
+    "switch_index_paper": 300,
+    "switched": false,
+    "switch_index": 300,
+    "phase1_len": 300,
+    "p2_final_eps": 0.01177661188163778,
+    "p2_accept_last": 0.7389579233875399
+  },
+  "A2_all": {
+    "kwargs": {
+      "seed": "0",
+      "velocity_init": "gradient",
+      "L0_inf": "True",
+      "nan_eps_halving": "True",
+      "precond_source": "final"
+    },
+    "ratio": [
+      336.72771589468874,
+      3.136656326290804,
+      22.422735286486848,
+      17.593916789604304,
+      97.8869100815761,
+      107.50353968989972,
+      25.678220879097292,
+      23.150785125809605
+    ],
+    "ratio_median": 24.41450300245345,
+    "ratio_max": 336.72771589468874,
+    "logp_median": 39.543326988155215,
+    "logp_max": 167.77829034934948,
+    "nan_frac_max": 0.0,
+    "nan_frac_mean": 0.0,
+    "switch_index_paper": 300,
+    "switched": false,
+    "switch_index": 300,
+    "phase1_len": 300,
+    "p2_final_eps": 0.01177661188163778,
+    "p2_accept_last": 0.7495300924281283
+  }
+}
+DIAG DONE
+--- aniso_bed_f1.py (arm A3) ---
+devices [CudaDevice(id=0)] ... 4 total
+switch_index_paper=3000  phase1_len=3000  (T1=3000)
+dim  true_sig init_std0 final_std final/true  logslope_f3          verdict
+  0  1.00e-03  3.27e-02  9.69e-04        1.0    -2.83e-05       contracted
+  1  1.93e-03  3.67e-02  1.85e-03        1.0    -4.87e-05       contracted
+  2  3.73e-03  4.57e-02  3.74e-03        1.0     5.25e-06       contracted
+  3  7.20e-03  4.91e-02  6.96e-03        1.0     1.58e-06       contracted
+  4  1.39e-02  4.88e-02  1.41e-02        1.0    -4.01e-06       contracted
+  5  2.68e-02  4.89e-02  2.53e-02        0.9     1.64e-05       contracted
+  6  5.18e-02  5.37e-02  5.08e-02        1.0    -2.45e-06       contracted
+  7  1.00e-01  4.84e-02  9.82e-02        1.0    -4.52e-05       contracted
+BED DONE
+=== ALL DONE Mon Jul  6 03:38:46 PM PDT 2026 ===

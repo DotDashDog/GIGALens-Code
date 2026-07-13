@@ -1,0 +1,40 @@
+jax devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+dim (num free params): 22
+Final Chi-squared: 0.98602
+[PROBE] 512ch t(25)=26.2s t(200)=26.3s  per_step~0.001s compile~26.2s  -> STEPS=6000 (est 0.5 min/run)
+[warm] done wall=246.2s (4.1 min)  T1=6000
+[prior] done wall=244.6s (4.1 min)  T1=6000
+switch idx: prior(paper)=6000 prior(active)=6000 warm(paper)=6000 warm(active)=6000
+saved traj.npz
+saved contraction.png
+saved stragglers.png
+
+==============================================================================================================
+ dim   target_std  prior@switch  prior@final  final/target  log-slope(final3)  descending?
+--------------------------------------------------------------------------------------------------------------
+   3    6.745e-04     2.433e-03    2.433e-03          3.61          -6.56e-05          yes
+   2    7.775e-04     2.635e-03    2.635e-03          3.39          -7.93e-05          yes
+  12    1.279e-03     2.835e-01    2.835e-01        221.57           3.70e-05  no(flat/up)
+  17    1.421e-03     3.859e-01    3.859e-01        271.49           5.24e-05  no(flat/up)
+   7    1.878e-03     3.653e-01    3.653e-01        194.58           5.02e-05  no(flat/up)
+   8    1.951e-03     3.151e-01    3.151e-01        161.46           8.16e-05  no(flat/up)
+  14    4.198e-03     1.538e-01    1.538e-01         36.63           2.56e-05  no(flat/up)
+  18    4.253e-03     2.975e-01    2.975e-01         69.95           5.14e-05  no(flat/up)
+==============================================================================================================
+saved summary.json
+
+========================================================================================================
+PHYSICAL ANCHOR (mass params, ranked by HMC tightness)
+param                        HMC_std    warm_std   prior_std   warm/HMC  prior/HMC
+--------------------------------------------------------------------------------------------------------
+planes/0/mass/0/theta_E    1.401e-03   1.409e-03   5.227e-01       1.01     373.12
+planes/0/mass/0/center_y   1.895e-03   1.951e-03   3.151e-01       1.03     166.29
+planes/0/mass/0/center_x   1.974e-03   1.878e-03   3.653e-01       0.95     185.04
+planes/0/mass/1/gamma2     4.125e-03   4.198e-03   1.538e-01       1.02      37.28
+planes/0/mass/1/gamma1     6.020e-03   5.992e-03   1.827e-01       1.00      30.35
+planes/0/mass/0/e2         6.429e-03   6.553e-03   1.621e-01       1.02      25.22
+planes/0/mass/0/e1         7.458e-03   7.673e-03   2.192e-01       1.03      29.40
+planes/0/mass/0/gamma      8.109e-02   8.175e-02   2.863e-01       1.01       3.53
+========================================================================================================
+
+DONE. artifacts in: /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/laps/experiments/laps_validation/handoff/diag_phase1
