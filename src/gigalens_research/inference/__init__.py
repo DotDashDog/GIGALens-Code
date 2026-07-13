@@ -3,10 +3,17 @@
 This namespace is for sampler / inference algorithm implementations, not the
 pipeline wrappers around GIGA-Lens' MAP / SVI / HMC workflow. Those wrappers
 live in :mod:`gigalens_research.inference_utils`.
+
+The validated MCLMC and MAMS samplers have been consolidated into the core
+``gigalens`` package under :mod:`gigalens.jax.experimental`. They are re-exported
+here for backward compatibility, so existing ``gigalens_research.inference``
+imports (and the ``MCLMCStage`` / ``MAMSStage`` pipeline wrappers) keep working.
+Prefer importing them from :mod:`gigalens.jax.experimental.mclmc` /
+:mod:`gigalens.jax.experimental.mams` in new code.
 """
 
-from .mclmc import MCLMC, MCLMC_JIT
-from .mams import MAMS, MAMS_JIT
+from gigalens.jax.experimental.mclmc import MCLMC, MCLMC_JIT
+from gigalens.jax.experimental.mams import MAMS, MAMS_JIT
 from .laps import (
     LAPS_JIT,
 )

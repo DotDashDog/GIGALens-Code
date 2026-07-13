@@ -43,7 +43,7 @@ import tensorflow_probability.substrates.jax as tfp
 import blackjax
 from matplotlib import pyplot as plt
 
-from gigalens_research.inference.mclmc import MCLMC_JIT
+from gigalens.jax.experimental.mclmc import MCLMC_JIT
 from gigalens_research.inference_utils import PipelineConfig, run_pipeline
 from gigalens_research.plotting import plot_image_results
 from vela_utilities import (

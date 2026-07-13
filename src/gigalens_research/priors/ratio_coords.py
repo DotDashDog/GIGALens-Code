@@ -244,8 +244,13 @@ def _make_w_solver(u_fn: Callable, w_lo: float, w_hi: float, n_bisect: int):
 
     def _bisect(om, u):
         dt = jnp.result_type(om, u)
-        lo = jnp.asarray(w_lo, dt)
-        hi = jnp.asarray(w_hi, dt)
+        # Seed the bracket FROM the inputs (om*0 + u*0): under shard_map (the
+        # sharded MCLMC kernel) a plain-constant fori_loop carry is unvarying
+        # while the body output mixes in the device-varying om/u, and the loop
+        # rejects the mismatched carry types.
+        base = (om * 0 + u * 0).astype(dt)
+        lo = base + jnp.asarray(w_lo, dt)
+        hi = base + jnp.asarray(w_hi, dt)
         # Local orientation: works wherever u_fn is monotone at this om and
         # degrades gracefully (stays in the bracket) in a degenerate sliver.
         s = jnp.sign(u_fn(om, hi) - u_fn(om, lo))
@@ -271,7 +276,14 @@ def _make_w_solver(u_fn: Callable, w_lo: float, w_hi: float, n_bisect: int):
         om, _, w = res
         du_dom = jax.grad(u_fn, argnums=0)(om, w)
         du_dw = jax.grad(u_fn, argnums=1)(om, w)
-        return (-(du_dom / du_dw) * g, g / du_dw)
+        # A root pinned at a bracket edge means the target was outside the
+        # bracket (an inactive constraint in the u-first interval logic): the
+        # true derivative of the clamped output is 0, and the implicit rule
+        # (which assumes an interior root) would emit garbage — measured
+        # ~1e15 via 1/slope at the edge. Margin ≫ the 2^-n_bisect resolution.
+        margin = (w_hi - w_lo) * 1e-9
+        interior = jnp.where((w > w_lo + margin) & (w < w_hi - margin), 1.0, 0.0)
+        return (-(du_dom / du_dw) * g * interior, g / du_dw * interior)
 
     solve.defvjp(fwd, bwd)
     return solve
@@ -424,6 +436,324 @@ class RatioCoordsUniform(tfd.Independent):
             validate_args=validate_args)
         if dtype is None:
             dtype = jnp.zeros(()).dtype  # ambient default float (float64 iff x64)
+        low = jnp.asarray([om0_bounds[0], w0_bounds[0]], dtype)
+        high = jnp.asarray([om0_bounds[1], w0_bounds[1]], dtype)
+        super().__init__(
+            tfd.Uniform(low=low, high=high),
+            reinterpreted_batch_ndims=1,
+            validate_args=validate_args,
+            name=name,
+        )
+
+    def _default_event_space_bijector(self):
+        return self._esb
+
+
+
+
+# ------------------------------------------------------------------------------
+# u-first ordering (Run D) — banded global squash of the stiff scalar.
+#
+# Run C's om-first ordering left a residual disease: the conditional bracket
+# [u(Om0,w_lo), u(Om0,w_hi)] drifts with Om0, so the likelihood band ROTATES in
+# (z1, z2) (measured -8deg -> -84deg along the DSPL contour) and a frozen global
+# metric truncates where the rotation outruns it (Run C outcome, lab log). The
+# u-first ordering makes the likelihood a function of z1 ALONE:
+#
+#     u   = u_lo_band + (u_hi_band - u_lo_band) * NormalCDF(z1)   (fixed range)
+#     Om0 = om_lo + (om_hi_eff(u) - om_lo) * NormalCDF(z2)
+#     w0  = root of u_fn(Om0, w0) = u                              (as om-first)
+#
+# so the likelihood band in z-space is an axis-aligned slab — zero rotation at
+# every point of the posterior, by construction.
+#
+# THE BAND (support amendment, measured on the real DSPL u_fn 2026-07-11): u has
+# interior critical points on the full box — u_a(Om0) = u_fn(Om0, w_lo) dips
+# before rising (minimum at Om0 ~ 0.02, corner slope -4.7) and
+# u_b(Om0) = u_fn(Om0, w_hi) wiggles — so level sets of u change topology and a
+# FULL-BOX "u as a global coordinate" diffeomorphism cannot exist. The map
+# therefore squashes z1 into the band
+#
+#     u in ( u_a(start end),  min over Om0 of u_b )
+#
+# ("start end" = om_lo for a rising u_a, om_hi for a falling one), inside which
+# u_a is single-crossing (validated) and the u_b constraint is never binding,
+# giving Om0-interval [om_lo, root of u_a = u] (mirrored for falling u_a). The
+# prior becomes an UNNORMALIZED TRUNCATED uniform: theta with u(theta) outside
+# the band is unreachable. For the DSPL system the band is (1.28671, 1.34072)
+# while the data sit at u* = 1.32392 +/- 6.7e-4 — the truncation edges are
+# ~55 sigma and ~25 sigma away (excluded posterior mass < erfc(25/sqrt(2))
+# ~ 1e-138); the excluded PRIOR volume is reported by the validator and must be
+# quoted with any run. This is an explicit, quantified support amendment — not
+# a silent approximation.
+#
+# Jacobian through the (u, Om0) intermediate is triangular, so the log-det is
+# analytic:  log|det dtheta/dz| = log(band width) + log phi(z1)
+#                               + log(om-interval width) + log phi(z2)
+#                               - log|du_fn/dw0|.
+# (The om-interval endpoint's u-derivative does not enter the determinant; it
+# DOES carry forward-map gradients, via the solver's implicit-vjp rule, which
+# zeroes itself at bracket-edge clamps.)
+# ------------------------------------------------------------------------------
+
+
+def validate_u_first_ratio_coords(
+    u_fn: Callable,
+    om0_bounds: Tuple[float, float],
+    w0_bounds: Tuple[float, float],
+    *,
+    du_dw_atol: float = 0.0,
+    excursion_atol: float = 0.0,
+    curve_atol: float = 0.0,
+    n_om: int = 201,
+    n_w: int = 201,
+) -> Dict[str, float]:
+    """Validate ``u_fn`` for the banded u-first map; raise if unusable.
+
+    Runs :func:`validate_ratio_coords` (w0-monotonicity + excursion — the
+    w0-solve is shared), then derives the u-band and requires, on the grid:
+
+    1. ``u_a`` finite with a well-defined dominant direction; the band floor is
+       ``u_a`` at the branch's START end (om_lo if rising, om_hi if falling) —
+       a dip BELOW the floor before the branch is tolerated (it is outside the
+       band), but above the floor ``u_a`` must be single-crossing: signed slope
+       >= -``curve_atol`` wherever ``u_a >= floor``.
+    2. Band ceiling = min over the grid of ``u_b``; the band must be non-empty
+       (floor < ceiling) — otherwise no u-value admits the construction.
+
+    Reports the band, the excluded prior-volume fraction (grid measure of
+    ``u < floor`` or ``u > ceiling`` over the box), and the curve diagnostics.
+    """
+    report = validate_ratio_coords(
+        u_fn, om0_bounds, w0_bounds, du_dw_atol=du_dw_atol,
+        excursion_atol=excursion_atol, n_om=n_om, n_w=n_w)
+
+    om_lo, om_hi = float(om0_bounds[0]), float(om0_bounds[1])
+    w_lo, w_hi = float(w0_bounds[0]), float(w0_bounds[1])
+    om = jnp.linspace(om_lo, om_hi, int(n_om))
+    du_dom_vec = jnp.vectorize(jax.grad(u_fn, argnums=0))
+    u_vec = jnp.vectorize(u_fn)
+
+    u_a = u_vec(om, jnp.full_like(om, w_lo))
+    u_b = u_vec(om, jnp.full_like(om, w_hi))
+    slope_a = du_dom_vec(om, jnp.full_like(om, w_lo))
+    if not (bool(jnp.isfinite(u_a).all()) and bool(jnp.isfinite(u_b).all())
+            and bool(jnp.isfinite(slope_a).all())):
+        raise ValueError(
+            "endpoint curve u_a/u_b non-finite on the validation grid; the "
+            "u-first map is unusable on this box.")
+
+    sign_a = 1.0 if float(u_a[-1]) >= float(u_a[0]) else -1.0
+    floor = float(u_a[0]) if sign_a > 0 else float(u_a[-1])
+    ceiling = float(jnp.min(u_b))
+    report["u_a_sign"] = sign_a
+    report["u_band_floor"] = floor
+    report["u_band_ceiling"] = ceiling
+    if not (ceiling > floor):
+        raise ValueError(
+            f"empty u-band: floor u_a(start)={floor} >= ceiling min(u_b)="
+            f"{ceiling}; the banded u-first construction does not apply to "
+            f"this u_fn/box. Report: {report}")
+
+    # STRICTLY above the floor: the branch-start endpoint has u_a == floor and
+    # may legitimately descend into a below-band dip (the DSPL curve does);
+    # only points above the floor can spoil single-crossing within the band.
+    above = u_a > floor
+    viol = jnp.where(above, sign_a * slope_a, jnp.inf)
+    worst = float(jnp.min(viol))
+    n_flip_beyond = int(jnp.sum(viol < -float(curve_atol)))
+    report["u_a_min_signed_slope_above_floor"] = worst
+    report["u_a_n_flips_beyond_atol"] = n_flip_beyond
+    if n_flip_beyond > 0:
+        raise ValueError(
+            f"endpoint curve u_a is not single-crossing above the band floor: "
+            f"{n_flip_beyond} grid point(s) with signed slope < -curve_atol="
+            f"{curve_atol} (worst {worst:.3e}) where u_a >= floor={floor}. "
+            f"Report: {report}")
+
+    # Excluded prior volume: grid measure of u outside the band over the box.
+    w = jnp.linspace(w_lo, w_hi, int(n_w))
+    om_mesh, w_mesh = jnp.meshgrid(om, w, indexing="ij")
+    u_grid = u_vec(om_mesh, w_mesh)
+    report["excluded_prior_volume_frac"] = float(
+        jnp.mean((u_grid < floor) | (u_grid > ceiling)))
+    report["curve_atol"] = float(curve_atol)
+    return report
+
+
+class UFirstRatioCoordsBijector(tfb.Bijector):
+    """Banded u-first diffeomorphism ``R^2 -> {theta in box : u(theta) in band}``
+    (section doc). Event ndims 1. ``_forward`` runs one Om0-root solve + the w0
+    solve; ``_inverse`` is analytic modulo the Om0-root solve; both log-det
+    directions are analytic."""
+
+    def __init__(
+        self,
+        u_fn: Callable,
+        om0_bounds: Tuple[float, float],
+        w0_bounds: Tuple[float, float],
+        *,
+        n_bisect: int = 80,
+        n_band_grid: int = 201,
+        validate_args: bool = False,
+        name: str = "u_first_ratio_coords",
+    ):
+        parameters = dict(locals())
+        self._om_lo, self._om_hi = float(om0_bounds[0]), float(om0_bounds[1])
+        self._w_lo, self._w_hi = float(w0_bounds[0]), float(w0_bounds[1])
+        if not (self._om_hi > self._om_lo) or not (self._w_hi > self._w_lo):
+            raise ValueError(
+                f"bounds must be increasing; got om0={om0_bounds}, w0={w0_bounds}.")
+        if int(n_bisect) < 50:
+            raise ValueError(
+                f"n_bisect={n_bisect} < 50 cannot reach float64 resolution; "
+                f"use >= 50.")
+        self._u_scalar = u_fn
+        self._u = jnp.vectorize(u_fn)
+        self._du_dw = jnp.vectorize(jax.grad(u_fn, argnums=1))
+        self._solve_w = jnp.vectorize(
+            _make_w_solver(u_fn, self._w_lo, self._w_hi, int(n_bisect)))
+        # Om0-root solver on the u_a curve: the w-solver machinery with swapped
+        # arguments — solve om in [om_lo, om_hi] with u_fn(om, w_lo) = u.
+        self._solve_om = jnp.vectorize(_make_w_solver(
+            lambda w_end, om: u_fn(om, w_end),
+            self._om_lo, self._om_hi, int(n_bisect)))
+
+        # The band (concrete, eager; see section doc). Curves evaluated on a
+        # construction grid — validate_u_first_ratio_coords is the authority
+        # on whether this shape family applies; here we only re-derive the
+        # numbers and hard-fail on an empty band.
+        om_grid = jnp.linspace(self._om_lo, self._om_hi, int(n_band_grid))
+        u_a = self._u(om_grid, jnp.full_like(om_grid, self._w_lo))
+        u_b = self._u(om_grid, jnp.full_like(om_grid, self._w_hi))
+        self._sign_a = 1.0 if float(u_a[-1]) >= float(u_a[0]) else -1.0
+        self._u_lo_band = float(u_a[0]) if self._sign_a > 0 else float(u_a[-1])
+        self._u_hi_band = float(jnp.min(u_b))
+        # u_a value at the branch's FAR end: beyond it the u_a constraint is
+        # inactive and the Om0-interval endpoint is the box edge.
+        self._u_a_far = float(u_a[-1]) if self._sign_a > 0 else float(u_a[0])
+        if not (self._u_hi_band > self._u_lo_band):
+            raise ValueError(
+                f"empty u-band [{self._u_lo_band}, {self._u_hi_band}]; run "
+                "validate_u_first_ratio_coords for the full report.")
+        super().__init__(
+            forward_min_event_ndims=1,
+            is_constant_jacobian=False,
+            validate_args=validate_args,
+            parameters=parameters,
+            name=name,
+        )
+
+    # -- pieces ----------------------------------------------------------------
+    def _om_interval(self, u):
+        """Om0-interval of the u-contour within the band.
+
+        Only the u_a constraint can bind inside the band (the ceiling is
+        min u_b). A rising u_a bounds Om0 above by its root; a falling one
+        bounds it below. The root is used only where the constraint is active
+        (u on the branch side of u_a's far end) — `jnp.where` on that concrete
+        activity test keeps clamped-root garbage gradients out of the graph
+        (the solver's edge mask is the second line of defense)."""
+        dt = jnp.result_type(u)
+        # Seed w_end FROM u (u*0 + const) so it inherits u's sharding/varying
+        # type: under shard_map a plain-constant custom_vjp argument makes the
+        # bwd rule's cotangent type (varying) mismatch the primal input type
+        # (unvarying) — the same class of failure as the bisection carry.
+        w_end = u * 0 + jnp.asarray(self._w_lo, dt)
+        r_a = self._solve_om(w_end, u)
+        lo = jnp.full_like(u, self._om_lo)
+        hi = jnp.full_like(u, self._om_hi)
+        if self._sign_a > 0:
+            hi = jnp.where(u < self._u_a_far, jnp.minimum(hi, r_a), hi)
+        else:
+            lo = jnp.where(u < self._u_a_far, jnp.maximum(lo, r_a), lo)
+        return lo, hi
+
+    def _u_from_z1(self, z1):
+        return self._u_lo_band + (self._u_hi_band - self._u_lo_band) * ndtr(z1)
+
+    def _fldj_from_parts(self, z1, z2, om_int_lo, om_int_hi, om, w0):
+        return (
+            math.log(self._u_hi_band - self._u_lo_band) + _log_phi(z1)
+            + jnp.log(jnp.abs(om_int_hi - om_int_lo)) + _log_phi(z2)
+            - jnp.log(jnp.abs(self._du_dw(om, w0)))
+        )
+
+    # -- bijector interface ------------------------------------------------------
+    def _forward(self, z):
+        z1, z2 = z[..., 0], z[..., 1]
+        u = self._u_from_z1(z1)
+        lo, hi = self._om_interval(u)
+        om = lo + (hi - lo) * ndtr(z2)
+        w0 = self._solve_w(om, u)
+        return jnp.stack([om, w0], axis=-1)
+
+    def _inverse(self, x):
+        om, w0 = x[..., 0], x[..., 1]
+        u = self._u(om, w0)
+        z1 = ndtri(RatioCoordsBijector._clip_unit(
+            (u - self._u_lo_band) / (self._u_hi_band - self._u_lo_band)))
+        lo, hi = self._om_interval(u)
+        z2 = ndtri(RatioCoordsBijector._clip_unit((om - lo) / (hi - lo)))
+        return jnp.stack([z1, z2], axis=-1)
+
+    def _forward_log_det_jacobian(self, z):
+        z1, z2 = z[..., 0], z[..., 1]
+        u = self._u_from_z1(z1)
+        lo, hi = self._om_interval(u)
+        om = lo + (hi - lo) * ndtr(z2)
+        w0 = self._solve_w(om, u)
+        return self._fldj_from_parts(z1, z2, lo, hi, om, w0)
+
+    def _inverse_log_det_jacobian(self, x):
+        om, w0 = x[..., 0], x[..., 1]
+        z = self._inverse(x)
+        u = self._u(om, w0)
+        lo, hi = self._om_interval(u)
+        return -self._fldj_from_parts(z[..., 0], z[..., 1], lo, hi, om, w0)
+
+
+class UFirstRatioCoordsUniform(tfd.Independent):
+    """Uniform prior on the (Om0, w0) box whose event-space bijector is the
+    banded u-FIRST ratio-coordinates map (event_shape [2]); Run D counterpart
+    of :class:`RatioCoordsUniform` — same drop-in tuple-key usage.
+
+    SUPPORT AMENDMENT (section doc): the sampler can only reach theta with
+    ``u(theta)`` inside the band, so this is effectively an UNNORMALIZED
+    truncated-uniform prior (``log_prob`` stays the plain box value — the
+    truncation constant is irrelevant to MCMC). Quote the validator report's
+    ``excluded_prior_volume_frac`` and the band's sigma-distance from the data
+    with any run that uses it."""
+
+    def __init__(
+        self,
+        u_fn: Callable,
+        om0_bounds: Tuple[float, float],
+        w0_bounds: Tuple[float, float],
+        *,
+        du_dw_atol: float = 0.0,
+        excursion_atol: float = 0.0,
+        curve_atol: float = 0.0,
+        n_bisect: int = 80,
+        n_validation_grid: int = 201,
+        skip_validation: bool = False,
+        dtype=None,
+        validate_args: bool = False,
+        name: str = "UFirstRatioCoordsUniform",
+    ):
+        if skip_validation:
+            self.ratio_coords_report = None
+        else:
+            self.ratio_coords_report = validate_u_first_ratio_coords(
+                u_fn, om0_bounds, w0_bounds,
+                du_dw_atol=du_dw_atol, excursion_atol=excursion_atol,
+                curve_atol=curve_atol,
+                n_om=n_validation_grid, n_w=n_validation_grid)
+        self._esb = UFirstRatioCoordsBijector(
+            u_fn, om0_bounds, w0_bounds, n_bisect=n_bisect,
+            n_band_grid=n_validation_grid, validate_args=validate_args)
+        if dtype is None:
+            dtype = jnp.zeros(()).dtype
         low = jnp.asarray([om0_bounds[0], w0_bounds[0]], dtype)
         high = jnp.asarray([om0_bounds[1], w0_bounds[1]], dtype)
         super().__init__(

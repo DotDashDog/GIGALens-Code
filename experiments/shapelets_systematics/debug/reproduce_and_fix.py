@@ -40,7 +40,7 @@ jax.config.update("jax_enable_x64", False)
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 
-from gigalens_research.inference.mclmc import MCLMC_JIT
+from gigalens.jax.experimental.mclmc import MCLMC_JIT
 
 tfd = tfp.distributions
 

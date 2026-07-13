@@ -20,7 +20,7 @@ correctness hazard the pre-registration flags.)
 --------------------------------------------------------------------------------
 TRACE 1 -- xi <-> displacement alignment (resolved in SOURCE, not fitted)
 --------------------------------------------------------------------------------
-Kernel: gigalens_research.inference.mclmc.MCLMC_JIT -> full_mclmc_with_adapt_sharded
+Kernel: gigalens.jax.experimental.mclmc.MCLMC_JIT -> full_mclmc_with_adapt_sharded
         (src/gigalens_research/inference/mclmc.py).
 
 In `step_batched` (mclmc.py:281) the scan carry holds `states` = the state BEFORE

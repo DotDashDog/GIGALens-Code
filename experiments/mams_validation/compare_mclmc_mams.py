@@ -20,8 +20,8 @@ from gigalens_research.inference.blackjax_updated_utils import (
     _build_kernel_shardmap, _build_adjusted_kernel_shardmap,
     isokinetic_mclachlan_smart, init_multi,
 )
-from gigalens_research.inference.mclmc import full_mclmc_with_adapt_sharded
-from gigalens_research.inference.mams import full_mams_with_adapt_sharded
+from gigalens.jax.experimental.mclmc import full_mclmc_with_adapt_sharded
+from gigalens.jax.experimental.mams import full_mams_with_adapt_sharded
 import blackjax
 from blackjax.diagnostics import effective_sample_size
 

@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(home, "GIGALens-Code/src"))
 from gigalens_research.inference.blackjax_updated_utils import (
     init_multi, _build_kernel_shardmap, isokinetic_mclachlan_smart,
 )
-from gigalens_research.inference.mclmc import full_mclmc_with_adapt_sharded
+from gigalens.jax.experimental.mclmc import full_mclmc_with_adapt_sharded
 from blackjax.adaptation.mclmc_adaptation import MCLMCAdaptationState
 
 import tensorflow_probability.substrates.jax as tfp
