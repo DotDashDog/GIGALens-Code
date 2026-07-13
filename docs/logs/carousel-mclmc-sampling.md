@@ -420,6 +420,50 @@ multimodality, conditioning, or the NFW profile.
 - **Proposed by / on:** Claude (Batch A) · 2026-07-06   ·   **Grader:** _pending_
 - **CORRECTION (2026-07-06, C-8 trap):** Batch A within-component parameter NAMES were wrong — I labeled z-columns in `_unique` *insertion* order, but the sampler uses **sorted-key** (JAX-tree-flatten) order (confirmed empirically by a per-column perturbation test through `pm.bij.forward`; map in `z_names_TRUE.json`). Column *indices* and all numbers are unaffected; only names within each component were permuted. Corrected identifications: **the ξ lattice is in EPL_Lf.center_x / center_y (perturber POSITION), NOT (theta_E, gamma)**; the slowest/widest direction (softest eig, loading 0.998; min bulk-ESS 482) is **src9.e2 (Sérsic source ellipticity)**, not a center; the worst-ESS subspace is a mix of weakly-identified source-shape (src9 e1/e2), source-shapelet centres, and mass shape/ellipticity — the Batch A 'positions dominate' phrasing is withdrawn. At the max-ξ draw EPL_Lf.e1=0.4977 (pinned at the +0.5 prior wall) and the perturber sits ~3σ off its center-x prior. Corrected plots: batchA_diag/P10_EPL_Lf_CORRECTED.png, P11_position_lattice.png.
 
+### C-22 — The ξ teeth are the EPL_Lf central CUSP crossing bright arc pixels; ellipticity bounds exonerated BY INTERVENTION; cured out-of-sample by a cored profile (dPIE)
+
+- **Status:** `proposed (UNCERTIFIED)` — diagnostics by Claude; the dPIE confirmation is the
+  user's own run (2026-07-07).
+- **Scope:** NEW complex carousel. Completes C-21: establishes the *mechanism* (its open Test-1/3
+  question) and the *fix*.
+- **Evidence:**
+  - **(a) Intervention falsifies the ellipticity wall.** The user's `DiskEllipticity(e_max=0.3,
+    scale=0.1)` prior (gigalens `grouped_priors.py`, 56ca69a) verifiably engaged: the ±fldj cancel
+    exactly in `log_prior` (effective prior = N(0,0.1) on u — the T28 tfp wrong-space trap does NOT
+    apply), EPL_Lf e1 wall-pinning gone (max|z| 4.27 → 0.50), posterior |e| fully interior (max
+    0.244, zero draws near 0.3). Yet on the matched 2k/2k seed-42 run: frac(ξ>10)/step **+73%**,
+    eps 0.1255 → 0.323 (still ~3× below healthy), min bulk-ESS/draw 6.3× worse, R̂ 1.51, and the
+    ξ spikes **still localize in EPL_Lf (center_x, center_y)**. Wall hypothesis dead.
+    Caveat: `scale=0.1` is strongly round-preferring (~all prior mass |e|<0.1); EPL_Le's posterior
+    sits ~12σ from the prior mean in u and its median |e| shifted 0.30 → 0.23 — the prior *changes
+    the posterior*, not just geometry.
+  - **(b) Core-softening dial-scan (pre-registered; user-approved).** `CoredEPL` = stock EPL with
+    only the radial factor softened, `(b/R)^(γ−2) → (b/√(R²+rc²))^(γ−2)`; angular series untouched.
+    Gates: rebuild reproduces the logged red-χ²=1.1608 at the old max-ξ draw (rel 2e-5); rc=0 ≡
+    stock logL (rel 0.0). Result: |∂logL/∂center_x| comb peak-to-trough collapses **13.2×** at the
+    old run's max-ξ point (|e|=0.50) and **119×** at the new run's (|e|=0.23) for rc ≥ 0.5 px =
+    0.1″; tooth prominence → 0; the smooth ~35-nat logL envelope (the parameter information) is
+    intact. Pre-registered bar (≥10× at rc=1px): HIT both points. Stock teeth are 4× *taller* at
+    |e|=0.23 than at 0.50 — ellipticity magnitude irrelevant; the cusp is the generator.
+    Honest anomaly: rc=0.25 px *amplified* PtT 3.6× at the old point only (sub-pixel re-phasing of
+    the cusp against the grid; monotone 0.29 at the new point) — outside the registered partition,
+    direction-consistent with the mechanism, and a warning against sub-pixel cores.
+  - **(c) Out-of-sample confirmation.** Registered prediction "a cored physical profile collapses
+    the ξ tail" confirmed: the user's dPIE-for-EPL_Lf run removes the ξ spikes. (dPIE also
+    independently better-motivated for Lf per group work — the fix is physical, not a fudge.)
+- **Doubt report:** dial-scan cuts are endpoint-frozen and 1-D (mid-trajectory encounters
+  unprobed); 401-pt grid may under-resolve the sharpest teeth (conservative direction — understates
+  stock PtT); `CoredEPL` is not a self-consistent mass model (attribution surrogate only); the dPIE
+  confirmation swaps slope *and* core jointly (the core arm isolates the core within-profile, so
+  the joint attribution stands); dPIE run's eps/ESS recovery not yet quantified against the clone.
+- **Artifacts:** `/pscratch/sd/l/linusu/carousel_diag/core_dialscan/{core_dialscan.npz,
+  core_dialscan_summary.json, core_dialscan.png}` and `.../circ_eprior_verif/` (panel, |e|
+  crowding, pushforward); scripts `core_dialscan.py`, `circ_verif.py`, `bij_*.py` in Claude job
+  fe3e84e8 tmp — promote next to `test1_dialscan.py` if wanted durable.
+- **Playbook:** logged as disease class **(vi)** + instrument **§3.15** + fix-ladder rung 0 in
+  `docs/playbooks/sampling-diagnosis-playbook.md`.
+- **Proposed by / on:** Claude · 2026-07-07   ·   **Grader:** _pending_
+
 ---
 
 ## Design checkpoints (criteria awaiting approval)
@@ -511,6 +555,20 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-07 (DiskEllipticity intervention + core dial-scan + dPIE cure → C-22)** — Closed the
+  C-21 mechanism question. (1) User's `DiskEllipticity(0.3, 0.1)` run (`messy_tests/
+  circular_ellipticity_prior`, 2k/2k seed 42): bijector engagement verified (Jacobian cancellation
+  exact; pinning gone; |e| interior) yet ξ rate +73%/step, eps 0.323 still suppressed, spikes still
+  on EPL_Lf position ⇒ **ellipticity wall falsified as carrier by direct intervention**. (2)
+  Pre-registered core-softening dial-scan on a dedicated GPU node (`CoredEPL`, radial factor only;
+  Gate A red-χ² 1.160823 vs 1.1608 rel 2e-5; Gate B rc=0≡stock rel 0.0): teeth collapse 13×/119×
+  (old/new max-ξ points) at rc ≥ 0.5 px, prominence → 0, envelope intact ⇒ **the EPL_Lf central
+  cusp is the tooth generator**; honest anomaly rc=0.25px amplified 3.6× (old point only). (3)
+  User's dPIE-for-Lf run removes the ξ spikes — registered out-of-sample prediction HIT; dPIE also
+  independently better-motivated for Lf. See **C-22**; playbook updated (disease (vi), instrument
+  §3.15, fix-ladder rung 0). Batch-A-era script bug found en route: `test1_dialscan.py` labeled its
+  scan axis theta_E/gamma but cols 12/13 are center_x/center_y (sorted-key order) — it scanned
+  position, which is why its window matched; C-8 strikes again.
 - **2026-07-06 (Test 4 + Test 2)** — **Catastrophic ξ = PHYSICAL localized caustic stiffness; numerics fully excluded.** `proposed (UNCERTIFIED)`. Test 4 (EPL_Lf.center_x dial-scan, conv_precision float32 vs float64 at ss1 and ss5): **f64/f32 comb ratio = 1.001** at both ss ⇒ the teeth are NOT float32-convolution roughness. Test 2 (per-pixel |∂model/∂center_x| via jvp at the max-ξ draw): sensitivity is highly localized — **top-1% of pixels carry 92% (band0) / 95% (band1)** — and in band0 it **traces the bright lensed arcs, peaking right at the perturber** (peak px→(-15.0,-4.6) vs perturber (-14.78,-4.48)). Synthesis: the small (θ_E≈1.07), maximally-elliptical (e1≈0.50, pinned at the +0.5 wall) EPL_Lf perturber sits among the lensed arcs; its position near-singularly controls those arc pixels (a critical-curve/caustic effect), producing the sharp likelihood teeth that at ss=1 the sampler occasionally hits → the catastrophic ξ that suppress eps globally. Ruled OUT across Tests 1/4: pixel-aliasing, EPL series, float32 numerics. **Fix is NOT render fidelity / conv precision / a variance-stabilizing reparam (this is not a smooth funnel).** Likely levers: regularize the perturber (cap ellipticity below the wall / add a core / question whether the component is justified) or sampler robustness. This unifies the user's two symptoms (ellipticity-at-bounds + ξ spikes) into one cause. Artifacts (on $SCRATCH, home quota full): /pscratch/sd/l/linusu/carousel_diag/{P12_f64_vs_f32_comb,P13_localize_band0_shapelets,P13_localize_band1_sersic}.png, test_f64_loc.npz. NOT yet done: cond(G) of the lstsq Gram at spike vs calm (lstsq-conditioning sub-check).
 - **2026-07-06 (later)** — **Test 1 dial-scan RAN + Batch A labeling CORRECTED.** `proposed (UNCERTIFIED)`. (a) C-8 trap caught: Batch A names were insertion-order; true map is sorted-key (`z_names_TRUE.json`, perturbation-verified). The ξ lattice is in **EPL_Lf position (center_x,center_y)**, not (theta_E,gamma). (b) Test 1 (EPL_Lf position dial-scan, supersample{1,3,5}×niter{50,200}, other 30 params frozen at the max-ξ draw; faithful rebuild reproduces run red_chi2=1.1608): **teeth do NOT collapse under supersampling — they proliferate**; **niter has zero effect**. ⇒ pixel-aliasing and the EPL series both FALSIFIED. The perturber (small θ_E≈1.07, e1 at the +0.5 wall) produces near-singular caustic structure in the likelihood-vs-position that finer grids resolve as sharper; at the run's ss=1 it is mostly blurred with a few sharp teeth = the catastrophic ξ events. **Implication: raising supersampling is NOT a fix (would expose more teeth) — Test 3's premise is falsified in advance.** Remaining discriminator (cheap): rerun the SAME dial-scan at conv_precision=float64 to separate physical-caustic from float32-conv roughness that worsens with pixel count. Artifacts: batchA_diag/P9–P11, test1_dialscan.npz.
 - **2026-07-06** — **Batch A diagnosis of the NEW complex-carousel run (`messy_tests/just_map`);
