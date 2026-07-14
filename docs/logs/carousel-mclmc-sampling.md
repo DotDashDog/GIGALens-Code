@@ -465,6 +465,11 @@ multimodality, conditioning, or the NFW profile.
 - **Also:** F-S no-fire under the pinned E1/E2 test (E4 near-threshold alignment |cos| 0.756 = watch item); F-P fired (E4 fails W-t+W-o; moot routing — E2 fails too); W-p NOT assembled; E1/E2 2σ-consistent yet clause-flipping ⇒ single-run certification unsupportable at 1500 rounds.
 - **Scope:** this posterior, unadjusted kernel, MAP entry; chain UNCERTIFIED (C-24/C-25 basis; 1e-6·I ratification pending).
 
+### C-28 — GATE PT-4: adaptive-metric transit inflation is CROSS-CHAIN DISPERSION, not ensemble-mean drift — drift hypothesis falsified by the in-run W/B decomposition (B/W 0.0–0.2 on top axes vs ≥ 10 predicted; W ≈ reconstructed-pooled, per-window max-axis ratios 0.74–1.02; W-only window-2 maxima 87–103) ⇒ no within-window unbiased empirical covariance estimator evades it; pooled-vs-within choice immaterial for the pathology (scored max 19.7–27.6, the {19,2,3,20} family all four arms, vs PT-2 freeze-500 20.2–22.9 on a 1-seed baseline; the in-run decomposition is the load-bearing evidence). Product-level: pinned config passes all transport/health clauses 4/4 (RT 209–316 ≥ 175) and the first adequately-powered pooled MAP-entry occupancy is IN BAND (0.352 ± 0.029 iid-48 se, ≈ 0.045 under a between-arm random-effects reading; near-low-edge, rising-trace corroborated; per-arm G3 0.266 below band)
+- **Status:** `proposed (UNCERTIFIED)` — 2026-07-13; scorer @4f81244 (audit-certified, post-incident C-24 config asserts); artifacts `carousel_gate_pt0_out/*pt4*` + `invalid_cfg_run1/` quarantine; result-grader CERTIFY-RECOMMENDED conditional on B1–B6 (applied). W-p BLOCKED by the pre-registered F-M exclusion; human menu OPEN — (a) bounded estimation (plan-reshape candidate; UNTESTED, not proven-remainder) / (b) accept (3, 28] — EXTENDS PT-2's pre-committed (3, 10] zone, a NEW decision / (c) both; producer lean (c), proposal-only.
+- **Also:** W-L validated with L1b under the AMENDED neighbor-conservative β_min rule (pinned own-rate rule → 0.5994 on archived data; amendment pre-launch @da63b53, conservative direction, answer-aware on this posterior — non-circular test = PT-5; own-rate reading would certify a shorter ladder bottoming at 0.5995, a live PT-5 option). F-U marginal (G2 0.09957, 0.43% under the heuristic floor), F-S-aligned 0.821 on 1/3 MAP seeds — the {10,4,11,1} direction has now appeared in 2 gates (watch). W-s G2/G3 2σ fail (0.1506 > 0.1249), F-eq no-fire; between-arm occupancy variance component suggestive (p ≈ 0.08).
+- **Scope:** this posterior, unadjusted kernel, C-24/C-25 UNCERTIFIED basis, 1e-6·I ratification pending; within-basin bias along the inflated axes UNCONSTRAINED; hot-rung metric unscored.
+
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: carousel GATE PT-4 — drift-free metric estimator (system-agnostic, zero tuned
@@ -511,7 +516,21 @@ multimodality, conditioning, or the NFW profile.
   (fail-closed); A3-2 clipped-arm trace-bias pre-registration added to W-o;
   A3-3 stray pt4_score.json kept untracked. Ten adversarial scenarios passed
   (missing-arm, F-M-on-G4-only, F-R'/F-U blocking, A6 both edges, op-7 clip,
-  F-S 2-of-3). Fix re-verification by the same auditor before alloc A.**
+  F-S 2-of-3). Fix re-verification by the same auditor before alloc A.
+  RAN 2026-07-13 (after one config-mismatch op-incident + two probe clips,
+  all recorded in Log): F-M FIRED ON ALL FOUR ARMS — drift hypothesis
+  falsified (B/W ~0.1 vs ≥ 10 predicted; transit variance = cross-chain
+  dispersion); W-p BLOCKED per the pre-registered exclusion; transport/
+  health/pooled-occupancy clauses ALL PASS on the pinned config (pooled
+  MAP-entry occ 0.352 in band, RT 209–316); W-L PASS (with the B1
+  circularity disclosure on L1b's β_min leg). Result-grader:
+  CERTIFY-RECOMMENDED conditional on B1–B6 — ALL APPLIED (L1b circularity
+  disclosed both entries; menu (b) marked as zone EXTENSION (3,28]; ESTABLISHES (ii)
+  attribution inverted; ratios 0.74–1.02 / F-U 0.43% / probe 6.3 GPU·h
+  arithmetic corrected; between-arm component softened to suggestive p≈0.08
+  w/ random-effects se 0.045; >10 axis named = {19,2,3,20} all four arms,
+  recomputed). C-28 registered. AWAITING HUMAN DECISION (menu a/b/c in the
+  result entry).**
   **Claim + classification.** Stochastic-estimator behaviour (covariance estimation
   under non-stationary burn-in) + a distributional claim (occupancy). Links: (M,
   mechanism) the pooled-Welford ridge-axis inflation (PT-2/PT-3: 20–126× on z-cols
@@ -2677,33 +2696,54 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   [2.4, 88.8, 13.6], G2 [2.2, 87.3, 9.2], G3 [2.3, 102.9, 5.9], G4
   [48.6, 26.2, 4.7]; reconstructed-pooled counterparts [2.4, 97.9, 16.4] /
   [2.2, 96.8, 11.7] / [2.3, 117.6, 7.6] / [53.7, 35.3, 4.6] — W ≈ pooled
-  everywhere (ratio 0.8–1.1), and the identity-attributed B/W shares on the
+  everywhere (per-window max-axis ratios 0.74–1.02; grader recount, B4), and
+  the identity-attributed B/W shares on the
   top inflated axes are 0.0–0.2 (prediction: ≥ 10). Magnitude accounting:
   prediction (M) said W-only window-2 ≤ 10 with B ≥ 10×W; observed W 87–103
   with B ≈ 0.1×W — failed in BOTH parts. The transit variance on slow axes
-  is carried by the chains' cross-sectional spread itself (each ladder at a
-  different transit stage), which NO within-window empirical covariance
-  estimator can evade — the drop-B family is dead as a fix (F-M routing),
-  and by extension pooled-vs-within estimator choice is immaterial
-  (measured: scored max gen-eig 27.6/24.7/23.3/19.7 — the same class as
-  PT-2's pooled freeze-500 20–23). The invalid-config run's suggestive F-M
-  (op-incident above) transferred to the pinned config.
+  is carried by the chains' cross-sectional spread itself (INFERENCE for the
+  physical picture — each ladder at a different transit stage; the measured
+  fact is the decomposition), which no within-window UNBIASED empirical
+  covariance estimator can evade (grader qualifier: deductively sound for
+  unbiased estimators of the current marginal covariance ONLY — a feedback
+  component from the still-poor window-1 metric, PT-3's confound class, is
+  not excluded, so menu option (a) is UNTESTED, not the proven remainder) —
+  the drop-B family is dead as a fix (F-M routing). Pooled-vs-within
+  estimator choice: immaterial for THIS pathology, with the load-bearing
+  evidence being the in-run W ≈ pooled decomposition (0.74–1.02), NOT the
+  cross-gate comparison (scored max 19.7–27.6 vs PT-2 freeze-500 20.2–22.9
+  sits on a 1-seed-per-mode PT-2 baseline — A3 hedge). Blind-spot vii
+  closure: the pre-committed round-mean-trace check is MOOT with B ≈ 0.1×W
+  (no drift to inspect) — stated rather than silently skipped. The
+  invalid-config run's suggestive F-M (op-incident above) transferred to the
+  pinned config.
   **Scored clauses (certified scorer, pinned formulas).** W-t: PASS ALL FOUR
   — RT_pocket 270/316/209/299 vs floor 175 (MAP entry 209–316; PT-3's same
   mode got 61–229 under freeze-1000). W-o (POOLED, primary, n = 48): 0.3520
   ± 0.0286 IN BAND — near-low-edge, corroborated by the pinned rising-trace
   rule (0.296 → 0.352); per-arm occ G1 0.3730 ± 0.0545, G2 0.4168 ± 0.0422,
-  G3 0.2661 ± 0.0461 (below band; coldocc plot: still climbing at round
-  1300 — budget-limited appearance), G4 (SVI) 0.3882 ± 0.0589 in band.
-  A4 between-arm variance component: 6.0e-3 vs within/nsys 2.3e-3 — REAL and
-  ~2.6× the naive term (the planning se 0.022 underestimated; realized
-  se_pool 0.0286). W-h: PASS all four (EEVPD medians 3.4–4.5e-4 every rung;
+  G3 0.2661 ± 0.0461 (below band; coldocc plot: below band throughout,
+  trending up late 0.20 → 0.27 with a wobble down in the final ~100 rounds —
+  budget-limited appearance; blind-spot ix applied: gen-eig vs Σ_ref(0.42) =
+  [0.338, 23.0], the >10 axis is NOT a composition artifact), G4 (SVI)
+  0.3882 ± 0.0589 in band. A4 between-arm variance component: 6.0e-3 vs
+  within/nsys 2.3e-3 — SUGGESTIVE, not established (n = 3 arms: F(2,~45) ≈
+  2.6, p ≈ 0.08; corroborated qualitatively by the G2/G3 2σ flip); under a
+  between-arm random-effects reading the pooled-mean se is ≈ 0.045, not the
+  iid-48 0.0286 — the W-o point value 0.352 is in band either way and the
+  near-edge corroboration was applied, but the "first adequately powered"
+  label leans on the iid reading (B5 hedge). W-h: PASS all four (EEVPD
+  medians 3.4–4.5e-4 every rung;
   pair acc 0.502–0.541; NaN 0); EEVPD tail fractions 8–21% per rung (same
   class as every prior gate; freeze-schedule- and estimator-insensitive).
   W-g: FAILS on all arms — exactly ONE axis > 10 per arm (27.6/24.7/23.3/
-  19.7 = F-R', WITH F-M so same routing), 2–3 soft-hi axes, low-side G1 one
-  axis 0.1997, G2 one axis 0.09957 → F-U fired MARGINALLY (0.04% under the
-  heuristic 0.1 floor) and that axis is ALIGNED with the stored
+  19.7 = F-R', WITH F-M so same routing), and that axis IS the known
+  {19, 2, 3, 20} slow-ridge family in ALL FOUR arms (top |components| 0.71–
+  0.74 on z[19], 0.57–0.60 on z[2]; |cos Δμ| = 0.000; recomputed from
+  metric_frozen at amendment time — B6, C-8 discharged), 2–3 soft-hi axes,
+  low-side G1 one axis 0.1997, G2 one axis 0.09957 → F-U fired MARGINALLY
+  (0.43% under the heuristic 0.1 floor: 0.09957 vs 0.100 — B4 correction)
+  and that axis is ALIGNED with the stored
   {10,4,11,1} under-inflation direction (|cos| = 0.821) — 1 of 3 MAP arms,
   BELOW the pinned 2-of-3 systematic threshold (report; the pt3_fs_reference
   direction has now appeared in 2 gates). W-s: G1/G2 PASS (0.044 ≤ 0.138),
@@ -2712,17 +2752,27 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   flipping per-arm, which is precisely why the pooled clause is primary.
   split-R̂ 1.09–1.18 all arms (pre-registered budget-limited zone,
   report-only). NaN 0. **W-L: PASS (all four criteria; see L-link entry
-  below) — attaches to this reading; does not rescue W-p.**
+  below) — attaches to this reading; does not rescue W-p. B1 disclosure
+  (grader): L1b passed under the PRE-LAUNCH-AMENDED neighbor-conservative
+  β_min rule; the checkpoint's original own-rate wording returns 0.5994 on
+  the archived table, and the amendment was adopted precisely because only
+  it reproduces the certified 0.3594 — ANSWER-AWARE rule selection on this
+  posterior (conservative-direction, PT-0b-advisory-7-grounded, but a
+  pre-registration deviation): L1b's evidentiary value is accordingly
+  CIRCULAR here; the non-circular test is PT-5. Bonus finding: the own-rate
+  reading would certify a shorter ladder bottoming at 0.5995 (31 ≥ 4.6) — a
+  live PT-5 design option.**
   **Verdict (scorer, pre-registered):** BLOCKED by F-M (mechanism falsified
   — report to human). No product proposal is made this gate; the
   pre-committed decision menu goes to the human (below).
-  **Plots vs pre-committed expectations:** coldocc — all four arms rise from
-  all-main into a common band by ~round 550 and hold (G3 lower, still
-  rising); the F-M plot signature (W trace itself spiking > 10 in windows
-  1–2, flat contaminated plateau post-freeze) is exactly what the gen-eig
-  traces show; the bulk spectrum (~28 of 33 axes) converges INTO band from
-  the 1e-6 seed by freeze — the pathology is confined to the known slow-axis
-  family + the >10 outlier.
+  **Plots vs pre-committed expectations:** coldocc — G1/G2/G4 rise from
+  all-main into the band region by ~round 550 and hold; G3 stays BELOW band
+  throughout, trending up (A2 correction: not a common band for all four);
+  the F-M plot signature (W trace itself spiking > 10 in windows 1–2, flat
+  contaminated plateau post-freeze) is exactly what the gen-eig traces show;
+  the bulk spectrum (~28 of 33 axes) converges INTO band from the 1e-6 seed
+  by freeze — the pathology is confined to the {19, 2, 3, 20} slow-ridge
+  family (verified per-arm, B6) plus 2–3 soft-hi axes.
   **What this gate ESTABLISHES (proposed):** (i) mechanism: transit window
   variance = cross-chain dispersion (measured decomposition, 4 valid + 4
   invalid-config arms consistent) ⇒ the viable fix families are EXPLICIT
@@ -2730,9 +2780,13 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   ACCEPTING the recorded inflation; (ii) product-level: on the pinned config
   the MAP-entry no-SVI mode with multi-seed pooling passes EVERY transport/
   occupancy/health clause at 1500 rounds — the metric-quality clause (one
-  >10 axis per arm) is the sole failing family, and PT-2 already established
-  this inflation class is not transport-fatal (corroborated here: RT
-  209–316 WITH the inflation); (iii) the recipe (W-L) is validated.
+  >10 axis per arm) is the sole failing family; B3 attribution correction:
+  not-transport-fatal was INDICATED by PT-2 with a D1-only occupancy caveat
+  (D2's occ was below band there) and is ESTABLISHED HERE at multi-seed (RT
+  209–316 WITH the inflation, pooled occ in band); standing caveat attaches
+  to this item itself: within-basin bias along the inflated axes remains
+  UNCONSTRAINED — occupancy is blind there (|cos Δμ| = 0.000); (iii) the
+  recipe (W-L) is validated, with the B1 circularity disclosure above.
   **Falsifier closure:** F-M fired (all arms; routing honored, no in-gate
   knob). F-R' fired WITH F-M (subsumed). F-U fired marginally on G2 (0.04%
   under a heuristic floor; report). F-C did not fire (pooled occ in band).
@@ -2742,20 +2796,26 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   (a) EXPLICIT BOUNDED ESTIMATION checkpoint — e.g. per-axis cap of the
   window estimate vs the running metric in whitened space at a
   stationary-fluctuation quantile (the original PLAN-RESHAPE candidate,
-  system-agnostic, now the only surviving estimator-side family) — one more
+  system-agnostic, now the only surviving estimator-side family, and per the
+  grader's qualifier UNTESTED rather than proven-remainder) — one more
   gate on this posterior; or (b) ACCEPT the freeze-500 inflation as the
-  product (PT-2's routed decision, now with multi-seed pooled-occupancy
-  transport evidence behind it), record the (3, 28] axes as a known
-  limitation with the B3 caveats (within-basin bias along those axes
-  UNCONSTRAINED), and proceed to PT-5 generalization; or (c) both: proceed
+  product — B2 scope note: this EXTENDS the pre-registered acceptance zone
+  (PT-2/PT-4 pre-committed (3, 10]; the realized top axis is 19.7–27.6, so
+  (b) = accepting (3, 28], a NEW human decision, not "PT-2's routed decision
+  with more evidence") — record those axes as a known limitation with the B3
+  caveats (within-basin bias along them UNCONSTRAINED), and proceed to PT-5
+  generalization; or (c) both: proceed
   to PT-5 with the accepted-inflation recipe while the bounded-estimation
   refinement runs as a parallel track. Producer lean (proposal only): (c) —
   the engagement goal is the general pipeline; PT-5 tests generality either
   way, and the mechanism result says the bound must be explicit, which is a
   contained one-checkpoint change.
   Scope: this posterior, unadjusted kernel; UNCERTIFIED throughout (C-24/
-  C-25 basis; 1e-6·I ratification pending). Cost: 4 arms ≈ 13 GPU·h valid
-  (+13 quarantined) + probe 3.4 GPU·h; wall this gate ≈ 11 h incl. both
+  C-25 basis; 1e-6·I ratification pending). Cost (B4 explicit arithmetic):
+  4 arms ≈ 13 GPU·h valid (+13 quarantined, op-incident); probe ≈ 1.1
+  (alloc-A clip) + 2.5 (alloc-C timeout) + 2.7 (valid alloc-D) ≈ 6.3 GPU·h;
+  scorer stdout archived at `carousel_gate_pt0_out/pt4_score_stdout.txt`
+  (durable path — B4 citation fix); wall this gate ≈ 11 h incl. both
   incidents.
 
 - **2026-07-13 (PT-4 L-link ADJUDICATED: W-L = L1 ∧ L1b ∧ L2 ∧ L3 ALL PASS —
@@ -2772,7 +2832,15 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   indicator on the MAMS64 pool: disagreement 0.01125 ≤ 0.045 (confusion
   fp = 17, fn = 703 of 64000). The recipe (ladder_recipe.py @da63b53) is
   VALIDATED for PT-5 use on this posterior's evidence; W-L attaches to the
-  eventual W-p reading per the checkpoint (independent link). Scope: one
+  eventual W-p reading per the checkpoint (independent link). RESULT-GRADER
+  AMENDMENT (B1, 2026-07-13): L1b's β_min leg passed under the PRE-LAUNCH-
+  AMENDED neighbor-conservative rule — the checkpoint's original own-rate
+  wording returns 0.5994 on the same archived table, and the amendment was
+  adopted precisely because only it reproduces the certified 0.3594; on THIS
+  posterior that makes L1b's β_min evidence CIRCULAR (answer-aware rule
+  selection, conservative-direction, PT-0b-advisory-7-grounded); the
+  non-circular test is PT-5, where the own-rate reading (shorter ladder from
+  0.5995) is also a live design option. Scope: one
   posterior, power path; the probe grid/erfc model generality is PT-5's
   question. Wall: probe 3 attempts total (two clips recorded above), valid
   attempt ≈ 2.7 h on one GPU.
