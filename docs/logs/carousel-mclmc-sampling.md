@@ -3034,53 +3034,75 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   systematic). ⇒ the rung-chunked phase-0 is a validated substitute for the
   un-runnable 160-wide; the OOM fix is sound. (C-28-adjacent: the chunking
   question is closed.)
-  **F-NEVER root cause (PLOTS before metrics — `pt5a_fnever_diag.png`):**
-  the trigger requires all 10 rungs u-stationary simultaneously; per-rung
-  pass is only ~30–76%/eval and never all-10 at once (P(fire) ≈ 3% over 21
-  evals — F-NEVER is the EXPECTED outcome). WHY per-rung pass is low: the
-  chain-mean-u traces show the TEMPERED rungs (β = 0.01–0.13) are STILL
-  DRIFTING at round 400 — mean-u shift 0.40–0.56·sd between rounds 100–250
-  and 250–400; only the cold rung β = 1 is flat (0.17·sd). So u on the
-  tempered rungs has NOT equilibrated by 400 rounds — the pre-registered
-  APS-lag / "u slower than hypothesized" concern REALIZED, and broadly (not
-  just the hottest rung). PRODUCER-HONESTY NOTE: my first read (from the
-  short-window dmean/sd ≈ 5–25%) was "near-equilibrated, just a too-tight
-  threshold"; the PLOTS + the longer 150-round baseline REFUTED that — the
-  drift is real and ongoing; dmean/sd looked small only because the hot-rung
-  fluctuation is huge (sd 277). Secondary compounding cause (numbers, not
-  primary): batch-means under-estimates the u IAT on hot/mid rungs
-  (tau_round 4.5 vs probe IAT ≈ 18 rounds at β = 0.01) ⇒ se too small ⇒ 2se
-  gate ~2× too tight.
-  **MECHANISM (INFERENCE, labeled; NOT A/B-tested this gate):** the
-  MAP + 1e-6·I entry (a delta at the cold-basin MAP) is a POOR start for the
-  tempered rungs, whose typical set is BROAD — they must expand from a
-  pinned point, which is slow. The ORIGINAL arm-A probe that produced the
-  certified ladder started hot rungs from the broad MAMS64 position POOLS
-  (draw_init), so it equilibrated; phase-0 inherited the production MAP
-  entry, which is wrong for hot-rung phase-0. This predicts a broad hot-rung
-  init would fix it (untested).
-  **MEASUREMENT also degraded (not just the trigger):** forcing sd(u) from
-  the non-stationary rounds 300–400 and running the recipe gives 6 rungs but
-  knots off by ≤ 0.042 from certified (0.4485 vs 0.4388, 0.7023 vs 0.6598;
-  0.843 vs 0.894 nats/pair) — beyond the W-T 3·se tolerance — because the
-  still-drifting hot rungs have INFLATED sd(u) (trend variance adds to
-  fluctuation). So the ladder-measurement leg would FAIL W-T too, for the
-  same root cause.
-  **Gate outcome:** F-NEVER (pre-registered falsifier) fired; W-T/W-H/W-P/W-G
-  UN-adjudicable (no re-space, no phase 1); W-S adjudicated on phase-0 data =
-  the scheme's readiness gate does not trigger. The in-run self-tuning
-  scheme AS DESIGNED does not work on the carousel warm-up. Routed to human
-  (checkpoint F-NEVER routing) — the goal was to catch exactly this before
-  the new posterior. FIX DIRECTIONS (for a PT-5a-round-2 / trigger redesign,
-  human to weigh): (a) broad hot-rung init (the diagnosed root cause; a
-  short A/B run tests it); (b) de-trend sd(u) before measuring (measure
-  fluctuation, not the slow drift); (c) drop the all-10 conjunction for a
-  per-rung-ready re-space or a ≥8/10 rule; (d) a fixed generous burn-in
-  instead of a u-stationarity gate; (e) a better IAT estimator (fixes the
-  secondary tightening); (f) reconsider in-run measurement vs a dedicated
-  short probe (the arm-A probe worked because it ran broad-init + discarded
-  burn-in). Cost: 2 × ~88 min phase-0 (chunk check + F-NEVER), ≈ 4.7 GPU·h.
-  Diagnosis UNDER GRADER REVIEW before human certification.**
+  **F-NEVER: two SEPARATE trigger-design failures (diagnosis CORRECTED after
+  result-grader NEEDS-MORE — my causal weighting was INVERTED; see the
+  honesty note). The trigger requires all 10 rungs u-stationary
+  simultaneously; per-rung pass 29–76%/eval, never all-10 (P(fire) ≈ 3%).**
+  **(1) WHY IT NEVER FIRES — the τ underestimate (PRIMARY, MEASURED).**
+  Batch-means under-estimates the u IAT (tau_round 4.5 vs probe IAT ≈ 18
+  rounds at β = 0.01; batch length 10 rounds < true IAT) ⇒ N_eff over-
+  estimated ⇒ se too small ⇒ the 2·se gate is ~2× too tight. Panel C of
+  `pt5a_fnever_diag.png` generalized over ALL 21 evals (grader recompute):
+  with the TRUE (probe) τ the all-10 conjunction IS satisfied at rounds 360
+  AND 370 — **the trigger WOULD HAVE FIRED.** As-computed τ never reaches
+  all-10. So the F-NEVER SYMPTOM is a threshold-calibration bug, not the
+  drift. Also (grader, refutes my entry): the WORST-passing rungs are the
+  MID rungs β = 0.2154/0.3594 (pass 38%/29%), and the HOTTEST rung β = 0.01
+  passes BEST (76%, its huge sd 277 swamps the split-half shift) — my claim
+  "per-rung pass is low BECAUSE the tempered rungs drift" pointed at the
+  rungs that pass best. Under true τ the binding (last-failing) rungs are the
+  COLD rungs, not the hot.
+  **(2) A DEEPER FLAW the trigger cannot see — window-blindness to drift.**
+  The chain-mean-u traces (panel A) show the tempered rungs β = 0.01–0.5995
+  are STILL DRIFTING at round 400 (mean-u shift 0.40–0.56·sd between rounds
+  100–250 and 250–400; ONLY β = 1 flat, 0.17·sd) — the premise "u
+  equilibrates fast" is genuinely FALSIFIED. BUT the split-half-mean-over-
+  100-rounds test is structurally BLIND to drift whose timescale ≳ the
+  window: with correct τ the gate would FALSE-FIRE at round 360 on chains
+  that are visibly still drifting (an F-early event the gate has no power to
+  catch). So the slow-u was detected by the PLOT, NOT the trigger; F-NEVER
+  was NOT the gate "correctly refusing" — that framing (my original) is luck,
+  not diagnosis. The trigger both (1) never fires as-calibrated AND (2) would
+  false-pass if calibrated — two independent design failures.
+  **PRODUCER-HONESTY (2× on one result).** First read (short-window
+  dmean/sd ≈ 5–25%): "near-equilibrated, just a too-tight threshold." I then
+  OVER-CORRECTED to "real drift is the primary cause, τ is a footnote" —
+  discarding the CORRECT half (threshold/τ IS the symptom driver) with the
+  wrong half ("near-equilibrated"). The grader restored the balance from my
+  own panel C. Lesson: a true-but-irrelevant fact (the hot rungs really do
+  drift) fooled me into believing the gate detected it. [[validate-internals-not-just-results]],
+  [[memory-for-artifact-substitution]].
+  **MECHANISM of the drift (INFERENCE, UNTESTED — now co-equal candidates,
+  NOT "the diagnosed root cause"):** (i) the MAP + 1e-6·I entry is a delta at
+  the cold-basin MAP, a poor start for the BROAD tempered rungs (the arm-A
+  probe used broad MAMS64 pool draws and equilibrated — inits are
+  code-verified different: run_st_phase0:2110-2167 vs run_arm_a:678-693);
+  (ii) the single round-100 metric freeze lands while the hot rungs are
+  still in transient (panel A: descending through 100+), so the frozen
+  preconditioner is estimated off-equilibrium ⇒ wrong scale ⇒ slow mixing ⇒
+  slow u. Broad-init alone does NOT isolate (ii). Both untested this gate.
+  **MEASUREMENT also degraded (PRODUCER numbers, grader verified DIRECTION
+  only):** de-trending sd(u)[300:400] shrinks it 1.16–1.37× on hot rungs
+  (drift-inflation direction confirmed); the recipe on the raw non-stationary
+  sd gives 6 rungs but knots off ≤ 0.042 from certified (0.843 vs 0.894
+  nats/pair — PRODUCER recompute, not grader-reproduced) ⇒ the W-T
+  measurement leg would also fail, same root drift.
+  **Gate outcome (CERTIFY-RECOMMENDED legs):** F-NEVER (pre-registered)
+  fired; premise "u fast" FALSIFIED on tempered rungs (plot-solid);
+  chunk-invariance PASSED (chunking validated); W-T/W-H/W-P/W-G
+  un-adjudicable (no phase 1). The in-run self-tuning scheme AS DESIGNED does
+  not work on the carousel warm-up. SCOPE CAVEAT (grader): established on ONE
+  seed (55; chk6/chk5 are the same seed ± FP-reorder) — "F-NEVER across
+  seeds" is technically untested. FIX DIRECTIONS (re-scoped per grader —
+  note the interaction): the τ fix (better IAT estimator) or the ≥8/10
+  conjunction relaxation would ALONE convert F-NEVER into a FALSE trigger
+  (they make the gate fire at ~360 on drifting chains) — so they must be
+  paired with a drift-AWARE readiness test; the ones that actually address
+  window-blindness are de-trending sd(u) / a longer-baseline stationarity
+  test / a fixed generous burn-in; the drift's cause (broad-init vs
+  metric-freeze-on-transient) needs a small A/B before any "root cause" is
+  claimed. Cost: 2 × ~88 min phase-0, ≈ 4.7 GPU·h. Routed to human — the
+  warm-up caught exactly the failure it was meant to.**
 
 - **2026-07-14 (HUMAN EXCHANGE — PT-5 target named; preset-vs-measured
   tuning question; self-tuning timing question; PT-5a approved; recorded
