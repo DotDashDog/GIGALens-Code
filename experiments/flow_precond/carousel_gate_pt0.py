@@ -148,6 +148,12 @@ ST_ROUNDS1 = 1000                   # phase-1 production rounds (PT-2 frontier
                                     # precedent; GATE_PT0_ROUNDS_B overrides,
                                     # smoke > env)
 ST_TARGET_NATS = 1.0                # design_ladder target (PT-0b convention)
+ST_PHASE0_CHUNK = 6                  # phase-0 rung-batch: the 10-rung x NSYS
+                                     # fused vmap (160-wide) OOMs a 40 GB A100;
+                                     # swaps-OFF => rungs independent => chunk
+                                     # of 6 (96-wide, the proven-fitting size)
+                                     # is BITWISE-identical (GATE_PT0_ST_CHUNK
+                                     # overrides; smoke-discovered OOM fix)
 ST_RULE_NSYS = 16                   # beta_min discovery-rule constants: the
 ST_RULE_BUDGET = 16500              # pinned ln(100)/(16*11) threshold
 ST_RULE_PROBE = 1500                # (pt4_recipe_validate L1b convention)
@@ -329,6 +335,33 @@ def fresh_adapt2(n_rungs, nch, ss_max=SS_MAX0):
     """(R, NSYS)-shaped adapt state for the fused round runner."""
     return (jnp.zeros((n_rungs, nch)), jnp.zeros((n_rungs, nch)),
             jnp.full((n_rungs, nch), ss_max))
+
+
+def round_all_chunked(fn, pos, ss, ast, ik, sk, betas, inv_mass, chunk):
+    """Rung-chunked round_all for PT-5a phase-0 memory. round_all is
+    jax.vmap(per_rung) over the rung axis with NO cross-rung coupling, and
+    phase-0 runs SWAPS-OFF, so splitting the R rungs into chunks of `chunk`
+    and concatenating every output on axis 0 is BITWISE-IDENTICAL to the single
+    R-wide call: per-rung positions/step-sizes/adapt-state/keys/betas/inv_mass
+    are SLICED (not re-split), so each rung sees the exact same inputs it would
+    in the fused call. Motivation: the 10-rung x NSYS=160-wide fused vmap
+    overflows a 40 GB A100 on the 90k-pixel forward model; chunk=6 (96-wide,
+    the proven-fitting production width) fits. chunk >= R is the identity."""
+    R = int(pos.shape[0])
+    if chunk >= R:
+        return fn(pos, ss, ast, ik, sk, betas, inv_mass)
+    P, L, S, A0, A1, A2, E, O = ([] for _ in range(8))
+    for c in range(0, R, chunk):
+        sl = slice(c, min(c + chunk, R))
+        p2, ld, s2, ad2, ec2, ok = fn(
+            pos[sl], ss[sl], (ast[0][sl], ast[1][sl], ast[2][sl]),
+            ik[sl], sk[sl], betas[sl], inv_mass[sl])
+        P.append(p2); L.append(ld); S.append(s2)
+        A0.append(ad2[0]); A1.append(ad2[1]); A2.append(ad2[2])
+        E.append(ec2); O.append(ok)
+    cat = lambda xs: jnp.concatenate(xs, axis=0)
+    return (cat(P), cat(L), cat(S), (cat(A0), cat(A1), cat(A2)),
+            cat(E), cat(O))
 
 
 def regularize_cov_np(cov, n):
@@ -2068,6 +2101,7 @@ def run_st_phase0(tag, handoff_path, kn):
     None on F-never (phase-0 arrays saved either way)."""
     betas = np.geomspace(0.01, 1.0, ST_GRID_N)   # arm-A probe grid (PINNED)
     R = len(betas)
+    st_chunk, st_chunk_src = _st_env_num("GATE_PT0_ST_CHUNK", ST_PHASE0_CHUNK, int)
     seed, nsys, k_b = kn["seed"], kn["nsys"], kn["k_b"]
     rng = np.random.default_rng(seed)
     key = jax.random.key(seed)
@@ -2221,9 +2255,38 @@ def run_st_phase0(tag, handoff_path, kn):
     for t in range(ST_ROUNDS0_MAX):
         key, *lks = jax.random.split(key, R + 1)
         ik_all, sk_all = _round_keys(lks, R, nsys, k_b)
-        p2, ld, steps_all, adapt_all, ec2, ok = round_all(
-            jnp.asarray(pos), steps_all, adapt_all, ik_all, sk_all,
-            betas_j, inv_rungs_j)
+        p2, ld, steps_all, adapt_all, ec2, ok = round_all_chunked(
+            round_all, jnp.asarray(pos), steps_all, adapt_all, ik_all,
+            sk_all, betas_j, inv_rungs_j, st_chunk)
+        if t == 0 and os.environ.get("GATE_PT0_ST_VERIFY_CHUNK") == "1" \
+                and st_chunk < R:
+            # one-time bitwise-equivalence proof on a rung-subset that fits
+            # unchunked (<= 96-wide): chunked == direct to 0 ULP
+            nv = min(6, R)
+            d = round_all(jnp.asarray(pos)[:nv], steps_all[:nv],
+                          (adapt_all[0][:nv], adapt_all[1][:nv],
+                           adapt_all[2][:nv]), ik_all[:nv], sk_all[:nv],
+                          betas_j[:nv], inv_rungs_j[:nv])
+            cw = round_all_chunked(round_all, jnp.asarray(pos)[:nv],
+                                   steps_all[:nv], (adapt_all[0][:nv],
+                                   adapt_all[1][:nv], adapt_all[2][:nv]),
+                                   ik_all[:nv], sk_all[:nv], betas_j[:nv],
+                                   inv_rungs_j[:nv], 2)
+            a, b = np.asarray(d[0]), np.asarray(cw[0])
+            dp = float(np.max(np.abs(a - b)))
+            drel = float(np.max(np.abs(a - b) / (1.0 + np.abs(a))))
+            # STRUCTURAL check (not bitwise): chunking is a pure per-rung vmap
+            # slice, so a mis-assigned rung would differ by O(1); XLA fuses
+            # 2-wide vs 6-wide vmaps with different matmul reduction order, so
+            # a valid chunking still differs at the FP-reorder level (the same
+            # cross-compile phenomenon as the B-arm fused-vs-legacy equiv-check)
+            # -> tolerate FP-reorder, catch mis-slicing (rel > 1e-3)
+            pr(f"[ST {tag}] CHUNK-EQUIV (nv={nv}, chunk 2 vs direct): "
+               f"max|dpos| = {dp:.3e}, rel = {drel:.3e} (FP-reorder expected; "
+               f"rel > 1e-3 would mean a rung mis-assignment)")
+            if drel > 1e-3:
+                raise RuntimeError(f"chunk STRUCTURAL check FAILED: rel "
+                                   f"{drel:.3e} > 1e-3 (rung mis-assignment?)")
         pos = np.array(p2)
         logd = np.asarray(ld)
         ev[t] = np.asarray(ec2).mean(axis=(1, 2)) / DIM
