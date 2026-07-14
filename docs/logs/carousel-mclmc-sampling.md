@@ -2658,6 +2658,106 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-13 (carousel GATE PT-4 RAN, valid config — F-M FIRES ON ALL FOUR
+  ARMS: the DRIFT HYPOTHESIS IS FALSIFIED BY THE IN-RUN DECOMPOSITION (the
+  pooled-Welford transit inflation is CROSS-CHAIN DISPERSION, not
+  ensemble-mean drift; B-share ~0.1× the W-share, an inversion of the ≥ 10×
+  prediction by two orders); W-p BLOCKED by the pre-registered F-M/W-p
+  mutual exclusion and ROUTED TO HUMAN; AND the product-level transport
+  clauses ALL PASS on the pinned config — pooled 3-seed MAP-entry occupancy
+  IN BAND for the first time; PROPOSED (UNCERTIFIED)):** allocation E
+  55878910 (after the config-mismatch op-incident above), code @b4dcda0
+  lineage, scorer @4f81244 (audit-certified incl. the post-incident C-24
+  config asserts; run to completion; stdout archived
+  `pt4_score_stdout_run2.txt` in job tmp + `pt4_score.json`); all four arms
+  1500 rounds, cards verified pre-run (R6 ladder / NSYS 16 / K 10 / windows
+  100,250,500 / est=within).
+  **M-link (the gate's primary question) — FALSIFIED, decisively.** W-only
+  cold-rung window maxima vs the fixed pooled diagnostic ref: G1
+  [2.4, 88.8, 13.6], G2 [2.2, 87.3, 9.2], G3 [2.3, 102.9, 5.9], G4
+  [48.6, 26.2, 4.7]; reconstructed-pooled counterparts [2.4, 97.9, 16.4] /
+  [2.2, 96.8, 11.7] / [2.3, 117.6, 7.6] / [53.7, 35.3, 4.6] — W ≈ pooled
+  everywhere (ratio 0.8–1.1), and the identity-attributed B/W shares on the
+  top inflated axes are 0.0–0.2 (prediction: ≥ 10). Magnitude accounting:
+  prediction (M) said W-only window-2 ≤ 10 with B ≥ 10×W; observed W 87–103
+  with B ≈ 0.1×W — failed in BOTH parts. The transit variance on slow axes
+  is carried by the chains' cross-sectional spread itself (each ladder at a
+  different transit stage), which NO within-window empirical covariance
+  estimator can evade — the drop-B family is dead as a fix (F-M routing),
+  and by extension pooled-vs-within estimator choice is immaterial
+  (measured: scored max gen-eig 27.6/24.7/23.3/19.7 — the same class as
+  PT-2's pooled freeze-500 20–23). The invalid-config run's suggestive F-M
+  (op-incident above) transferred to the pinned config.
+  **Scored clauses (certified scorer, pinned formulas).** W-t: PASS ALL FOUR
+  — RT_pocket 270/316/209/299 vs floor 175 (MAP entry 209–316; PT-3's same
+  mode got 61–229 under freeze-1000). W-o (POOLED, primary, n = 48): 0.3520
+  ± 0.0286 IN BAND — near-low-edge, corroborated by the pinned rising-trace
+  rule (0.296 → 0.352); per-arm occ G1 0.3730 ± 0.0545, G2 0.4168 ± 0.0422,
+  G3 0.2661 ± 0.0461 (below band; coldocc plot: still climbing at round
+  1300 — budget-limited appearance), G4 (SVI) 0.3882 ± 0.0589 in band.
+  A4 between-arm variance component: 6.0e-3 vs within/nsys 2.3e-3 — REAL and
+  ~2.6× the naive term (the planning se 0.022 underestimated; realized
+  se_pool 0.0286). W-h: PASS all four (EEVPD medians 3.4–4.5e-4 every rung;
+  pair acc 0.502–0.541; NaN 0); EEVPD tail fractions 8–21% per rung (same
+  class as every prior gate; freeze-schedule- and estimator-insensitive).
+  W-g: FAILS on all arms — exactly ONE axis > 10 per arm (27.6/24.7/23.3/
+  19.7 = F-R', WITH F-M so same routing), 2–3 soft-hi axes, low-side G1 one
+  axis 0.1997, G2 one axis 0.09957 → F-U fired MARGINALLY (0.04% under the
+  heuristic 0.1 floor) and that axis is ALIGNED with the stored
+  {10,4,11,1} under-inflation direction (|cos| = 0.821) — 1 of 3 MAP arms,
+  BELOW the pinned 2-of-3 systematic threshold (report; the pt3_fs_reference
+  direction has now appeared in 2 gates). W-s: G1/G2 PASS (0.044 ≤ 0.138),
+  G1/G3 PASS (0.107 ≤ 0.143), G2/G3 FAIL at 2σ (0.1506 > 0.1249; 3σ =
+  0.187 ⇒ F-eq NOT fired) — seed spread at 1500 rounds remains clause-
+  flipping per-arm, which is precisely why the pooled clause is primary.
+  split-R̂ 1.09–1.18 all arms (pre-registered budget-limited zone,
+  report-only). NaN 0. **W-L: PASS (all four criteria; see L-link entry
+  below) — attaches to this reading; does not rescue W-p.**
+  **Verdict (scorer, pre-registered):** BLOCKED by F-M (mechanism falsified
+  — report to human). No product proposal is made this gate; the
+  pre-committed decision menu goes to the human (below).
+  **Plots vs pre-committed expectations:** coldocc — all four arms rise from
+  all-main into a common band by ~round 550 and hold (G3 lower, still
+  rising); the F-M plot signature (W trace itself spiking > 10 in windows
+  1–2, flat contaminated plateau post-freeze) is exactly what the gen-eig
+  traces show; the bulk spectrum (~28 of 33 axes) converges INTO band from
+  the 1e-6 seed by freeze — the pathology is confined to the known slow-axis
+  family + the >10 outlier.
+  **What this gate ESTABLISHES (proposed):** (i) mechanism: transit window
+  variance = cross-chain dispersion (measured decomposition, 4 valid + 4
+  invalid-config arms consistent) ⇒ the viable fix families are EXPLICIT
+  BOUNDING (shrink-to-prior/cap against the seed or a target spectrum) or
+  ACCEPTING the recorded inflation; (ii) product-level: on the pinned config
+  the MAP-entry no-SVI mode with multi-seed pooling passes EVERY transport/
+  occupancy/health clause at 1500 rounds — the metric-quality clause (one
+  >10 axis per arm) is the sole failing family, and PT-2 already established
+  this inflation class is not transport-fatal (corroborated here: RT
+  209–316 WITH the inflation); (iii) the recipe (W-L) is validated.
+  **Falsifier closure:** F-M fired (all arms; routing honored, no in-gate
+  knob). F-R' fired WITH F-M (subsumed). F-U fired marginally on G2 (0.04%
+  under a heuristic floor; report). F-C did not fire (pooled occ in band).
+  F-eq did not fire (2σ flip on one pair, disclosed). F-S systematic did
+  not fire (1 of 3). F-L did not fire.
+  **HUMAN DECISION MENU (pre-committed by the checkpoint's F-M routing):**
+  (a) EXPLICIT BOUNDED ESTIMATION checkpoint — e.g. per-axis cap of the
+  window estimate vs the running metric in whitened space at a
+  stationary-fluctuation quantile (the original PLAN-RESHAPE candidate,
+  system-agnostic, now the only surviving estimator-side family) — one more
+  gate on this posterior; or (b) ACCEPT the freeze-500 inflation as the
+  product (PT-2's routed decision, now with multi-seed pooled-occupancy
+  transport evidence behind it), record the (3, 28] axes as a known
+  limitation with the B3 caveats (within-basin bias along those axes
+  UNCONSTRAINED), and proceed to PT-5 generalization; or (c) both: proceed
+  to PT-5 with the accepted-inflation recipe while the bounded-estimation
+  refinement runs as a parallel track. Producer lean (proposal only): (c) —
+  the engagement goal is the general pipeline; PT-5 tests generality either
+  way, and the mechanism result says the bound must be explicit, which is a
+  contained one-checkpoint change.
+  Scope: this posterior, unadjusted kernel; UNCERTIFIED throughout (C-24/
+  C-25 basis; 1e-6·I ratification pending). Cost: 4 arms ≈ 13 GPU·h valid
+  (+13 quarantined) + probe 3.4 GPU·h; wall this gate ≈ 11 h incl. both
+  incidents.
+
 - **2026-07-13 (PT-4 L-link ADJUDICATED: W-L = L1 ∧ L1b ∧ L2 ∧ L3 ALL PASS —
   the automated ladder recipe reproduces the certified carousel ladder from a
   FRESH probe; PROPOSED, UNCERTIFIED):** allocation D (55878062) probe

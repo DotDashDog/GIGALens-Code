@@ -1,0 +1,145 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+[setup] z_param_names (33 columns; C-8 column->name map):
+  z[ 0] = planes/0/mass/0/center_x
+  z[ 1] = planes/0/mass/0/center_y
+  z[ 2] = planes/0/mass/0/e1
+  z[ 3] = planes/0/mass/0/e2
+  z[ 4] = planes/0/mass/0/s_E
+  z[ 5] = planes/0/mass/0/theta_E
+  z[ 6] = planes/0/mass/1/center_x
+  z[ 7] = planes/0/mass/1/center_y
+  z[ 8] = planes/0/mass/1/e1
+  z[ 9] = planes/0/mass/1/e2
+  z[10] = planes/0/mass/1/gamma
+  z[11] = planes/0/mass/1/theta_E
+  z[12] = planes/0/mass/2/center_x
+  z[13] = planes/0/mass/2/center_y
+  z[14] = planes/0/mass/2/e1
+  z[15] = planes/0/mass/2/e2
+  z[16] = planes/0/mass/2/r_core
+  z[17] = planes/0/mass/2/r_cut
+  z[18] = planes/0/mass/2/theta_E
+  z[19] = planes/0/mass/3/gamma1
+  z[20] = planes/0/mass/3/gamma2
+  z[21] = planes/1/light/0/beta
+  z[22] = planes/1/light/0/center_x
+  z[23] = planes/1/light/0/center_y
+  z[24] = planes/1/light/1/beta
+  z[25] = planes/1/light/1/center_x
+  z[26] = planes/1/light/1/center_y
+  z[27] = planes/2/light/0/R_sersic
+  z[28] = planes/2/light/0/center_x
+  z[29] = planes/2/light/0/center_y
+  z[30] = planes/2/light/0/e1
+  z[31] = planes/2/light/0/e2
+  z[32] = planes/2/light/0/n_sersic
+MODEL CARD: {
+ "arm": "D2_G1pt4",
+ "path": "power",
+ "seed": 50,
+ "seed_source": "env override GATE_PT0_SEED_B=50",
+ "swap_seed": 10050,
+ "prior_init_seed": null,
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260713",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "R": 6,
+ "NSYS": 16,
+ "K": 10,
+ "ROUNDS": 1500,
+ "thin": 5,
+ "betas": [
+  0.3594,
+  0.4388,
+  0.5373,
+  0.6598,
+  0.8116,
+  1.0
+ ],
+ "betas_source": "env override GATE_PT0_BETAS_B (6 rungs: 0.3594,0.4388,0.5373,0.6598,0.8116,1.0)",
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "ss_max": 5.0,
+ "devar": 0.0005,
+ "env_overrides": {
+  "K": "env override GATE_PT0_K_B=10",
+  "NSYS": "env override GATE_PT0_NSYS_B=16",
+  "ROUNDS": "env override GATE_PT0_ROUNDS_B=1500",
+  "ss_max": "env override GATE_PT0_SSMAX=5.0",
+  "devar": "env override GATE_PT0_DEVAR=5e-4",
+  "metric_windows": "env override GATE_PT0_METRIC_WINDOWS=100,250,500 (freeze = last entry, round 500)"
+ },
+ "metric": "ADAPTIVE (windowed); seed = diagonal 1e-06*I (stock init_scales convention)",
+ "adapt_metric": true,
+ "metric_windows": [
+  100,
+  250,
+  500
+ ],
+ "metric_windows_source": "env override GATE_PT0_METRIC_WINDOWS=100,250,500 (freeze = last entry, round 500)",
+ "metric_estimator": "within",
+ "metric_estimator_source": "env override GATE_PT0_METRIC_EST=within",
+ "metric_n0": 160,
+ "metric_reference": "pooled MAMS64 cov (reference-ONLY)",
+ "metric_smoke_boundaries_note": null,
+ "d2_diag_provenance": "stock no-SVI diagonal convention: init_scales=0.001 (STD in z) from ModellingSequence.SVI default (gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored gigalens_research/inference_utils/pipeline.py:1440) => seed cov = 0.001^2 * I = 1e-06*I",
+ "svi_npz": null,
+ "map_npz": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/map/arrays.npz",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "pocket_indicator": "z[6] > -22.35",
+ "init": "MAP z_best + stock-diagonal draws all rungs (adaptive metric)",
+ "u_def": "log_prob = logdensity/beta",
+ "harness": "run_pt (shared with Arm-0 control, amendment ii)",
+ "sep_check_max_abs": 0.0,
+ "runner_impl": "fused-vmap-over-rungs"
+}
+[B D2_G1pt4] init cold occ = 0.000; init occ per rung = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[B D2_G1pt4] round-0 u identity: rel = 2.314e-11 (abs = 6.742e-06)
+[B D2_G1pt4] round     0/1500 cold occ=0.000 hot occ=0.000 RT=0 pocketCA=0 EEVPD[h/m/c]=3.3e-07/4.7e-06/8.9e-06 reverts=0 wall=74s
+[B D2_G1pt4] round    50/1500 cold occ=0.000 hot occ=0.000 RT=39 pocketCA=0 EEVPD[h/m/c]=3.0e-04/4.0e-04/3.4e-04 reverts=0 wall=510s
+[B D2_G1pt4] metric window boundary at round 100: n_w=1600, n0=160, est=within
+[B D2_G1pt4] round   100/1500 cold occ=0.000 hot occ=0.000 RT=112 pocketCA=0 EEVPD[h/m/c]=7.7e-02/1.5e+00/5.0e-02 reverts=0 wall=898s
+[B D2_G1pt4] round   150/1500 cold occ=0.125 hot occ=0.125 RT=172 pocketCA=3 EEVPD[h/m/c]=1.2e-03/4.8e-04/7.4e-04 reverts=0 wall=1286s
+[B D2_G1pt4] round   200/1500 cold occ=0.188 hot occ=0.125 RT=217 pocketCA=5 EEVPD[h/m/c]=2.0e-04/1.9e-04/4.0e-04 reverts=0 wall=1674s
+[B D2_G1pt4] metric window boundary at round 250: n_w=2400, n0=160, est=within
+[B D2_G1pt4] round   250/1500 cold occ=0.062 hot occ=0.312 RT=250 pocketCA=8 EEVPD[h/m/c]=4.0e+00/4.3e-01/2.3e+02 reverts=0 wall=2062s
+[B D2_G1pt4] round   300/1500 cold occ=0.062 hot occ=0.250 RT=276 pocketCA=14 EEVPD[h/m/c]=9.0e-05/2.1e-04/2.8e-04 reverts=0 wall=2450s
+[B D2_G1pt4] round   350/1500 cold occ=0.125 hot occ=0.312 RT=285 pocketCA=15 EEVPD[h/m/c]=8.9e-04/8.6e-03/4.9e-04 reverts=0 wall=2838s
+[B D2_G1pt4] round   400/1500 cold occ=0.062 hot occ=0.312 RT=295 pocketCA=18 EEVPD[h/m/c]=5.1e-04/1.6e-04/2.0e-04 reverts=0 wall=3226s
+[B D2_G1pt4] round   450/1500 cold occ=0.000 hot occ=0.438 RT=313 pocketCA=22 EEVPD[h/m/c]=2.5e-05/5.0e-04/1.9e-04 reverts=0 wall=3615s
+[B D2_G1pt4] metric window boundary at round 500: n_w=4000, n0=160, est=within (METRIC FROZEN)
+[B D2_G1pt4] round   500/1500 cold occ=0.062 hot occ=0.438 RT=337 pocketCA=24 EEVPD[h/m/c]=4.0e+01/7.4e+01/2.6e+00 reverts=0 wall=4003s
+[B D2_G1pt4] round   550/1500 cold occ=0.188 hot occ=0.250 RT=379 pocketCA=36 EEVPD[h/m/c]=1.7e-04/4.6e-03/2.4e-04 reverts=0 wall=4391s
+[B D2_G1pt4] round   600/1500 cold occ=0.438 hot occ=0.188 RT=418 pocketCA=48 EEVPD[h/m/c]=1.5e-04/1.4e-04/3.4e-04 reverts=0 wall=4779s
+[B D2_G1pt4] round   650/1500 cold occ=0.250 hot occ=0.188 RT=473 pocketCA=59 EEVPD[h/m/c]=2.6e-03/4.3e-04/7.5e-04 reverts=0 wall=5167s
+[B D2_G1pt4] round   700/1500 cold occ=0.250 hot occ=0.312 RT=514 pocketCA=70 EEVPD[h/m/c]=2.0e-05/2.3e-04/5.5e-05 reverts=0 wall=5555s
+[B D2_G1pt4] round   750/1500 cold occ=0.312 hot occ=0.312 RT=562 pocketCA=82 EEVPD[h/m/c]=1.7e-04/1.3e-03/3.4e-04 reverts=0 wall=5943s
+[B D2_G1pt4] round   800/1500 cold occ=0.250 hot occ=0.375 RT=609 pocketCA=99 EEVPD[h/m/c]=2.5e-04/2.3e-03/1.5e-04 reverts=0 wall=6331s
+[B D2_G1pt4] round   850/1500 cold occ=0.438 hot occ=0.438 RT=655 pocketCA=117 EEVPD[h/m/c]=2.2e-03/6.1e-05/3.8e-04 reverts=0 wall=6719s
+[B D2_G1pt4] round   900/1500 cold occ=0.312 hot occ=0.312 RT=711 pocketCA=132 EEVPD[h/m/c]=8.6e-04/7.1e-04/4.6e-04 reverts=0 wall=7107s
+[B D2_G1pt4] round   950/1500 cold occ=0.312 hot occ=0.250 RT=760 pocketCA=144 EEVPD[h/m/c]=1.4e-03/5.5e-04/2.1e-03 reverts=0 wall=7495s
+[B D2_G1pt4] round  1000/1500 cold occ=0.250 hot occ=0.250 RT=799 pocketCA=153 EEVPD[h/m/c]=8.7e-05/1.3e-02/1.6e-04 reverts=0 wall=7883s
+[B D2_G1pt4] round  1050/1500 cold occ=0.312 hot occ=0.312 RT=835 pocketCA=164 EEVPD[h/m/c]=6.7e-04/2.2e-03/3.2e-04 reverts=0 wall=8271s
+[B D2_G1pt4] round  1100/1500 cold occ=0.312 hot occ=0.375 RT=873 pocketCA=174 EEVPD[h/m/c]=4.3e-04/2.9e-04/1.9e-04 reverts=0 wall=8659s
+[B D2_G1pt4] round  1150/1500 cold occ=0.375 hot occ=0.438 RT=916 pocketCA=188 EEVPD[h/m/c]=7.2e-04/4.4e-04/2.1e-04 reverts=0 wall=9047s
+[B D2_G1pt4] round  1200/1500 cold occ=0.562 hot occ=0.312 RT=952 pocketCA=199 EEVPD[h/m/c]=2.2e-03/8.6e-04/7.2e-03 reverts=0 wall=9435s
+[B D2_G1pt4] round  1250/1500 cold occ=0.562 hot occ=0.188 RT=1008 pocketCA=210 EEVPD[h/m/c]=5.0e-05/7.1e-05/5.9e-04 reverts=0 wall=9824s
+[B D2_G1pt4] round  1300/1500 cold occ=0.625 hot occ=0.438 RT=1054 pocketCA=222 EEVPD[h/m/c]=3.2e-04/1.2e-02/2.9e-04 reverts=0 wall=10212s
+[B D2_G1pt4] round  1350/1500 cold occ=0.438 hot occ=0.375 RT=1102 pocketCA=235 EEVPD[h/m/c]=1.7e-03/1.9e-04/7.7e-04 reverts=0 wall=10599s
+[B D2_G1pt4] round  1400/1500 cold occ=0.438 hot occ=0.375 RT=1153 pocketCA=251 EEVPD[h/m/c]=1.9e-02/1.9e-03/3.0e-04 reverts=0 wall=10987s
+[B D2_G1pt4] round  1450/1500 cold occ=0.562 hot occ=0.312 RT=1212 pocketCA=271 EEVPD[h/m/c]=5.1e-02/1.2e-03/1.5e-04 reverts=0 wall=11375s
+[B D2_G1pt4] round  1499/1500 cold occ=0.500 hot occ=0.438 RT=1254 pocketCA=287 EEVPD[h/m/c]=1.4e-03/1.1e-03/3.6e-04 reverts=0 wall=11755s
+
+[B D2_G1pt4] ===== END-OF-ARM (PROPOSED/UNCERTIFIED) =====
+  cold occ last 500 rounds: 0.3730 +- 0.2181 (per-sys [0.182, 0.394, 0.41, 0.28, 0.088, 0.128, 0.026, 0.382, 0.61, 0.342, 0.158, 0.528, 0.49, 0.642, 0.524, 0.784]; init 0.000)
+  round trips total 1254 (median/sys 82.0; pocket-classified 270 [W-2], main-classified 984); pocket cold-arrivals 287, main 1017
+  swap acc same=[0.534, 0.539, 0.54, 0.532, 0.515]
+  swap acc cross=[0.509, 0.518, 0.512, 0.516, 0.497] (cross attempts [4392, 4337, 4194, 4207, 4113])
+  cold split-Rhat = 1.1059770719986157; EEVPD in [1e-4,2e-3]: [np.False_, np.False_, np.False_, np.False_, np.True_, np.True_]; NaN reverts 0
+  metric adapt: 3 boundaries applied, frozen=True; final gen-eig cold rung [0.484, 29.296] (band [1/3, 3] all rungs: False [DIAGNOSTIC vs pooled ref — scored clause is vs Sigma_ref(w-hat), pt2 scorer])
+[B D2_G1pt4] DONE in 11765s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

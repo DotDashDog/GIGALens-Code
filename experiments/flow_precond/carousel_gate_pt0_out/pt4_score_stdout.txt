@@ -1,0 +1,82 @@
+  [F-S check G1] low-side axis g=0.200: |cos(stored)| = 0.745 (distinct direction)
+  [W-M G1 b0 T=100] cold-rung max gen-eig vs FIXED pooled ref: W-only 2.4, reconstructed-pooled 2.4
+  [W-M G1 b1 T=150] cold-rung max gen-eig vs FIXED pooled ref: W-only 88.8, reconstructed-pooled 97.9
+  [W-M G1 b1 attribution] top-4 pooled-inflated axes (prediction: B-share >= 10x W-share on the {19,2,3,20} family — report):
+    z[ 7]: pooled-infl      1.5x  B/W share =    0.2
+    z[31]: pooled-infl      1.1x  B/W share =    0.1
+    z[27]: pooled-infl      1.1x  B/W share =    0.1
+    z[ 1]: pooled-infl      1.1x  B/W share =    0.1
+  [W-M G1 b2 T=250] cold-rung max gen-eig vs FIXED pooled ref: W-only 13.6, reconstructed-pooled 16.4
+
+[G1] rounds=1500 m=0.3730±0.0545 RTpocket=270 (floor 175) geneig [0.200, 27.604] out=5 soft-hi=3 low-side=1 split-Rhat=1.1658 NaN=0
+  eevpd_med=['3.7e-04', '3.7e-04', '3.4e-04', '4.2e-04', '4.5e-04', '4.4e-04']; tail>2e-3 per rung [0.21, 0.188, 0.182, 0.15, 0.134, 0.108] (report); pair acc [0.525, 0.532, 0.53, 0.526, 0.509]
+  *** F-M: W-only cold-rung max gen-eig > 10 in window(s) [1, 2] — within-round spread is itself transit-inflated; drift hypothesis WRONG, drop-B family cannot fix adaptation -> report-to-human (options: explicit shrink-to-prior bounding; or ACCEPT PT-2 freeze-500 (3,10] inflation as product) ***
+  *** F-R': 1 scored post-freeze axis(es) > 10 — WITH F-M: same report-to-human routing ***
+  ZONE [0.1,1/3) on 1 axis(es): certifiable-with-caveat IF W-t/W-o(pooled)/W-h pass (budget-limited ridge equilibration, the predicted signature; 0.1 floor is HEURISTIC (A5) — carousel-derived, MUST NOT migrate into recipe v1)
+  split-Rhat 1.166 in (1.05,1.2] with transport: budget-limited reading (report-only diagnostic this gate)
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False, 'geneig_routed': False, 'wm': False, 'fm': True}
+  [F-S check G2] low-side axis g=0.100: |cos(stored)| = 0.821 -> aligned (counts toward F-S SYSTEMATIC 2-of-3 MAP tally)
+  [W-M G2 b0 T=100] cold-rung max gen-eig vs FIXED pooled ref: W-only 2.2, reconstructed-pooled 2.2
+  [W-M G2 b1 T=150] cold-rung max gen-eig vs FIXED pooled ref: W-only 87.3, reconstructed-pooled 96.8
+  [W-M G2 b1 attribution] top-4 pooled-inflated axes (prediction: B-share >= 10x W-share on the {19,2,3,20} family — report):
+    z[ 1]: pooled-infl      1.2x  B/W share =    0.1
+    z[ 7]: pooled-infl      1.1x  B/W share =    0.2
+    z[32]: pooled-infl      1.0x  B/W share =    0.0
+    z[31]: pooled-infl      1.0x  B/W share =    0.1
+  [W-M G2 b2 T=250] cold-rung max gen-eig vs FIXED pooled ref: W-only 9.2, reconstructed-pooled 11.7
+
+[G2] rounds=1500 m=0.4168±0.0422 RTpocket=316 (floor 175) geneig [0.100, 24.699] out=5 soft-hi=3 low-side=0 split-Rhat=1.0948 NaN=0
+  eevpd_med=['3.9e-04', '4.1e-04', '3.9e-04', '4.2e-04', '4.2e-04', '4.5e-04']; tail>2e-3 per rung [0.166, 0.156, 0.178, 0.152, 0.146, 0.116] (report); pair acc [0.528, 0.541, 0.53, 0.533, 0.535]
+  *** F-M: W-only cold-rung max gen-eig > 10 in window(s) [1] — within-round spread is itself transit-inflated; drift hypothesis WRONG, drop-B family cannot fix adaptation -> report-to-human (options: explicit shrink-to-prior bounding; or ACCEPT PT-2 freeze-500 (3,10] inflation as product) ***
+  *** F-R': 1 scored post-freeze axis(es) > 10 — WITH F-M: same report-to-human routing ***
+  *** F-U: 1 scored axis(es) < 0.1 — estimator pathology beyond finite-window under-read ***
+  split-Rhat 1.095 in (1.05,1.2] with transport: budget-limited reading (report-only diagnostic this gate)
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False, 'geneig_routed': False, 'wm': False, 'fm': True}
+  [W-M G3 b0 T=100] cold-rung max gen-eig vs FIXED pooled ref: W-only 2.3, reconstructed-pooled 2.3
+  [W-M G3 b1 T=150] cold-rung max gen-eig vs FIXED pooled ref: W-only 102.9, reconstructed-pooled 117.6
+  [W-M G3 b1 attribution] top-4 pooled-inflated axes (prediction: B-share >= 10x W-share on the {19,2,3,20} family — report):
+    z[ 1]: pooled-infl      1.2x  B/W share =    0.1
+    z[ 7]: pooled-infl      1.2x  B/W share =    0.2
+    z[14]: pooled-infl      1.1x  B/W share =    0.1
+    z[31]: pooled-infl      1.1x  B/W share =    0.1
+  [W-M G3 b2 T=250] cold-rung max gen-eig vs FIXED pooled ref: W-only 5.9, reconstructed-pooled 7.6
+
+[G3] rounds=1500 m=0.2661±0.0461 RTpocket=209 (floor 175) geneig [0.427, 23.324] out=4 soft-hi=3 low-side=0 split-Rhat=1.1315 NaN=0
+  eevpd_med=['3.8e-04', '4.1e-04', '4.2e-04', '4.0e-04', '4.1e-04', '4.3e-04']; tail>2e-3 per rung [0.184, 0.16, 0.156, 0.144, 0.14, 0.084] (report); pair acc [0.541, 0.54, 0.529, 0.524, 0.502]
+  blind-spot ix: gen-eig vs Sigma_ref(0.42) [0.338, 23.013]
+  *** F-M: W-only cold-rung max gen-eig > 10 in window(s) [1] — within-round spread is itself transit-inflated; drift hypothesis WRONG, drop-B family cannot fix adaptation -> report-to-human (options: explicit shrink-to-prior bounding; or ACCEPT PT-2 freeze-500 (3,10] inflation as product) ***
+  *** F-R': 1 scored post-freeze axis(es) > 10 — WITH F-M: same report-to-human routing ***
+  split-Rhat 1.132 in (1.05,1.2] with transport: budget-limited reading (report-only diagnostic this gate)
+  clauses: {'rt': True, 'occ': False, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False, 'geneig_routed': False, 'wm': False, 'fm': True}
+  [W-M G4 b0 T=100] cold-rung max gen-eig vs FIXED pooled ref: W-only 48.6, reconstructed-pooled 53.7
+  [W-M G4 b1 T=150] cold-rung max gen-eig vs FIXED pooled ref: W-only 26.2, reconstructed-pooled 35.3
+  [W-M G4 b1 attribution] top-4 pooled-inflated axes (prediction: B-share >= 10x W-share on the {19,2,3,20} family — report):
+    z[24]: pooled-infl      2.0x  B/W share =    0.0
+    z[32]: pooled-infl      1.6x  B/W share =    0.1
+    z[27]: pooled-infl      1.2x  B/W share =    0.1
+    z[ 2]: pooled-infl      1.2x  B/W share =    0.1
+  [W-M G4 b2 T=250] cold-rung max gen-eig vs FIXED pooled ref: W-only 4.7, reconstructed-pooled 4.6
+
+[G4] rounds=1500 m=0.3882±0.0589 RTpocket=299 (floor 175) geneig [0.570, 19.666] out=3 soft-hi=2 low-side=0 split-Rhat=1.1800 NaN=0
+  eevpd_med=['3.5e-04', '3.7e-04', '3.8e-04', '3.8e-04', '3.8e-04', '4.0e-04']; tail>2e-3 per rung [0.186, 0.196, 0.164, 0.152, 0.136, 0.102] (report); pair acc [0.53, 0.512, 0.525, 0.512, 0.516]
+  *** F-M: W-only cold-rung max gen-eig > 10 in window(s) [0, 1] — within-round spread is itself transit-inflated; drift hypothesis WRONG, drop-B family cannot fix adaptation -> report-to-human (options: explicit shrink-to-prior bounding; or ACCEPT PT-2 freeze-500 (3,10] inflation as product) ***
+  *** F-R': 1 scored post-freeze axis(es) > 10 — WITH F-M: same report-to-human routing ***
+  split-Rhat 1.180 in (1.05,1.2] with transport: budget-limited reading (report-only diagnostic this gate)
+  clauses: {'rt': True, 'occ': True, 'eevpd': True, 'pair_acc': True, 'nan': True, 'geneig': False, 'geneig_routed': False, 'wm': False, 'fm': True}
+
+F-S: aligned low-side exit on 1/3 MAP arms — below the 2-of-3 systematic threshold (report)
+
+W-o (POOLED, primary): m_pool=0.3520±0.0286 (n=48) in (0.32, 0.49): True — near LOW edge +-0.05 (trace 0.296->0.352 RISING: corroborated)
+  between-arm component (A4): var(arm means)=6.004e-03 vs within-arm/nsys=2.292e-03 (both reported; the 0.022 planning se assumed no between-arm component)
+
+W-s [G1/G2]: |0.3730-0.4168|=0.0438 <= 0.1379: True
+
+W-s [G1/G3]: |0.3730-0.2661|=0.1069 <= 0.1428: True
+
+W-s [G2/G3]: |0.4168-0.2661|=0.1506 <= 0.1249: False
+
+W-p verdict: BLOCKED by F-M (mechanism falsified — report to human)
+
+W-L (recipe) reminder: adjudicated by pt4_recipe_validate.py, NOT this scorer — attach its L1/L1b/L2/L3 output to the record before any W-p reading is final. L1b failure routes as PORT-BUG class (fix + re-audit; rd-2 condition 3). W-L failing alone does NOT block W-p (independent link; blocks PT-5 recipe use until fixed).
+
+-> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/pt4_score.json
