@@ -556,7 +556,9 @@ multimodality, conditioning, or the NFW profile.
   window at round 100 only (scale-finding). u recorded per (rung, chain,
   round); per-rung basin-class flips counted over rounds > 100 ONLY
   (post-boundary, B8), normalized per 1500 kernel steps (exposure =
-  (t_trigger − 100) rounds × K steps × NSYS chains; B2 pin) (pinned z[6]
+  (R* − 100) rounds × K steps × NSYS chains — rd-3 pin 1: this token is
+  the SHARED denominator for runner and scorer; the draft's t_trigger
+  variant disagreed whenever trigger < 300) (pinned z[6]
   indicator — on
   the carousel the truth is known; the nearest-mode classifier equivalence
   is already L3-validated). TRIGGER (derived): earliest round t ≥ 200 (B8:
@@ -609,9 +611,9 @@ multimodality, conditioning, or the NFW profile.
   pass-probability-checked this time): RUNNER-SIDE, raw rule + a k ≥ 2
   MINIMUM-COUNT guard at the admitting rung + the R* ≥ 300 exposure floor
   — computed rates at R* = 300 (exposure 21.3 per-1500-step units):
-  spurious admission of 0.5995 needs k ≥ 2 at β = 1.0, λ = 0.17 ⇒ P ≈
-  1.4%/arm; false-cold rejection of 0.3594 needs k ≤ 1 at β = 0.5995, λ =
-  3.75 ⇒ P ≈ 11%/arm (3-arm all-exact ≈ 70%). SCORER-SIDE: the W-T β_min
+  spurious admission of 0.5995 needs k ≥ 2 at β = 1.0, λ = 0.171 ⇒ P ≈
+  1.3%/arm; false-cold rejection of 0.3594 needs k ≤ 1 at β = 0.5995, λ =
+  3.75 ⇒ P ≈ 11%/arm (3-arm all-exact = 0.876³ ≈ 67%; rd-3 recount). SCORER-SIDE: the W-T β_min
   leg passes per arm iff β_min == 0.3594 OR (one-grid-point miss AND
   binding-rung count < 5 AND the rule on the POOLED 3-arm counts — λ ≈
   11.2, error ~1e-3 — returns 0.3594) ⇒ pass-WITH-COUNTING-CAVEAT,
@@ -670,9 +672,12 @@ multimodality, conditioning, or the NFW profile.
   materialized; W-S still adjudicated on phase-0 data; A4 explicit exit
   path: the run ENDS after the phase-0 final save ≈ 87 min in — no
   re-space, no phase 1, nothing downstream attempted). F-T: W-S passes but
-  wrong count/knots/β_min beyond the B2 counting-power routing ⇒
-  recipe-input assembly or carry-over bug (code
-  class, fix + re-audit). F-H/F-P: W-S ∧ W-T pass but phase-1 transport/
+  wrong count/knots/β_min beyond the B2' counting routing ⇒ rd-3 pin 2
+  investigation order: a one-grid-point β_min miss with binding count < 5
+  that the pooled rule does NOT rescue is first checked against the
+  printed flip counts as a COUNTING ANOMALY (the fail-closed 9.4% pooled
+  branch) BEFORE any code-class presumption; genuine recipe-input
+  assembly or carry-over bugs get fix + re-audit. F-H/F-P: W-S ∧ W-T pass but phase-1 transport/
   health fails or W-G fires ⇒ the HANDOFF damages the run — mechanism
   split (A1 discriminating pair): (a) OFFLINE interpolation-quality check
   computed AT handoff before phase 1 runs (gen-eig of each interpolated
@@ -701,8 +706,14 @@ multimodality, conditioning, or the NFW profile.
   scorer fallback — the rd-1 95%-lower-bound cure was itself defective,
   ~47%/arm false-rejection, caught at rd-2 by pass-probability
   computation) is the mitigation, with computed residuals: spurious
-  admission ≈ 1.4%/arm, per-arm false-cold ≈ 11% routed to the pooled
-  caveat (pooled error ~1e-3); β_min adjudication power at sparse rungs
+  admission ≈ 1.3%/arm, per-arm false-cold ≈ 11% routed to the pooled
+  caveat (pooled false-cold error ≈ 1.6e-4; rd-3 pin 2: the pooled rescue
+  has its OWN spurious-admission residual ≈ 9.4% — pooled λ(1.0) = 0.512 —
+  which is FAIL-CLOSED in every branch: it can only DENY the rescue and
+  convert an ~11%/arm false-cold miss into F-T, never grant a wrong pass;
+  net P(no β_min-driven F-T across the gate) ≈ 0.93, no
+  wrong-certification channel in any noise branch); β_min adjudication
+  power at sparse rungs
   remains budget-limited by design, and a SYSTEMATICALLY marginal β_min
   would surface only at PT-5 (rd-2 standing strongest-case, kept
   prominent). (vii, B4/B4') W-S tolerance widens to ~±20% (3se) at the
