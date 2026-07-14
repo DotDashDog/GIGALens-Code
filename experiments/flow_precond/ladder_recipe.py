@@ -113,7 +113,8 @@ def target_from_acceptance(acc):
     return 2.0 * x
 
 
-def beta_min_rule(betas, leak_rates, nsys, budget_steps, probe_steps, level=0.99):
+def beta_min_rule(betas, leak_rates, nsys, budget_steps, probe_steps, level=0.99,
+                  counts=None, min_count=2):
     """Coldest (largest) probe beta certified for >= `level` discovery within
     budget: nsys * p_hat * (budget_steps/probe_steps) >= ln(1/(1-level)).
 
@@ -130,17 +131,37 @@ def beta_min_rule(betas, leak_rates, nsys, budget_steps, probe_steps, level=0.99
     beta = 0.6 figure 0.176 -> 31. NOTE: scoring candidates by their own rate
     alone would return 0.5995 on the carousel table (0.176 -> 31 >= 4.6); only
     the neighbor-conservative form reproduces the certified beta_min = 0.3594].
-    The coldest grid point uses its own rate (no colder neighbor)."""
+    The coldest grid point uses its own rate (no colder neighbor).
+
+    B2' minimum-count guard (GATE PT-5a rd-2; ADDITIVE -- counts=None
+    preserves the original rule bitwise): when per-beta raw flip COUNTS are
+    supplied, a candidate is admitted only if, in addition to the rate
+    criterion, the ADMITTING rung's raw count satisfies k >= min_count -- the
+    admitting rung being the next-larger-beta neighbor whose rate the
+    conservative p_hat consults (the coldest grid point admits on its own
+    count, mirroring the rate rule). Guards the sparse-count rungs where a
+    single Poisson flip would flip beta_min (rd-2 recount: a lone flip at
+    beta = 1.0 at ~250-round exposure gives raw p_hat above threshold in
+    ~19%/arm; with k >= 2 the spurious-admission residual is ~1.3%/arm at
+    R* = 300)."""
     betas = np.asarray(betas, np.float64)
     p = np.asarray(leak_rates, np.float64)
     order = np.argsort(betas)
     betas, p = betas[order], p[order]
+    c = None
+    if counts is not None:
+        c = np.asarray(counts, np.float64)
+        if c.shape != p.shape:
+            raise ValueError(
+                f"counts shape {c.shape} != leak_rates shape {p.shape}")
+        c = c[order]
     need = math.log(1.0 / (1.0 - level))
     scale = nsys * (budget_steps / probe_steps)
     best = None
     for i in range(len(betas)):
-        p_hat = p[i] if i == len(betas) - 1 else min(p[i], p[i + 1])
-        if scale * p_hat >= need:
+        j = i if i == len(betas) - 1 else i + 1
+        p_hat = p[i] if j == i else min(p[i], p[j])
+        if scale * p_hat >= need and (c is None or c[j] >= min_count):
             best = float(betas[i])      # ascending scan -> keeps the coldest
     if best is None:
         raise ValueError("no probe beta satisfies the discovery rule")

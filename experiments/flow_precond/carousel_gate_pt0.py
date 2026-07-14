@@ -21,6 +21,15 @@ One arm per process (orchestrator assigns GPUs):
                            = (1-beta)*log_prior(z) + beta*log_prob(z)
   B1/B2/B3 instrumented PT-MCLMC pilot: B1 power/balanced init, B2 lik/balanced,
            B3 lik/all-main init (hot rung from prior on B2/B3).
+  ST       GATE PT-5a two-phase self-tuning ladder mode (checkpoint "carousel
+           GATE PT-5a", rd-3 CERTIFY-RECOMMENDED): phase 0 = swaps-OFF
+           measurement leg on the pinned arm-A probe grid with a per-rung
+           u-stationarity trigger + re-space through ladder_recipe; phase 1 =
+           run_pt production leg on the re-spaced ladder (nearest-log-beta
+           position carry-over, log-beta-interpolated metric seeds). MAP +
+           1e-6*I entry as D2. NOT part of the composite --arm smoke; smoke it
+           with GATE_PT0_SMOKE=1 --arm ST. --selftest-st = numpy-only unit
+           checks of the ST numeric helpers (no model build).
   smoke    all six arms, SHAPE-FAITHFUL (amendment iii, the GATE L attempt-1
            lesson): FULL production compile widths/counts (all Arm-A betas at
            32-wide, both hot-end checks, B at R=12 x NSYS=8 incl. swap sync +
@@ -61,6 +70,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "..", "src")))
 import carousel_model
+import ladder_recipe   # PT-5a ST re-space (numpy-only; validated by pt4_recipe_validate)
 from gigalens_research.inference.blackjax_updated_utils import (
     _build_kernel_shardmap, isokinetic_mclachlan_smart, _single_init, handle_nans)
 
@@ -85,9 +95,11 @@ U_REL_TOL = 1e-6                    # RELATIVE u-recovery gate (audit fixes 2+3)
                                     # max |u - u_direct| / (1 + |u_direct|)
 MIN_CLASS_N = 50                    # Arm A: min retained samples per (beta, class)
                                     # cell; below -> E missing, Delta truncated (fix 4)
-ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3, B5=4, D1=5, D2=6)
+ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3, B5=4, D1=5, D2=6,
+                ST=7)
                 # checkpoint seeds (PT-0b/PT-1/PT-2 arms override via
-                # GATE_PT0_SEED_B: 10-13 PT-0b, 20/21 PT-1, 30-33 PT-2)
+                # GATE_PT0_SEED_B: 10-13 PT-0b, 20/21 PT-1, 30-33 PT-2;
+                # PT-5a ST production arms 55/56/57)
 # PT-2 windowed mass-matrix adaptation (D arms; checkpoint "GATE PT-2")
 METRIC_WINDOWS = (100, 250, 500)    # expanding boundaries; metric FROZEN after last
 GENEIG_EVERY = 100                  # gen-eig ratio trace cadence (rounds)
@@ -119,6 +131,31 @@ CTRL_OCC_TRUTH = CTRL_W[0]          # cold occ_+ target 0.70
 CTRL_TOL_FLOOR = 0.025              # PASS = |occ - 0.70| <= max(2*se, 0.025)
 CTRL_MIN_RT = 20                    # >=20 round trips -> c_rw Poisson err <=~25%
 CRW_BAND = (0.1, 3.0)               # transport-constant sanity band
+# GATE PT-5a ST (self-tune) two-phase mode; checkpoint "carousel GATE PT-5a"
+ST_GRID_N = 10                      # phase-0 grid = arm-A probe grid,
+                                    # geomspace(0.01, 1, 10) (PINNED)
+ST_NSYS = 16                        # phase NSYS (checkpoint pin; env-overridable
+                                    # via GATE_PT0_NSYS_B, card-recorded)
+ST_ROUNDS0_MAX = 400                # phase-0 deadline (F-never past this)
+ST_TRIG_FLOOR = 200                 # earliest trigger evaluation round (B8)
+ST_TRIG_EVERY = 10                  # host-side trigger evaluation cadence
+ST_TRIG_WIN = 100                   # trigger window (split-halves 50/50)
+ST_RSTAR_FLOOR = 300                # B2' exposure floor: R* = max(trigger, 300)
+ST_WINDOW0 = 100                    # phase-0 single metric boundary (scale-
+                                    # finding); also the flip-count boundary (B8)
+ST_MEAS_WIN = 100                   # sd(u)/tau window: rounds (R*-100, R*]
+ST_ROUNDS1 = 1000                   # phase-1 production rounds (PT-2 frontier
+                                    # precedent; GATE_PT0_ROUNDS_B overrides,
+                                    # smoke > env)
+ST_TARGET_NATS = 1.0                # design_ladder target (PT-0b convention)
+ST_RULE_NSYS = 16                   # beta_min discovery-rule constants: the
+ST_RULE_BUDGET = 16500              # pinned ln(100)/(16*11) threshold
+ST_RULE_PROBE = 1500                # (pt4_recipe_validate L1b convention)
+ST_MIN_COUNT = 2                    # B2' k >= 2 minimum-count guard
+ST_LEAK_UNIT = 1500.0               # leakage rates normalized per 1500 kernel
+                                    # steps; exposure (R*-100)*K*NSYS is the
+                                    # SHARED runner/scorer denominator (rd-3
+                                    # pin 1)
 
 SMOKE = False
 # Wall-clock fix (2026-07-11): the PT round is ONE fused jitted call vmapped over
@@ -138,6 +175,8 @@ def apply_smoke():
     global SMOKE, STEPS_A, DISCARD_A
     global ROUNDS_B, SAVE_EVERY_B, PRINT_EVERY_B, LAST_OCC, RHAT_LAST
     global CTRL_ROUNDS, CTRL_BURN, METRIC_WINDOWS, GENEIG_EVERY
+    global ST_ROUNDS0_MAX, ST_TRIG_FLOOR, ST_TRIG_EVERY, ST_TRIG_WIN
+    global ST_RSTAR_FLOOR, ST_WINDOW0, ST_MEAS_WIN, ST_ROUNDS1
     SMOKE = True
     STEPS_A, DISCARD_A = 60, 30
     ROUNDS_B = 20
@@ -147,6 +186,16 @@ def apply_smoke():
     # PT-2 D-arm smoke: boundaries scaled purely to exercise the window/freeze/
     # save code paths at ROUNDS=20 (recorded in the model card)
     METRIC_WINDOWS, GENEIG_EVERY = (5, 10, 15), 5
+    # PT-5a ST smoke: tiny two-phase schedule exercising swaps-off phase 0,
+    # trigger firing (FORCED at the floor if the natural test fails), re-space
+    # + handoff save, restart into phase 1, and all new npz keys. Exposure
+    # floor waived (LOUD print at R* selection); phase-0 metric boundary at
+    # round 2 keeps floor = boundary + window (production 200 = 100 + 100) so
+    # the trigger window sits fully post-boundary (B8); phase-1 windows are
+    # the (5, 10, 15) METRIC_WINDOWS above. Numbers are NOT the measurement.
+    ST_ROUNDS0_MAX, ST_TRIG_FLOOR, ST_TRIG_EVERY = 24, 12, 2
+    ST_TRIG_WIN, ST_RSTAR_FLOOR = 10, 16
+    ST_WINDOW0, ST_MEAS_WIN, ST_ROUNDS1 = 2, 10, 20
 
 
 def pr(*a):
@@ -1693,17 +1742,998 @@ def run_control(tag, equiv=False):
     return summary, data
 
 
+# ---------------------------------------------- GATE PT-5a ST: numpy helpers
+# Pure-numpy ST numeric core (no jax use in this block): unit-tested by
+# --selftest-st and login-node testable by ast-extraction of these defs.
+def st_tau_rounds(x):
+    """Per-rung u IAT in ROUNDS by batch means over a (W, nch) round window:
+    per chain, b = max(floor(sqrt(W)), 2), IAT = b * var(batch means, ddof=1)
+    / var(series, ddof=1) (measure_sd_u convention, series variance over the
+    full window), chain-AVERAGED, then floored at 1 (checkpoint: 'per chain,
+    then averaged; floor tau_round at 1')."""
+    x = np.asarray(x, np.float64)
+    W, nch = x.shape
+    b = max(int(math.sqrt(W)), 2)
+    nbat = W // b
+    if nbat < 2:
+        raise ValueError(f"st_tau_rounds: window W={W} too short for batch means")
+    s = x.T                                              # (nch, W)
+    bm = s[:, :nbat * b].reshape(nch, nbat, b).mean(axis=2)
+    iat = b * bm.var(axis=1, ddof=1) / np.maximum(s.var(axis=1, ddof=1), 1e-300)
+    return max(float(iat.mean()), 1.0)
+
+
+def st_trigger_test(u_win):
+    """Split-halves u-stationarity gate on one evaluation window (derived
+    trigger, checkpoint 'TRIGGER'): u_win (W, R, nch), W even. Per rung, over
+    the POOLED per-rung u sample: |mean(half2) - mean(half1)| <= 2*se with
+    se = sd(u_window) * sqrt(1/N_eff,1 + 1/N_eff,2), per-half N_eff =
+    nch * (W/2) / tau_round, tau_round from st_tau_rounds on the full window;
+    sd(u_window) = pooled np.std (ddof 0) over the full window. ALL rungs must
+    pass simultaneously. Returns (all_pass, diagnostics dict)."""
+    u_win = np.asarray(u_win, np.float64)
+    W, R, nch = u_win.shape
+    h = W // 2
+    ok = np.zeros(R, dtype=bool)
+    dmean, thr2se, tau = np.zeros(R), np.zeros(R), np.zeros(R)
+    for r in range(R):
+        x = u_win[:, r, :]
+        tau[r] = st_tau_rounds(x)
+        neff_half = nch * h / tau[r]
+        se = float(np.std(x)) * math.sqrt(2.0 / neff_half)
+        dmean[r] = abs(float(x[h:2 * h].mean()) - float(x[:h].mean()))
+        thr2se[r] = 2.0 * se
+        ok[r] = dmean[r] <= thr2se[r]
+    return bool(ok.all()), dict(ok=ok, dmean=dmean, thr2se=thr2se, tau=tau)
+
+
+def st_flip_counts(ind, boundary, r_star):
+    """Basin-class flip counts over rounds (boundary, r_star] ONLY
+    (post-boundary counting, B8). ind[(i, r, c)] = pocket indicator at the END
+    of round i+1; the flip event at round n compares rounds n and n-1, counted
+    for n = boundary+1 .. r_star -> exactly r_star - boundary comparisons (the
+    rd-3 pin-1 exposure token (R*-100) rounds). Returns (counts (R,) int64,
+    flips (r_star-boundary, R, nch) uint8)."""
+    if boundary < 1 or r_star <= boundary:
+        raise ValueError(f"st_flip_counts: need 1 <= boundary < r_star, got "
+                         f"boundary={boundary}, r_star={r_star}")
+    ind = np.asarray(ind[:r_star], bool)
+    flips = ind[boundary:r_star] != ind[boundary - 1:r_star - 1]
+    return flips.sum(axis=(0, 2)).astype(np.int64), flips.astype(np.uint8)
+
+
+def st_sd_u_window(u, r_star, meas_win):
+    """Per-rung sd(u) over rounds (r_star - meas_win, r_star]: POOLED across
+    chains and rounds, np.std ddof-0, NO per-chain mean removal (recipe
+    convention, ladder_recipe.measure_sd_u lineage); se(sd) = sd/sqrt(2*N_eff)
+    with N_eff = nch * meas_win / tau_round (checkpoint B4 pin: the in-script
+    computation). Returns (sd, se, tau_rounds), each (R,)."""
+    w = np.asarray(u[r_star - meas_win:r_star], np.float64)
+    if w.shape[0] != meas_win:
+        raise ValueError(f"st_sd_u_window: u has {w.shape[0]} rounds in the "
+                         f"window, expected {meas_win}")
+    R, nch = w.shape[1], w.shape[2]
+    sd = np.array([float(np.std(w[:, r, :])) for r in range(R)])
+    tau = np.array([st_tau_rounds(w[:, r, :]) for r in range(R)])
+    neff = nch * meas_win / tau
+    se = sd / np.sqrt(2.0 * neff)
+    return sd, se, tau
+
+
+def st_carryover_map(old_betas, new_betas):
+    """A5 pinned carry-over rule: each new rung takes the OLD rung nearest in
+    |log beta| (general rule; on the certified knots this reproduces the
+    pinned map {0.3594->0.3594, 0.4388->0.3594, 0.5373->0.5995,
+    0.6598->0.5995, 0.8116->1.0, 1.0->1.0}). Returns old-rung indices (R1,)."""
+    lb_old = np.log(np.asarray(old_betas, np.float64))
+    return np.array([int(np.argmin(np.abs(math.log(float(b)) - lb_old)))
+                     for b in np.asarray(new_betas, np.float64)], dtype=np.int64)
+
+
+def st_interp_metrics(old_betas, old_mets, new_betas):
+    """Phase-1 metric seeds: log-beta-linear ELEMENTWISE interpolation between
+    the two bracketing phase-0 frozen metrics (a convex combination of PSD
+    matrices, hence PSD); an exact-match beta (rtol 1e-12 -- beta_min_rule
+    returns exact grid floats, so the first and last knots match exactly) uses
+    that rung's metric directly. Extrapolation outside the grid raises.
+    Returns (mets (R1, d, d), brackets (R1, 2) int, weights (R1,))."""
+    ob = np.asarray(old_betas, np.float64)
+    old_mets = np.asarray(old_mets, np.float64)
+    nb = np.asarray(new_betas, np.float64)
+    lb = np.log(ob)
+    d = old_mets.shape[-1]
+    mets = np.empty((len(nb), d, d))
+    brackets = np.zeros((len(nb), 2), dtype=np.int64)
+    weights = np.zeros(len(nb))
+    for j, b in enumerate(nb):
+        exact = np.where(np.isclose(ob, b, rtol=1e-12, atol=0.0))[0]
+        if len(exact):
+            i = int(exact[0])
+            mets[j], brackets[j] = old_mets[i], (i, i)
+            continue
+        hi = int(np.searchsorted(lb, math.log(float(b))))
+        if hi <= 0 or hi >= len(lb):
+            raise ValueError(f"st_interp_metrics: beta {b} outside the "
+                             f"phase-0 grid [{ob[0]}, {ob[-1]}]")
+        lo = hi - 1
+        w = (math.log(float(b)) - lb[lo]) / (lb[hi] - lb[lo])
+        mets[j] = (1.0 - w) * old_mets[lo] + w * old_mets[hi]
+        brackets[j], weights[j] = (lo, hi), w
+    return mets, brackets, weights
+
+
+def st_interp_geneig(mets, brackets, old_mets):
+    """A1 offline interpolation-quality check (F-H discriminating pair, leg a):
+    gen-eig extremes of each interpolated seed metric vs EACH of its two
+    bracketing phase-0 metrics. Returns (R1, 2, 2) = [rung, bracket lo/hi,
+    (min, max)]; exact-match rungs give identically 1."""
+    out = np.zeros((len(mets), 2, 2))
+    for j in range(len(mets)):
+        for s in range(2):
+            ch = np.linalg.cholesky(old_mets[brackets[j, s]])
+            ev = geneig_ratios(mets[j], ch)
+            out[j, s] = (float(ev.min()), float(ev.max()))
+    return out
+
+
+def st_selftest():
+    """--selftest-st: numpy-only unit checks of the ST numeric helpers on
+    synthetic data (batch-means/trigger, flip counting, sd-window convention,
+    beta_min count guard, carry-over map, metric interpolation + A1 gen-eig).
+    Raises AssertionError on failure; no jax use, no model build."""
+    from ladder_recipe import beta_min_rule
+    rng = np.random.default_rng(0)
+    # 1) batch-means IAT: white noise ~ 1 (floored); AR(1) rho=0.9 within 2x
+    t_white = st_tau_rounds(rng.standard_normal((100, 16)))
+    assert 1.0 <= t_white < 1.6, t_white
+    rho, n = 0.9, 4000
+    e = rng.standard_normal((n, 8))
+    y = np.empty_like(e)
+    y[0] = e[0]
+    for i in range(1, n):
+        y[i] = rho * y[i - 1] + math.sqrt(1.0 - rho ** 2) * e[i]
+    t_ar, t_true = st_tau_rounds(y), (1 + rho) / (1 - rho)
+    assert t_true / 2.0 < t_ar < t_true * 2.0, (t_ar, t_true)
+    pr(f"[selftest] tau: white={t_white:.2f} (in [1, 1.6)); AR1(0.9)={t_ar:.1f}"
+       f" vs true {t_true:.1f} (within 2x) PASS")
+    # 2) trigger: stationary window passes; one drifting rung blocks it
+    u = rng.standard_normal((100, 10, 16))
+    ok, diag = st_trigger_test(u)
+    assert ok, (diag["dmean"] / np.maximum(diag["thr2se"], 1e-300)).round(2)
+    u2 = u.copy()
+    u2[:, 3, :] += np.linspace(0.0, 3.0, 100)[:, None]   # 3-sd descent on rung 3
+    ok2, diag2 = st_trigger_test(u2)
+    assert (not ok2) and (not diag2["ok"][3]) and diag2["ok"].sum() == 9, diag2
+    pr(f"[selftest] trigger: stationary all-pass; drifting rung 3 blocks "
+       f"(|d|={diag2['dmean'][3]:.2f} > 2se={diag2['thr2se'][3]:.2f}) PASS")
+    # 3) flip counting: post-boundary only, r_star - boundary comparisons
+    ind = np.zeros((12, 2, 3), dtype=np.uint8)
+    ind[5, 0, 1] = 1        # flips at rounds 6 and 7 (rung 0)
+    ind[1:3, 1, 0] = 1      # flips at rounds 2 and 4 (rung 1, pre-boundary)
+    counts, flips = st_flip_counts(ind, 4, 10)
+    assert flips.shape == (6, 2, 3), flips.shape
+    assert counts.tolist() == [2, 0], counts
+    pr(f"[selftest] flips: counts={counts.tolist()} over (4, 10] "
+       f"({flips.shape[0]} comparisons); pre-boundary flips excluded PASS")
+    # 4) sd-window convention: pooled ddof-0, NO per-chain mean removal
+    u3 = np.zeros((20, 1, 4))
+    u3[:, 0, :] = np.array([0.0, 1.0, 2.0, 3.0])[None, :]  # chain offsets only
+    sd, se, tau = st_sd_u_window(u3, 20, 10)
+    assert abs(sd[0] - math.sqrt(1.25)) < 1e-12, sd   # demeaning would give 0
+    pr(f"[selftest] sd window: sd={sd[0]:.6f} = sqrt(1.25) (pooled, no "
+       f"per-chain mean removal) PASS")
+    # 5) beta_min B2' count guard + counts=None bitwise default
+    betas10 = np.geomspace(0.01, 1.0, 10)
+    leak = np.array([.9, .8, .7, .6, .5, .45, .35, .26, .18, .008])
+    b0 = beta_min_rule(betas10, leak, ST_RULE_NSYS, ST_RULE_BUDGET, ST_RULE_PROBE)
+    assert round(b0, 4) == 0.3594, b0
+    counts = np.array([50, 50, 50, 50, 50, 50, 40, 30, 1, 0])
+    b1 = beta_min_rule(betas10, leak, ST_RULE_NSYS, ST_RULE_BUDGET,
+                       ST_RULE_PROBE, counts=counts, min_count=ST_MIN_COUNT)
+    assert round(b1, 4) == 0.2154, b1   # k=1 at 0.5995 blocks 0.3594 (false-cold)
+    counts2 = counts.copy()
+    counts2[8] = 2
+    b2 = beta_min_rule(betas10, leak, ST_RULE_NSYS, ST_RULE_BUDGET,
+                       ST_RULE_PROBE, counts=counts2, min_count=ST_MIN_COUNT)
+    assert round(b2, 4) == 0.3594, b2   # k=2 re-admits it
+    assert beta_min_rule(betas10, leak, ST_RULE_NSYS, ST_RULE_BUDGET,
+                         ST_RULE_PROBE, counts=None) == b0
+    pr(f"[selftest] beta_min guard: no-counts {b0:.4f}; k=1@0.5995 -> {b1:.4f}"
+       f" (blocked colder); k=2 -> {b2:.4f}; counts=None bitwise PASS")
+    # 6) carry-over: A5 pinned map on the certified knots
+    knots = np.array([0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0])
+    cmap = st_carryover_map(betas10, knots)
+    assert cmap.tolist() == [7, 7, 8, 8, 9, 9], cmap
+    pr(f"[selftest] carry-over map on certified knots = {cmap.tolist()} "
+       f"(A5 pinned {{0.3594,0.4388->0.3594; 0.5373,0.6598->0.5995; "
+       f"0.8116,1.0->1.0}}) PASS")
+    # 7) interpolation: exact match, log-midpoint convexity, PSD, A1 gen-eig
+    dm = 4
+    A = rng.standard_normal((dm, dm))
+    A = A @ A.T + dm * np.eye(dm)
+    B = rng.standard_normal((dm, dm))
+    B = B @ B.T + dm * np.eye(dm)
+    ob, om = np.array([0.25, 1.0]), np.stack([A, B])
+    mets, br, wt = st_interp_metrics(ob, om, np.array([0.25, 0.5, 1.0]))
+    assert np.array_equal(mets[0], A) and np.array_equal(mets[2], B)
+    assert abs(wt[1] - 0.5) < 1e-12 and np.allclose(
+        mets[1], 0.5 * (A + B), rtol=0, atol=1e-12)   # log-beta midpoint
+    assert np.linalg.eigvalsh(mets[1]).min() > 0.0    # convex comb of PSD
+    ge = st_interp_geneig(mets, br, om)
+    assert ge.shape == (3, 2, 2) and np.allclose(ge[0], 1.0) \
+        and np.allclose(ge[2], 1.0), ge
+    assert ge[1, 0, 0] <= 1.0 <= ge[1, 0, 1], ge[1]
+    pr(f"[selftest] interp: exact-match endpoints; log-midpoint = (A+B)/2; "
+       f"PSD; A1 gen-eig vs lo bracket [{ge[1, 0, 0]:.3f}, {ge[1, 0, 1]:.3f}]"
+       f" straddles 1 PASS")
+    pr("[selftest] ALL ST helper checks PASS")
+
+
+# ------------------------------------------------- GATE PT-5a ST: runner mode
+def _st_env_num(name, default, cast):
+    """ST copy of the run_arm_b env-override pattern (that one is nested)."""
+    v = os.environ.get(name, "").strip()
+    if v:
+        return cast(v), f"env override {name}={v}"
+    return default, "default"
+
+
+def run_arm_st(tag):
+    """GATE PT-5a two-phase self-tuning runner (checkpoint 'carousel GATE
+    PT-5a', grader rd-3 CERTIFY-RECOMMENDED). Phase 0 = swaps-OFF measurement
+    leg (B1 pin: kernel-only leakage semantics) on the pinned arm-A probe grid,
+    MAP + 1e-6*I entry exactly as D2, single scale-finding metric boundary at
+    round 100 then FROZEN; per-rung split-halves u-stationarity trigger (floor
+    200, deadline 400 -> F-never exit); RE-SPACE at R* = max(trigger, 300)
+    through ladder_recipe (amended B2' beta_min rule); handoff npz saved.
+    Phase 1 = run_pt production leg on the re-spaced ladder: positions carried
+    per new rung from the nearest-log-beta old rung (A5), per-rung metric
+    seeded by log-beta-linear interpolation of the phase-0 frozen metrics
+    (A1 gen-eig quality check printed BEFORE the leg runs), EEVPD/ss reset,
+    swaps ON, windows 100/250/500 freeze-500, ROUNDS 1000.
+    GATE_PT0_ST_PHASE: auto (default) = phase 0 then, iff trigger <= the R*
+    floor, phase 1 in-process (trigger above the floor -> the pre-committed
+    B3 split-allocation contingency: save + exit, relaunch phase 1);
+    0 = phase 0 only; 1 = phase 1 standalone from the saved handoff."""
+    if LEGACY_RUNNERS:
+        raise RuntimeError("arm ST requires the fused runner; unset "
+                           "GATE_PT0_LEGACY_RUNNERS")
+    for bad in ("GATE_PT0_BETAS_B", "GATE_PT0_METRIC_WINDOWS"):
+        if os.environ.get(bad, "").strip():
+            raise RuntimeError(
+                f"{bad} is set, but arm ST pins its grid/windows (phase-0 "
+                f"grid = arm-A probe grid, windows ({ST_WINDOW0},) phase 0 / "
+                f"{tuple(METRIC_WINDOWS)} phase 1); unset it "
+                f"(launch-discipline: NO conflicting env)")
+    seed = ARM_SEED["ST"]
+    seed_source = "ARM_SEED default"
+    env_seed = os.environ.get("GATE_PT0_SEED_B", "").strip()
+    if env_seed:   # PT-5a production arms: seeds 55/56/57 per checkpoint
+        seed = int(env_seed)
+        seed_source = f"env override GATE_PT0_SEED_B={env_seed}"
+    nsys, nsys_src = _st_env_num("GATE_PT0_NSYS_B", ST_NSYS, int)
+    k_b, k_src = _st_env_num("GATE_PT0_K_B", K_B, int)
+    ss_max, ssmax_src = _st_env_num("GATE_PT0_SSMAX", SS_MAX0, float)
+    devar, devar_src = _st_env_num("GATE_PT0_DEVAR", DEVAR, float)
+    rounds1, rounds1_src = _st_env_num("GATE_PT0_ROUNDS_B", ST_ROUNDS1, int)
+    if SMOKE and rounds1 != ST_ROUNDS1:
+        # smoke > env > default (standing precedence; mirrors run_arm_b ROUNDS)
+        rounds1_src = (f"SMOKE override {ST_ROUNDS1} [env GATE_PT0_ROUNDS_B "
+                       f"IGNORED; precedence smoke > env > default]")
+        rounds1 = ST_ROUNDS1
+    env_est = os.environ.get("GATE_PT0_METRIC_EST", "").strip()
+    metric_est = env_est or "pooled"
+    assert metric_est in ("pooled", "within"), \
+        f"GATE_PT0_METRIC_EST must be 'pooled' or 'within', got {metric_est!r}"
+    est_src = (f"env override GATE_PT0_METRIC_EST={env_est}" if env_est
+               else "default")
+    phase = os.environ.get("GATE_PT0_ST_PHASE", "").strip() or "auto"
+    if phase not in ("auto", "0", "1"):
+        raise RuntimeError(
+            f"GATE_PT0_ST_PHASE must be auto/0/1, got {phase!r}")
+    kn = dict(seed=seed, seed_source=seed_source, nsys=nsys, nsys_src=nsys_src,
+              k_b=k_b, k_src=k_src, ss_max=ss_max, ssmax_src=ssmax_src,
+              devar=devar, devar_src=devar_src, rounds1=rounds1,
+              rounds1_src=rounds1_src, metric_est=metric_est, est_src=est_src,
+              phase=phase)
+    handoff_path = os.path.join(OUT, f"handoff_{tag}.npz")
+    if phase in ("auto", "0"):
+        trigger = run_st_phase0(tag, handoff_path, kn)
+        if trigger is None:
+            return                          # F-never (A4 explicit exit path)
+        if phase == "0":
+            pr(f"[ST {tag}] GATE_PT0_ST_PHASE=0: phase 0 complete, handoff "
+               f"saved -> {handoff_path}; run phase 1 with GATE_PT0_ST_PHASE=1")
+            return
+        if trigger > ST_RSTAR_FLOOR:
+            pr(f"[ST {tag}] PRE-COMMITTED SPLIT-ALLOCATION CONTINGENCY (B3): "
+               f"trigger {trigger} > {ST_RSTAR_FLOOR} -> phase 1 NOT run in "
+               f"this allocation; relaunch with GATE_PT0_ST_PHASE=1 "
+               f"(handoff: {handoff_path})")
+            return
+    run_st_phase1(tag, handoff_path, kn)
+
+
+def run_st_phase0(tag, handoff_path, kn):
+    """PT-5a phase 0: swaps-OFF measurement leg. Returns the trigger round, or
+    None on F-never (phase-0 arrays saved either way)."""
+    betas = np.geomspace(0.01, 1.0, ST_GRID_N)   # arm-A probe grid (PINNED)
+    R = len(betas)
+    seed, nsys, k_b = kn["seed"], kn["nsys"], kn["k_b"]
+    rng = np.random.default_rng(seed)
+    key = jax.random.key(seed)
+    map_npz = np.load(MAP_NPZ)
+    map_zbest = np.asarray(map_npz["z_best"], dtype=np.float64).reshape(-1)
+    assert map_zbest.shape == (DIM,), map_zbest.shape
+    inv_mass = (D2_INIT_SCALE ** 2) * np.eye(DIM)
+    d2_diag_provenance = (   # same provenance pin as D2 (run_arm_b)
+        f"stock no-SVI diagonal convention: init_scales={D2_INIT_SCALE} "
+        f"(STD in z) from ModellingSequence.SVI default "
+        f"(gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored "
+        f"gigalens_research/inference_utils/pipeline.py:1440) => seed cov "
+        f"= {D2_INIT_SCALE}^2 * I = {D2_INIT_SCALE**2:g}*I")
+    pos = np.zeros((R, nsys, DIM))
+    for r in range(R):   # MAP z_best + stock-diagonal draws (D2 entry, PT-2 M2)
+        pos[r] = map_zbest + D2_INIT_SCALE * rng.standard_normal((nsys, DIM))
+    windows0 = (ST_WINDOW0,)
+    trig_cfg = dict(floor=ST_TRIG_FLOOR, every=ST_TRIG_EVERY,
+                    window=ST_TRIG_WIN, deadline=ST_ROUNDS0_MAX,
+                    rstar_rule=f"max(trigger, {ST_RSTAR_FLOOR})",
+                    rstar_floor=ST_RSTAR_FLOOR, meas_window=ST_MEAS_WIN,
+                    flip_boundary=ST_WINDOW0)
+    b2prime = dict(min_count=ST_MIN_COUNT,
+                   threshold_rate=math.log(100.0)
+                   / (ST_RULE_NSYS * (ST_RULE_BUDGET / ST_RULE_PROBE)),
+                   rule_nsys=ST_RULE_NSYS, rule_budget_steps=ST_RULE_BUDGET,
+                   rule_probe_steps=ST_RULE_PROBE,
+                   leak_norm_per_steps=ST_LEAK_UNIT)
+    card = dict(arm=tag, gate="PT-5a", st_phase=0, path="power", seed=seed,
+                seed_source=kn["seed_source"], smoke=SMOKE,
+                script=os.path.abspath(__file__), jax=jax.__version__,
+                devices=[str(d) for d in jax.devices()],
+                x64=bool(jax.config.jax_enable_x64), dim=DIM,
+                R=R, NSYS=nsys, K=k_b, rounds_deadline=ST_ROUNDS0_MAX,
+                betas=betas.tolist(),
+                betas_source="arm-A probe grid geomspace(0.01, 1, 10) (PINNED)",
+                L=L_MCLMC, ss_init=SS_INIT, ss_max=kn["ss_max"],
+                devar=kn["devar"],
+                env_overrides=dict(NSYS=kn["nsys_src"], K=kn["k_src"],
+                                   ss_max=kn["ssmax_src"],
+                                   devar=kn["devar_src"]),
+                swaps_off_phase0=True,
+                phases_run=("0 only (GATE_PT0_ST_PHASE=0)" if kn["phase"] == "0"
+                            else "0 (+1 in-process iff trigger <= R* floor)"),
+                metric=("ADAPTIVE (single scale-finding window, then FROZEN); "
+                        "seed = diagonal 1e-6*I (stock init_scales convention)"),
+                adapt_metric=True, metric_windows=list(windows0),
+                metric_estimator=kn["metric_est"],
+                metric_estimator_source=kn["est_src"], metric_n0=10 * nsys,
+                d2_diag_provenance=d2_diag_provenance, map_npz=MAP_NPZ,
+                pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
+                init="MAP z_best + stock-diagonal draws all rungs (as D2)",
+                u_def=("log_prob = logdensity/beta (power path; the u the "
+                       "swap logic would use -- swaps OFF, B1 pin; recorded "
+                       "per (round, rung, chain), float64)"),
+                trigger_config=trig_cfg, b2prime=b2prime,
+                leak_direction=("M->P-dominated measured rate as-is (chains "
+                                "start all-main; the probe's conservative "
+                                "direction)"),
+                harness=("ST phase-0 fused kernel rounds, NO swap attempts "
+                         "(swap arrays saved present-and-all-zero)"),
+                sep_check_max_abs=M["sep_max"])
+    pr("MODEL CARD:", json.dumps(card, indent=1, default=_json_default))
+    summary = dict(model_card=card)
+    t0_all = time.time()
+
+    spec_kernel = dict(dim=DIM, L=L_MCLMC, K=k_b, devar=kn["devar"],
+                       make_tf=lambda b: make_tempered("power", b))
+    round_all = make_fused_round_runner(spec_kernel)
+    betas_j = jnp.asarray(betas)
+    inv_rungs = np.broadcast_to(inv_mass, (R, DIM, DIM)).copy()
+    inv_rungs_j = jnp.asarray(inv_rungs)
+    steps_all = jnp.full((R, nsys), SS_INIT)
+    adapt_all = fresh_adapt2(R, nsys, kn["ss_max"])
+    n0 = float(10 * nsys)
+    # Welford accumulators over ROUND-END positions (run_pt lineage; within/
+    # between decomposition recorded at the boundary in BOTH estimator modes)
+    w_n = 0
+    w_mean = np.zeros((R, DIM))
+    w_M2 = np.zeros((R, DIM, DIM))
+    s_C = np.zeros((R, DIM, DIM))
+    bm_n = 0
+    bm_mean = np.zeros((R, DIM))
+    bm_M2 = np.zeros((R, DIM, DIM))
+    metric_frozen_flag = False
+    boundary_covs, within_covs, between_covs = [], [], []
+    u_all = np.zeros((ST_ROUNDS0_MAX, R, nsys))          # float64
+    ind_all = np.zeros((ST_ROUNDS0_MAX, R, nsys), dtype=np.uint8)
+    ev = np.zeros((ST_ROUNDS0_MAX, R))
+    ssm = np.zeros((ST_ROUNDS0_MAX, R))
+    n_revert = 0
+    u0_rel = None
+    trig_rounds, trig_pass, trig_dmean, trig_thr, trig_tau = [], [], [], [], []
+    trigger, forced, r_star = None, False, None
+    ph0_npz = os.path.join(OUT, f"arrays_{tag}_phase0.npz")
+
+    def save_phase0(t):
+        np.savez(
+            ph0_npz, betas=betas, u=u_all[:t + 1], ind=ind_all[:t + 1],
+            eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
+            # swaps OFF (B1): swap arrays PRESENT AND ALL-ZERO (documented
+            # choice -- keeps pt4-class loaders working), plus explicit flag
+            swap_attempts=np.zeros((R - 1, 2), dtype=np.int64),
+            swap_accepts=np.zeros((R - 1, 2), dtype=np.int64),
+            swaps_off=np.bool_(True),
+            metric_frozen=inv_rungs,
+            metric_boundary_covs=(np.stack(boundary_covs)
+                                  if boundary_covs else np.zeros((0,))),
+            metric_within_covs=(np.stack(within_covs)
+                                if within_covs else np.zeros((0,))),
+            metric_between_covs=(np.stack(between_covs)
+                                 if between_covs else np.zeros((0,))),
+            metric_windows=np.asarray(windows0, dtype=np.int64),
+            metric_n0=n0, metric_estimator=np.array(kn["metric_est"]),
+            n_revert=np.int64(n_revert), rounds_done=np.int64(t + 1),
+            trigger=np.int64(-1 if trigger is None else trigger),
+            trigger_forced=np.bool_(forced),
+            r_star=np.int64(-1 if r_star is None else r_star),
+            trig_eval_rounds=np.asarray(trig_rounds, dtype=np.int64),
+            trig_eval_pass=(np.stack(trig_pass) if trig_pass
+                            else np.zeros((0, R), dtype=np.uint8)),
+            trig_eval_dmean=(np.stack(trig_dmean) if trig_dmean
+                             else np.zeros((0, R))),
+            trig_eval_thr2se=(np.stack(trig_thr) if trig_thr
+                              else np.zeros((0, R))),
+            trig_eval_tau=(np.stack(trig_tau) if trig_tau
+                           else np.zeros((0, R))),
+            # model-card fields (npz-embedded copies; full card in the json)
+            arm=np.array(tag), gate=np.array("PT-5a"),
+            seed=np.int64(seed), nsys=np.int64(nsys), K=np.int64(k_b),
+            ss_max=np.float64(kn["ss_max"]), devar=np.float64(kn["devar"]),
+            smoke=np.bool_(SMOKE),
+            trig_floor=np.int64(ST_TRIG_FLOOR),
+            trig_every=np.int64(ST_TRIG_EVERY),
+            trig_window=np.int64(ST_TRIG_WIN),
+            deadline=np.int64(ST_ROUNDS0_MAX),
+            rstar_floor=np.int64(ST_RSTAR_FLOOR),
+            meas_window=np.int64(ST_MEAS_WIN),
+            flip_boundary=np.int64(ST_WINDOW0),
+            min_count=np.int64(ST_MIN_COUNT),
+            rule_nsys=np.int64(ST_RULE_NSYS),
+            rule_budget_steps=np.int64(ST_RULE_BUDGET),
+            rule_probe_steps=np.int64(ST_RULE_PROBE))
+
+    pr(f"[ST {tag}] phase 0: swaps OFF, {R}x{nsys} = {R * nsys} chains "
+       f"(s/round below is the {R * nsys}-wide GO/NO-GO timing), K={k_b}, "
+       f"trigger floor {ST_TRIG_FLOOR} every {ST_TRIG_EVERY}, deadline "
+       f"{ST_ROUNDS0_MAX}, R* = max(trigger, {ST_RSTAR_FLOOR})")
+    t0 = time.time()
+    t_block, last_block_rd = t0, 0
+    for t in range(ST_ROUNDS0_MAX):
+        key, *lks = jax.random.split(key, R + 1)
+        ik_all, sk_all = _round_keys(lks, R, nsys, k_b)
+        p2, ld, steps_all, adapt_all, ec2, ok = round_all(
+            jnp.asarray(pos), steps_all, adapt_all, ik_all, sk_all,
+            betas_j, inv_rungs_j)
+        pos = np.array(p2)
+        logd = np.asarray(ld)
+        ev[t] = np.asarray(ec2).mean(axis=(1, 2)) / DIM
+        ssm[t] = np.asarray(steps_all).mean(axis=1)
+        n_revert += int((~np.asarray(ok)).sum())
+        u = logd / betas[:, None]   # power-path u (what the swap logic uses)
+        if t == 0:   # round-0 identity verification (run_pt convention)
+            u_direct = M["lp_batch"](pos.reshape(-1, DIM)).reshape(R, nsys)
+            u0_rel = float(np.max(np.abs(u - u_direct)
+                                  / (1.0 + np.abs(u_direct))))
+            pr(f"[ST {tag}] round-0 u identity: rel = {u0_rel:.3e}")
+            if u0_rel > U_REL_TOL:
+                raise RuntimeError(f"round-0 u verification failed: rel "
+                                   f"{u0_rel:.3e} > {U_REL_TOL}")
+        u_all[t] = u
+        ind_all[t] = pos[:, :, POCKET_COL] > POCKET_THR   # round-end indicator
+        # NO swap attempts (B1 pin): kernel rounds only in phase 0
+        if not metric_frozen_flag:
+            for r in range(R):
+                batch = pos[r]                            # (nsys, dim)
+                bmean = batch.mean(axis=0)
+                bctr = batch - bmean
+                bM2 = bctr.T @ bctr
+                if w_n == 0:
+                    w_mean[r], w_M2[r] = bmean, bM2
+                else:
+                    delta = bmean - w_mean[r]
+                    tot = w_n + nsys
+                    w_M2[r] += bM2 + np.outer(delta, delta) * w_n * nsys / tot
+                    w_mean[r] += delta * nsys / tot
+                s_C[r] += bM2 / (nsys - 1)
+                delta_b = bmean - bm_mean[r]
+                bm_mean[r] += delta_b / (bm_n + 1)
+                bm_M2[r] += np.outer(delta_b, bmean - bm_mean[r])
+            w_n += nsys
+            bm_n += 1
+            if (t + 1) in windows0:
+                n_w = w_n
+                T = bm_n
+                if T < 2:
+                    raise RuntimeError(
+                        f"metric window boundary at round {t + 1}: only T={T} "
+                        f"round(s) accumulated; needs T >= 2 (never default)")
+                W_win = s_C / T
+                B_win = bm_M2 / (T - 1)
+                for r in range(R):
+                    cov_w = (W_win[r] if kn["metric_est"] == "within"
+                             else w_M2[r] / max(n_w - 1, 1))
+                    comb = (n0 * inv_rungs[r] + n_w * cov_w) / (n0 + n_w)
+                    inv_rungs[r] = regularize_cov_np(comb, n0 + n_w)
+                boundary_covs.append(inv_rungs.copy())
+                within_covs.append(W_win.copy())
+                between_covs.append(B_win.copy())
+                inv_rungs_j = jnp.asarray(inv_rungs)
+                adapt_all = (jnp.zeros_like(adapt_all[0]),
+                             jnp.zeros_like(adapt_all[1]), adapt_all[2])
+                w_n, w_mean[:], w_M2[:] = 0, 0.0, 0.0
+                bm_n, s_C[:], bm_mean[:], bm_M2[:] = 0, 0.0, 0.0, 0.0
+                if (t + 1) == windows0[-1]:
+                    metric_frozen_flag = True   # FROZEN (single-window path)
+                pr(f"[ST {tag}] metric window boundary at round {t + 1}: "
+                   f"n_w={n_w}, n0={n0:.0f}, est={kn['metric_est']}"
+                   f"{' (METRIC FROZEN)' if metric_frozen_flag else ''}")
+        rd = t + 1
+        if (trigger is None and rd >= ST_TRIG_FLOOR
+                and (rd - ST_TRIG_FLOOR) % ST_TRIG_EVERY == 0):
+            ok_all, diag = st_trigger_test(u_all[rd - ST_TRIG_WIN:rd])
+            trig_rounds.append(rd)
+            trig_pass.append(diag["ok"].astype(np.uint8))
+            trig_dmean.append(diag["dmean"])
+            trig_thr.append(diag["thr2se"])
+            trig_tau.append(diag["tau"])
+            n_pass = int(diag["ok"].sum())
+            pr(f"[ST {tag}] trigger eval @ round {rd}: {n_pass}/{R} rungs "
+               f"pass (worst |d|/2se = "
+               f"{float(np.max(diag['dmean'] / np.maximum(diag['thr2se'], 1e-300))):.2f})"
+               f"{' -> TRIGGER FIRED' if ok_all else ''}")
+            if ok_all:
+                trigger = rd
+            elif SMOKE and rd == ST_TRIG_FLOOR:
+                trigger, forced = rd, True
+                pr(f"[ST {tag}] SMOKE: trigger FORCED at round {rd} (natural "
+                   f"test: {n_pass}/{R} rungs passed) -- forced-trigger smoke "
+                   f"per checkpoint; NOT a measurement")
+            if trigger is not None:
+                r_star = max(trigger, ST_RSTAR_FLOOR)
+                if SMOKE:
+                    pr(f"[ST {tag}] SMOKE: exposure floor waived (R* floor "
+                       f"{ST_RSTAR_FLOOR}; production 300)")
+                pr(f"[ST {tag}] trigger={trigger} -> RE-SPACE at R* = "
+                   f"max({trigger}, {ST_RSTAR_FLOOR}) = {r_star}")
+        if (rd % PRINT_EVERY_B == 0 or rd == ST_ROUNDS0_MAX
+                or (r_star is not None and rd == r_star)):
+            spr = (time.time() - t_block) / max(rd - last_block_rd, 1)
+            t_block, last_block_rd = time.time(), rd
+            pr(f"[ST {tag}] phase0 round {rd:4d} "
+               f"cold occ={ind_all[t, -1].mean():.3f} "
+               f"hot occ={ind_all[t, 0].mean():.3f} "
+               f"EEVPD[h/m/c]={ev[t, 0]:.1e}/{ev[t, R // 2]:.1e}/{ev[t, -1]:.1e} "
+               f"reverts={n_revert} block {spr:.2f} s/round "
+               f"({R * nsys}-wide) wall={time.time() - t0:.0f}s")
+        if rd % SAVE_EVERY_B == 0:
+            save_phase0(t)
+        if r_star is not None and rd == r_star:
+            break
+
+    if trigger is None:   # F-never (A4): save, print loudly, EXIT -- no
+        save_phase0(ST_ROUNDS0_MAX - 1)   # re-space, no phase 1
+        summary["f_never"] = True
+        summary["trigger"] = None
+        summary["trig_eval_rounds"] = trig_rounds
+        summary["trig_eval_pass_counts"] = [int(p.sum()) for p in trig_pass]
+        summary["total_wall_s"] = time.time() - t0_all
+        with open(os.path.join(OUT, f"summary_{tag}_phase0.json"), "w") as f:
+            json.dump(summary, f, indent=1, default=_json_default)
+        pr(f"\n[ST {tag}] " + "!" * 66)
+        pr(f"[ST {tag}] F-NEVER: NO trigger by the round-{ST_ROUNDS0_MAX} "
+           f"deadline -- u equilibrates slower than hypothesized (the APS-lag "
+           f"caution materialized).")
+        pr(f"[ST {tag}] Phase-0 arrays saved -> {ph0_npz}. NO re-space, NO "
+           f"phase 1, nothing downstream attempted (A4 exit path). W-S is "
+           f"still adjudicated on the phase-0 data by the scorer.")
+        pr(f"[ST {tag}] " + "!" * 66)
+        return None
+
+    # ---------------- R* measurement: sd(u), leakage, re-spaced ladder ------
+    if r_star - ST_MEAS_WIN < ST_WINDOW0:
+        raise RuntimeError(
+            f"sd window (R*-{ST_MEAS_WIN}, R*] crosses the metric boundary "
+            f"{ST_WINDOW0} (R*={r_star}) -- config invalid (never default)")
+    sd_u, sd_u_se, tau_rounds = st_sd_u_window(u_all, r_star, ST_MEAS_WIN)
+    flip_counts, flips = st_flip_counts(ind_all, ST_WINDOW0, r_star)
+    exposure_steps = (r_star - ST_WINDOW0) * k_b * nsys   # rd-3 pin 1 (SHARED
+    exposure_per1500 = exposure_steps / ST_LEAK_UNIT      # runner/scorer token)
+    flip_rates = flip_counts / exposure_per1500           # per 1500 kernel steps
+    pr(f"[ST {tag}] R*={r_star} measurement (sd window ({r_star - ST_MEAS_WIN},"
+       f" {r_star}], flips ({ST_WINDOW0}, {r_star}], exposure "
+       f"{exposure_steps} steps = {exposure_per1500:.2f} per-1500 units):")
+    for r in range(R):
+        pr(f"  beta={betas[r]:8.4f}  sd(u)={sd_u[r]:12.3f} +- {sd_u_se[r]:8.3f}"
+           f"  tau={tau_rounds[r]:6.2f} rounds  flips k={int(flip_counts[r]):4d}"
+           f"  rate={flip_rates[r]:.4f}/1500")
+    if flip_counts[0] == 0:
+        msg = (f"F-flip: ZERO flips at the hottest rung (beta={betas[0]:.4f}) "
+               f"post-boundary -- this posterior is known to cross (probe "
+               f"class 0.24-0.66 per 1500 steps); in-run leakage counting "
+               f"broken (code class)")
+        if SMOKE:
+            pr(f"[ST {tag}] SMOKE: F-flip zero-flip check WAIVED "
+               f"(exposure {exposure_per1500:.2f} units is sub-unit in smoke)"
+               f" -- production raises: {msg}")
+        else:
+            raise RuntimeError(msg)
+    bmin_fallback = False
+    try:
+        beta_min = ladder_recipe.beta_min_rule(
+            betas, flip_rates, ST_RULE_NSYS, ST_RULE_BUDGET, ST_RULE_PROBE,
+            counts=flip_counts, min_count=ST_MIN_COUNT)
+    except ValueError:
+        if not SMOKE:
+            raise
+        beta_min = float(betas[7])   # 0.35938-class grid point
+        bmin_fallback = True
+        pr(f"[ST {tag}] SMOKE: beta_min_rule inadmissible on smoke-length "
+           f"exposure -- FALLING BACK to beta_min = {beta_min:.6g} grid point "
+           f"(smoke-only path exercise; production raises)")
+    des = ladder_recipe.design_ladder(betas, sd_u, beta_min, ST_TARGET_NATS)
+    knots = np.asarray(des["knots"], np.float64)
+    kse = ladder_recipe.knot_se(betas, sd_u, sd_u_se, beta_min, ST_TARGET_NATS)
+    pr(f"[ST {tag}] beta_min = {beta_min:.6g} (B2' rule, min_count "
+       f"{ST_MIN_COUNT}{', SMOKE FALLBACK' if bmin_fallback else ''}); "
+       f"re-spaced ladder: {des['n_rungs']} rungs, total "
+       f"{des['total_cost']:.3f} nats, {des['nats_per_pair']:.4f} nats/pair")
+    pr(f"[ST {tag}] knots = "
+       + ", ".join(f"{k:.6g}(+-{s:.2e})" for k, s in zip(knots, kse)))
+    carry = st_carryover_map(betas, knots)
+    pr(f"[ST {tag}] carry-over map (A5 nearest-log-beta): "
+       + ", ".join(f"{knots[j]:.4f}<-{betas[carry[j]]:.4f}"
+                   for j in range(len(knots))))
+    mets_interp, brackets, weights = st_interp_metrics(betas, inv_rungs, knots)
+    interp_geneig = st_interp_geneig(mets_interp, brackets, inv_rungs)
+    pr(f"[ST {tag}] A1 interpolation-quality check (gen-eig of each "
+       f"interpolated seed metric vs its two bracketing phase-0 metrics):")
+    for j in range(len(knots)):
+        pr(f"  rung {j} beta={knots[j]:.4f} "
+           f"(brackets {betas[brackets[j, 0]]:.4f}/{betas[brackets[j, 1]]:.4f},"
+           f" w={weights[j]:.3f}): vs lo [{interp_geneig[j, 0, 0]:.3f}, "
+           f"{interp_geneig[j, 0, 1]:.3f}], vs hi [{interp_geneig[j, 1, 0]:.3f},"
+           f" {interp_geneig[j, 1, 1]:.3f}]")
+    u_level = np.array([float(u_all[r_star - ST_MEAS_WIN:r_star, r, :].mean())
+                        for r in range(R)])
+    np.savez(
+        handoff_path, betas_grid=betas, final_pos=pos,
+        metric_frozen=inv_rungs, sd_u=sd_u, sd_u_se=sd_u_se,
+        tau_rounds=tau_rounds, flip_counts=flip_counts, flip_rates=flip_rates,
+        exposure_steps=np.int64(exposure_steps),
+        exposure_per1500=np.float64(exposure_per1500),
+        trigger=np.int64(trigger), trigger_forced=np.bool_(forced),
+        r_star=np.int64(r_star), knots=knots,
+        beta_min=np.float64(beta_min),
+        beta_min_fallback_smoke=np.bool_(bmin_fallback), knot_se=kse,
+        nats_per_pair=np.float64(des["nats_per_pair"]),
+        total_cost=np.float64(des["total_cost"]), carryover_map=carry,
+        metric_interp=mets_interp, interp_brackets=brackets,
+        interp_weights=weights, interp_geneig=interp_geneig,
+        u_level_phase0=u_level, u=u_all[:r_star], ind=ind_all[:r_star],
+        flips=flips, jax_key_data=np.asarray(jax.random.key_data(key)),
+        seed=np.int64(seed), nsys=np.int64(nsys), K=np.int64(k_b),
+        ss_max=np.float64(kn["ss_max"]), devar=np.float64(kn["devar"]),
+        metric_estimator=np.array(kn["metric_est"]), smoke=np.bool_(SMOKE),
+        flip_boundary=np.int64(ST_WINDOW0), meas_window=np.int64(ST_MEAS_WIN),
+        trig_floor=np.int64(ST_TRIG_FLOOR), trig_every=np.int64(ST_TRIG_EVERY),
+        trig_window=np.int64(ST_TRIG_WIN), deadline=np.int64(ST_ROUNDS0_MAX),
+        rstar_floor=np.int64(ST_RSTAR_FLOOR), min_count=np.int64(ST_MIN_COUNT),
+        rule_nsys=np.int64(ST_RULE_NSYS),
+        rule_budget_steps=np.int64(ST_RULE_BUDGET),
+        rule_probe_steps=np.int64(ST_RULE_PROBE),
+        phase0_npz=np.array(os.path.basename(ph0_npz)))
+    save_phase0(r_star - 1)   # final phase-0 arrays through R*
+    pr(f"[ST {tag}] handoff saved -> {handoff_path}")
+
+    # pre-committed plot: per-rung u traces with the trigger round marked
+    fig, ax = plt.subplots(figsize=(9, 4))
+    for r in range(R):
+        um = u_all[:r_star, r, :].mean(axis=1)
+        ax.plot(np.arange(1, r_star + 1), (um - u_level[r]) / max(sd_u[r], 1e-12),
+                lw=0.7, label=f"b={betas[r]:.3f}" if r % 3 == 0 else None)
+    ax.axvline(ST_WINDOW0, ls=":", color="gray", lw=0.8, label="metric boundary")
+    ax.axvline(trigger, ls="--", color="r", lw=1.0,
+               label=f"trigger {trigger}{' (SMOKE-FORCED)' if forced else ''}")
+    ax.axvline(r_star, ls="--", color="k", lw=1.0, label=f"R* {r_star}")
+    ax.set_xlabel("round")
+    ax.set_ylabel("per-rung mean u, offset by R*-window level [sd(u) units]")
+    ax.set_title(f"{tag}: phase-0 u traces (swaps OFF) with trigger marked")
+    ax.legend(fontsize=7)
+    fig.tight_layout()
+    fig.savefig(os.path.join(OUT, f"pt0_{tag}_phase0_utrace.png"), dpi=120)
+    plt.close(fig)
+
+    summary["trigger"] = int(trigger)
+    summary["trigger_forced"] = bool(forced)
+    summary["r_star"] = int(r_star)
+    summary["trig_eval_rounds"] = trig_rounds
+    summary["trig_eval_pass_counts"] = [int(p.sum()) for p in trig_pass]
+    summary["sd_u"] = sd_u.tolist()
+    summary["sd_u_se"] = sd_u_se.tolist()
+    summary["tau_rounds"] = tau_rounds.tolist()
+    summary["flip_counts"] = flip_counts.tolist()
+    summary["flip_rates_per1500"] = flip_rates.tolist()
+    summary["exposure_steps"] = int(exposure_steps)
+    summary["exposure_per1500"] = float(exposure_per1500)
+    summary["beta_min"] = float(beta_min)
+    summary["beta_min_fallback_smoke"] = bool(bmin_fallback)
+    summary["knots"] = knots.tolist()
+    summary["knot_se"] = kse.tolist()
+    summary["n_rungs"] = int(des["n_rungs"])
+    summary["nats_per_pair"] = float(des["nats_per_pair"])
+    summary["carryover_map"] = carry.tolist()
+    summary["interp_geneig_minmax"] = interp_geneig.tolist()
+    summary["u_level_phase0"] = u_level.tolist()
+    summary["u0_verify_rel"] = u0_rel
+    summary["n_nan_reverts"] = int(n_revert)
+    summary["total_wall_s"] = time.time() - t0_all
+    with open(os.path.join(OUT, f"summary_{tag}_phase0.json"), "w") as f:
+        json.dump(summary, f, indent=1, default=_json_default)
+    pr(f"[ST {tag}] phase 0 DONE in {summary['total_wall_s']:.0f}s -> {OUT}")
+    return int(trigger)
+
+
+def run_st_phase1(tag, handoff_path, kn):
+    """PT-5a phase 1 (checkpoint 'carousel GATE PT-5a', Scheme (pinned),
+    2nd paragraph; rd-3 CERTIFY-RECOMMENDED): production leg on the re-spaced
+    ladder, run through run_pt -- the SAME shared harness B1-B3/control/D1/D2
+    use (swaps ON, adapt_metric ON). Standalone entry point for
+    GATE_PT0_ST_PHASE=1 (loads the saved handoff fresh from disk; never
+    re-runs phase 0). Positions carried per new rung from the nearest-log-beta
+    old rung (A5 pin, st_carryover_map, cross-checked against the handoff's
+    stored map -- fail-closed on a stale/foreign handoff); per-rung metric
+    seeded by log-beta-linear interpolation of the phase-0 FROZEN metrics
+    (st_interp_metrics); the A1 offline interpolation-quality gen-eig
+    (st_interp_geneig) is computed, PRINTED, and archived BEFORE the leg runs
+    (F-H discriminating pair, leg a). run_pt has no hook to record raw u
+    externally, so u is recorded via a side-effect closure passed as
+    spec['u_from'] -- run_pt itself is not touched. run_pt cannot accept extra
+    npz keys, so the ST/scorer keys are added by loading + re-saving
+    arrays_<tag>.npz after run_pt returns (same load+resave pattern as
+    elsewhere in this file); model card + summary json record phase=1,
+    entry=carried, interpolated-metric, estimator, windows, seeds."""
+    hd = np.load(handoff_path)
+    betas0 = np.asarray(hd["betas_grid"], np.float64)          # phase-0 grid (10)
+    knots = np.asarray(hd["knots"], np.float64)                # re-spaced ladder
+    R1 = len(knots)                                            # NEVER hardcode 6
+    final_pos = np.asarray(hd["final_pos"], np.float64)        # (R0, nsys0, DIM)
+    metric_frozen = np.asarray(hd["metric_frozen"], np.float64)  # (R0, DIM, DIM)
+    sd_u0 = np.asarray(hd["sd_u"], np.float64)
+    sd_u0_se = np.asarray(hd["sd_u_se"], np.float64)
+    tau_rounds0 = np.asarray(hd["tau_rounds"], np.float64)
+    flip_counts0 = np.asarray(hd["flip_counts"], np.int64)
+    flip_rates0 = np.asarray(hd["flip_rates"], np.float64)
+    u_level0 = np.asarray(hd["u_level_phase0"], np.float64)
+    trigger = int(np.asarray(hd["trigger"]).item())
+    trigger_forced = bool(np.asarray(hd["trigger_forced"]).item())
+    r_star = int(np.asarray(hd["r_star"]).item())
+    beta_min = float(np.asarray(hd["beta_min"]).item())
+    exposure_steps = int(np.asarray(hd["exposure_steps"]).item())
+    exposure_per1500 = float(np.asarray(hd["exposure_per1500"]).item())
+    phase0_npz_name = (str(np.asarray(hd["phase0_npz"])) if "phase0_npz"
+                       in hd.files else os.path.basename(
+                           os.path.join(OUT, f"arrays_{tag}_phase0.npz")))
+
+    # A5 carry-over (pinned mapping): trust the handoff's map ONLY if it
+    # reproduces the general rule exactly -- never silently trust a
+    # stale/foreign handoff npz (fail-closed, never default)
+    carry_check = st_carryover_map(betas0, knots)
+    if "carryover_map" in hd.files:
+        carry = np.asarray(hd["carryover_map"], dtype=np.int64)
+        if not np.array_equal(carry, carry_check):
+            raise RuntimeError(
+                f"[ST {tag}] handoff carryover_map {carry.tolist()} != "
+                f"st_carryover_map recompute {carry_check.tolist()} on "
+                f"(betas_grid, knots) -- stale or foreign handoff; refusing "
+                f"phase 1 (never silently trust)")
+    else:
+        carry = carry_check
+    pr(f"[ST {tag}] phase 1: R1={R1} rungs (knots="
+       f"{np.round(knots, 4).tolist()}); carry-over (A5 nearest-log-beta) = "
+       + ", ".join(f"{knots[j]:.4f}<-{betas0[carry[j]]:.4f}"
+                   for j in range(R1)))
+
+    nsys, k_b = int(kn["nsys"]), int(kn["k_b"])
+    if final_pos.shape[1] != nsys:
+        raise RuntimeError(
+            f"[ST {tag}] handoff final_pos NSYS {final_pos.shape[1]} != "
+            f"phase-1 NSYS {nsys} (kn['nsys']) -- position carry-over "
+            f"requires matching chain counts across phases (never default)")
+    init_pos = final_pos[carry].copy()
+    assert init_pos.shape == (R1, nsys, DIM), init_pos.shape
+
+    # metric seeds: log-beta-linear interpolation of the phase-0 FROZEN
+    # metrics; A1 offline interpolation-quality gen-eig BEFORE the leg runs
+    mets_interp, brackets, weights = st_interp_metrics(betas0, metric_frozen,
+                                                       knots)
+    if "metric_interp" in hd.files:
+        mi = np.asarray(hd["metric_interp"], np.float64)
+        dev = float(np.max(np.abs(mets_interp - mi)))
+        if dev > 1e-9:
+            raise RuntimeError(
+                f"[ST {tag}] recomputed st_interp_metrics deviates from the "
+                f"handoff's saved metric_interp by {dev:.3e} -- stale/foreign "
+                f"handoff or non-reproducible interpolation; refusing "
+                f"phase 1 (never silently trust)")
+    interp_geneig = st_interp_geneig(mets_interp, brackets, metric_frozen)
+    pr(f"[ST {tag}] A1 offline interpolation-quality check (recomputed at "
+       f"phase-1 entry; gen-eig of each seed metric vs its two bracketing "
+       f"phase-0 metrics):")
+    for j in range(R1):
+        pr(f"  rung {j} beta={knots[j]:.4f} (brackets "
+           f"{betas0[brackets[j, 0]]:.4f}/{betas0[brackets[j, 1]]:.4f}, "
+           f"w={weights[j]:.3f}): vs lo [{interp_geneig[j, 0, 0]:.3f}, "
+           f"{interp_geneig[j, 0, 1]:.3f}], vs hi [{interp_geneig[j, 1, 0]:.3f},"
+           f" {interp_geneig[j, 1, 1]:.3f}]")
+
+    rounds1 = int(kn["rounds1"])
+    metric_windows = tuple(METRIC_WINDOWS)   # PT-2 pinned (100,250,500);
+                                              # smoke-overridden globally
+    metric_n0 = float(10 * nsys)             # default convention (D1/D2), not
+                                              # pinned otherwise by the checkpoint
+    if metric_windows[-1] >= rounds1:
+        pr(f"[ST {tag}] WARNING: freeze boundary {metric_windows[-1]} >= "
+           f"ROUNDS {rounds1} -- the metric will NEVER freeze in this run")
+
+    # u recorded per phase-1 round via a side-effect closure passed as
+    # spec['u_from'] -- run_pt calls this exactly once per round, in round
+    # order, for every arm; recording here is purely a property of the
+    # closure I supply, run_pt itself is untouched (A1 leg-b input)
+    u_buf = np.zeros((rounds1, R1, nsys), np.float64)
+    _u_ctr = [0]
+
+    def u_from(logd, p):
+        u = logd / knots[:, None]
+        t = _u_ctr[0]
+        if t < rounds1:
+            u_buf[t] = u
+        _u_ctr[0] = t + 1
+        return u
+
+    def u_direct(pf):
+        return M["lp_batch"](pf)
+
+    card = dict(
+        arm=tag, gate="PT-5a", st_phase=1, path="power", seed=kn["seed"],
+        seed_source=kn["seed_source"], smoke=SMOKE,
+        script=os.path.abspath(__file__), jax=jax.__version__,
+        devices=[str(d) for d in jax.devices()],
+        x64=bool(jax.config.jax_enable_x64), dim=DIM,
+        R=R1, NSYS=nsys, K=k_b, ROUNDS=rounds1, thin=THIN_B,
+        betas=knots.tolist(),
+        betas_source=(f"ladder_recipe re-space at R*={r_star} "
+                     f"(trigger={trigger}{', SMOKE-FORCED' if trigger_forced else ''})"
+                     f", beta_min={beta_min:.6g}; handoff "
+                     f"{os.path.abspath(handoff_path)}"),
+        L=L_MCLMC, ss_init=SS_INIT, ss_max=kn["ss_max"], devar=kn["devar"],
+        env_overrides=dict(NSYS=kn["nsys_src"], K=kn["k_src"],
+                           ss_max=kn["ssmax_src"], devar=kn["devar_src"],
+                           ROUNDS=kn["rounds1_src"]),
+        metric=("ADAPTIVE (windowed); seed = log-beta-linear interpolation "
+                "of the phase-0 FROZEN metrics (st_interp_metrics; A1 "
+                "gen-eig printed + archived above/in npz)"),
+        adapt_metric=True, metric_windows=list(metric_windows),
+        metric_windows_source=f"default {metric_windows} (PT-2 pinned)",
+        metric_estimator=kn["metric_est"], metric_estimator_source=kn["est_src"],
+        metric_n0=metric_n0,
+        metric_reference="pooled MAMS64 cov (reference-ONLY, DIAGNOSTIC)",
+        entry="carried (A5 nearest-log-beta position carry-over from the "
+              "phase-0 final positions); metric = interpolated (NOT a fresh "
+              "MAP/SVI draw or seed)",
+        map_npz=MAP_NPZ, pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
+        init="carried: final_pos[carryover_map] from phase 0 (A5)",
+        u_def="log_prob = logdensity/beta (power path)",
+        harness="run_pt (shared production harness; phase-1 leg of the ST "
+                "two-phase self-tuning runner)",
+        sep_check_max_abs=M["sep_max"],
+        st_phase0=dict(trigger=trigger, trigger_forced=trigger_forced,
+                      r_star=r_star, beta_min=beta_min,
+                      exposure_steps=exposure_steps,
+                      exposure_per1500=exposure_per1500,
+                      handoff_npz=os.path.abspath(handoff_path),
+                      phase0_npz=phase0_npz_name))
+    spec = dict(dim=DIM, L=L_MCLMC, betas=knots, NSYS=nsys, K=k_b,
+               ROUNDS=rounds1, inv_mass=mets_interp, ss_max=kn["ss_max"],
+               devar=kn["devar"], make_tf=lambda b: make_tempered("power", b),
+               u_from=u_from, u_direct=u_direct,
+               indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
+               init_pos=init_pos, card=card, ind_label="pocket",
+               adapt_metric=True, metric_windows=metric_windows,
+               metric_n0=metric_n0, metric_estimator=kn["metric_est"],
+               metric_ref=M["cov_pool"])
+
+    summary, data = run_pt(tag, kn["seed"], spec)
+
+    # ---- A1 leg (b): first-100-round phase-1 u vs the phase-0 stationary
+    # level, printed for a live check (the scorer recomputes this from the
+    # archived arrays; this print is the in-run corroboration) ------------
+    if rounds1 >= 100:
+        m1 = u_buf[:100].mean(axis=(0, 2))
+        lgrid, lknot = np.log(betas0), np.log(knots)
+        lvl_interp = np.interp(lknot, lgrid, u_level0)
+        sd_interp = np.exp(np.interp(lknot, lgrid, np.log(sd_u0)))
+        pr(f"[ST {tag}] A1 leg (b): phase-1 first-100-round u vs phase-0 "
+           f"stationary level (units of phase-0 sd(u)):")
+        for j in range(R1):
+            s = int(carry[j])
+            d_src = (m1[j] - u_level0[s]) / sd_u0[s]
+            d_int = (m1[j] - lvl_interp[j]) / sd_interp[j]
+            pr(f"  rung {j} beta={knots[j]:.4f}: vs source rung "
+               f"(beta={betas0[s]:.4f}) {d_src:+.2f} sd; vs log-beta interp "
+               f"{d_int:+.2f} sd")
+    else:
+        pr(f"[ST {tag}] WARNING: rounds1={rounds1} < 100 -- A1 leg (b) "
+           f"first-100-round check skipped (smoke-scale run)")
+
+    # ---- run_pt cannot accept extra npz keys: load + re-save (matches the
+    # load+resave pattern already used elsewhere in this file) -------------
+    npz_path = os.path.join(OUT, f"arrays_{tag}.npz")
+    merged = dict(np.load(npz_path))
+    extra_st = dict(
+        st_trigger=np.int64(trigger), st_trigger_forced=np.bool_(trigger_forced),
+        st_R_star=np.int64(r_star), st_beta_min=np.float64(beta_min),
+        st_knots=knots, st_sd_u=sd_u0, st_sd_u_se=sd_u0_se,
+        st_tau_rounds=tau_rounds0, st_flip_counts=flip_counts0,
+        st_flip_rates=flip_rates0, st_exposure_steps=np.int64(exposure_steps),
+        st_exposure_per1500=np.float64(exposure_per1500),
+        st_carryover_map=carry, st_interp_geneig=interp_geneig,
+        st_interp_brackets=brackets, st_interp_weights=weights,
+        u_phase1=u_buf, st_phase0_npz=np.array(phase0_npz_name),
+        st_handoff_npz=np.array(os.path.abspath(handoff_path)))
+    collide = sorted(set(merged) & set(extra_st))
+    if collide:
+        raise RuntimeError(
+            f"[ST {tag}] ST scorer key(s) {collide} collide with existing "
+            f"run_pt npz keys in {npz_path} -- refusing to silently "
+            f"overwrite (never default)")
+    merged.update(extra_st)
+    np.savez(npz_path, **merged)
+    pr(f"[ST {tag}] phase-1 npz enriched with ST scorer keys -> {npz_path}")
+
+    summary["st_phase1"] = dict(
+        handoff_npz=os.path.abspath(handoff_path), phase0_npz=phase0_npz_name,
+        trigger=trigger, trigger_forced=trigger_forced, r_star=r_star,
+        beta_min=beta_min, knots=knots.tolist(), carryover_map=carry.tolist(),
+        interp_geneig=interp_geneig.tolist(), sd_u_phase0=sd_u0.tolist(),
+        tau_rounds_phase0=tau_rounds0.tolist(),
+        flip_counts_phase0=flip_counts0.tolist(),
+        exposure_per1500=exposure_per1500)
+    with open(os.path.join(OUT, f"summary_{tag}.json"), "w") as f:
+        json.dump(summary, f, indent=1, default=_json_default)
+    pr(f"[ST {tag}] phase 1 DONE -> {OUT}")
+
+
 # ------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(description="GATE PT-0 (one arm per process)")
     ap.add_argument("--arm", required=True,
                     choices=["smoke", "control", "A_power", "A_lik",
-                             "B1", "B2", "B3", "B4", "B5", "D1", "D2"])
+                             "B1", "B2", "B3", "B4", "B5", "D1", "D2", "ST"])
     ap.add_argument("--equiv-check", action="store_true",
                     help="fused-vs-legacy runner equivalence guard: 3 rounds, "
                          "both implementations, identical inits/keys, SMOKE "
                          "config; requires a PT arm (control/B1/B2/B3)")
+    ap.add_argument("--selftest-st", action="store_true",
+                    help="numpy-only unit checks of the GATE PT-5a ST numeric "
+                         "helpers (st_tau_rounds/st_trigger_test/"
+                         "st_flip_counts/st_sd_u_window/st_carryover_map/"
+                         "st_interp_metrics/st_interp_geneig); no model "
+                         "build, no jax use -- runs before setup_model()")
     args = ap.parse_args()
+    if args.selftest_st:
+        st_selftest()
+        return
     equiv = args.equiv_check or os.environ.get("GATE_PT0_EQUIV", "0") == "1"
 
     if equiv or args.arm == "smoke" \
@@ -1743,6 +2773,8 @@ def main():
         run_arm_a("power", tag_of("A_power"))
     elif args.arm == "A_lik":
         run_arm_a("lik", tag_of("A_lik"))
+    elif args.arm == "ST":
+        run_arm_st(tag_of("ST"))
     else:
         run_arm_b(args.arm, tag_of(args.arm))
 
