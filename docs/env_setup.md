@@ -1,5 +1,15 @@
 # Environment setup
 
+> **⚠️ DEPRECATED (2026-07-14).** The `gigalens_multinode_env` conda env and the
+> Shifter-container runtime described below are **deprecated**. The new-API
+> gigalens now runs end-to-end on a single **native** conda env — **`gigalens_env`**
+> (Python 3.14, GPU JAX 0.9.1, **no container, no sidecar overlay**) — verified for
+> multiplane MAP → MCLMC (4 seeds, Max R-hat ≤ 1.06) and multi-node sharding. Use it
+> for all new work; see **`GIGALens-Code-paper/docs/env_setup.md`** for setup.
+> (`gigalens_env` was the env formerly named `gigalens_oldapi`, which remains as a
+> back-compat symlink.) The container layout below is kept only for reproducing
+> pre-consolidation (JAX 0.10 / 0.6) behavior.
+
 This repository is run on **NERSC Perlmutter** inside a pinned NVIDIA Shifter
 container that ships JAX 0.10, layered on top of a conda env that supplies
 everything else (lenstronomy, blackjax, matplotlib, etc.), with a small
