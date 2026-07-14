@@ -1896,8 +1896,14 @@ def st_selftest():
     assert t_true / 2.0 < t_ar < t_true * 2.0, (t_ar, t_true)
     pr(f"[selftest] tau: white={t_white:.2f} (in [1, 1.6)); AR1(0.9)={t_ar:.1f}"
        f" vs true {t_true:.1f} (within 2x) PASS")
-    # 2) trigger: stationary window passes; one drifting rung blocks it
-    u = rng.standard_normal((100, 10, 16))
+    # 2) trigger: stationary window passes; one drifting rung blocks it.
+    # A half-mean-matched palindrome (base + reversed base) makes the two
+    # split-halves means IDENTICAL per rung (dmean == 0 << 2se), so all 10
+    # rungs pass DETERMINISTICALLY. A raw random draw is fragile: dmean/2se ~
+    # |Z|/2, so P(one rung within 2se) = 0.9545 independent of N and the all-10
+    # conjunction is only ~0.63 (fails ~37% incl. at seed 0) — audit B1 fix.
+    base = rng.standard_normal((50, 10, 16))
+    u = np.concatenate([base, base[::-1]])
     ok, diag = st_trigger_test(u)
     assert ok, (diag["dmean"] / np.maximum(diag["thr2se"], 1e-300)).round(2)
     u2 = u.copy()
@@ -2022,7 +2028,10 @@ def run_arm_st(tag):
                        f"IGNORED; precedence smoke > env > default]")
         rounds1 = ST_ROUNDS1
     env_est = os.environ.get("GATE_PT0_METRIC_EST", "").strip()
-    metric_est = env_est or "pooled"
+    # ST arm defaults to WITHIN (the PT-5a gate's pinned config + the scorer's
+    # asserted estimator), NOT pooled — a launch that omits the env still runs
+    # the correct estimator instead of failing the scorer after 3.4 h (audit A1)
+    metric_est = env_est or "within"
     assert metric_est in ("pooled", "within"), \
         f"GATE_PT0_METRIC_EST must be 'pooled' or 'within', got {metric_est!r}"
     est_src = (f"env override GATE_PT0_METRIC_EST={env_est}" if env_est

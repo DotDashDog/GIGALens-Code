@@ -560,15 +560,22 @@ for name in ARMS:
         grid0 = np.asarray(grid0, np.float64)
     assert grid0.shape == (10,) and np.allclose(grid0, GRID, rtol=1e-12, atol=0), \
         f"[{name}] phase-0 grid != geomspace(0.01,1,10): {grid0} ({gsrc})"
-    # swaps-off flag (B1): npz flag, else model card
+    # swaps-off flag: the phase-0 npz saves it as `swaps_off` (carousel_gate_pt0
+    # :2166); the `swaps_off_phase0` name lives only in the phase-0 CARD, which
+    # this scorer does not open — check BOTH names in the npz (audit B2 fix)
     swaps_off = None
     for d, lab in src0:
-        if d is not None and "swaps_off_phase0" in d.files:
-            swaps_off = bool(np.asarray(d["swaps_off_phase0"]).item())
+        if d is None:
+            continue
+        for kk in ("swaps_off_phase0", "swaps_off"):
+            if kk in d.files:
+                swaps_off = bool(np.asarray(d[kk]).item())
+                break
+        if swaps_off is not None:
             break
     if swaps_off is None and card is not None:
-        swaps_off = bool(card.get("swaps_off_phase0"))
-    assert swaps_off is True, f"[{name}] swaps_off_phase0 flag missing/False (B1)!"
+        swaps_off = bool(card.get("swaps_off_phase0") or card.get("swaps_off"))
+    assert swaps_off is True, f"[{name}] swaps-off phase-0 flag missing/False!"
     if card is not None and "seed" in card:
         assert int(card["seed"]) == SEEDS[name], \
             f"[{name}] seed {card['seed']} != pinned {SEEDS[name]}"
