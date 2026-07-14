@@ -3112,7 +3112,11 @@ def run_pr_phase_p(tag, handoff_path, kn):
     ready_bmin, ready_dev, ready_tol = [], [], []
     t_ready, readiness_fired = None, False
     final_snap = None
-    ph_npz = os.path.join(OUT, f"arrays_PR_{tag}_probe.npz")
+    # probe companion shares the PRODUCTION stem arrays_{tag} (tag already
+    # starts with "PR_" via tag_of); the earlier arrays_PR_{tag}_probe added a
+    # REDUNDANT "PR_" (double/triple-PR) that did not match the scorer's
+    # arrays_PR_{TAGS}_probe path — smoke-caught filename fix
+    ph_npz = os.path.join(OUT, f"arrays_{tag}_probe.npz")
 
     def save_probe(t):
         # AUDIT FIX (blocking #2, scorer<->runner key contract): emit the
