@@ -479,7 +479,52 @@ multimodality, conditioning, or the NFW profile.
   F-NEVER, "as long as the probe is relatively cheap" — cost CONFIRMED
   ~600–1000 steps/β ≈ 15–20% overhead from the arm-A subsampling finding;
   then "Go ahead with it!").**
-  **Status: awaiting grader approval.**
+  **Status: grader rd-1 NEEDS-MORE (2026-07-14) — the ONE new element (the
+  readiness signal) was ANTI-DIAGNOSTIC; REDESIGNED + amendments below, all
+  verified on arm-A data.**
+  **rd-1 B1/B2 — READINESS REDESIGN (supersedes the crossing-count +
+  occupancy-stationarity signal in "Scheme"/"Win conditions"/"Falsifiers"
+  below).** The grader showed (and I reproduced) that the occupancy
+  split-halves is MOST stationary at step 250 — exactly where β_min is WRONG
+  (collapsed to 1.0) — and N_x≥12 pooled is reached by ~150 steps, far
+  before the ~400-step burn-in: the proxy is anti-diagnostic and its only
+  carousel protection was the calibrated floor, i.e. the PT-5a
+  window-blindness flaw moved from u to occupancy. REPLACEMENT (a genuine,
+  system-agnostic CONVERGENCE check on the DELIVERABLE itself, no floor):
+  the probe periodically re-derives (ladder knots + β_min) on the cumulative
+  trailing window [D0 : t] (small fixed discard D0 = 100 steps) and is READY
+  when, across a 1.5× window growth (compare t vs t/1.5), (i) β_min is the
+  SAME grid point AND non-trivial (< 1.0 — a real tempered rung admitted)
+  AND (ii) max|Δknot| < the T tolerance. VERIFIED on arm-A: β_min first
+  reaches 0.3594 at ~800 steps and STABILIZES (agrees across the 1.5×
+  growth) at **~1200 steps** — readiness fires at 1200, correctly PAST
+  stabilization, and is FALSE at 300/400/…/1000 (β_min still 1.0 or not yet
+  stable). This is not anti-diagnostic: it requires the actual output to
+  stop moving, directly guarding the β_min-collapse failure. It generalizes
+  by construction (runs until the ladder/β_min converge, however long the
+  new system's barrier needs) — the carousel only demonstrates it, PT-5
+  tests it on a new barrier. Cost update: readiness ~1200–1500 steps
+  (120–150 rounds) ≈ 25–30 min probe (was "15–20 min / 600–1000 steps" —
+  that was the first-CORRECT-value budget, not the CONVERGED budget;
+  corrected). Still ~20% overhead. A crossing-count ≥ N_x is DEMOTED to a
+  sanity floor (report-only), not the readiness signal. NEW pre-committed
+  plot: β_min(t) and max|Δknot|(t) vs cumulative step t, with the fire-step
+  marked (the anti-diagnostic proxy's curve is what this replaces).
+  **rd-1 B3/advisory — record corrections.** (a) "ladder_recipe W-L PASS
+  PT-4" is CORRECTED to "W-L L1/L1b/L3 PASS; **L2 PENDING** (pt4_recipe_
+  validate.py:191) — THIS gate supplies the fresh-probe L2." (b) the "leak
+  ~0.09 at β=0.5995" quoted below is the SHORT-PROBE-WINDOW (W≈200) value,
+  DISTINCT from the ~0.1756 FULL-window conservative figure that set the
+  certified β_min (the discovery margin holds under BOTH: even 0.09 gives
+  16×0.09×(16500/200) ≈ 119 ≫ ln(100); the convergence readiness makes the
+  window-length dependence moot). (c) crux-1 reword: production D2 starts
+  ALL rungs (incl. tempered β = 0.3594–1.0) at MAP + 1e-6·I
+  (carousel_gate_pt0.py:1611,1669), so "the scheme no longer samples
+  MAP-pinned tempered rungs" is FALSE — the correct statement is that
+  production needs only TRANSPORT (C-24 swap + boundary leakage, main-init
+  arms rose 0→0.43), NOT the sd(u) MEASUREMENT that MAP-pinning corrupted;
+  F-P re-tests this end-to-end, and it rests on UNCERTIFIED C-24 + pending
+  1e-6·I (standing). Awaiting rd-2.**
   **Claim + classification.** A CHAIN — stochastic-estimator (probe
   measurements) → distributional (production occupancy). Links, each named:
   (R, readiness) a crossing-count probe-readiness signal fires at a
