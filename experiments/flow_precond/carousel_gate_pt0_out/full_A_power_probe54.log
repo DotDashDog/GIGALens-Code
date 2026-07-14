@@ -1,0 +1,91 @@
+[setup] separability check OK: max |log_prior+log_like-log_prob| = 0.000e+00 over 8 points
+[setup] z_param_names (33 columns; C-8 column->name map):
+  z[ 0] = planes/0/mass/0/center_x
+  z[ 1] = planes/0/mass/0/center_y
+  z[ 2] = planes/0/mass/0/e1
+  z[ 3] = planes/0/mass/0/e2
+  z[ 4] = planes/0/mass/0/s_E
+  z[ 5] = planes/0/mass/0/theta_E
+  z[ 6] = planes/0/mass/1/center_x
+  z[ 7] = planes/0/mass/1/center_y
+  z[ 8] = planes/0/mass/1/e1
+  z[ 9] = planes/0/mass/1/e2
+  z[10] = planes/0/mass/1/gamma
+  z[11] = planes/0/mass/1/theta_E
+  z[12] = planes/0/mass/2/center_x
+  z[13] = planes/0/mass/2/center_y
+  z[14] = planes/0/mass/2/e1
+  z[15] = planes/0/mass/2/e2
+  z[16] = planes/0/mass/2/r_core
+  z[17] = planes/0/mass/2/r_cut
+  z[18] = planes/0/mass/2/theta_E
+  z[19] = planes/0/mass/3/gamma1
+  z[20] = planes/0/mass/3/gamma2
+  z[21] = planes/1/light/0/beta
+  z[22] = planes/1/light/0/center_x
+  z[23] = planes/1/light/0/center_y
+  z[24] = planes/1/light/1/beta
+  z[25] = planes/1/light/1/center_x
+  z[26] = planes/1/light/1/center_y
+  z[27] = planes/2/light/0/R_sersic
+  z[28] = planes/2/light/0/center_x
+  z[29] = planes/2/light/0/center_y
+  z[30] = planes/2/light/0/e1
+  z[31] = planes/2/light/0/e2
+  z[32] = planes/2/light/0/n_sersic
+MODEL CARD: {
+ "arm": "A_power_probe54",
+ "path": "power",
+ "seed": 54,
+ "seed_source": "env override GATE_PT0_SEED_A=54",
+ "smoke": false,
+ "script": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0.py",
+ "jax": "0.10.0.dev20260713",
+ "devices": [
+  "cuda:0"
+ ],
+ "x64": true,
+ "dim": 33,
+ "betas": [
+  0.01,
+  0.016681005372000592,
+  0.027825594022071243,
+  0.046415888336127774,
+  0.0774263682681127,
+  0.1291549665014884,
+  0.21544346900318834,
+  0.3593813663804626,
+  0.5994842503189409,
+  1.0
+ ],
+ "n_chains_per_basin": 16,
+ "steps": 3000,
+ "discard": 1500,
+ "L": 5.744562646538029,
+ "ss_init": 0.05,
+ "devar": 0.0005,
+ "jitter": 0.001,
+ "metric": "per-basin empirical cov (confined) / pooled cov (hot-end unconfined), MAMS64 positions only, never weights",
+ "mams64": "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/../sim_carousel/messy_tests/dpie/mams/arrays.npz",
+ "n_pool_M": 57873,
+ "n_pool_P": 6127,
+ "pocket_indicator": "z[6] > -22.35",
+ "sep_check_max_abs": 0.0,
+ "n_hot_check": 2,
+ "u_def": "log_prob"
+}
+E0713 17:49:01.309976 1484027 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+[A A_power_probe54] beta=0.0100: E_M=-292837.724+-43.771 (n=31725) E_P=-292809.829+-46.356 (n=16275) leak M/P=0.320/0.641 LEAK>10% u_check_rel=3.9e-12/7.2e-12 eevpd=1.3e-03/5.5e-04 reverts=[0, 0] (810s)
+[A A_power_probe54] beta=0.0167: E_M=-292259.379+-26.242 (n=31739) E_P=-292245.541+-22.858 (n=16261) leak M/P=0.275/0.598 LEAK>10% u_check_rel=1.0e-11/1.0e-11 eevpd=5.0e-04/3.0e-03 reverts=[0, 0] (802s)
+[A A_power_probe54] beta=0.0278: E_M=-291922.719+-12.108 (n=30456) E_P=-291941.822+-15.881 (n=17544) leak M/P=0.333/0.602 LEAK>10% u_check_rel=1.2e-12/3.8e-12 eevpd=2.9e-04/2.9e-05 reverts=[0, 0] (797s)
+[A A_power_probe54] beta=0.0464: E_M=-291710.873+-7.030 (n=30791) E_P=-291709.396+-8.639 (n=17209) leak M/P=0.369/0.652 LEAK>10% u_check_rel=4.6e-12/1.2e-12 eevpd=4.2e-04/8.5e-04 reverts=[0, 0] (797s)
+[A A_power_probe54] beta=0.0774: E_M=-291549.806+-4.648 (n=31035) E_P=-291555.675+-4.316 (n=16965) leak M/P=0.333/0.626 LEAK>10% u_check_rel=3.2e-12/4.9e-12 eevpd=2.8e-02/7.0e-04 reverts=[0, 0] (797s)
+[A A_power_probe54] beta=0.1292: E_M=-291449.870+-3.249 (n=30958) E_P=-291448.409+-3.882 (n=17042) leak M/P=0.374/0.664 LEAK>10% u_check_rel=2.4e-12/1.0e-11 eevpd=8.3e-04/2.1e-03 reverts=[0, 0] (800s)
+[A A_power_probe54] beta=0.2154: E_M=-291389.822+-1.595 (n=34606) E_P=-291386.902+-1.739 (n=13394) leak M/P=0.164/0.606 LEAK>10% u_check_rel=6.8e-12/2.2e-12 eevpd=2.5e-03/6.5e-03 reverts=[0, 0] (797s)
+[A A_power_probe54] beta=0.3594: E_M=-291351.320+-0.768 (n=38658) E_P=-291349.524+-1.440 (n=9342) leak M/P=0.271/0.881 LEAK>10% u_check_rel=1.2e-10/2.0e-12 eevpd=4.8e-03/1.0e-03 reverts=[0, 0] (797s)
+[A A_power_probe54] beta=0.5995: E_M=-291328.835+-0.672 (n=29919) E_P=-291329.048+-0.484 (n=18081) leak M/P=0.105/0.352 LEAK>10% u_check_rel=3.4e-12/4.9e-12 eevpd=6.7e-03/1.0e-03 reverts=[0, 0] (797s)
+[A A_power_probe54] beta=1.0000: E_M=-291316.534+-0.460 (n=28838) E_P=-291316.216+-0.489 (n=19162) leak M/P=0.043/0.244 LEAK>10% u_check_rel=3.1e-12/8.6e-11 eevpd=1.3e-03/8.1e-04 reverts=[0, 0] (797s)
+[A A_power_probe54] Delta(beta): 0.010:-0.50+-0.87 0.017:-0.36+-0.81 0.028:-0.39+-0.75 0.046:-0.56+-0.69 0.077:-0.63+-0.64 0.129:-0.74+-0.56 0.215:-0.55+-0.46 0.359:-0.21+-0.36 0.599:-0.02+-0.21 1.000:+0.00+-0.00
+[A A_power_probe54] hot-end unconfined beta=0.0100: pocket occ=0.3376+-0.0469 (pred w/ 0.1 anchor: 0.063; consistent within 2se: False) (737s)
+[A A_power_probe54] hot-end unconfined beta=0.0167: pocket occ=0.3077+-0.0422 (pred w/ 0.1 anchor: 0.072; consistent within 2se: False) (735s)
+[A A_power_probe54] DONE in 9468s -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out

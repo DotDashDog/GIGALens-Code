@@ -2658,6 +2658,25 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-13 (PT-4 L-link ADJUDICATED: W-L = L1 ∧ L1b ∧ L2 ∧ L3 ALL PASS —
+  the automated ladder recipe reproduces the certified carousel ladder from a
+  FRESH probe; PROPOSED, UNCERTIFIED):** allocation D (55878062) probe
+  completed (arm A_power, seed 54 card-verified env override, tag probe54,
+  ~2h40m); `pt4_recipe_validate.py --l2` on `arrays_A_power_probe54.npz`
+  (stdout archived `pt4_recipe_validate_stdout.txt`): L1 port reproduction
+  0.0 deviation; L1b certified-R6 end-to-end 0.0 deviation with β_min =
+  0.3594 emerging from the amended neighbor-conservative ln(100) rule on the
+  machine-loaded leakage table; L2 fresh-probe: same 6 rungs, every knot
+  within 3× propagated se (|Δ| ≤ 2.28e-3 vs 3se 3.5–6.1e-3 on interior knots,
+  endpoints exact by construction); L3 nearest-mode classifier vs pinned
+  indicator on the MAMS64 pool: disagreement 0.01125 ≤ 0.045 (confusion
+  fp = 17, fn = 703 of 64000). The recipe (ladder_recipe.py @da63b53) is
+  VALIDATED for PT-5 use on this posterior's evidence; W-L attaches to the
+  eventual W-p reading per the checkpoint (independent link). Scope: one
+  posterior, power path; the probe grid/erfc model generality is PT-5's
+  question. Wall: probe 3 attempts total (two clips recorded above), valid
+  attempt ≈ 2.7 h on one GPU.
+
 - **2026-07-13 (OP-INCIDENT — PT-4 allocation-B arms ran the WRONG CONFIG;
   run INVALID for checkpoint adjudication; artifacts quarantined UNSCORED-in-
   substance; relaunch with fully pinned env):** all four G arms completed

@@ -1,0 +1,23 @@
+[L1] n_rungs=21 (archived 21); max|d sd|=0.000e+00  max|d knot|=0.000e+00  rel|d total|=0.000e+00
+[L1] PASS: archived 21-knot design reproduced (max knot deviation 0.000e+00 < 1e-9: True; total rel 0.000e+00 < 1e-9: True)
+[L1b] erfc round-trips: |erfc(s/2)-0.527|=0.00e+00, |target(erfc(0.5))-1|=0.00e+00 -> ok
+[L1b] NOTE: leakage table LOADED machine-readable from summary_A_power.json (per_beta leak_Minit/leak_Pinit; conservative = smaller direction per beta) -- no transcription needed.
+[L1b] beta_min_rule -> 0.3593813664 (own-rate reading would give 0.5994842503; conservative-neighbor form is the pinned one)
+[L1b] R6 design: n_rungs=6 total=4.470780 nats realized=0.894156 nats/pair (log quotes 0.894; full precision 0.894156098091992)
+[L1b] knots=[0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0] vs pinned [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0]: match; max|d knot| vs full-precision reference = 0.000e+00
+[L1b] PASS: beta_min 0.3594 emerges=True, knots 1e-9=True, pinned-4dp=True, nats/pair 0.894=True
+[L3] n=64000 pocket(indicator)=6127; confusion [pred-pocket&pocket=5424, pred-main&main=57856, pred-pocket&main=17, pred-main&pocket=703]
+[L3] disagreement fraction = 0.011250 (pre-registered criterion <= 0.045: met; applied HERE — audit A2-2)
+[SUMMARY] L1  PASS
+[SUMMARY] L1b PASS
+[SUMMARY] L3  PASS (disagreement=0.011250 <= 0.045)
+[L2] fresh probe carousel_gate_pt0_out/arrays_A_power_probe54.npz: n_rungs 6 vs ref 6
+  knot 0: ref=0.359381 fresh=0.359381 |d|=0.00e+00 3se=0.00e+00
+  knot 1: ref=0.438796 fresh=0.438295 |d|=5.01e-04 3se=3.49e-03
+  knot 2: ref=0.537301 fresh=0.536029 |d|=1.27e-03 3se=5.52e-03
+  knot 3: ref=0.659766 fresh=0.657482 |d|=2.28e-03 3se=6.09e-03
+  knot 4: ref=0.811601 fresh=0.809321 |d|=2.28e-03 3se=5.54e-03
+  knot 5: ref=1.000000 fresh=1.000000 |d|=0.00e+00 3se=0.00e+00
+[L2] PASS: all knots within 3x propagated se
+[SUMMARY] L2  PASS
+[SUMMARY] W-L = L1 & L1b & L2 & L3 -> PASS
