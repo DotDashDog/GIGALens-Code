@@ -524,7 +524,40 @@ multimodality, conditioning, or the NFW profile.
   production needs only TRANSPORT (C-24 swap + boundary leakage, main-init
   arms rose 0→0.43), NOT the sd(u) MEASUREMENT that MAP-pinning corrupted;
   F-P re-tests this end-to-end, and it rests on UNCERTIFIED C-24 + pending
-  1e-6·I (standing). Awaiting rd-2.**
+  1e-6·I (standing).
+  **rd-2 (2026-07-14): CERTIFY-RECOMMENDED to implement — grader
+  independently reproduced the readiness table (fires 1200, FALSE 300–1100,
+  dev vs cert ≤ 0.0063); the anti-diagnostic defect is FIXED. 4 pre-run
+  items APPLIED:** (1) readiness knot-tolerance IS the derived W-T tolerance
+  (3× delta-method propagated se, ~0.01 interior) — the SAME constant, not a
+  fresh one; no invented threshold. (2) READINESS CAP pinned at **2000 steps
+  (200 rounds)** — above seed-A's 1200 stabilization with margin for
+  cross-seed spread; F-R fires if not converged by the cap. (3) COST refit:
+  probe worst-case = cap 200 rounds × 12.8 s ≈ 43 min + production 1000
+  rounds ≈ 131 min + 2 compiles ≈ 10 min ≈ 184 min WORST per arm ⇒ use a
+  **240-min allocation** (margin ~56 min), NOT 180 (the corrected ~30-min
+  typical probe + the PT-4/PT-5a margin-misjudgment history make the 180
+  margin unsafe). (4) NEW BLIND SPOTS (grader Q1, verbatim intent): (a)
+  METASTABLE-PLATEAU blindness — the 1.5× growth check is blind to estimator
+  drift slower than ~0.5× the current window; on a new posterior with a
+  GRADUALLY-discovered barrier, β_min could sit on a metastable low-leak
+  plateau, agree across the growth, and fire EARLY on a too-cold β_min; the
+  [100:t]/[100:t/1.5] OVERLAP amplifies this (shared data ⇒ correlated ⇒
+  agreement partly mechanical). (b) STABLY-WRONG too-cold β_min — the
+  "non-trivial (< 1.0)" guard excludes only the single-rung collapse, NOT a
+  stable-but-too-cold intermediate grid point (self-consistent knots can't
+  see it). BACKSTOP (why acceptable THIS gate ONLY): a too-cold β_min ⇒
+  shorter under-leaking ladder ⇒ pocket fails to transport ⇒ **production
+  F-P fires**, AND the carousel additionally checks dev ≤ 0.0063 vs the
+  KNOWN answer — so readiness self-consistency is NECESSARY, F-P-against-
+  known-answer is what makes it SUFFICIENT here; at PT-5 (no known answer)
+  F-P weakens and the metastable-plateau mode is the dominant generalization
+  risk ⇒ PT-5 must add a DISJOINT-tail readiness variant ([t/2:t] vs
+  [100:t/2], stricter) — pre-registered as the PT-5 hardening, not this
+  gate. IMPLEMENTATION NOTE (grader): design_ladder divides by (n_rungs−1);
+  at β_min = 1.0 it returns n_rungs = 1 ⇒ the readiness re-derivation code
+  MUST guard the β_min = 1.0 / n_rungs ≤ 1 case (treat as "not converged"),
+  not crash. PROCEEDING to implementation (sonnet + opus audit).**
   **Claim + classification.** A CHAIN — stochastic-estimator (probe
   measurements) → distributional (production occupancy). Links, each named:
   (R, readiness) a crossing-count probe-readiness signal fires at a
