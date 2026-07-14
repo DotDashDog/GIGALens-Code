@@ -520,6 +520,38 @@ multimodality, conditioning, or the NFW profile.
   fixes (1.3%, 67%). PROCEEDING: implementation subagents (two-phase ST
   runner mode + pt5a scorer) → independent audit → smoke (forced trigger,
   restart, swaps-off, 160-wide timing ≤ 14 s/round GO) → 3-arm run.**
+  **IMPLEMENTATION + SMOKE (2026-07-14).** Runner/scorer built (recovery
+  after a Fable-5-limit death mid-implementation; the phase-0 leg + helpers
+  by the dead agent, phase-1 + wiring by a sonnet agent, scorer by a third).
+  Opus code audit @f65d7c4: core machinery (handoff carry-over/interpolation,
+  exposure token, Stouffer, existing-arm isolation) CERTIFIED; 2 blocking
+  fail-closed defects fixed @c8a20db (B1 selftest step-2 fragile
+  all-10-at-2se ~63% pass on random data → deterministic palindrome; B2
+  scorer read the wrong swaps-off npz key → crashed every arm; A1 ST arm
+  metric_est default pooled → within). SMOKE-DISCOVERED RESOURCE FINDING +
+  FIX @0766884: phase-0 at 160-wide (10 rungs × NSYS 16, 90k-pixel forward
+  model) OOMs a 40 GB A100 — every prior arm ran 96-wide. Fix: rung-chunk
+  phase-0 at chunk 6 (96-wide, the proven-fitting width); phase-0 is SWAPS-
+  OFF so round_all is a pure per-rung vmap with no cross-rung coupling.
+  CORRECTION (method-discipline, self-reported): the fix was FIRST claimed
+  "bitwise-identical by construction" — FALSE; the on-GPU equiv check
+  measured chunk-2-vs-6 max|dpos| 3.8e-8 (rel 3.8e-8), i.e. XLA fuses
+  different vmap widths with different matmul reduction order → FP-reorder,
+  the SAME phenomenon the B-arm fused-vs-legacy `--equiv-check` documented
+  and the engagement already accepted for the production runner. Corrected
+  claim (labeled INFERENCE, ROUTED TO GRADER before the run): chunking runs
+  each rung through the identical kernel/keys/target and differs only at
+  FP-reorder ⇒ a distinct-but-valid realization, statistically equivalent to
+  a seed perturbation, so the distributional measurements (sd(u), leakage,
+  trigger) are unbiased — BUT the unchunked 160-wide reference is
+  UN-RUNNABLE on this hardware, so the substitute cannot be checked against
+  its own reference (only the chunk-2-vs-6-at-6-wide FP-reorder character +
+  the engagement's prior fused-vs-legacy ruling support it). Smoke GREEN:
+  full trigger→re-space→handoff→phase-1 path, chunk structural check rel
+  3.8e-8, round-0 u-identity 9.9e-11, phase-0 12.78 s/round (≤ 14 GO ⇒
+  same-allocation phase-1), all scorer npz keys present, metric_estimator
+  within. AWAITING grader ruling on the chunked-substitute validity, then
+  the 3-arm run.**
   **Claim + classification.** Stochastic-estimator behaviour (in-run
   measurement of sd(u|β) and basin leakage under a stationarity gate) + a
   procedural claim (the two-phase handoff preserves a working run). Links:
