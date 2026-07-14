@@ -472,6 +472,154 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-5a — in-run self-tuning ladder scheme, validated
+  against the known carousel answer (HUMAN-APPROVED 2026-07-14: "Can you
+  validate this new tuning scheme on our well-sampled carousel posterior
+  before we move on to other cases"; the pre-PT-5 warm-up the human asked
+  for after the K/ladder-preset discussion).**
+  **Status: awaiting grader approval.**
+  **Claim + classification.** Stochastic-estimator behaviour (in-run
+  measurement of sd(u|β) and basin leakage under a stationarity gate) + a
+  procedural claim (the two-phase handoff preserves a working run). Links:
+  (S, stationarity-gate validity) the per-rung u-stationarity trigger fires
+  at a time when in-run sd(u) is transit-clean — tested against the
+  INDEPENDENT equilibrium measurement in the archived seed-54 probe
+  (`arrays_A_power_probe54.npz`, same β grid); (T, tuning) the in-run
+  measurements pushed through the validated ladder_recipe reproduce the
+  certified R6 ladder (knots + rung count + β_min); (H, handoff) restarting
+  the runner on the re-spaced ladder (position carry-over, metric
+  interpolation, EEVPD re-find) yields a phase-1 run whose transport/health
+  matches the PT-4 class; (P, product-supporting) phase-1 pooled occupancy
+  lands in/near band at the reduced 1000-round budget. LAYERING PIN: this
+  gate validates the TUNING layer only — the PT-4 human menu (bounded
+  metric vs accept-(3,28] vs both) remains OPEN and is NOT presupposed:
+  gen-eig is REPORTED with PT-4 zone labels but is NOT a gating clause here
+  (re-gating the metric would conflate the layers; the C-28 inflation is a
+  known, human-adjudicated property of the freeze-500 path this gate runs
+  on). UNTESTED here: the second posterior (PT-5 proper); K self-tuning
+  (K = 10 preset per the record'd assessment, per-rung IAT measured and
+  REPORTED as PT-5 design data); the β_min RULE's non-circularity (B1
+  standing — this gate validates the in-run MEASUREMENTS against the
+  probe's, not the rule choice).
+  **Cause hypothesis.** u equilibrates much faster than the ridge position
+  coordinates (ridge moves change u little by near-degeneracy), so a
+  stationarity gate on per-rung u traces fires long before metric
+  convergence (which C-28 says never completes on ridge axes) yet after the
+  MAP-descent transit that biases sd(u) low (PT-4 window-1 spread ratios
+  1–2 before the window-2 explosion = the measured warning). Caution
+  carried from the record: the APS log-z work found log-density functionals
+  lagging θ-equilibration in this family — hence the gate is TESTED against
+  the probe, not assumed.
+  **Scheme (pinned).** Phase 0: preset grid = geomspace(0.01, 1.0, 10) —
+  the SAME grid as the archived probe (direct per-β W-S comparison; the
+  op-incident's geomspace-12 showed a preset grid runs fine as a
+  measurement platform even when it cannot transport), NSYS 16, MAP +
+  1e-6·I entry (PENDING RATIFICATION, standing), within-estimator, metric
+  window at round 100 only (scale-finding). u recorded per (rung, chain,
+  round); per-rung basin-class flips counted (pinned z[6] indicator — on
+  the carousel the truth is known; the nearest-mode classifier equivalence
+  is already L3-validated). TRIGGER (derived): earliest round t ≥ 150 such
+  that for EVERY rung, the last 100 rounds' u-trace split-halves mean shift
+  satisfies |Δ| ≤ 2·se, se = sd(u)·√(1/N_eff,1 + 1/N_eff,2) with per-half
+  N_eff = NSYS·50/τ_round and τ_round the per-rung u IAT in rounds
+  (batch-means, computed in-run; cross-chain independence does the heavy
+  lifting). Deadline: if no trigger by round 400, F-never fires (no
+  re-space; phase-0 data still adjudicates W-S). At trigger: sd(u) per rung
+  from the last 100 rounds (pooled across chains after NO mean removal —
+  recipe convention), leakage rates per rung from phase-0 flip counts;
+  ladder_recipe.design_ladder + amended β_min rule → final ladder
+  (expected: 6 rungs, [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0]-class).
+  Phase 1 (fresh jit at the new R): positions carried per new rung from the
+  nearest-log-β old rung (pinned mapping), per-rung metric seeded by
+  log-β-linear interpolation of phase-0 adapted metrics, EEVPD/ss reset;
+  windows 100/250/500 (freeze-500), ROUNDS 1000 (PT-2 frontier precedent:
+  750-round arms routed-PASS; 1000 gives a 500-round post-freeze scoring
+  window, lo = max(500, rounds−500) lineage); scoring on phase-1 rounds
+  500–1000. Three arms, seeds 55/56/57, one GPU each (4th GPU idle/spare);
+  K = 10; ss_max 5.0; DEVAR 5e-4.
+  **Predictions (direction + magnitude).** (S) trigger fires at round
+  ~150–250; in-run sd(u) at trigger within tolerance of the probe's
+  per-β equilibrium values — tolerance derived in-script by the L2 delta
+  method with BOTH se's (in-run N_eff ≈ NSYS·100/τ_round ≈ 400–1600/rung
+  → sd se ≈ 1.8–3.5%, wider than the probe's ≈ 1.25%); systematic
+  UNDER-dispersion (ratio < 1 − 3·se on ≥ 3 rungs) is the pre-registered
+  too-early signature (F-early). (T) re-spaced ladder: SAME rung count (6)
+  and every knot within 3× the COMBINED propagated se of the certified
+  knots (expected |Δ| ≲ 0.01, cf. L2's measured 2.3e-3 at higher N_eff);
+  β_min = 0.3594 grid point via the amended rule on in-run leakage
+  (phase-0 leakage at β = 0.3594/0.5995/1.0 must reproduce the probe's
+  0.256/0.176/0.008 class within counting error — REPORTED per rung). (H)
+  phase-1 EEVPD medians re-enter [1e-4, 2e-3] within window 1; pair acc
+  0.45–0.60 (0.894-nat spacing, erfc model); no NaN. (P) per-arm RT_pocket
+  ≥ 117 (= 175 op-7-scaled to 1000 rounds), predict 130–250; pooled
+  occupancy (48 systems) in (0.32, 0.49) predict 0.30–0.42 with the PT-4
+  near-edge rules (A6 + the A3-2 clipped-arm plot rule); per-arm spread
+  G3-class laggards possible (disclosed). Hot rung flips: > 0 per arm
+  post-stationarity (probe class 0.24–0.66 per 1500 steps); the zero-flip
+  extend-hotter monitor must NOT fire (F-flip if it does — in-run leakage
+  measurement broken, since this posterior is known to cross).
+  **Win conditions (scorer = pt5a_score.py from the pt4 lineage, committed
+  + audited BEFORE unblinding; asserts phase-0 grid, phase-1 ladder ==
+  recipe output, NSYS 16, estimator within, windows).** (W-S) all three
+  arms: trigger fired in [150, 400] AND per-rung in-run sd(u) vs probe sd(u)
+  ratios within ±3·combined-se on ≥ 8 of 10 rungs with NO systematic
+  one-sided violation (sign test at 0.05 on the 10 ratios). (W-T) all three
+  arms: rung count == 6 AND max knot |Δ| ≤ 3× combined se AND β_min grid
+  point == 0.3594. (W-H) all three arms: phase-1 EEVPD medians in band,
+  pair acc ∈ [0.25, 0.65], NaN = 0. (W-P, supporting) per-arm RT ≥ 117;
+  pooled occ in band with near-edge rules; W-s all three seed pairs ≤ 2σ.
+  Gen-eig: REPORTED with PT-4 zone labels + the {19,2,3,20} axis check —
+  NOT gating (layering pin above). (W-a, assembly) W-S ∧ W-T ∧ W-H on all
+  arms ∧ W-P not failing beyond near-edge ⇒ the self-tuning scheme is
+  PROPOSED as PT-5's tuning layer (UNCERTIFIED; carousel-only; β_min-rule
+  circularity carries; metric menu still open).
+  **Falsifiers + routing (no auto-levers).** F-early: trigger fired but
+  sd(u) systematically under-dispersed ⇒ the stationarity gate is
+  insufficient ⇒ report + redesign the gate (candidate: require flatness
+  over 2 consecutive windows) — do NOT re-space-and-hope. F-never: no
+  trigger by 400 ⇒ report (u slower than hypothesized — the APS-lag caution
+  materialized; W-S still adjudicated on phase-0 data). F-T: W-S passes but
+  wrong count/knots/β_min ⇒ recipe-input assembly or carry-over bug (code
+  class, fix + re-audit). F-H/F-P: W-S ∧ W-T pass but phase-1 transport/
+  health fails ⇒ the HANDOFF damages the run (mechanism split: EEVPD
+  re-entry traces + first-window gen-eig identify metric-interpolation vs
+  position-carry-over) ⇒ report + handoff redesign. F-flip: zero-flip
+  monitor fires on this posterior ⇒ in-run leakage counting broken (code
+  class). Anything else ⇒ report-to-human.
+  **Blind spots.** (i) Validation against a KNOWN answer cannot catch a
+  scheme that reproduces wrong answers on new systems — W-S is the
+  independent physical check that partially covers this; PT-5 proper is the
+  real test. (ii) The β_min rule circularity (B1) is inherited, disclosed,
+  unresolved by design. (iii) One entry mode (MAP) — SVI entry deferred to
+  PT-5. (iv) The 1000-round W-P is supporting evidence at reduced power
+  (per-arm se ≈ 0.05), not a certification re-run. (v) The C-28 metric
+  inflation rides along unadjudicated (human menu open); within-basin bias
+  along {19,2,3,20} UNCONSTRAINED, standing. (vi) Phase-0 leakage counts at
+  hot rungs may be noisy at 250-round budgets (16 chains × flips) — se
+  REPORTED; the β_min decision needs only the coarse ln(100) margin (45 ≫
+  4.6), which counting noise cannot flip on this posterior.
+  **Pre-committed plots.** Per-rung u traces with the trigger round marked
+  (expected: flat well before trigger; F-early would show trigger on a
+  still-descending trace). In-run vs probe sd(u) per β (ratio plot with
+  ±3se band). Phase-1 coldocc 3-arm overlay rising into band by ~round
+  500–700. Phase-1 EEVPD re-entry trace (handoff check). Gen-eig window-max
+  trace (report).
+  **Cost (interactive-only).** Phase 0: 160-wide ≈ 13 s/round × ≤ 400
+  rounds ≈ ≤ 87 min; phase 1: 96-wide 7.83 s/round × 1000 ≈ 2.2 h; two jit
+  compiles ≈ 20 min; 3 arms PARALLEL on 3 GPUs ⇒ wall ≈ 3.4 h worst-case —
+  ONE 240-min allocation with ~25 min margin (incremental saves + op-7 the
+  clip contingency; the A3-2 plot rule covers a clipped near-edge read).
+  Plus a smoke allocation (≤ 60 min): smoke of the new two-phase mode
+  (tiny phases, trigger forced, restart exercised, new npz keys verified)
+  with NO conflicting env; model cards verified against THIS paragraph
+  before production (launch-discipline rule, memory'd after the
+  op-incident). ≈ 11 GPU·h total.
+  **Process.** New runner mode implemented as an ADDITIVE arm path in
+  carousel_gate_pt0.py (existing arms untouched; subagent diff-audit);
+  pt5a_score.py audited before unblinding; every launch knob pinned
+  explicitly + card-verified (standing); boundary check after every log
+  edit; results BLIND until the certified scorer runs.**
+
 - **Run: carousel GATE PT-4 — drift-free metric estimator (system-agnostic, zero tuned
   constants) + multi-seed MAP-entry certification + automated ladder recipe
   (HUMAN-APPROVED to proceed 2026-07-13: "Okay, go ahead with PT-4"; design per the
