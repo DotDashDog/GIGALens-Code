@@ -477,7 +477,19 @@ multimodality, conditioning, or the NFW profile.
   validate this new tuning scheme on our well-sampled carousel posterior
   before we move on to other cases"; the pre-PT-5 warm-up the human asked
   for after the K/ladder-preset discussion).**
-  **Status: awaiting grader approval.**
+  **Status: grader rd-1 NEEDS-MORE (2026-07-14) — 6 blocking + 2 lite + 5
+  advisory, ALL APPLIED (B1 phase-0 SWAPS OFF pinned — kernel-only
+  leakage semantics, the leg was invalid under swaps; B2 blind spot (vi)
+  rewritten with computed Poisson rates + counting-error-aware β_min
+  adjudication; B3 wall worst-case fix via pre-committed split-allocation
+  contingency at trigger > 300; B4 se/N_eff arithmetic corrected — grader
+  recount from the probe IATs, 7th memory-for-artifact instance logged;
+  B5 gen-eig regression guard added to W-a as an F-H clause; B6 the
+  2026-07-14 human exchange recorded as a dated Log entry; B7 W-P conjunct
+  pinned; B8 trigger floor 200 + post-boundary counting; A1 F-H
+  discriminating pair; A2 window-1 anchor corrected to gen-eig 2.2–2.4;
+  A3 smoke wall go/no-go; A4 F-never exit path; A5 carry-over map pinned).
+  Awaiting rd-2.**
   **Claim + classification.** Stochastic-estimator behaviour (in-run
   measurement of sd(u|β) and basin leakage under a stationarity gate) + a
   procedural claim (the two-phase handoff preserves a working run). Links:
@@ -505,8 +517,10 @@ multimodality, conditioning, or the NFW profile.
   coordinates (ridge moves change u little by near-degeneracy), so a
   stationarity gate on per-rung u traces fires long before metric
   convergence (which C-28 says never completes on ridge axes) yet after the
-  MAP-descent transit that biases sd(u) low (PT-4 window-1 spread ratios
-  1–2 before the window-2 explosion = the measured warning). Caution
+  MAP-descent transit that biases sd(u) low (PT-4 window-1 W-only max
+  gen-eig 2.2–2.4 on the MAP arms before the window-2 explosion to 87–103
+  = the measured warning; A2 correction of the draft's "spread ratios
+  1–2"). Caution
   carried from the record: the APS log-z work found log-density functionals
   lagging θ-equilibration in this family — hence the gate is TESTED against
   the probe, not assumed.
@@ -514,11 +528,21 @@ multimodality, conditioning, or the NFW profile.
   the SAME grid as the archived probe (direct per-β W-S comparison; the
   op-incident's geomspace-12 showed a preset grid runs fine as a
   measurement platform even when it cannot transport), NSYS 16, MAP +
-  1e-6·I entry (PENDING RATIFICATION, standing), within-estimator, metric
+  1e-6·I entry (PENDING RATIFICATION, standing), within-estimator,
+  **SWAPS OFF for all of phase 0** (B1 pin: kernel-only dynamics — the
+  probe measured kernel-only leakage on independent per-β chains, and
+  under swaps per-rung basin flips are dominated by transport relabeling,
+  invalidating the leakage leg; swap-free u traces also feed the trigger
+  cleanly; recorded in the model card and verified in the smoke), metric
   window at round 100 only (scale-finding). u recorded per (rung, chain,
-  round); per-rung basin-class flips counted (pinned z[6] indicator — on
+  round); per-rung basin-class flips counted over rounds > 100 ONLY
+  (post-boundary, B8), normalized per 1500 kernel steps (exposure =
+  (t_trigger − 100) rounds × K steps × NSYS chains; B2 pin) (pinned z[6]
+  indicator — on
   the carousel the truth is known; the nearest-mode classifier equivalence
-  is already L3-validated). TRIGGER (derived): earliest round t ≥ 150 such
+  is already L3-validated). TRIGGER (derived): earliest round t ≥ 200 (B8:
+  floor raised from 150 so the 100-round test window sits fully past the
+  round-100 metric boundary/EEVPD reset) such
   that for EVERY rung, the last 100 rounds' u-trace split-halves mean shift
   satisfies |Δ| ≤ 2·se, se = sd(u)·√(1/N_eff,1 + 1/N_eff,2) with per-half
   N_eff = NSYS·50/τ_round and τ_round the per-rung u IAT in rounds
@@ -530,7 +554,9 @@ multimodality, conditioning, or the NFW profile.
   ladder_recipe.design_ladder + amended β_min rule → final ladder
   (expected: 6 rungs, [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0]-class).
   Phase 1 (fresh jit at the new R): positions carried per new rung from the
-  nearest-log-β old rung (pinned mapping), per-rung metric seeded by
+  nearest-log-β old rung (pinned mapping; expected map on the certified
+  knots, A5, scorer-assertable: {0.3594→0.3594, 0.4388→0.3594,
+  0.5373→0.5995, 0.6598→0.5995, 0.8116→1.0, 1.0→1.0}), per-rung metric seeded by
   log-β-linear interpolation of phase-0 adapted metrics, EEVPD/ss reset;
   windows 100/250/500 (freeze-500), ROUNDS 1000 (PT-2 frontier precedent:
   750-round arms routed-PASS; 1000 gives a 500-round post-freeze scoring
@@ -540,15 +566,27 @@ multimodality, conditioning, or the NFW profile.
   **Predictions (direction + magnitude).** (S) trigger fires at round
   ~150–250; in-run sd(u) at trigger within tolerance of the probe's
   per-β equilibrium values — tolerance derived in-script by the L2 delta
-  method with BOTH se's (in-run N_eff ≈ NSYS·100/τ_round ≈ 400–1600/rung
-  → sd se ≈ 1.8–3.5%, wider than the probe's ≈ 1.25%); systematic
+  method with BOTH se's (B4 grader recount from the probe IATs 14.5–201
+  steps: in-run N_eff = NSYS·100/τ_round ≈ 92–1233/rung → sd se ≈
+  2.0–7.4%; probe se from its ess_proxy ≈ 1.6–6.0%; the draft's 400–1600 /
+  1.8–3.5% / 1.25% applied the retained-ladder IAT class to all 10 grid
+  rungs — 7th memory-for-artifact instance, corrected; the in-script
+  computation is the pin); systematic
   UNDER-dispersion (ratio < 1 − 3·se on ≥ 3 rungs) is the pre-registered
   too-early signature (F-early). (T) re-spaced ladder: SAME rung count (6)
   and every knot within 3× the COMBINED propagated se of the certified
   knots (expected |Δ| ≲ 0.01, cf. L2's measured 2.3e-3 at higher N_eff);
-  β_min = 0.3594 grid point via the amended rule on in-run leakage
-  (phase-0 leakage at β = 0.3594/0.5995/1.0 must reproduce the probe's
-  0.256/0.176/0.008 class within counting error — REPORTED per rung). (H)
+  β_min = 0.3594 grid point via the amended rule on in-run leakage with
+  the B2 counting-error-aware adjudication: a rung is ADMITTED only if the
+  LOWER 95% Poisson bound of its p̂ clears the threshold ln(100)/(16·11) =
+  0.0262 per 1500 steps (grader recount: at a ~250-round trigger, β = 1.0
+  expects only ~0.21 flips — P(≥1) ≈ 19%, and a single flip gives raw p̂ =
+  0.0375 > 0.0262, so RAW counting would flip β_min to 0.5995 in ~half of
+  3-arm sets; the Poisson bound kills that channel); a one-grid-point
+  β_min miss whose binding rung has < 5 counted events routes to
+  "counting-power finding, report" — NOT F-T. Phase-0 leakage at β =
+  0.3594/0.5995/1.0 vs the probe's 0.2565/0.1756/0.008 REPORTED per rung
+  with Poisson se's. (H)
   phase-1 EEVPD medians re-enter [1e-4, 2e-3] within window 1; pair acc
   0.45–0.60 (0.894-nat spacing, erfc model); no NaN. (P) per-arm RT_pocket
   ≥ 117 (= 175 op-7-scaled to 1000 rounds), predict 130–250; pooled
@@ -563,14 +601,25 @@ multimodality, conditioning, or the NFW profile.
   recipe output, NSYS 16, estimator within, windows).** (W-S) all three
   arms: trigger fired in [150, 400] AND per-rung in-run sd(u) vs probe sd(u)
   ratios within ±3·combined-se on ≥ 8 of 10 rungs with NO systematic
-  one-sided violation (sign test at 0.05 on the 10 ratios). (W-T) all three
-  arms: rung count == 6 AND max knot |Δ| ≤ 3× combined se AND β_min grid
-  point == 0.3594. (W-H) all three arms: phase-1 EEVPD medians in band,
-  pair acc ∈ [0.25, 0.65], NaN = 0. (W-P, supporting) per-arm RT ≥ 117;
-  pooled occ in band with near-edge rules; W-s all three seed pairs ≤ 2σ.
-  Gen-eig: REPORTED with PT-4 zone labels + the {19,2,3,20} axis check —
-  NOT gating (layering pin above). (W-a, assembly) W-S ∧ W-T ∧ W-H on all
-  arms ∧ W-P not failing beyond near-edge ⇒ the self-tuning scheme is
+  one-sided violation (sign test at 0.05, RESTRICTED to rungs whose
+  combined 3se ≤ 15% — B4 consequence: at β ≤ ~0.017 the tolerance is
+  ~±20% and W-S is weakest exactly where transit under-dispersion would
+  show; the restriction set is computed in-script and printed). (W-T) all
+  three arms: rung count == 6 AND max knot |Δ| ≤ 3× combined se AND β_min
+  grid point == 0.3594 under the B2 Poisson-bound adjudication (the
+  <5-event one-grid-point miss routes to counting-power report, not F-T).
+  (W-H) all three arms: phase-1 EEVPD medians in band,
+  pair acc ∈ [0.25, 0.65], NaN = 0. (W-P, supporting; B7 pin) per-arm RT ≥
+  117 AND pooled occ in band (near-edge rules) AND W-s all three pairs ≤
+  2σ — ANY per-arm RT < 117, ANY W-s pair failure, or beyond-near-edge
+  pooled occ ⇒ W-a NOT assembled (the scheme is then adjudicated on
+  W-S/W-T/W-H as a tuning-layer-only finding). (W-G, regression guard —
+  B5, closes the layering-pin hole): phase-1 post-freeze cold-rung gen-eig
+  must not EXCEED the C-28 measured class — per arm max ≤ 30 AND ≤ 1 axis
+  > 10; exceeding fires F-H (a HANDOFF finding, explicitly not a
+  metric-menu adjudication; within-class inflation remains reported, not
+  gating). (W-a, assembly) W-S ∧ W-T ∧ W-H ∧ W-G on all
+  arms ∧ W-P as pinned ⇒ the self-tuning scheme is
   PROPOSED as PT-5's tuning layer (UNCERTIFIED; carousel-only; β_min-rule
   circularity carries; metric menu still open).
   **Falsifiers + routing (no auto-levers).** F-early: trigger fired but
@@ -578,12 +627,19 @@ multimodality, conditioning, or the NFW profile.
   insufficient ⇒ report + redesign the gate (candidate: require flatness
   over 2 consecutive windows) — do NOT re-space-and-hope. F-never: no
   trigger by 400 ⇒ report (u slower than hypothesized — the APS-lag caution
-  materialized; W-S still adjudicated on phase-0 data). F-T: W-S passes but
-  wrong count/knots/β_min ⇒ recipe-input assembly or carry-over bug (code
+  materialized; W-S still adjudicated on phase-0 data; A4 explicit exit
+  path: the run ENDS after the phase-0 final save ≈ 87 min in — no
+  re-space, no phase 1, nothing downstream attempted). F-T: W-S passes but
+  wrong count/knots/β_min beyond the B2 counting-power routing ⇒
+  recipe-input assembly or carry-over bug (code
   class, fix + re-audit). F-H/F-P: W-S ∧ W-T pass but phase-1 transport/
-  health fails ⇒ the HANDOFF damages the run (mechanism split: EEVPD
-  re-entry traces + first-window gen-eig identify metric-interpolation vs
-  position-carry-over) ⇒ report + handoff redesign. F-flip: zero-flip
+  health fails or W-G fires ⇒ the HANDOFF damages the run — mechanism
+  split (A1 discriminating pair): (a) OFFLINE interpolation-quality check
+  computed AT handoff before phase 1 runs (gen-eig of each interpolated
+  seed metric vs the phase-0 adapted metrics at its bracketing rungs); (b)
+  per-rung phase-1 u-level re-equilibration vs phase-0 stationary levels
+  (carry-over damage shows as u displacement); EEVPD re-entry traces
+  corroborate but do not discriminate alone ⇒ report + handoff redesign. F-flip: zero-flip
   monitor fires on this posterior ⇒ in-run leakage counting broken (code
   class). Anything else ⇒ report-to-human.
   **Blind spots.** (i) Validation against a KNOWN answer cannot catch a
@@ -594,26 +650,44 @@ multimodality, conditioning, or the NFW profile.
   PT-5. (iv) The 1000-round W-P is supporting evidence at reduced power
   (per-arm se ≈ 0.05), not a certification re-run. (v) The C-28 metric
   inflation rides along unadjudicated (human menu open); within-basin bias
-  along {19,2,3,20} UNCONSTRAINED, standing. (vi) Phase-0 leakage counts at
-  hot rungs may be noisy at 250-round budgets (16 chains × flips) — se
-  REPORTED; the β_min decision needs only the coarse ln(100) margin (45 ≫
-  4.6), which counting noise cannot flip on this posterior.
+  along {19,2,3,20} UNCONSTRAINED, standing. (vi, B2 REWRITE — the draft's
+  "counting noise cannot flip the margin" was FALSE at the binding sparse
+  rungs, grader recount: at a ~250-round trigger the β = 1.0 rung expects
+  ~0.21 flips → P(≥1) ≈ 19% per arm, and a single flip gives raw p̂ =
+  0.0375 > threshold 0.0262 → raw counting would flip β_min to 0.5995 in
+  ~47% of 3-arm sets; P(0 flips at 0.5995) ≈ 1–6% flips it colder; TRUE
+  only at 0.3594 itself, 45 ≫ 4.6, P(0) ≈ 1e-3): the B2
+  Poisson-lower-bound admission + counting-power routing is the
+  mitigation; residual = β_min adjudication power at sparse rungs is
+  budget-limited by design, disclosed. (vii, B4) W-S tolerance widens to
+  ~±20% (3se) at the hottest rungs — mitigated by the sign-test
+  restriction to 3se ≤ 15% rungs; W-S is weakest at hot β, disclosed.
   **Pre-committed plots.** Per-rung u traces with the trigger round marked
   (expected: flat well before trigger; F-early would show trigger on a
   still-descending trace). In-run vs probe sd(u) per β (ratio plot with
   ±3se band). Phase-1 coldocc 3-arm overlay rising into band by ~round
   500–700. Phase-1 EEVPD re-entry trace (handoff check). Gen-eig window-max
   trace (report).
-  **Cost (interactive-only).** Phase 0: 160-wide ≈ 13 s/round × ≤ 400
-  rounds ≈ ≤ 87 min; phase 1: 96-wide 7.83 s/round × 1000 ≈ 2.2 h; two jit
-  compiles ≈ 20 min; 3 arms PARALLEL on 3 GPUs ⇒ wall ≈ 3.4 h worst-case —
-  ONE 240-min allocation with ~25 min margin (incremental saves + op-7 the
-  clip contingency; the A3-2 plot rule covers a clipped near-edge read).
-  Plus a smoke allocation (≤ 60 min): smoke of the new two-phase mode
-  (tiny phases, trigger forced, restart exercised, new npz keys verified)
-  with NO conflicting env; model cards verified against THIS paragraph
-  before production (launch-discipline rule, memory'd after the
-  op-incident). ≈ 11 GPU·h total.
+  **Cost (interactive-only; B3 worst-case repair — the draft's "3.4 h
+  worst-case" was the EXPECTED case; true worst 400×13 s + 1000×7.83 s +
+  2 compiles ≈ 238–242 min vs 240, margin ≈ 0, grader recount).** Phase 0:
+  160-wide ≈ 13 s/round (extrapolated from measured 3.97 @ 48 / 7.83 @ 96;
+  A3: the smoke MEASURES the 160-wide s/round and that measurement is the
+  wall GO/NO-GO before production); phase 1: 96-wide 7.83 s/round × 1000 ≈
+  131 min. PINNED SPLIT-ALLOCATION CONTINGENCY: handoff state (positions,
+  metrics, recipe output, RNG keys) is SAVED at trigger in all cases; if
+  trigger ≤ 300, phase 1 runs in the SAME allocation (worst 300×13 s = 65
+  + 131 + 24 compiles ≈ 220 min, margin ≈ 20 min); if trigger ∈ (300, 400],
+  phase 0 completes and phase 1 RELAUNCHES from the saved state in a
+  second allocation (phase-1-only ≈ 131 + 12 ≈ 143 min in a 180-min
+  alloc) — pre-committed, not an in-flight decision. 3 arms PARALLEL on 3
+  GPUs; incremental saves + op-7 the clip contingency; the PT-4 A3-2 plot
+  rule covers a clipped near-edge read. Plus a smoke allocation (≤ 60
+  min): smoke of the new two-phase mode (tiny phases, trigger forced,
+  restart exercised, swaps-off verified in phase 0, new npz keys verified,
+  160-wide timing measured) with NO conflicting env; model cards verified
+  against THIS paragraph before production (launch-discipline rule,
+  memory'd after the op-incident). ≈ 11–12 GPU·h total.
   **Process.** New runner mode implemented as an ADDITIVE arm path in
   carousel_gate_pt0.py (existing arms untouched; subagent diff-audit);
   pt5a_score.py audited before unblinding; every launch knob pinned
@@ -2824,6 +2898,49 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-14 (HUMAN EXCHANGE — PT-5 target named; preset-vs-measured
+  tuning question; self-tuning timing question; PT-5a approved; recorded
+  per PT-5a grader rd-1 B6):** (1) The human named the PT-5 target: the
+  carousel with MORE source planes + adaptive super sampling, notebook
+  `experiments/sim_carousel/debug_carousel_1_3_4_5_9.ipynb` (main
+  checkout), saved MAP + MCLMC runs under
+  `experiments/sim_carousel/debug_carousel/{1_2_3_4_5_9, 3_4_5_9}/{map,
+  mclmc}/` (arrays.npz + manifests; MCLMC "looks multimodal" per the
+  human); MAP reuse offered. Which plane subset is the target: to be
+  pinned at the PT-5 checkpoint. (2) Human asked: "is it totally necessary
+  to set K and the ladder using information from the posterior? Would
+  having them be preset work?" Assessment given (now record'd): K IS
+  presettable (smooth two-sided cost, K = 10 vs measured IATs 11–46;
+  tens-of-percent penalty for 2–4× misset); ladder SPACING is NOT
+  transferable across data sizes (rung density scales with sd(u|β) which
+  grows with data; the op-incident's geomspace-12 run = the accidental
+  preset-ladder experiment on this very posterior: pair acc 0.16–0.31
+  matching erfc at ~2 nats/pair, RT 0 in 1500 rounds, vs the measured
+  ladder's 0.50–0.54 / RT 209–316); β_min is the LEAST presettable and
+  fails SILENTLY when too high (the June-28/PT-0 mode); conservative-low
+  preset is safe but ≈ 4× ladder cost on the carousel (0.36 → 0.01 ≈ +17
+  rungs at 1 nat). Middle path proposed: presets as initialization + in-run
+  self-checks (in-run sd(u) → one re-space; hot-rung flip counter; K vs
+  measured IAT). (3) Human asked when self-tuning should happen relative
+  to mass-matrix adaptation ("if it's confounded by an improperly adapted
+  inverse mass matrix, it should happen after that phase of burnin. Does
+  that check out? Is the interdependence more complicated?"). Answer
+  (record'd): the confound is EQUILIBRATION not the metric per se — sd(u)
+  is a target property, contaminated only dynamically (C-28 mechanism
+  applied to u; PT-4 window-1 under-dispersion = the too-early signature);
+  u equilibrates faster than ridge positions, so a u-stationarity gate
+  fires long before metric convergence (which C-28 says never completes on
+  ridges — requiring metric maturity would deadlock); APS log-z θ-lag
+  caution attached (test, don't assume); the interdependence IS mutual
+  (ladder→metric: cold-rung mixture covariance needs transport;
+  re-space invalidates per-rung adaptation state ⇒ re-space at a window
+  boundary before the final metric window; β_min verifiable only by
+  observed crossings ⇒ runtime monitor). (4) Human approved: "Alright,
+  that sounds like a good idea. Can you validate this new tuning scheme on
+  our well-sampled carousel posterior before we move on to other cases?"
+  ⇒ GATE PT-5a checkpoint (Design checkpoints section). The PT-4 metric
+  menu (a/b/c) remains UNANSWERED — PT-5a does not presuppose it.
 
 - **2026-07-13 (carousel GATE PT-4 RAN, valid config — F-M FIRES ON ALL FOUR
   ARMS: the DRIFT HYPOTHESIS IS FALSIFIED BY THE IN-RUN DECOMPOSITION (the
