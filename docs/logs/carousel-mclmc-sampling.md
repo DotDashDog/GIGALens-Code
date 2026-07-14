@@ -3019,6 +3019,69 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-14 (carousel GATE PT-5a — F-NEVER FIRES: the u-stationarity
+  trigger does NOT fire on the carousel; the scheme's core premise ("u
+  equilibrates fast, before the ridge positions") is FALSIFIED on the
+  TEMPERED rungs; chunk-invariance condition PASSED; PROPOSED, UNCERTIFIED —
+  a NEGATIVE result on the tuning scheme with a diagnosed cause):**
+  allocation 55906639, phase-0-only runs at chunk 6 and chunk 5 (seed 55,
+  the grader's VALID-WITH-CONDITION check), both ran to the round-400
+  deadline and hit **F-NEVER identically** (no trigger; A4 exit).
+  **CHUNK-INVARIANCE CHECK — PASSED (grader condition met):** per-rung sd(u)
+  over rounds 300–400 agrees chunk-6-vs-5 within 3√2·se on ALL 10 rungs
+  (max |Δ| 2.7 vs tol 44 hot / <0.05 cold); leakage flip counts identical
+  bar one rung (67 vs 65, Poisson-fine), signed diffs sum +2 (NOT
+  systematic). ⇒ the rung-chunked phase-0 is a validated substitute for the
+  un-runnable 160-wide; the OOM fix is sound. (C-28-adjacent: the chunking
+  question is closed.)
+  **F-NEVER root cause (PLOTS before metrics — `pt5a_fnever_diag.png`):**
+  the trigger requires all 10 rungs u-stationary simultaneously; per-rung
+  pass is only ~30–76%/eval and never all-10 at once (P(fire) ≈ 3% over 21
+  evals — F-NEVER is the EXPECTED outcome). WHY per-rung pass is low: the
+  chain-mean-u traces show the TEMPERED rungs (β = 0.01–0.13) are STILL
+  DRIFTING at round 400 — mean-u shift 0.40–0.56·sd between rounds 100–250
+  and 250–400; only the cold rung β = 1 is flat (0.17·sd). So u on the
+  tempered rungs has NOT equilibrated by 400 rounds — the pre-registered
+  APS-lag / "u slower than hypothesized" concern REALIZED, and broadly (not
+  just the hottest rung). PRODUCER-HONESTY NOTE: my first read (from the
+  short-window dmean/sd ≈ 5–25%) was "near-equilibrated, just a too-tight
+  threshold"; the PLOTS + the longer 150-round baseline REFUTED that — the
+  drift is real and ongoing; dmean/sd looked small only because the hot-rung
+  fluctuation is huge (sd 277). Secondary compounding cause (numbers, not
+  primary): batch-means under-estimates the u IAT on hot/mid rungs
+  (tau_round 4.5 vs probe IAT ≈ 18 rounds at β = 0.01) ⇒ se too small ⇒ 2se
+  gate ~2× too tight.
+  **MECHANISM (INFERENCE, labeled; NOT A/B-tested this gate):** the
+  MAP + 1e-6·I entry (a delta at the cold-basin MAP) is a POOR start for the
+  tempered rungs, whose typical set is BROAD — they must expand from a
+  pinned point, which is slow. The ORIGINAL arm-A probe that produced the
+  certified ladder started hot rungs from the broad MAMS64 position POOLS
+  (draw_init), so it equilibrated; phase-0 inherited the production MAP
+  entry, which is wrong for hot-rung phase-0. This predicts a broad hot-rung
+  init would fix it (untested).
+  **MEASUREMENT also degraded (not just the trigger):** forcing sd(u) from
+  the non-stationary rounds 300–400 and running the recipe gives 6 rungs but
+  knots off by ≤ 0.042 from certified (0.4485 vs 0.4388, 0.7023 vs 0.6598;
+  0.843 vs 0.894 nats/pair) — beyond the W-T 3·se tolerance — because the
+  still-drifting hot rungs have INFLATED sd(u) (trend variance adds to
+  fluctuation). So the ladder-measurement leg would FAIL W-T too, for the
+  same root cause.
+  **Gate outcome:** F-NEVER (pre-registered falsifier) fired; W-T/W-H/W-P/W-G
+  UN-adjudicable (no re-space, no phase 1); W-S adjudicated on phase-0 data =
+  the scheme's readiness gate does not trigger. The in-run self-tuning
+  scheme AS DESIGNED does not work on the carousel warm-up. Routed to human
+  (checkpoint F-NEVER routing) — the goal was to catch exactly this before
+  the new posterior. FIX DIRECTIONS (for a PT-5a-round-2 / trigger redesign,
+  human to weigh): (a) broad hot-rung init (the diagnosed root cause; a
+  short A/B run tests it); (b) de-trend sd(u) before measuring (measure
+  fluctuation, not the slow drift); (c) drop the all-10 conjunction for a
+  per-rung-ready re-space or a ≥8/10 rule; (d) a fixed generous burn-in
+  instead of a u-stationarity gate; (e) a better IAT estimator (fixes the
+  secondary tightening); (f) reconsider in-run measurement vs a dedicated
+  short probe (the arm-A probe worked because it ran broad-init + discarded
+  burn-in). Cost: 2 × ~88 min phase-0 (chunk check + F-NEVER), ≈ 4.7 GPU·h.
+  Diagnosis UNDER GRADER REVIEW before human certification.**
+
 - **2026-07-14 (HUMAN EXCHANGE — PT-5 target named; preset-vs-measured
   tuning question; self-tuning timing question; PT-5a approved; recorded
   per PT-5a grader rd-1 B6):** (1) The human named the PT-5 target: the
