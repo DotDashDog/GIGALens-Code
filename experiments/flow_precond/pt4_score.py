@@ -134,6 +134,14 @@ for name in ALL_ARMS:
         print(f"\n[{name}] MISSING — skipped"); continue
     rounds = int(d["rounds_done"])
     assert float(d["betas"][-1]) == 1.0, "cold rung is not beta=1"
+    # config-mismatch guard (op-incident 2026-07-13: arms ran default R12/NSYS8
+    # ladder because the launch env omitted BETAS_B/NSYS_B — assert the FULL
+    # pinned C-24 config, not just the cold rung)
+    assert np.allclose(np.asarray(d["betas"], float),
+                       [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0],
+                       atol=1e-12), f"non-C-24 ladder: {list(d['betas'])}"
+    assert d["cold_ind"].shape[1] == 16, \
+        f"NSYS {d['cold_ind'].shape[1]} != pinned 16"
     assert list(d["metric_windows"]) == WINDOWS, "non-pinned windows!"
     assert str(d["metric_estimator"]) == "within", "estimator is not 'within' (A7)!"
     assert d["cold_ind"].shape[0] >= rounds, "truncated buffer (shape guard)"

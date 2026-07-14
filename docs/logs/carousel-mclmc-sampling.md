@@ -2658,6 +2658,38 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-13 (OP-INCIDENT — PT-4 allocation-B arms ran the WRONG CONFIG;
+  run INVALID for checkpoint adjudication; artifacts quarantined UNSCORED-in-
+  substance; relaunch with fully pinned env):** all four G arms completed
+  1500 rounds cleanly, but the model cards record `betas: geomspace(0.01, 1,
+  12) [default]` and `NSYS: 8 [default]` — NOT the pinned C-24 config (R6
+  measured ladder [0.3594…1.0], NSYS 16). CAUSE: the launch env set only
+  METRIC_EST/ROUNDS_B/SEED_B/TAG_SUFFIX and omitted GATE_PT0_BETAS_B /
+  GATE_PT0_NSYS_B (K=10 default coincidentally matched); prior gates' launches
+  pinned these and I did not re-read a prior launch command from the record
+  before launching — the memory-for-artifact failure class, operational form,
+  THIRD env-knob incident class in this engagement. TWO visible warning signs
+  were rationalized away pre-launch: the alloc-A smoke printed R = 12 (W/B
+  shapes (3, 12, 33, 33)) and n0 = 80 = 10×8. The scorer ran (unblinding
+  occurred) and its output is QUARANTINED in
+  `carousel_gate_pt0_out/invalid_cfg_run1/` (37 files) — headline numbers are
+  NOT interpreted against the checkpoint (wrong ladder reproduces the PT-0
+  naive-ladder failure mode: RT 0, EEVPD medians below band on hot rungs,
+  pair acc < 0.25, occ 0.005–0.12). ONE flag carried forward as SUGGESTIVE
+  ONLY, pending the valid rerun: the scorer's F-M fired on all four arms with
+  B/W shares ~0.1–0.4 (W-only ≈ reconstructed-pooled everywhere) — on THIS
+  wrong config, window variance inflation is cross-chain dispersion, not
+  ensemble-mean drift; whether that transfers to the pinned config is exactly
+  what the rerun adjudicates. FIXES: (1) pt4_score.py now asserts the FULL
+  C-24 ladder (allclose, 1e-12) and NSYS == 16 — the config-mismatch class is
+  scorer-fatal from now on; (2) relaunch pins EVERY knob explicitly (BETAS_B,
+  K_B, NSYS_B, ROUNDS_B, SSMAX, DEVAR, METRIC_WINDOWS, METRIC_EST, SEED_B,
+  TAG_SUFFIX) and the arms' model cards are verified against the checkpoint
+  config line BEFORE the orchestrator leaves them unattended. COST: ≈ 13
+  GPU·h + 3.4 h wall. Blind status: the quarantined scores were seen; the
+  rerun uses fresh dynamics (same seeds, different config ⇒ different
+  trajectories), so no meaningful unblinding of the rerun's outcome occurred.
+
 - **2026-07-13 (GATE PT-4 LAUNCHED — pre-launch verifications PASSED; arms
   running BLIND):** instruments committed + audited (da63b53 certified after
   B3-1 fix; b4dcda0 SEED_A knob certified). Allocation A (55869274, 90 min):
