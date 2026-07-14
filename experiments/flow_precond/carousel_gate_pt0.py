@@ -3115,6 +3115,27 @@ def run_pr_phase_p(tag, handoff_path, kn):
     ph_npz = os.path.join(OUT, f"arrays_PR_{tag}_probe.npz")
 
     def save_probe(t):
+        # AUDIT FIX (blocking #2, scorer<->runner key contract): emit the
+        # DELIVERABLE keys (sd_u/leak/knots/beta_min/knot_se) + a PACKED
+        # readiness_trace (N,3)=[t, beta_min, max_knot_dev] that pt5a_r2_score
+        # requires in the probe companion (they previously lived only in the
+        # handoff file / as component keys -> require_keys crashed every arm).
+        # When readiness has NOT fired, final_snap is None: write sentinels
+        # (nan scalar / empty arrays); the scorer's F-R branch keys off the
+        # readiness_fired flag and does not use them.
+        tr_pack = np.column_stack([
+            np.asarray(ready_t, np.float64),
+            np.asarray([np.nan if b is None else b for b in ready_bmin], np.float64),
+            np.asarray([np.nan if v is None else v for v in ready_dev], np.float64),
+        ]) if ready_t else np.zeros((0, 3), np.float64)
+        if final_snap is not None:
+            fs_sd, fs_leak = final_snap["sd_u"], final_snap["leak"]
+            fs_knots, fs_bmin = final_snap["knots"], final_snap["beta_min"]
+            fs_kse = final_snap["knot_se"]
+        else:
+            fs_sd, fs_leak = np.zeros(0), pr_leak_window(ind_all, mask_m, mask_p,
+                                                         PR_D0, t + 1)
+            fs_knots, fs_bmin, fs_kse = np.zeros(0), np.nan, np.zeros(0)
         np.savez(
             ph_npz, betas_grid=betas, u=u_all[:t + 1], ind=ind_all[:t + 1],
             eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
@@ -3124,6 +3145,12 @@ def run_pr_phase_p(tag, handoff_path, kn):
             n_revert=np.int64(n_revert), rounds_done=np.int64(t + 1),
             readiness_fired=np.bool_(readiness_fired),
             t_ready_steps=np.int64(-1 if t_ready is None else t_ready),
+            sd_u=np.asarray(fs_sd, np.float64),
+            leak=np.asarray(fs_leak, np.float64),
+            knots=np.asarray(fs_knots, np.float64),
+            beta_min=np.float64(np.nan if fs_bmin is None else fs_bmin),
+            knot_se=np.asarray(fs_kse, np.float64),
+            readiness_trace=tr_pack,
             readiness_trace_t=np.asarray(ready_t, dtype=np.int64),
             readiness_trace_pass=np.asarray(ready_pass, dtype=np.bool_),
             readiness_trace_beta_min=np.asarray(
@@ -3446,9 +3473,18 @@ def run_pr_phase_q(tag, handoff_path, kn):
     # load+resave pattern already used by run_st_phase1) --------------------
     npz_path = os.path.join(OUT, f"arrays_{tag}.npz")
     merged = dict(np.load(npz_path))
+    # AUDIT FIX (blocking #2): the scorer requires a PACKED pr_readiness_trace
+    # (N,3)=[t, beta_min, max_knot_dev] in the production npz (it read a bare
+    # key the runner only wrote as components -> require_keys crashed).
+    pr_trace_pack = np.column_stack([
+        np.asarray(hd["readiness_trace_t"], np.float64),
+        np.asarray(hd["readiness_trace_beta_min"], np.float64),
+        np.asarray(hd["readiness_trace_maxdev"], np.float64),
+    ]) if np.asarray(hd["readiness_trace_t"]).size else np.zeros((0, 3), np.float64)
     extra_pr = dict(
         pr_t_ready_steps=np.int64(t_ready), pr_beta_min=np.float64(beta_min),
         pr_knots=knots, pr_readiness_fired=np.bool_(True),
+        pr_readiness_trace=pr_trace_pack,
         pr_readiness_trace_t=hd["readiness_trace_t"],
         pr_readiness_trace_beta_min=hd["readiness_trace_beta_min"],
         pr_readiness_trace_maxdev=hd["readiness_trace_maxdev"],
