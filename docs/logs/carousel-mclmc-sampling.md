@@ -472,6 +472,130 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-5a-r2 — DEDICATED CHEAP-PROBE tuning scheme
+  (broad-init probe → ladder_recipe → C-24 production), replacing the
+  PT-5a-falsified in-run u-stationarity trigger; carousel END-TO-END
+  re-validation (HUMAN-APPROVED 2026-07-14: chose Option A after the PT-5a
+  F-NEVER, "as long as the probe is relatively cheap" — cost CONFIRMED
+  ~600–1000 steps/β ≈ 15–20% overhead from the arm-A subsampling finding;
+  then "Go ahead with it!").**
+  **Status: awaiting grader approval.**
+  **Claim + classification.** A CHAIN — stochastic-estimator (probe
+  measurements) → distributional (production occupancy). Links, each named:
+  (R, readiness) a crossing-count probe-readiness signal fires at a
+  sensible budget with BROAD init (the mechanism that MAP-init lacked —
+  PT-5a F-NEVER); (T, tuning) the ladder + β_min from a FRESH broad-init
+  probe reproduce the certified carousel values (this is W-L re-run live,
+  not from archived data); (P, production) the C-24 production config run on
+  the PROBE'S ladder transports and reproduces the certified pocket-weight
+  band — the END-TO-END point-and-go pipeline on the known answer. UNTESTED
+  here: the SECOND posterior (PT-5 proper — this gate is the carousel
+  re-validation that the replacement scheme works before generalization);
+  the C-28 metric menu (still open; production uses the freeze-500
+  within-estimator path with its recorded (3,28] inflation, NOT re-gated).
+  **Cause hypothesis.** PT-5a's in-run trigger failed for a diagnosed
+  reason (F-NEVER; two trigger-design failures — τ-underestimate never
+  fires + window-blindness to drift; the drift itself = MAP-pinned tempered
+  rungs never equilibrate). A DEDICATED probe with BROAD init (both MAMS
+  basins, the arm-A draw_init) equilibrates the basin OCCUPANCY fast
+  (measured ~400 steps from arm-A subsampling, vs MAP-init's >4000), so
+  sd(u) and leakage are cheaply measurable; that probe's ladder, fed to the
+  ALREADY-VALIDATED C-24 production (which works from a MAP entry on the
+  COLD basin — the slow-u problem was only the tempered in-run rungs this
+  scheme no longer samples), reproduces the certified carousel end-to-end.
+  The scheme is a chain of already-validated pieces (arm-A probe machinery;
+  ladder_recipe W-L PASS PT-4; C-24 production C-24/C-25) + ONE new element
+  (crossing-count probe-readiness).
+  **Scheme (pinned).** PHASE P (probe): broad init = draw_init from MAMS
+  pools, both basins (run_arm_a machinery); 10-β geomspace(0.01,1) grid; NO
+  swaps; per-rung u + basin-indicator recorded per step. READINESS (the new
+  element, crossing-count based for generalization): the probe stops at the
+  earliest step ≥ a floor where the coldest-tempered rung's basin OCCUPANCY
+  is stationary (split-halves on the M/P occupancy fraction over a trailing
+  window — occupancy, NOT u, so it is drift-robust and equilibrates fast
+  with broad init) AND ≥ N_x cumulative basin crossings observed at that
+  rung (Poisson-precision floor for the β_min leakage rate); generous cap.
+  Then sd(u) per rung over the post-readiness window (recipe convention) +
+  leakage per rung → ladder_recipe.design_ladder + beta_min_rule → ladder +
+  β_min. PHASE Q (production): the C-24 config on the PROBE'S ladder — MAP +
+  1e-6·I entry (PENDING RATIFICATION, standing; the entry that WORKS for the
+  cold-basin production), K=10, NSYS 16, freeze-500 within-estimator,
+  ROUNDS 1000, even/odd swaps. Probe is DISCARDED after producing the
+  ladder (not carried into Q). Chunk both phases at 96-wide (the OOM fix,
+  grader-validated bitwise-up-to-FP-reorder). 3 seeds (60/61/62).
+  **Predictions (direction + magnitude).** (R) readiness fires by ~600–1000
+  steps/β on the carousel (arm-A finding: ~400 burn-in + crossing margin);
+  probe wall ~15–20 min; the crossing-count floor is hit at the binding rung
+  β≈0.5995 (leak ~0.09) within the window. (T) probe ladder = 6 rungs, knots
+  within 3× propagated se of certified [0.3594, 0.4388, 0.5373, 0.6598,
+  0.8116, 1.0] (arm-A subsampling gave max dev ≤ 0.011 at 600–1000 steps),
+  β_min = 0.3594. (P) production: per-arm RT_pocket ≥ 117 (175 op-7-scaled
+  to 1000 rounds; predict 150–300), pooled 3-seed occupancy ∈ (0.32, 0.49)
+  matching C-25's ≈0.42 (predict 0.30–0.45), W-s seed pairs agree; EEVPD /
+  pair-acc / NaN healthy (C-24 class). (end-to-end) the pipeline reproduces
+  the certified carousel with ZERO hand-set ladder/β_min — the point-and-go
+  claim.
+  **Win conditions (scorer = pt5a_r2_score.py from the pt5a lineage — DROP
+  the trigger/W-S-stationarity clauses; KEEP W-T ladder-repro, W-H/W-P/W-G
+  production; ADD a readiness-fired clause; committed + audited BEFORE
+  unblinding).** (W-R) readiness fired on all 3 arms within the cap; probe
+  steps + crossing counts REPORTED. (W-T) all 3: rung count 6 AND max knot
+  |Δ| ≤ 3× combined se vs certified AND β_min = 0.3594. (W-P) pooled
+  occupancy ∈ band (near-edge rules), per-arm RT ≥ 117, W-s all pairs ≤ 2σ.
+  (W-H) EEVPD medians ∈ [1e-4,2e-3], pair acc ∈ [0.25,0.65], NaN 0. (W-G,
+  regression guard) production post-freeze cold gen-eig ≤ C-28 class (max
+  ≤ 30, ≤ 1 axis > 10) — exceeding = handoff/config finding, not metric
+  adjudication. (W-a) W-R ∧ W-T ∧ W-P ∧ W-H ∧ W-G on all arms ⇒ the
+  dedicated-probe point-and-go pipeline is PROPOSED as the PT-5 tuning layer
+  (UNCERTIFIED; carousel-only; 1e-6·I pending; metric menu open).
+  **Falsifiers + routing.** F-R: readiness does NOT fire by the generous cap
+  ⇒ broad-init occupancy not equilibrating as the arm-A finding predicted ⇒
+  report (contradicts the finding — investigate before PT-5). F-T: fresh
+  probe ladder ≠ certified within tol ⇒ probe/recipe bug OR the fresh
+  realization genuinely differs (recompute; the arm-A subsampling says it
+  should reproduce) ⇒ report. F-P: production does not transport (RT <
+  floor) or occupancy out of band beyond near-edge ⇒ the END-TO-END pipeline
+  fails on the KNOWN answer ⇒ the scheme is broken, report-to-human (a hard
+  negative — the pieces validated separately don't compose). F-eq: seed
+  pairs > 3σ ⇒ single-seed unreliable. No auto-levers.
+  **Threshold derivation.** (T) knot tol = 3× delta-method propagated se
+  (the L2 criterion, ~0.01 interior) — DERIVED from the sd(u) sampling
+  distribution. (P) band (0.32,0.49) = certified C-25 pocket-weight band;
+  RT floor 117 = 175×1000/1500 op-7 — DERIVED from prior gates. (R) crossing
+  floor N_x: pinned so the β_min leakage rate at the binding rung has ≤ ~30%
+  Poisson se (N_x ≥ ~12 crossings) AND the ln(100) margin holds — DERIVED
+  from the arm-A leak ~0.09 at β=0.5995. (occupancy-stationarity window /
+  floor: threshold NOT independently derivable for a NEW system a priori —
+  stated as the carousel-calibrated starting value to be VALIDATED here and
+  generalized at PT-5; flagged to grader).
+  **Blind spot (metric).** Reproducing the carousel (known answer) does NOT
+  prove generalization — a probe tuned to reproduce THIS system's ladder
+  could fail on a new one; PT-5 is the real test (this gate is necessary,
+  not sufficient). Occupancy is blind along the |cosΔμ|≈0 inflated axes
+  (within-basin bias UNCONSTRAINED, standing). The certified pocket-weight
+  ≈0.42 basis (C-25) is itself UNCERTIFIED.
+  **Pre-committed plots.** Probe: basin-occupancy fraction vs step per rung
+  (readiness = when it goes flat); sd(u) vs β with the probe window marked.
+  Ladder: probe knots vs certified (overlay, within-se band). Production:
+  cold-occupancy 3-arm overlay rising into the (0.32,0.49) band and holding;
+  gen-eig window-max trace (report). F-P would show cold-occ plateauing
+  below 0.27 or RT flat.
+  **Cost (interactive-only, wall-minimized).** Probe ~15–20 min (60–100
+  rounds, 96-wide chunked) + production ~131 min (1000 rounds, 96-wide) per
+  arm; 3 seeds PARALLEL on 3 GPUs ⇒ ONE ~180-min allocation (probe then
+  production in-process per arm; ~2.5 h wall + compile). Plus a smoke (≤ 60
+  min): tiny probe (forced short readiness) → ladder → tiny production,
+  new npz keys + the probe→production handoff verified, 96-wide timing GO.
+  ≈ 12 GPU·h. Reuses: run_arm_a (broad init), ladder_recipe (W-L), the
+  D2/C-24 production path, round_all_chunked.
+  **Process.** New probe+production arm path (ADDITIVE; existing arms
+  untouched) implemented sonnet + opus-audited; pt5a_r2_score.py opus-audited
+  before unblinding; every launch knob pinned + card-verified
+  (launch-discipline, standing); crossing-count readiness is the one novel
+  element — audit it hardest. Model policy: opus graders/audits, sonnet
+  impl, explicit model every dispatch (no Fable — human directive
+  2026-07-14).**
+
 - **Run: carousel GATE PT-5a — in-run self-tuning ladder scheme, validated
   against the known carousel answer (HUMAN-APPROVED 2026-07-14: "Can you
   validate this new tuning scheme on our well-sampled carousel posterior
