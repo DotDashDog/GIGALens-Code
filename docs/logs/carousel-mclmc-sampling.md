@@ -2677,8 +2677,14 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   D1_G4pt4, one arm per GPU, launched ~16:xx, all 4 model cards clean, srun
   steps .0–.3 RUNNING. Allocation C (55872726, 150 min): probe rerun seed 54
   tag probe54 (margin ~15 min — thin, accepted; a clip costs only recipe-L2
-  latency, not gate integrity). Results remain BLIND until pt4_score.py +
-  pt4_recipe_validate.py run per process pins.
+  latency, not gate integrity). OUTCOME: TIMED OUT at 2:30 — all 10 β sampled
+  (~800 s each) but arm A runs a ~12-min hot-end diagnostic + Δ-profile BEFORE
+  its only save, so nothing was written; full probe cost ≈ 2h40m, not 2h15m
+  (second margin misjudgment on the same arm, recorded; ~2.5 GPU·h wasted, no
+  unblinding — probe output is recipe-input only). Allocation D (55878062,
+  180 min): attempt 3, same pinned config, ETA ≈ 2h40m + ~20 min margin.
+  Results remain BLIND until pt4_score.py + pt4_recipe_validate.py run per
+  process pins.
 
 - **2026-07-13 (HUMAN DIRECTIVE — plan reshape; recorded per PT-4 grader rd-1
   B4: the record, not agent memory, is the source of truth):** the human
