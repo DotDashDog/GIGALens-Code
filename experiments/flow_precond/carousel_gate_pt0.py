@@ -30,6 +30,18 @@ One arm per process (orchestrator assigns GPUs):
            1e-6*I entry as D2. NOT part of the composite --arm smoke; smoke it
            with GATE_PT0_SMOKE=1 --arm ST. --selftest-st = numpy-only unit
            checks of the ST numeric helpers (no model build).
+  PR       GATE PT-5a-r2 probe->production mode (checkpoint "carousel GATE
+           PT-5a-r2", rd-2 CERTIFY-RECOMMENDED): phase P (probe) = swaps-OFF
+           BROAD-init (both MAMS basins, the arm-A draw_init convention) leg
+           on the arm-A probe grid, fixed pooled metric; readiness = the
+           rd-1 CUMULATIVE-CONVERGENCE re-derivation of (ladder knots,
+           beta_min) on the trailing window [D0, t), comparing t vs t/1.5
+           (replaces PT-5a's falsified in-run u-stationarity trigger).
+           Phase Q (production) = run_pt on the probe's ladder with a FRESH
+           MAP + 1e-6*I entry (D2 convention; NOT carried from the probe).
+           NOT part of the composite --arm smoke; smoke it with
+           GATE_PT0_SMOKE=1 --arm PR. --selftest-pr = numpy-only unit check
+           of the readiness convergence logic against arrays_A_power.npz.
   smoke    all six arms, SHAPE-FAITHFUL (amendment iii, the GATE L attempt-1
            lesson): FULL production compile widths/counts (all Arm-A betas at
            32-wide, both hot-end checks, B at R=12 x NSYS=8 incl. swap sync +
@@ -96,10 +108,11 @@ U_REL_TOL = 1e-6                    # RELATIVE u-recovery gate (audit fixes 2+3)
 MIN_CLASS_N = 50                    # Arm A: min retained samples per (beta, class)
                                     # cell; below -> E missing, Delta truncated (fix 4)
 ARM_SEED = dict(A_power=0, A_lik=0, B1=0, B2=1, B3=2, B4=3, B5=4, D1=5, D2=6,
-                ST=7)
+                ST=7, PR=8)
                 # checkpoint seeds (PT-0b/PT-1/PT-2 arms override via
                 # GATE_PT0_SEED_B: 10-13 PT-0b, 20/21 PT-1, 30-33 PT-2;
-                # PT-5a ST production arms 55/56/57)
+                # PT-5a ST production arms 55/56/57; PT-5a-r2 PR production
+                # arms via the same env override, seeds pinned at launch)
 # PT-2 windowed mass-matrix adaptation (D arms; checkpoint "GATE PT-2")
 METRIC_WINDOWS = (100, 250, 500)    # expanding boundaries; metric FROZEN after last
 GENEIG_EVERY = 100                  # gen-eig ratio trace cadence (rounds)
@@ -167,6 +180,42 @@ ST_LEAK_UNIT = 1500.0               # leakage rates normalized per 1500 kernel
                                     # SHARED runner/scorer denominator (rd-3
                                     # pin 1)
 
+# GATE PT-5a-r2 PR (probe -> production) two-phase mode; checkpoint "carousel
+# GATE PT-5a-r2". rd-1 READINESS REDESIGN (CUMULATIVE-CONVERGENCE re-
+# derivation of the ladder/beta_min itself, replacing the falsified crossing-
+# count/occupancy-stationarity proxy) + rd-2 4 pre-run items are BINDING over
+# the original "Scheme"/"Win conditions" text. Phase P (probe): run_arm_a-
+# style BROAD init (both MAMS basins), the arm-A probe grid, swaps OFF, a
+# FIXED (non-adaptive) pooled metric; readiness = periodic re-derivation of
+# (ladder knots, beta_min) on the cumulative trailing window [D0, t), fixed
+# D0, comparing t vs t/1.5. Phase Q (production): the D2/C-24 production leg
+# (FRESH MAP + 1e-6*I entry -- NOT carried from the probe) run through run_pt
+# on the probe's ladder.
+PR_GRID_N = 10                      # phase-P grid = arm-A probe grid (PINNED)
+PR_NSYS = 16                         # phase-P NSYS (matches ST_NSYS convention;
+                                     # half M-pool / half P-pool per rung, 8+8,
+                                     # mirroring run_arm_a's draw_init)
+PR_D0 = 10                           # readiness fixed discard, ROUNDS (rd-1:
+                                     # "D0 = 100 STEPS" at K=10 steps/round)
+PR_READY_EVERY = 10                  # readiness re-derivation cadence, ROUNDS
+                                     # (rd-1: "every READINESS_EVERY rounds
+                                     # (e.g. 10)")
+PR_READY_FLOOR = 30                  # earliest readiness evaluation round (a
+                                     # "small min"): derived, not guessed --
+                                     # st_tau_rounds needs window >= 4 rounds
+                                     # for BOTH the t and t/1.5 windows, so
+                                     # floor/1.5 - PR_D0 >= 4 => floor >=
+                                     # 1.5*(PR_D0+4) = 21; 30 gives margin
+PR_CAP_ROUNDS = 200                  # readiness CAP: 2000 steps / K=10 = 200
+                                     # rounds (rd-2 item 2, pinned above
+                                     # seed-A's 1200-step stabilization with
+                                     # cross-seed margin)
+PR_PHASE0_CHUNK = ST_PHASE0_CHUNK    # reuse the 96-wide OOM fix chunk width
+PR_RULE_NSYS = ST_RULE_NSYS          # pinned ln(100) discovery-rule constants,
+PR_RULE_BUDGET = ST_RULE_BUDGET      # REUSED unchanged (same threshold as the
+                                     # certified table, not re-derived)
+PR_TARGET_NATS = ST_TARGET_NATS      # design_ladder target (PT-0b convention)
+
 SMOKE = False
 # Wall-clock fix (2026-07-11): the PT round is ONE fused jitted call vmapped over
 # rungs with beta as a traced argument (the per-rung dispatch loop was fixed-cost
@@ -206,6 +255,15 @@ def apply_smoke():
     ST_ROUNDS0_MAX, ST_TRIG_FLOOR, ST_TRIG_EVERY = 24, 12, 2
     ST_TRIG_WIN, ST_RSTAR_FLOOR = 10, 16
     ST_WINDOW0, ST_MEAS_WIN, ST_ROUNDS1 = 2, 10, 20
+    # GATE PT-5a-r2 PR smoke: tiny readiness schedule exercising the
+    # cumulative-window re-derivation, a forced-readiness fallback (mirrors
+    # the ST forced-trigger pattern) if the natural test hasn't converged by
+    # the floor, the probe->handoff->phase-Q path, and all new npz keys.
+    # PR_READY_FLOOR=10 keeps BOTH the t and t/1.5=6 windows >= 4 rounds
+    # (PR_D0=2 -> window_prev=6-2=4, the st_tau_rounds minimum). Numbers are
+    # NOT the measurement.
+    global PR_D0, PR_READY_EVERY, PR_READY_FLOOR, PR_CAP_ROUNDS
+    PR_D0, PR_READY_EVERY, PR_READY_FLOOR, PR_CAP_ROUNDS = 2, 2, 10, 20
 
 
 def pr(*a):
@@ -2798,12 +2856,686 @@ def run_st_phase1(tag, handoff_path, kn):
     pr(f"[ST {tag}] phase 1 DONE -> {OUT}")
 
 
+# --------------------------------------------------- GATE PT-5a-r2 PR: readiness
+def pr_leak_window(ind, mask_m, mask_p, d0, t):
+    """GATE PT-5a-r2 readiness leak measure: per-rung MIN(M-init-now-pocket,
+    P-init-now-main) occupancy FRACTION, pooled over rounds AND chains in the
+    cumulative window [d0, t) (basin_estimates leak_Minit/leak_Pinit
+    convention -- the PT-4 L1b conservative-direction "min of the two basin-
+    class directions" form, NOT the ST B2' flip-count rate). ind: (n_rounds,
+    R, nsys) bool/uint8 pocket indicator; mask_m/mask_p: (nsys,) bool,
+    disjoint, selecting the M-init / P-init chains. Returns (R,) float64."""
+    if t <= d0:
+        raise ValueError(f"pr_leak_window: need t > d0, got d0={d0}, t={t}")
+    w = np.asarray(ind[d0:t], dtype=bool)
+    leak_m = w[:, :, mask_m].mean(axis=(0, 2))
+    leak_p = (~w[:, :, mask_p]).mean(axis=(0, 2))
+    return np.minimum(leak_m, leak_p)
+
+
+def pr_ladder_snapshot(betas, u, ind, mask_m, mask_p, d0, t):
+    """One cumulative-window [d0, t) ladder/beta_min re-derivation (GATE
+    PT-5a-r2 rd-1 READINESS REDESIGN, binding over the original crossing-
+    count/occupancy-stationarity proxy). sd(u) via st_sd_u_window (r_star=t,
+    meas_win=t-d0 -- EXACTLY the window [d0, t), pooled ddof-0, no per-chain
+    mean removal, recipe convention -- REUSED, not reimplemented); leak via
+    pr_leak_window over the SAME window; beta_min via the ORIGINAL (pre-B2')
+    ln(100) discovery rule -- beta_min_rule(..., counts=None) -- with
+    probe_steps = the window's OWN length (the task-pinned call form:
+    occupancy-fraction leak pooled over nsys*window_rounds samples does not
+    have the sparse-flip-count problem the B2' min-count guard targeted, so
+    the plain rule applies here, unlike ST's flip-rate leak). GUARD (rd-2
+    IMPLEMENTATION NOTE): design_ladder divides by (n_rungs-1); beta_min ==
+    1.0 (single-rung collapse, incl. beta_min_rule finding no admissible
+    beta at all) or n_rungs <= 1 -> NOT CONVERGED, beta_min/n_rungs/knots/
+    knot_se all None (never crash). Returns a dict."""
+    w = t - d0
+    if w < 1:
+        raise ValueError(f"pr_ladder_snapshot: window [{d0}:{t}) empty")
+    sd, se, tau = st_sd_u_window(u, t, w)
+    leak = pr_leak_window(ind, mask_m, mask_p, d0, t)
+    try:
+        beta_min = ladder_recipe.beta_min_rule(betas, leak, PR_RULE_NSYS,
+                                               PR_RULE_BUDGET, w)
+    except ValueError:
+        beta_min = None
+    n_rungs, knots, kse = None, None, None
+    if beta_min is not None and beta_min < 1.0:
+        des = ladder_recipe.design_ladder(betas, sd, beta_min, PR_TARGET_NATS)
+        n_rungs = int(des["n_rungs"])
+        if n_rungs > 1:
+            knots = np.asarray(des["knots"], np.float64)
+            kse = ladder_recipe.knot_se(betas, sd, se, beta_min,
+                                        PR_TARGET_NATS)
+        else:
+            beta_min = None       # rd-2 guard: n_rungs <= 1
+    else:
+        beta_min = None            # rd-2 guard: beta_min == 1.0 / inadmissible
+    return dict(t=int(t), d0=int(d0), window=int(w), sd_u=sd, sd_u_se=se,
+               tau_rounds=tau, leak=leak, beta_min=beta_min, n_rungs=n_rungs,
+               knots=knots, knot_se=kse)
+
+
+def pr_readiness_ready(snap_t, snap_prev):
+    """rd-1/rd-2 pinned READY test: compare the cumulative-window derivation
+    at t vs t/1.5 (snap_t, snap_prev, from pr_ladder_snapshot). READY iff
+    (i) beta_min is the SAME grid point AND non-trivial (< 1.0, i.e. not
+    None under the rd-2 collapse guard) at BOTH windows, with the SAME
+    n_rungs (a ladder-shape change makes the knot arrays position-
+    incomparable -- treated as not converged, never crash), AND (ii)
+    max|interior knot(t) - interior knot(t/1.5)| < T_TOL, T_TOL = 3x the max
+    INTERIOR delta-method knot se (ladder_recipe.knot_se) at the CURRENT
+    (larger) window t -- the derived W-T tolerance, not an invented
+    constant. n_rungs <= 2 (no interior knots to compare) trivially
+    satisfies (ii). Returns (ready: bool, max_knot_dev: float or None,
+    t_tol: float or None)."""
+    bt, bp = snap_t["beta_min"], snap_prev["beta_min"]
+    if bt is None or bp is None:
+        return False, None, None
+    if snap_t["n_rungs"] != snap_prev["n_rungs"]:
+        return False, None, None
+    if not math.isclose(bt, bp, rel_tol=0.0, abs_tol=1e-9):
+        return False, None, None
+    n = snap_t["n_rungs"]
+    if n <= 2:
+        return True, 0.0, 0.0
+    max_dev = float(np.max(np.abs(snap_t["knots"][1:-1]
+                                  - snap_prev["knots"][1:-1])))
+    t_tol = 3.0 * float(np.max(snap_t["knot_se"][1:-1]))
+    return (max_dev < t_tol), max_dev, t_tol
+
+
+def pr_selftest():
+    """--selftest-pr: numpy-only unit test of the GATE PT-5a-r2 readiness
+    convergence logic (pr_ladder_snapshot / pr_readiness_ready, the rd-1
+    READINESS REDESIGN, rd-2 CERTIFY-RECOMMENDED) against the ARCHIVED arm-A
+    probe data (arrays_A_power.npz, broad MAMS init, step-resolved u/ind) --
+    reproduces the checkpoint's verified table (readiness FALSE at
+    cumulative t=300..1100, fires at t=1200) as the core correctness check.
+    Here "t"/"d0" are raw MCLMC STEPS (arm-A's per-step archived trace,
+    D0=100 per rd-1); the live PR runner calls the SAME functions with
+    t/d0 in ROUNDS (PR_D0=10 rounds = 100 steps at K=10) -- the functions are
+    generic over the trace's time unit. No jax use, no model build."""
+    npz = os.path.join(OUT, "arrays_A_power.npz")
+    if not os.path.exists(npz):
+        raise RuntimeError(f"--selftest-pr needs {npz} (archived arm-A "
+                           f"broad-init probe data); not found")
+    d = np.load(npz)
+    u_g, ind_g, betas = d["u"], d["ind"], d["betas"]   # (10, 2, 3000, 16)
+    R, ng, T, nch = u_g.shape
+    assert ng == 2, ng
+    # combine the two init-groups (0=M-init, 1=P-init; arm-A's basin_
+    # estimates convention) into one chain axis, group-major so mask_m/
+    # mask_p are contiguous halves
+    u_cum = np.transpose(u_g, (2, 0, 1, 3)).reshape(T, R, ng * nch)
+    ind_cum = np.transpose(ind_g, (2, 0, 1, 3)).reshape(T, R, ng * nch
+                                                        ).astype(bool)
+    mask_m = np.zeros(ng * nch, dtype=bool)
+    mask_m[:nch] = True
+    mask_p = np.zeros(ng * nch, dtype=bool)
+    mask_p[nch:] = True
+    d0 = 100
+
+    def snap(t):
+        return pr_ladder_snapshot(betas, u_cum, ind_cum, mask_m, mask_p, d0, t)
+
+    s300, s200 = snap(300), snap(200)
+    ready300, dev300, tol300 = pr_readiness_ready(s300, s200)
+    assert s300["beta_min"] is None, s300["beta_min"]          # collapsed (1.0)
+    assert round(s200["beta_min"], 4) == 0.3594, s200["beta_min"]
+    assert not ready300, (ready300, dev300, tol300)
+    pr(f"[selftest-pr] t=300: beta_min collapsed (1.0 -> None under the rd-2 "
+       f"guard) vs t/1.5=200's {s200['beta_min']:.4f} -> mismatch, NOT READY "
+       f"PASS")
+    s1200, s800 = snap(1200), snap(800)
+    ready1200, dev1200, tol1200 = pr_readiness_ready(s1200, s800)
+    assert round(s1200["beta_min"], 4) == 0.3594, s1200["beta_min"]
+    assert round(s800["beta_min"], 4) == 0.3594, s800["beta_min"]
+    assert s1200["n_rungs"] == s800["n_rungs"] == 6, \
+        (s1200["n_rungs"], s800["n_rungs"])
+    assert dev1200 < tol1200, (dev1200, tol1200)
+    assert ready1200, (ready1200, dev1200, tol1200)
+    pr(f"[selftest-pr] t=1200: beta_min stable at 0.3594 vs t/1.5=800 (both "
+       f"6 rungs); max|Delta knot|={dev1200:.4g} < T_TOL={tol1200:.4g} (3x "
+       f"max interior knot se) -> READY PASS")
+    # intermediate cumulative rounds 300..1100 all NOT ready (reproduces the
+    # checkpoint's "FALSE at 300/400/.../1000/1100" verified table row)
+    for t in (300, 400, 500, 600, 700, 800, 900, 1000, 1100):
+        tprev = int(t / 1.5)
+        if tprev <= d0:
+            continue
+        ready, _, _ = pr_readiness_ready(snap(t), snap(tprev))
+        assert not ready, (t, ready)
+    pr("[selftest-pr] readiness FALSE at cumulative t=300..1100 (checkpoint's "
+       "verified table) PASS")
+    pr("[selftest-pr] ALL PR readiness checks PASS")
+
+
+def run_pr_phase_p(tag, handoff_path, kn):
+    """GATE PT-5a-r2 phase P (probe): BROAD-init measurement leg (run_arm_a's
+    draw_init convention -- half M-pool, half P-pool per rung, PR_NSYS=16
+    total), the arm-A probe grid, swaps OFF (kernel-only leakage semantics,
+    the ST B1 pin carried over -- swap-relabeling would corrupt the per-
+    init-group leak measurement), a FIXED (non-adaptive) pooled metric
+    (M["cov_pool"], the arm-A hot-end unconfined convention -- the checkpoint
+    does not pin a windowed metric adaptation for phase P), chunked via
+    round_all_chunked at PR_PHASE0_CHUNK (96-wide OOM fix, reused unchanged).
+    Readiness = the rd-1 CUMULATIVE-CONVERGENCE redesign (pr_ladder_snapshot
+    / pr_readiness_ready), NOT a per-round u-stationarity trigger. Returns
+    True if readiness fired (handoff + probe npz saved), False on F-R (cap
+    reached without convergence; probe npz still saved, no handoff)."""
+    betas = np.geomspace(0.01, 1.0, PR_GRID_N)   # arm-A probe grid (PINNED)
+    R = len(betas)
+    chunk, chunk_src = _st_env_num("GATE_PT0_ST_CHUNK", PR_PHASE0_CHUNK, int)
+    seed, nsys, k_b = kn["seed"], kn["nsys"], kn["k_b"]
+    if nsys % 2 != 0:
+        raise RuntimeError(f"PR phase P needs an even NSYS for the half-M/"
+                           f"half-P broad init, got {nsys}")
+    half = nsys // 2
+    rng = np.random.default_rng(seed)
+    key = jax.random.key(seed)
+
+    def draw_init(pool, n):     # run_arm_a's draw_init, verbatim convention
+        idx = rng.integers(0, len(pool), size=n)
+        return pool[idx] + JITTER * rng.standard_normal((n, DIM))
+
+    pos = np.zeros((R, nsys, DIM))
+    for r in range(R):
+        pos[r] = np.concatenate([draw_init(M["pool_M"], half),
+                                 draw_init(M["pool_P"], half)])
+    mask_m = np.zeros(nsys, dtype=bool)
+    mask_m[:half] = True
+    mask_p = np.zeros(nsys, dtype=bool)
+    mask_p[half:] = True
+
+    inv_mass = np.asarray(M["cov_pool"], dtype=np.float64)
+    inv_rungs_j = jnp.asarray(np.broadcast_to(inv_mass, (R, DIM, DIM)))
+    betas_j = jnp.asarray(betas)
+    steps_all = jnp.full((R, nsys), SS_INIT)
+    adapt_all = fresh_adapt2(R, nsys, kn["ss_max"])
+
+    card = dict(
+        arm=tag, gate="PT-5a-r2", pr_phase="P", path="power", seed=seed,
+        seed_source=kn["seed_source"], smoke=SMOKE,
+        script=os.path.abspath(__file__), jax=jax.__version__,
+        devices=[str(d) for d in jax.devices()],
+        x64=bool(jax.config.jax_enable_x64), dim=DIM,
+        R=R, NSYS=nsys, K=k_b, cap_rounds=PR_CAP_ROUNDS,
+        betas=betas.tolist(),
+        betas_source="arm-A probe grid geomspace(0.01, 1, 10) (PINNED)",
+        L=L_MCLMC, ss_init=SS_INIT, ss_max=kn["ss_max"], devar=kn["devar"],
+        env_overrides=dict(NSYS=kn["nsys_src"], K=kn["k_src"],
+                           ss_max=kn["ssmax_src"], devar=kn["devar_src"],
+                           chunk=chunk_src),
+        swaps_off_phase_P=True,
+        init=(f"BROAD: {half} chains draw_init(pool_M) + {half} chains "
+             f"draw_init(pool_P) per rung (run_arm_a convention, "
+             f"JITTER={JITTER})"),
+        metric="FIXED (non-adaptive) pooled MAMS64 empirical cov, all rungs "
+               "(arm-A hot-end unconfined convention)",
+        pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
+        u_def="log_prob = logdensity/beta (power path; the u the readiness "
+              "re-derivation uses -- swaps OFF, B1-class pin)",
+        readiness=dict(
+            rule="rd-1 CUMULATIVE-CONVERGENCE (supersedes the crossing-"
+                 "count/occupancy-stationarity proxy)",
+            d0_rounds=PR_D0, every_rounds=PR_READY_EVERY,
+            floor_round=PR_READY_FLOOR, cap_rounds=PR_CAP_ROUNDS,
+            growth_factor=1.5, rule_nsys=PR_RULE_NSYS,
+            rule_budget_steps=PR_RULE_BUDGET, target_nats=PR_TARGET_NATS,
+            t_tol="3x max interior ladder_recipe.knot_se at the current "
+                  "(larger) window -- derived, not invented"),
+        harness=(f"PR phase-P fused kernel rounds (round_all_chunked, "
+                f"chunk={chunk}), NO swap attempts"),
+        sep_check_max_abs=M["sep_max"])
+    pr("MODEL CARD:", json.dumps(card, indent=1, default=_json_default))
+    summary = dict(model_card=card)
+    t0_all = time.time()
+
+    spec_kernel = dict(dim=DIM, L=L_MCLMC, K=k_b, devar=kn["devar"],
+                       make_tf=lambda b: make_tempered("power", b))
+    round_all = make_fused_round_runner(spec_kernel)
+
+    u_all = np.zeros((PR_CAP_ROUNDS, R, nsys), np.float64)
+    ind_all = np.zeros((PR_CAP_ROUNDS, R, nsys), dtype=np.uint8)
+    ev = np.zeros((PR_CAP_ROUNDS, R))
+    ssm = np.zeros((PR_CAP_ROUNDS, R))
+    n_revert = 0
+    u0_rel = None
+    ready_t, ready_pass = [], []      # readiness_trace parallel arrays
+    ready_bmin, ready_dev, ready_tol = [], [], []
+    t_ready, readiness_fired = None, False
+    final_snap = None
+    ph_npz = os.path.join(OUT, f"arrays_PR_{tag}_probe.npz")
+
+    def save_probe(t):
+        np.savez(
+            ph_npz, betas_grid=betas, u=u_all[:t + 1], ind=ind_all[:t + 1],
+            eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
+            swap_attempts=np.zeros((R - 1, 2), dtype=np.int64),
+            swap_accepts=np.zeros((R - 1, 2), dtype=np.int64),
+            swaps_off=np.bool_(True), metric_fixed=inv_mass,
+            n_revert=np.int64(n_revert), rounds_done=np.int64(t + 1),
+            readiness_fired=np.bool_(readiness_fired),
+            t_ready_steps=np.int64(-1 if t_ready is None else t_ready),
+            readiness_trace_t=np.asarray(ready_t, dtype=np.int64),
+            readiness_trace_pass=np.asarray(ready_pass, dtype=np.bool_),
+            readiness_trace_beta_min=np.asarray(
+                [np.nan if b is None else b for b in ready_bmin], np.float64),
+            readiness_trace_maxdev=np.asarray(
+                [np.nan if v is None else v for v in ready_dev], np.float64),
+            readiness_trace_ttol=np.asarray(
+                [np.nan if v is None else v for v in ready_tol], np.float64),
+            mask_m=mask_m, mask_p=mask_p,
+            arm=np.array(tag), gate=np.array("PT-5a-r2"),
+            seed=np.int64(seed), nsys=np.int64(nsys), K=np.int64(k_b),
+            ss_max=np.float64(kn["ss_max"]), devar=np.float64(kn["devar"]),
+            smoke=np.bool_(SMOKE), d0_rounds=np.int64(PR_D0),
+            every_rounds=np.int64(PR_READY_EVERY),
+            floor_round=np.int64(PR_READY_FLOOR),
+            cap_rounds=np.int64(PR_CAP_ROUNDS))
+
+    pr(f"[PR {tag}] phase P: swaps OFF, {R}x{nsys} = {R * nsys} chains "
+       f"(broad init, half M-pool/half P-pool), K={k_b}, readiness every "
+       f"{PR_READY_EVERY} from round {PR_READY_FLOOR}, D0={PR_D0} rounds, "
+       f"cap {PR_CAP_ROUNDS} rounds")
+    t0 = time.time()
+    t_block, last_block_rd = t0, 0
+    for t in range(PR_CAP_ROUNDS):
+        key, *lks = jax.random.split(key, R + 1)
+        ik_all, sk_all = _round_keys(lks, R, nsys, k_b)
+        p2, ld, steps_all, adapt_all, ec2, ok = round_all_chunked(
+            round_all, jnp.asarray(pos), steps_all, adapt_all, ik_all,
+            sk_all, betas_j, inv_rungs_j, chunk)
+        pos = np.array(p2)
+        logd = np.asarray(ld)
+        ev[t] = np.asarray(ec2).mean(axis=(1, 2)) / DIM
+        ssm[t] = np.asarray(steps_all).mean(axis=1)
+        n_revert += int((~np.asarray(ok)).sum())
+        u = logd / betas[:, None]   # power-path u (readiness reads this)
+        if t == 0:   # round-0 identity verification (run_pt convention)
+            u_direct = M["lp_batch"](pos.reshape(-1, DIM)).reshape(R, nsys)
+            u0_rel = float(np.max(np.abs(u - u_direct)
+                                  / (1.0 + np.abs(u_direct))))
+            pr(f"[PR {tag}] round-0 u identity: rel = {u0_rel:.3e}")
+            if u0_rel > U_REL_TOL:
+                raise RuntimeError(f"round-0 u verification failed: rel "
+                                   f"{u0_rel:.3e} > {U_REL_TOL}")
+        u_all[t] = u
+        ind_all[t] = pos[:, :, POCKET_COL] > POCKET_THR   # round-end indicator
+        # NO swap attempts (B1-class pin): kernel rounds only in phase P
+        rd = t + 1
+        if (rd >= PR_READY_FLOOR
+                and (rd - PR_READY_FLOOR) % PR_READY_EVERY == 0):
+            tprev = int(rd / 1.5)
+            snap_t = ok_ready = maxdev = ttol = None
+            if tprev > PR_D0:
+                try:
+                    snap_t = pr_ladder_snapshot(betas, u_all[:rd],
+                                               ind_all[:rd], mask_m, mask_p,
+                                               PR_D0, rd)
+                    snap_p = pr_ladder_snapshot(betas, u_all[:rd],
+                                               ind_all[:rd], mask_m, mask_p,
+                                               PR_D0, tprev)
+                    ok_ready, maxdev, ttol = pr_readiness_ready(snap_t,
+                                                                snap_p)
+                except ValueError as e:   # transient IAT-window underflow;
+                    ok_ready = False      # never crash the probe on this
+                    pr(f"[PR {tag}] readiness eval @ round {rd}: SKIPPED "
+                       f"({e}) -- not ready")
+            else:
+                ok_ready = False
+            ready_t.append(rd)
+            ready_pass.append(bool(ok_ready))
+            ready_bmin.append(None if snap_t is None else snap_t["beta_min"])
+            ready_dev.append(maxdev)
+            ready_tol.append(ttol)
+            bm_str = ("n/a" if snap_t is None or snap_t["beta_min"] is None
+                      else f"{snap_t['beta_min']:.4f}")
+            pr(f"[PR {tag}] readiness eval @ round {rd} (tprev={tprev}): "
+               f"beta_min={bm_str} maxdev={_f3(maxdev)} T_TOL={_f3(ttol)}"
+               f"{' -> READY' if ok_ready else ''}")
+            if ok_ready:
+                t_ready, readiness_fired, final_snap = rd, True, snap_t
+            elif SMOKE and rd == PR_READY_FLOOR:
+                # SMOKE forced-readiness (mirrors the ST forced-trigger
+                # pattern): exercise the handoff/phase-Q path even if the
+                # natural convergence test cannot fire in a tiny smoke
+                # budget -- NOT a measurement; production never forces.
+                fb = snap_t if (snap_t is not None
+                                and snap_t["beta_min"] is not None) else None
+                if fb is None:
+                    bm_fb = float(betas[7])       # 0.35938-class grid point
+                    sd_fb, se_fb, tau_fb = st_sd_u_window(u_all[:rd], rd,
+                                                         rd - PR_D0)
+                    des_fb = ladder_recipe.design_ladder(
+                        betas, sd_fb, bm_fb, PR_TARGET_NATS)
+                    kse_fb = ladder_recipe.knot_se(betas, sd_fb, se_fb,
+                                                   bm_fb, PR_TARGET_NATS)
+                    fb = dict(
+                        t=rd, d0=PR_D0, window=rd - PR_D0, sd_u=sd_fb,
+                        sd_u_se=se_fb, tau_rounds=tau_fb,
+                        leak=pr_leak_window(ind_all[:rd], mask_m, mask_p,
+                                            PR_D0, rd),
+                        beta_min=bm_fb, n_rungs=int(des_fb["n_rungs"]),
+                        knots=np.asarray(des_fb["knots"], np.float64),
+                        knot_se=kse_fb)
+                t_ready, readiness_fired, final_snap = rd, True, fb
+                pr(f"[PR {tag}] SMOKE: readiness FORCED at round {rd} "
+                   f"(natural test not converged) -- forced-readiness smoke "
+                   f"per checkpoint; NOT a measurement")
+        if (rd % PRINT_EVERY_B == 0 or rd == PR_CAP_ROUNDS or t_ready == rd):
+            spr = (time.time() - t_block) / max(rd - last_block_rd, 1)
+            t_block, last_block_rd = time.time(), rd
+            pr(f"[PR {tag}] phaseP round {rd:4d} "
+               f"cold occ={ind_all[t, -1].mean():.3f} "
+               f"hot occ={ind_all[t, 0].mean():.3f} "
+               f"EEVPD[h/m/c]={ev[t, 0]:.1e}/{ev[t, R // 2]:.1e}/"
+               f"{ev[t, -1]:.1e} reverts={n_revert} block {spr:.2f} "
+               f"s/round ({R * nsys}-wide) wall={time.time() - t0:.0f}s")
+        if rd % SAVE_EVERY_B == 0:
+            save_probe(t)
+        if t_ready == rd:
+            break
+
+    if not readiness_fired:
+        save_probe(PR_CAP_ROUNDS - 1)
+        summary["f_readiness_never"] = True
+        summary["readiness_trace_t"] = ready_t
+        summary["total_wall_s"] = time.time() - t0_all
+        with open(os.path.join(OUT, f"summary_PR_{tag}_probe.json"), "w") as f:
+            json.dump(summary, f, indent=1, default=_json_default)
+        pr(f"\n[PR {tag}] " + "!" * 66)
+        pr(f"[PR {tag}] F-R: readiness did NOT fire by the round-"
+           f"{PR_CAP_ROUNDS} cap -- broad-init occupancy/ladder is not "
+           f"converging as the arm-A finding predicted.")
+        pr(f"[PR {tag}] Probe arrays saved -> {ph_npz}. NO handoff, NO "
+           f"phase Q attempted (A4-class exit path).")
+        pr(f"[PR {tag}] " + "!" * 66)
+        return False
+
+    # ---------------- final measurement + crossing-count sanity floor ------
+    sd_u, sd_u_se = final_snap["sd_u"], final_snap["sd_u_se"]
+    tau_rounds, leak = final_snap["tau_rounds"], final_snap["leak"]
+    beta_min, knots, kse = (final_snap["beta_min"], final_snap["knots"],
+                            final_snap["knot_se"])
+    n_rungs = final_snap["n_rungs"]
+    crossing_counts, _ = st_flip_counts(ind_all[:t_ready], PR_D0, t_ready)
+    pr(f"[PR {tag}] READY at round {t_ready} (D0={PR_D0}): beta_min="
+       f"{beta_min:.6g}, {n_rungs} rungs, knots="
+       + ", ".join(f"{k:.6g}(+-{s:.2e})" for k, s in zip(knots, kse)))
+    pr(f"[PR {tag}] crossing-count sanity floor (report-only, NOT the gate; "
+       f"cumulative basin crossings over ({PR_D0}, {t_ready}]): "
+       + ", ".join(f"b={betas[r]:.4f}:{int(crossing_counts[r])}"
+                   for r in range(R)))
+
+    np.savez(
+        handoff_path, betas_grid=betas, readiness_fired=np.bool_(True),
+        t_ready_steps=np.int64(t_ready),
+        readiness_trace_t=np.asarray(ready_t, dtype=np.int64),
+        readiness_trace_pass=np.asarray(ready_pass, dtype=np.bool_),
+        readiness_trace_beta_min=np.asarray(
+            [np.nan if b is None else b for b in ready_bmin], np.float64),
+        readiness_trace_maxdev=np.asarray(
+            [np.nan if v is None else v for v in ready_dev], np.float64),
+        readiness_trace_ttol=np.asarray(
+            [np.nan if v is None else v for v in ready_tol], np.float64),
+        sd_u=sd_u, sd_u_se=sd_u_se, tau_rounds=tau_rounds, leak=leak,
+        knots=knots, beta_min=np.float64(beta_min), knot_se=kse,
+        n_rungs=np.int64(n_rungs), crossing_counts=crossing_counts,
+        d0_rounds=np.int64(PR_D0), seed=np.int64(seed), nsys=np.int64(nsys),
+        K=np.int64(k_b), smoke=np.bool_(SMOKE),
+        probe_npz=np.array(os.path.basename(ph_npz)))
+    save_probe(t_ready - 1)
+    pr(f"[PR {tag}] handoff saved -> {handoff_path}")
+
+    # pre-committed plot (rd-1): beta_min(t) and max|Delta knot|(t) vs
+    # cumulative round t, fire-round marked
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+    tt = np.asarray(ready_t)
+    bmv = np.asarray([np.nan if b is None else b for b in ready_bmin])
+    dv = np.asarray([np.nan if v is None else v for v in ready_dev])
+    tolv = np.asarray([np.nan if v is None else v for v in ready_tol])
+    ax[0].plot(tt, bmv, "o-")
+    ax[0].axhline(beta_min, ls="--", color="k", lw=0.8,
+                  label=f"final {beta_min:.4f}")
+    ax[0].axvline(t_ready, ls="--", color="r", lw=1.0, label="READY")
+    ax[0].set_xlabel("cumulative round t")
+    ax[0].set_ylabel("beta_min(t)")
+    ax[0].legend(fontsize=8)
+    ax[0].set_title(f"{tag}: readiness beta_min(t)")
+    ax[1].plot(tt, dv, "o-", label="max|Delta knot| (t vs t/1.5)")
+    ax[1].plot(tt, tolv, "s--", label="T_TOL (3x max interior knot se)")
+    ax[1].axvline(t_ready, ls="--", color="r", lw=1.0, label="READY")
+    ax[1].set_xlabel("cumulative round t")
+    ax[1].set_ylabel("beta units")
+    ax[1].legend(fontsize=8)
+    ax[1].set_title(f"{tag}: readiness knot deviation vs T_TOL")
+    fig.tight_layout()
+    fig.savefig(os.path.join(OUT, f"pt0_PR_{tag}_readiness.png"), dpi=120)
+    plt.close(fig)
+
+    summary["readiness_fired"] = True
+    summary["t_ready_steps"] = int(t_ready)
+    summary["readiness_trace_t"] = ready_t
+    summary["beta_min"] = float(beta_min)
+    summary["n_rungs"] = int(n_rungs)
+    summary["knots"] = knots.tolist()
+    summary["knot_se"] = kse.tolist()
+    summary["sd_u"] = sd_u.tolist()
+    summary["leak"] = leak.tolist()
+    summary["crossing_counts"] = crossing_counts.tolist()
+    summary["u0_verify_rel"] = u0_rel
+    summary["n_nan_reverts"] = int(n_revert)
+    summary["total_wall_s"] = time.time() - t0_all
+    with open(os.path.join(OUT, f"summary_PR_{tag}_probe.json"), "w") as f:
+        json.dump(summary, f, indent=1, default=_json_default)
+    pr(f"[PR {tag}] phase P DONE in {summary['total_wall_s']:.0f}s -> {OUT}")
+    return True
+
+
+def run_pr_phase_q(tag, handoff_path, kn):
+    """GATE PT-5a-r2 phase Q (production): the D2/C-24 production leg --
+    FRESH MAP + 1e-6*I entry, ALL rungs (NOT carried from the phase-P
+    broad-init probe: production needs only TRANSPORT on the probe's ladder,
+    not the probe's positions/metric -- rd-1 crux-1) -- run through run_pt,
+    the SAME shared harness B1-B3/control/D1/D2/ST-phase1 use. The ladder
+    (knots from the probe's handoff) is the ONLY thing that changes vs a
+    normal D2 run; swaps ON, adapt_metric ON (run_pt default behaviour)."""
+    hd = np.load(handoff_path)
+    knots = np.asarray(hd["knots"], np.float64)
+    beta_min = float(np.asarray(hd["beta_min"]).item())
+    t_ready = int(np.asarray(hd["t_ready_steps"]).item())
+    n_rungs = int(np.asarray(hd["n_rungs"]).item())
+    probe_npz_name = str(np.asarray(hd["probe_npz"]))
+    R1 = len(knots)
+    if R1 != n_rungs:
+        raise RuntimeError(f"[PR {tag}] handoff n_rungs {n_rungs} != "
+                           f"len(knots) {R1} -- stale/foreign handoff, "
+                           f"refusing phase Q (never silently trust)")
+
+    seed, nsys, k_b = kn["seed"], kn["nsys"], kn["k_b"]
+    rng = np.random.default_rng(seed)
+    map_npz = np.load(MAP_NPZ)
+    map_zbest = np.asarray(map_npz["z_best"], dtype=np.float64).reshape(-1)
+    assert map_zbest.shape == (DIM,), map_zbest.shape
+    pos = np.zeros((R1, nsys, DIM))
+    for r in range(R1):    # fresh MAP z_best + stock-diagonal draws (D2 entry)
+        pos[r] = map_zbest + D2_INIT_SCALE * rng.standard_normal((nsys, DIM))
+    inv_mass = (D2_INIT_SCALE ** 2) * np.eye(DIM)
+    d2_diag_provenance = (   # same provenance pin as D2 (run_arm_b)
+        f"stock no-SVI diagonal convention: init_scales={D2_INIT_SCALE} "
+        f"(STD in z) from ModellingSequence.SVI default "
+        f"(gigalens/src/gigalens/jax/inference.py:254,282-284; mirrored "
+        f"gigalens_research/inference_utils/pipeline.py:1440) => seed cov "
+        f"= {D2_INIT_SCALE}^2 * I = {D2_INIT_SCALE**2:g}*I")
+
+    rounds1, rounds1_src = _st_env_num("GATE_PT0_ROUNDS_B", ST_ROUNDS1, int)
+    if SMOKE and rounds1 != ST_ROUNDS1:
+        rounds1_src = (f"SMOKE override {ST_ROUNDS1} [env GATE_PT0_ROUNDS_B "
+                       f"IGNORED; precedence smoke > env > default]")
+        rounds1 = ST_ROUNDS1
+    metric_windows = tuple(METRIC_WINDOWS)   # PT-2 pinned (100,250,500);
+                                              # smoke-overridden globally
+    metric_n0 = float(10 * nsys)
+    if metric_windows[-1] >= rounds1:
+        pr(f"[PR {tag}] WARNING: freeze boundary {metric_windows[-1]} >= "
+           f"ROUNDS {rounds1} -- the metric will NEVER freeze in this run")
+
+    def u_from(logd, p):
+        return logd / knots[:, None]
+
+    def u_direct(pf):
+        return M["lp_batch"](pf)
+
+    card = dict(
+        arm=tag, gate="PT-5a-r2", pr_phase="Q", path="power", seed=seed,
+        seed_source=kn["seed_source"], smoke=SMOKE,
+        script=os.path.abspath(__file__), jax=jax.__version__,
+        devices=[str(d) for d in jax.devices()],
+        x64=bool(jax.config.jax_enable_x64), dim=DIM,
+        R=R1, NSYS=nsys, K=k_b, ROUNDS=rounds1, thin=THIN_B,
+        betas=knots.tolist(),
+        betas_source=(f"PR phase-P ladder (readiness fired at cumulative "
+                     f"round {t_ready}, beta_min={beta_min:.6g}); handoff "
+                     f"{os.path.abspath(handoff_path)}"),
+        L=L_MCLMC, ss_init=SS_INIT, ss_max=kn["ss_max"], devar=kn["devar"],
+        env_overrides=dict(NSYS=kn["nsys_src"], K=kn["k_src"],
+                           ss_max=kn["ssmax_src"], devar=kn["devar_src"],
+                           ROUNDS=rounds1_src),
+        metric=(f"ADAPTIVE (windowed); seed = diagonal "
+               f"{D2_INIT_SCALE**2:g}*I (D2 stock init_scales convention)"),
+        adapt_metric=True, metric_windows=list(metric_windows),
+        metric_windows_source=f"default {metric_windows} (PT-2 pinned)",
+        metric_estimator=kn["metric_est"],
+        metric_estimator_source=kn["est_src"], metric_n0=metric_n0,
+        metric_reference="pooled MAMS64 cov (reference-ONLY, DIAGNOSTIC)",
+        d2_diag_provenance=d2_diag_provenance,
+        entry=("FRESH MAP z_best + stock-diagonal draws, ALL rungs (D2 "
+              "convention; NOT carried from the phase-P broad-init probe -- "
+              "production needs only TRANSPORT on the probe's ladder)"),
+        map_npz=MAP_NPZ, pocket_indicator=f"z[{POCKET_COL}] > {POCKET_THR}",
+        init="MAP z_best + stock-diagonal draws all rungs (as D2)",
+        u_def="log_prob = logdensity/beta (power path)",
+        harness=("run_pt (shared production harness; phase-Q leg of the "
+                "PT-5a-r2 probe->production runner)"),
+        sep_check_max_abs=M["sep_max"],
+        pr_phase_p=dict(t_ready_steps=t_ready, beta_min=beta_min,
+                        n_rungs=n_rungs,
+                        handoff_npz=os.path.abspath(handoff_path),
+                        probe_npz=probe_npz_name))
+    spec = dict(dim=DIM, L=L_MCLMC, betas=knots, NSYS=nsys, K=k_b,
+               ROUNDS=rounds1, inv_mass=inv_mass, ss_max=kn["ss_max"],
+               devar=kn["devar"], make_tf=lambda b: make_tempered("power", b),
+               u_from=u_from, u_direct=u_direct,
+               indicator=lambda p: p[..., POCKET_COL] > POCKET_THR,
+               init_pos=pos, card=card, ind_label="pocket",
+               adapt_metric=True, metric_windows=metric_windows,
+               metric_n0=metric_n0, metric_estimator=kn["metric_est"],
+               metric_ref=M["cov_pool"])
+
+    summary, data = run_pt(tag, seed, spec)
+
+    # ---- run_pt cannot accept extra npz keys: load + re-save (matches the
+    # load+resave pattern already used by run_st_phase1) --------------------
+    npz_path = os.path.join(OUT, f"arrays_{tag}.npz")
+    merged = dict(np.load(npz_path))
+    extra_pr = dict(
+        pr_t_ready_steps=np.int64(t_ready), pr_beta_min=np.float64(beta_min),
+        pr_knots=knots, pr_readiness_fired=np.bool_(True),
+        pr_readiness_trace_t=hd["readiness_trace_t"],
+        pr_readiness_trace_beta_min=hd["readiness_trace_beta_min"],
+        pr_readiness_trace_maxdev=hd["readiness_trace_maxdev"],
+        pr_crossing_counts=hd["crossing_counts"],
+        pr_probe_npz=np.array(probe_npz_name),
+        pr_handoff_npz=np.array(os.path.abspath(handoff_path)))
+    collide = sorted(set(merged) & set(extra_pr))
+    if collide:
+        raise RuntimeError(f"[PR {tag}] PR scorer key(s) {collide} collide "
+                           f"with existing run_pt npz keys in {npz_path} -- "
+                           f"refusing to silently overwrite (never default)")
+    merged.update(extra_pr)
+    np.savez(npz_path, **merged)
+    pr(f"[PR {tag}] phase-Q npz enriched with PR probe cross-reference keys "
+       f"-> {npz_path}")
+
+    summary["pr_phase_q"] = dict(
+        handoff_npz=os.path.abspath(handoff_path), probe_npz=probe_npz_name,
+        t_ready_steps=t_ready, beta_min=beta_min, n_rungs=n_rungs,
+        knots=knots.tolist())
+    with open(os.path.join(OUT, f"summary_{tag}.json"), "w") as f:
+        json.dump(summary, f, indent=1, default=_json_default)
+    pr(f"[PR {tag}] phase Q DONE -> {OUT}")
+
+
+def run_arm_pr(tag):
+    """GATE PT-5a-r2 probe->production runner (checkpoint 'carousel GATE
+    PT-5a-r2'; rd-1 READINESS REDESIGN + rd-2 4 items BINDING). Phase P =
+    broad-init measurement leg (run_pr_phase_p); readiness = the cumulative-
+    convergence re-derivation (NOT the falsified crossing-count/occupancy-
+    stationarity proxy PT-5a-r2 replaced). Phase Q = the D2/C-24 production
+    leg on the probe's ladder (run_pr_phase_q), FRESH MAP entry (NOT carried
+    from the probe). GATE_PT0_PR_PHASE: auto (default) = phase P then, iff
+    readiness fired, phase Q in-process; 0 = phase P only; 1 = phase Q
+    standalone from a saved handoff (debugging/restart use -- the
+    checkpoint's cost section assumes ONE allocation for both phases, no
+    split-alloc contingency, unlike ST/PT-5a)."""
+    if LEGACY_RUNNERS:
+        raise RuntimeError("arm PR requires the fused runner; unset "
+                           "GATE_PT0_LEGACY_RUNNERS")
+    for bad in ("GATE_PT0_BETAS_B", "GATE_PT0_METRIC_WINDOWS"):
+        if os.environ.get(bad, "").strip():
+            raise RuntimeError(
+                f"{bad} is set, but arm PR pins its grid/windows (phase-P "
+                f"grid = arm-A probe grid; phase-Q windows "
+                f"{tuple(METRIC_WINDOWS)}); unset it (launch-discipline: NO "
+                f"conflicting env)")
+    seed = ARM_SEED["PR"]
+    seed_source = "ARM_SEED default"
+    env_seed = os.environ.get("GATE_PT0_SEED_B", "").strip()
+    if env_seed:   # PT-5a-r2 PR production arms: seeds pinned at launch
+        seed = int(env_seed)
+        seed_source = f"env override GATE_PT0_SEED_B={env_seed}"
+    nsys, nsys_src = _st_env_num("GATE_PT0_NSYS_B", PR_NSYS, int)
+    k_b, k_src = _st_env_num("GATE_PT0_K_B", K_B, int)
+    ss_max, ssmax_src = _st_env_num("GATE_PT0_SSMAX", SS_MAX0, float)
+    devar, devar_src = _st_env_num("GATE_PT0_DEVAR", DEVAR, float)
+    env_est = os.environ.get("GATE_PT0_METRIC_EST", "").strip()
+    # phase Q defaults to WITHIN (the A1 default, reused) -- a launch that
+    # omits the env still runs the correct production estimator
+    metric_est = env_est or "within"
+    assert metric_est in ("pooled", "within"), \
+        f"GATE_PT0_METRIC_EST must be 'pooled' or 'within', got {metric_est!r}"
+    est_src = (f"env override GATE_PT0_METRIC_EST={env_est}" if env_est
+               else "default")
+    phase = os.environ.get("GATE_PT0_PR_PHASE", "").strip() or "auto"
+    if phase not in ("auto", "0", "1"):
+        raise RuntimeError(
+            f"GATE_PT0_PR_PHASE must be auto/0/1, got {phase!r}")
+    kn = dict(seed=seed, seed_source=seed_source, nsys=nsys, nsys_src=nsys_src,
+              k_b=k_b, k_src=k_src, ss_max=ss_max, ssmax_src=ssmax_src,
+              devar=devar, devar_src=devar_src, metric_est=metric_est,
+              est_src=est_src, phase=phase)
+    handoff_path = os.path.join(OUT, f"handoff_PR_{tag}.npz")
+    if phase in ("auto", "0"):
+        ready = run_pr_phase_p(tag, handoff_path, kn)
+        if not ready:
+            return                          # F-R (no handoff, no phase Q)
+        if phase == "0":
+            pr(f"[PR {tag}] GATE_PT0_PR_PHASE=0: phase P complete, handoff "
+               f"saved -> {handoff_path}; run phase Q with "
+               f"GATE_PT0_PR_PHASE=1")
+            return
+    run_pr_phase_q(tag, handoff_path, kn)
+
+
 # ------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(description="GATE PT-0 (one arm per process)")
     ap.add_argument("--arm", required=True,
                     choices=["smoke", "control", "A_power", "A_lik",
-                             "B1", "B2", "B3", "B4", "B5", "D1", "D2", "ST"])
+                             "B1", "B2", "B3", "B4", "B5", "D1", "D2", "ST",
+                             "PR"])
     ap.add_argument("--equiv-check", action="store_true",
                     help="fused-vs-legacy runner equivalence guard: 3 rounds, "
                          "both implementations, identical inits/keys, SMOKE "
@@ -2814,9 +3546,19 @@ def main():
                          "st_flip_counts/st_sd_u_window/st_carryover_map/"
                          "st_interp_metrics/st_interp_geneig); no model "
                          "build, no jax use -- runs before setup_model()")
+    ap.add_argument("--selftest-pr", action="store_true",
+                    help="numpy-only unit checks of the GATE PT-5a-r2 PR "
+                         "readiness convergence logic (pr_ladder_snapshot/"
+                         "pr_readiness_ready) against the ARCHIVED arm-A "
+                         "broad-init probe data (arrays_A_power.npz); no "
+                         "model build, no jax use -- runs before "
+                         "setup_model()")
     args = ap.parse_args()
     if args.selftest_st:
         st_selftest()
+        return
+    if args.selftest_pr:
+        pr_selftest()
         return
     equiv = args.equiv_check or os.environ.get("GATE_PT0_EQUIV", "0") == "1"
 
@@ -2859,6 +3601,8 @@ def main():
         run_arm_a("lik", tag_of("A_lik"))
     elif args.arm == "ST":
         run_arm_st(tag_of("ST"))
+    elif args.arm == "PR":
+        run_arm_pr(tag_of("PR"))
     else:
         run_arm_b(args.arm, tag_of(args.arm))
 
