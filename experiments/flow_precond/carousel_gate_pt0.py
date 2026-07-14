@@ -152,8 +152,12 @@ ST_PHASE0_CHUNK = 6                  # phase-0 rung-batch: the 10-rung x NSYS
                                      # fused vmap (160-wide) OOMs a 40 GB A100;
                                      # swaps-OFF => rungs independent => chunk
                                      # of 6 (96-wide, the proven-fitting size)
-                                     # is BITWISE-identical (GATE_PT0_ST_CHUNK
-                                     # overrides; smoke-discovered OOM fix)
+                                     # is EQUIVALENT up to XLA vmap-width
+                                     # FP-reorder (NOT bitwise; measured 3.8e-8
+                                     # chunk-2-vs-6 — a distinct-but-valid
+                                     # realization, same per-rung kernel/keys/
+                                     # target; GATE_PT0_ST_CHUNK overrides;
+                                     # smoke-discovered OOM fix)
 ST_RULE_NSYS = 16                   # beta_min discovery-rule constants: the
 ST_RULE_BUDGET = 16500              # pinned ln(100)/(16*11) threshold
 ST_RULE_PROBE = 1500                # (pt4_recipe_validate L1b convention)
@@ -341,12 +345,19 @@ def round_all_chunked(fn, pos, ss, ast, ik, sk, betas, inv_mass, chunk):
     """Rung-chunked round_all for PT-5a phase-0 memory. round_all is
     jax.vmap(per_rung) over the rung axis with NO cross-rung coupling, and
     phase-0 runs SWAPS-OFF, so splitting the R rungs into chunks of `chunk`
-    and concatenating every output on axis 0 is BITWISE-IDENTICAL to the single
-    R-wide call: per-rung positions/step-sizes/adapt-state/keys/betas/inv_mass
-    are SLICED (not re-split), so each rung sees the exact same inputs it would
-    in the fused call. Motivation: the 10-rung x NSYS=160-wide fused vmap
-    overflows a 40 GB A100 on the 90k-pixel forward model; chunk=6 (96-wide,
-    the proven-fitting production width) fits. chunk >= R is the identity."""
+    and concatenating every output on axis 0 feeds each rung the EXACT same
+    inputs (positions/step-sizes/adapt-state/keys/betas/inv_mass SLICED on
+    axis 0, NOT re-split) it would get in the fused call. NOT bitwise: XLA
+    fuses different vmap widths with different matmul reduction order, so the
+    chunked result differs from the single R-wide call at the FP-reorder level
+    (measured chunk-2-vs-6 max|dpos| 3.8e-8, then chaotically amplified) — a
+    distinct-but-valid realization of the identical per-rung kernel, the same
+    phenomenon accepted for the fused-vs-legacy production runner (op-6). Its
+    validity for the distributional phase-0 estimands (sd(u), leakage) was
+    grader-ruled VALID-WITH-CONDITION (chunk=6-vs-5 statistic-invariance check
+    2026-07-14). Motivation: the 10-rung x NSYS=160-wide fused vmap overflows
+    a 40 GB A100 on the 90k-pixel forward model; chunk=6 (96-wide, the
+    proven-fitting production width) fits. chunk >= R is the identity."""
     R = int(pos.shape[0])
     if chunk >= R:
         return fn(pos, ss, ast, ik, sk, betas, inv_mass)
@@ -2260,8 +2271,9 @@ def run_st_phase0(tag, handoff_path, kn):
             sk_all, betas_j, inv_rungs_j, st_chunk)
         if t == 0 and os.environ.get("GATE_PT0_ST_VERIFY_CHUNK") == "1" \
                 and st_chunk < R:
-            # one-time bitwise-equivalence proof on a rung-subset that fits
-            # unchunked (<= 96-wide): chunked == direct to 0 ULP
+            # one-time STRUCTURAL check on a rung-subset that fits unchunked
+            # (<= 96-wide): chunked vs direct agree up to FP-reorder (NOT 0 ULP
+            # — XLA vmap-width reduction-order; an O(1) diff = rung mis-slice)
             nv = min(6, R)
             d = round_all(jnp.asarray(pos)[:nv], steps_all[:nv],
                           (adapt_all[0][:nv], adapt_all[1][:nv],

@@ -550,8 +550,25 @@ multimodality, conditioning, or the NFW profile.
   full trigger→re-space→handoff→phase-1 path, chunk structural check rel
   3.8e-8, round-0 u-identity 9.9e-11, phase-0 12.78 s/round (≤ 14 GO ⇒
   same-allocation phase-1), all scorer npz keys present, metric_estimator
-  within. AWAITING grader ruling on the chunked-substitute validity, then
-  the 3-arm run.**
+  within. GRADER VALIDITY RULING (chunked phase-0 substitute, 2026-07-14):
+  VALID-WITH-CONDITION. round_all confirmed a PURE per-rung vmap (no
+  cross-rung coupling; swaps off; keys sliced not re-split; u0 identity
+  9.9e-11 excludes rung mis-assignment; the round-100 metric boundary /
+  EEVPD reset / trigger / exposure all run host-side on the reassembled
+  full arrays — no bad interaction); fusion-width change is a STRICT SUBSET
+  of the op-6 fused-vs-legacy FP-reorder precedent already accepted on the
+  dPIE target (that accepted max|Δpos| 0.41 after one round; chunking is
+  3.8e-8); distributional estimands unbiased under kernel-invariance.
+  CONDITION before the 3-arm spend: one chunk=6-vs-chunk=5 run (SAME seed,
+  cheapest arm, both fit 40 GB — gives every rung a different fusion width),
+  per-rung sd(u) agreeing within 3·√2·se(sd) AND leakage counts within
+  3·√(C₆+C₅); SYSTEMATIC one-directional divergence blocks (would signal a
+  width-dependent step-size-adaptation-feedback bias — the named residual
+  seam: adapt_one's energy_change is FP-sensitive, a stable fixed point
+  EXPECTED not proven, which this check closes). Code-comment honesty fix
+  (grader): carousel_gate_pt0.py:155/344/2263-64 still said "bitwise"/"0
+  ULP" contradicting the record retraction — CORRECTED. Proceeding to the
+  chunk-invariance check, then (on PASS) the 3-arm run.**
   **Claim + classification.** Stochastic-estimator behaviour (in-run
   measurement of sd(u|β) and basin leakage under a stationarity gate) + a
   procedural claim (the two-phase handoff preserves a working run). Links:
