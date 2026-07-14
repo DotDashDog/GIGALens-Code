@@ -2873,7 +2873,7 @@ def pr_leak_window(ind, mask_m, mask_p, d0, t):
     return np.minimum(leak_m, leak_p)
 
 
-def pr_ladder_snapshot(betas, u, ind, mask_m, mask_p, d0, t):
+def pr_ladder_snapshot(betas, u, ind, mask_m, mask_p, d0, t, k=1):
     """One cumulative-window [d0, t) ladder/beta_min re-derivation (GATE
     PT-5a-r2 rd-1 READINESS REDESIGN, binding over the original crossing-
     count/occupancy-stationarity proxy). sd(u) via st_sd_u_window (r_star=t,
@@ -2895,8 +2895,14 @@ def pr_ladder_snapshot(betas, u, ind, mask_m, mask_p, d0, t):
     sd, se, tau = st_sd_u_window(u, t, w)
     leak = pr_leak_window(ind, mask_m, mask_p, d0, t)
     try:
+        # AUDIT FIX (blocking #1, units): beta_min_rule's probe_steps must be
+        # in STEPS to match PR_RULE_BUDGET (16500 steps). The t/d0 axis unit is
+        # the caller's: STEPS in --selftest-pr (k=1) but ROUNDS in the live
+        # run_pr_phase_p (k=k_b) -- a K× mismatch that made beta_min collapse to
+        # 1.0 (never converged) at every window and readiness NEVER fire. w*k
+        # converts the window length to steps for the discovery rule.
         beta_min = ladder_recipe.beta_min_rule(betas, leak, PR_RULE_NSYS,
-                                               PR_RULE_BUDGET, w)
+                                               PR_RULE_BUDGET, w * k)
     except ValueError:
         beta_min = None
     n_rungs, knots, kse = None, None, None
@@ -3173,10 +3179,10 @@ def run_pr_phase_p(tag, handoff_path, kn):
                 try:
                     snap_t = pr_ladder_snapshot(betas, u_all[:rd],
                                                ind_all[:rd], mask_m, mask_p,
-                                               PR_D0, rd)
+                                               PR_D0, rd, k=k_b)
                     snap_p = pr_ladder_snapshot(betas, u_all[:rd],
                                                ind_all[:rd], mask_m, mask_p,
-                                               PR_D0, tprev)
+                                               PR_D0, tprev, k=k_b)
                     ok_ready, maxdev, ttol = pr_readiness_ready(snap_t,
                                                                 snap_p)
                 except ValueError as e:   # transient IAT-window underflow;
