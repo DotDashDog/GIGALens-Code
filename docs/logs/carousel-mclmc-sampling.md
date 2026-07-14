@@ -3019,6 +3019,40 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-14 (HUMAN DECISION + probe-cost finding — Option A chosen; the
+  dedicated cheap probe is CONFIRMED cheap from existing data, GPU-free):**
+  after the PT-5a F-NEVER result, the human chose **Option A: replace the
+  in-run u-stationarity trigger with a dedicated cheap PROBE** (broad init,
+  the way the arm-A probe that made the certified ladder worked), "as long
+  as the probe is relatively cheap." COST CONFIRMED by subsampling the
+  EXISTING arm-A step-resolved u/ind (`arrays_A_power.npz`, broad MAMS
+  init, 3000 steps/β): the certified R6 ladder + β_min = 0.3594 reproduce
+  within tolerance (ladder max|Δknot| ≤ 0.011 vs the certified recipe input)
+  from as few as **~600–1000 steps/β** — a 3–5× cut from the 3000-step
+  arm-A run. BINDING CONSTRAINT = the β_min LEAKAGE measurement, NOT the
+  ladder sd(u): the ladder reproduces from ~250 steps (D=100 discard + W=150),
+  but β_min needs ~400 steps of broad-init BURN-IN for the M/P basin
+  occupancy to equilibrate at the binding rung (β = 0.5995) before the
+  ln(100) discovery margin holds (D=400/W=200=600 steps works: dev 0.0064,
+  β_min 0.3594; D=300 fails β_min → collapses to 1.0). SOME discard is
+  required (D=0 gives the wrong rung count — the initial transient inflates
+  sd). Wall: ~60–100 rounds (600–1000 steps) at 96-wide chunked ≈ 12.8
+  s/round ≈ 13–21 min + ~5 min compile ≈ 15–20% overhead on the 131-min
+  phase-1 production. GENERALIZATION CAVEAT (labeled, for the PT-5a-r2
+  checkpoint): the ~400-step burn-in is CAROUSEL-CALIBRATED (barrier height /
+  mode separation dependent) — a NEW posterior needs a crossing-count-based
+  probe-readiness signal (run until ≥ N basin crossings observed at the
+  coldest-tempered rung, or a generous fixed budget with a crossing-count
+  guard), NOT a fixed step count. This is FAR more tractable than the failed
+  in-run trigger because broad init equilibrates the occupancy fast (~400
+  steps) where MAP-init never did (>4000). The pieces already exist and are
+  validated: arm-A probe machinery (broad draw_init) + ladder_recipe (W-L
+  PASS, PT-4) + C-24 production (MAP-entry, which works for the COLD-basin
+  production leg — the slow-u problem was ONLY the tempered in-run phase-0
+  rungs, which this scheme no longer samples). Next: PT-5a-r2 design
+  checkpoint (probe-as-pre-phase + crossing-count readiness + production),
+  then the carousel re-validation, then the new posterior.
+
 - **2026-07-14 (carousel GATE PT-5a — F-NEVER FIRES: the u-stationarity
   trigger does NOT fire on the carousel; the scheme's core premise ("u
   equilibrates fast, before the ridge positions") is FALSIFIED on the
