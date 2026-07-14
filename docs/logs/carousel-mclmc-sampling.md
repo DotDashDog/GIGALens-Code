@@ -507,8 +507,19 @@ multimodality, conditioning, or the NFW profile.
   response; leakage directionality note (M→P = probe's conservative
   direction throughout); blind spot (vi) residuals updated to the B2'
   numbers. rd-2 verified clean: B1/B3/B5/B6/B7 + A1–A5, diff pure
-  rewording, PT-4 header intact. Awaiting rd-3 (expected formality per
-  grader).**
+  rewording, PT-4 header intact.
+  rd-3 (2026-07-14): CERTIFY-RECOMMENDED to PROCEED-TO-IMPLEMENTATION —
+  B2' arithmetic independently confirmed (0.0130 / 0.1121 / pooled
+  1.6e-4); the pooled rescue's own 9.4% spurious-admission branch verified
+  FAIL-CLOSED in every case (net no-F-T ≈ 0.93, no wrong-certification
+  channel); Stouffer spec verified (unit variance, optimal weighting); 2
+  one-line pins APPLIED with this update (pin 1: exposure denominator
+  (R*−100) SHARED by runner and scorer — the t_trigger variant disagreed
+  whenever trigger < 300; pin 2: pooled 9.4% fail-closed residual stated
+  in (vi) + F-T counting-anomaly investigation order) + advisory number
+  fixes (1.3%, 67%). PROCEEDING: implementation subagents (two-phase ST
+  runner mode + pt5a scorer) → independent audit → smoke (forced trigger,
+  restart, swaps-off, 160-wide timing ≤ 14 s/round GO) → 3-arm run.**
   **Claim + classification.** Stochastic-estimator behaviour (in-run
   measurement of sd(u|β) and basin leakage under a stationarity gate) + a
   procedural claim (the two-phase handoff preserves a working run). Links:
