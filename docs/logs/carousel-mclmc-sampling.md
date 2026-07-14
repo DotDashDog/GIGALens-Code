@@ -489,7 +489,26 @@ multimodality, conditioning, or the NFW profile.
   pinned; B8 trigger floor 200 + post-boundary counting; A1 F-H
   discriminating pair; A2 window-1 anchor corrected to gen-eig 2.2–2.4;
   A3 smoke wall go/no-go; A4 F-never exit path; A5 carry-over map pinned).
-  Awaiting rd-2.**
+  rd-2 (2026-07-14): NEEDS-MORE — 3 NEW blocking defects INTRODUCED BY THE
+  rd-1 AMENDMENTS, all caught by the grader's pass-probability recomputes
+  and ALL APPLIED: (1) the 95%-Poisson-bound admission swapped a 19%
+  false-admission for a ~47%/arm false-rejection that would CASCADE into
+  phase 1 running a wrong ladder (grader flags shared fault: rd-1 offered
+  the bound without demanding the computation) → replaced by B2' = raw
+  rule + k ≥ 2 minimum-count guard + R* = max(trigger, 300) exposure floor
+  (runner-side; 1.4%/arm spurious, 11%/arm false-cold) + pooled-3-arm
+  scorer fallback (error ~1e-3) with pre-registered counting-caveat pass;
+  (2) the 3se ≤ 15% sign-test restriction left 3 rungs — min p = 0.125,
+  test silently DISABLED → replaced by B4' weighted Stouffer combined-z
+  over all 10 rungs, |Z| < 2, Z ≤ −2 = F-early, Z ≥ +2 = report; (3) stale
+  [150, 400] / ~150–250 trigger numbers harmonized to [200, 400] /
+  ~200–300 with re-space at R*. rd-2 advisories applied: smoke GO
+  threshold pinned at 14 s/round with the pre-committed above-threshold
+  response; leakage directionality note (M→P = probe's conservative
+  direction throughout); blind spot (vi) residuals updated to the B2'
+  numbers. rd-2 verified clean: B1/B3/B5/B6/B7 + A1–A5, diff pure
+  rewording, PT-4 header intact. Awaiting rd-3 (expected formality per
+  grader).**
   **Claim + classification.** Stochastic-estimator behaviour (in-run
   measurement of sd(u|β) and basin leakage under a stationarity gate) + a
   procedural claim (the two-phase handoff preserves a working run). Links:
@@ -548,9 +567,15 @@ multimodality, conditioning, or the NFW profile.
   N_eff = NSYS·50/τ_round and τ_round the per-rung u IAT in rounds
   (batch-means, computed in-run; cross-chain independence does the heavy
   lifting). Deadline: if no trigger by round 400, F-never fires (no
-  re-space; phase-0 data still adjudicates W-S). At trigger: sd(u) per rung
-  from the last 100 rounds (pooled across chains after NO mean removal —
-  recipe convention), leakage rates per rung from phase-0 flip counts;
+  re-space; phase-0 data still adjudicates W-S). RE-SPACE at R* =
+  max(trigger, 300) (rd-2 B2' EXPOSURE FLOOR: at a 250-round trigger the
+  binding rung's leakage exposure is too thin — λ(0.5995) ≈ 2.8 — and a
+  false-cold β_min CASCADES into phase 1 running the wrong ladder; at R* ≥
+  300, λ(0.5995) ≈ 3.75; wall unchanged — the B3 worst case already
+  assumed 300): sd(u) per rung from rounds (R*−100, R*] (fully
+  post-stationarity whenever trigger < R*; pooled across chains after NO
+  mean removal — recipe convention), leakage rates per rung from rounds
+  (100, R*] flip counts;
   ladder_recipe.design_ladder + amended β_min rule → final ladder
   (expected: 6 rungs, [0.3594, 0.4388, 0.5373, 0.6598, 0.8116, 1.0]-class).
   Phase 1 (fresh jit at the new R): positions carried per new rung from the
@@ -564,7 +589,8 @@ multimodality, conditioning, or the NFW profile.
   500–1000. Three arms, seeds 55/56/57, one GPU each (4th GPU idle/spare);
   K = 10; ss_max 5.0; DEVAR 5e-4.
   **Predictions (direction + magnitude).** (S) trigger fires at round
-  ~150–250; in-run sd(u) at trigger within tolerance of the probe's
+  ~200–300 (rd-2 harmonized with the 200 floor), re-space at R* =
+  max(trigger, 300); in-run sd(u) at R* within tolerance of the probe's
   per-β equilibrium values — tolerance derived in-script by the L2 delta
   method with BOTH se's (B4 grader recount from the probe IATs 14.5–201
   steps: in-run N_eff = NSYS·100/τ_round ≈ 92–1233/rung → sd se ≈
@@ -577,16 +603,24 @@ multimodality, conditioning, or the NFW profile.
   and every knot within 3× the COMBINED propagated se of the certified
   knots (expected |Δ| ≲ 0.01, cf. L2's measured 2.3e-3 at higher N_eff);
   β_min = 0.3594 grid point via the amended rule on in-run leakage with
-  the B2 counting-error-aware adjudication: a rung is ADMITTED only if the
-  LOWER 95% Poisson bound of its p̂ clears the threshold ln(100)/(16·11) =
-  0.0262 per 1500 steps (grader recount: at a ~250-round trigger, β = 1.0
-  expects only ~0.21 flips — P(≥1) ≈ 19%, and a single flip gives raw p̂ =
-  0.0375 > 0.0262, so RAW counting would flip β_min to 0.5995 in ~half of
-  3-arm sets; the Poisson bound kills that channel); a one-grid-point
-  β_min miss whose binding rung has < 5 counted events routes to
-  "counting-power finding, report" — NOT F-T. Phase-0 leakage at β =
+  the rd-2 B2' counting-aware adjudication (REPLACES rd-1's 95%-lower-
+  bound admission, which the rd-2 recount showed swaps a 19% false-
+  admission for a ~47%/arm false-rejection at 250-round exposure —
+  pass-probability-checked this time): RUNNER-SIDE, raw rule + a k ≥ 2
+  MINIMUM-COUNT guard at the admitting rung + the R* ≥ 300 exposure floor
+  — computed rates at R* = 300 (exposure 21.3 per-1500-step units):
+  spurious admission of 0.5995 needs k ≥ 2 at β = 1.0, λ = 0.17 ⇒ P ≈
+  1.4%/arm; false-cold rejection of 0.3594 needs k ≤ 1 at β = 0.5995, λ =
+  3.75 ⇒ P ≈ 11%/arm (3-arm all-exact ≈ 70%). SCORER-SIDE: the W-T β_min
+  leg passes per arm iff β_min == 0.3594 OR (one-grid-point miss AND
+  binding-rung count < 5 AND the rule on the POOLED 3-arm counts — λ ≈
+  11.2, error ~1e-3 — returns 0.3594) ⇒ pass-WITH-COUNTING-CAVEAT,
+  pre-registered; anything else on this leg = F-T. Phase-0 leakage at β =
   0.3594/0.5995/1.0 vs the probe's 0.2565/0.1756/0.008 REPORTED per rung
-  with Poisson se's. (H)
+  with Poisson se's (directionality note, rd-2 adv-2: MAP-entry main-only
+  chains measure the M→P direction, which IS the probe's conservative
+  (smaller) direction at every grid β — leak_Minit < leak_Pinit
+  throughout summary_A_power.json). (H)
   phase-1 EEVPD medians re-enter [1e-4, 2e-3] within window 1; pair acc
   0.45–0.60 (0.894-nat spacing, erfc model); no NaN. (P) per-arm RT_pocket
   ≥ 117 (= 175 op-7-scaled to 1000 rounds), predict 130–250; pooled
@@ -599,15 +633,21 @@ multimodality, conditioning, or the NFW profile.
   **Win conditions (scorer = pt5a_score.py from the pt4 lineage, committed
   + audited BEFORE unblinding; asserts phase-0 grid, phase-1 ladder ==
   recipe output, NSYS 16, estimator within, windows).** (W-S) all three
-  arms: trigger fired in [150, 400] AND per-rung in-run sd(u) vs probe sd(u)
+  arms: trigger fired in [200, 400] (rd-2 harmonized) AND per-rung in-run
+  sd(u) at R* vs probe sd(u)
   ratios within ±3·combined-se on ≥ 8 of 10 rungs with NO systematic
-  one-sided violation (sign test at 0.05, RESTRICTED to rungs whose
-  combined 3se ≤ 15% — B4 consequence: at β ≤ ~0.017 the tolerance is
-  ~±20% and W-S is weakest exactly where transit under-dispersion would
-  show; the restriction set is computed in-script and printed). (W-T) all
+  one-sided violation, adjudicated by a WEIGHTED STOUFFER combined-z over
+  all 10 rungs (rd-2 B4' — the rd-1 "sign test on 3se ≤ 15% rungs" left
+  only 3 rungs and could never reach 0.05, silently disabling the catch;
+  replaced): z_i = (ratio_i − 1)/se_i, Z = Σ w_i z_i / √(Σ w_i²) with
+  w_i = 1/se_i; require |Z| < 2; Z ≤ −2 ⇒ F-early (systematic
+  under-dispersion, the transit signature); Z ≥ +2 ⇒ over-dispersion,
+  unexpected direction — report-to-human; per-rung ratios and the
+  full weight vector printed. (W-T) all
   three arms: rung count == 6 AND max knot |Δ| ≤ 3× combined se AND β_min
-  grid point == 0.3594 under the B2 Poisson-bound adjudication (the
-  <5-event one-grid-point miss routes to counting-power report, not F-T).
+  grid point == 0.3594 under the rd-2 B2' adjudication (per-arm exact, OR
+  the pre-registered pooled-3-arm pass-with-counting-caveat; see scheme —
+  anything else on this leg = F-T).
   (W-H) all three arms: phase-1 EEVPD medians in band,
   pair acc ∈ [0.25, 0.65], NaN = 0. (W-P, supporting; B7 pin) per-arm RT ≥
   117 AND pooled occ in band (near-edge rules) AND W-s all three pairs ≤
@@ -656,12 +696,18 @@ multimodality, conditioning, or the NFW profile.
   ~0.21 flips → P(≥1) ≈ 19% per arm, and a single flip gives raw p̂ =
   0.0375 > threshold 0.0262 → raw counting would flip β_min to 0.5995 in
   ~47% of 3-arm sets; P(0 flips at 0.5995) ≈ 1–6% flips it colder; TRUE
-  only at 0.3594 itself, 45 ≫ 4.6, P(0) ≈ 1e-3): the B2
-  Poisson-lower-bound admission + counting-power routing is the
-  mitigation; residual = β_min adjudication power at sparse rungs is
-  budget-limited by design, disclosed. (vii, B4) W-S tolerance widens to
-  ~±20% (3se) at the hottest rungs — mitigated by the sign-test
-  restriction to 3se ≤ 15% rungs; W-S is weakest at hot β, disclosed.
+  only at 0.3594 itself, 45 ≫ 4.6, P(0) ≈ 1e-3): the rd-2 B2' rule
+  (k ≥ 2 minimum-count guard + R* ≥ 300 exposure floor + pooled-3-arm
+  scorer fallback — the rd-1 95%-lower-bound cure was itself defective,
+  ~47%/arm false-rejection, caught at rd-2 by pass-probability
+  computation) is the mitigation, with computed residuals: spurious
+  admission ≈ 1.4%/arm, per-arm false-cold ≈ 11% routed to the pooled
+  caveat (pooled error ~1e-3); β_min adjudication power at sparse rungs
+  remains budget-limited by design, and a SYSTEMATICALLY marginal β_min
+  would surface only at PT-5 (rd-2 standing strongest-case, kept
+  prominent). (vii, B4/B4') W-S tolerance widens to ~±20% (3se) at the
+  hottest rungs — the weighted Stouffer statistic down-weights them
+  naturally (w_i = 1/se_i); W-S is weakest at hot β, disclosed.
   **Pre-committed plots.** Per-rung u traces with the trigger round marked
   (expected: flat well before trigger; F-early would show trigger on a
   still-descending trace). In-run vs probe sd(u) per β (ratio plot with
@@ -672,8 +718,11 @@ multimodality, conditioning, or the NFW profile.
   worst-case" was the EXPECTED case; true worst 400×13 s + 1000×7.83 s +
   2 compiles ≈ 238–242 min vs 240, margin ≈ 0, grader recount).** Phase 0:
   160-wide ≈ 13 s/round (extrapolated from measured 3.97 @ 48 / 7.83 @ 96;
-  A3: the smoke MEASURES the 160-wide s/round and that measurement is the
-  wall GO/NO-GO before production); phase 1: 96-wide 7.83 s/round × 1000 ≈
+  A3 + rd-2 adv-1, numeric pin: the smoke MEASURES the 160-wide s/round —
+  ≤ 14 s/round preserves the 220-min worst case with ≥ 15 min margin and
+  is the GO threshold; above 14, the same-alloc trigger cutoff drops from
+  300 to 250 or the run goes split-alloc ALWAYS — decided from the smoke
+  number, pre-committed); phase 1: 96-wide 7.83 s/round × 1000 ≈
   131 min. PINNED SPLIT-ALLOCATION CONTINGENCY: handoff state (positions,
   metrics, recipe output, RNG keys) is SAVED at trigger in all cases; if
   trigger ≤ 300, phase 1 runs in the SAME allocation (worst 300×13 s = 65
