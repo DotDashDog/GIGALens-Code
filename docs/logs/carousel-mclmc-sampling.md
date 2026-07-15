@@ -3221,6 +3221,61 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-14 (carousel GATE PT-5a-r2 RAN — dedicated-probe pipeline: PROBE
+  concept VALIDATED (2/3 arms reproduce the certified ladder), but W-a FAILS
+  — 1/3 readiness early-fired (the grader-predicted metastable-plateau,
+  realized) AND production is BUDGET-LIMITED at 1000 rounds; PROPOSED,
+  UNCERTIFIED; diagnosis labeled INFERENCE, grader-verify before re-run):**
+  allocation 55919574, 3 arms PR1/PR2/PR3 (seeds 60/61/62), code @cc3493d
+  (after 2 blocking audit fixes + 1 smoke-caught filename fix — all verified),
+  scorer @pt5a_r2_score.py. Both phases completed all arms; scorer run
+  (stdout archived pt5a_r2_score_stdout.txt).
+  **PROBE (the new element) — mostly works.** Readiness fired on ALL 3
+  (W-R PASS); β_min = 0.3594 exact on ALL 3. Ladder: PR1 (fired round 180)
+  and PR2 (round 60) reproduce the certified 6-rung ladder within tol
+  (W-T PASS, knots ≤ 0.008 off certified); **PR3 fired at round 40 (its 2nd
+  eval, 30 rounds of data) → a 7-RUNG ladder → W-T FAIL.** PR3 is the
+  grader's rd-2 blind-spot (a) REALIZED: metastable-plateau early-firing —
+  at round 40 the cumulative sd(u) had not equilibrated (total cost 5.239
+  nats vs the ~4.47 that gives 6 rungs), but the 1.5×-growth check passed
+  (β_min + knots agreed round 40 vs 27) because the estimate was on a slow
+  plateau; 20 more rounds (PR2 at 60) sufficed for 6 rungs. So the readiness
+  early-fires on 1/3 seeds EVEN ON THE CAROUSEL — the disjoint-window
+  hardening pre-registered for PT-5 is needed HERE too, plus a firmer floor.
+  **PRODUCTION — BUDGET-LIMITED (not broken; plot-confirmed rising).**
+  Config verified correct (windows 100/250/500, est=within, betas = probe
+  ladders). Pooled occupancy 0.198 ± 0.019 OUT of band (0.32,0.49) and RT
+  73–91 < floor 117 ⇒ W-P FAIL all arms — BUT the coldocc plots
+  (pt0_PR_PR*_coldocc.png) show occupancy still RISING at round 1000: per-arm
+  final-50-round occ = PR1 0.30, PR2 0.386 (IN band), PR3 0.19; the scored
+  last-500 MEAN (0.209/0.230/0.155) understates it because the scoring window
+  (rounds 500–1000) catches the transport MID-RISE. ROOT CAUSE (INFERENCE):
+  the checkpoint pinned ROUNDS 1000, but MAP-entry production needs ~1500 to
+  equilibrate — C-24/C-25/PT-4 all used 1500 and scored rounds 1000–1500
+  (AFTER more burn-in); PR scored 500–1000, catching the rise. The 1000-round
+  budget was too aggressive (my design miss). Extrapolating the rising traces
+  to 1500 rounds, PR1/PR2 would plausibly reach the band; PR3 (7-rung, worse)
+  lags. W-H: PR1/PR2 PASS, PR3 FAIL (pair acc 0.62–0.70 > 0.65 — the 7-rung
+  ladder's finer spacing over-accepts swaps). W-G: F-H all 3 (gen-eig 34.7/
+  42.7/43.4 EXCEED the C-28 class ≤30/≤1-axis; 2 axes >10 each) — the C-28
+  metric inflation riding along, somewhat WORSE than the G-arms (seed and/or
+  probe-ladder effect, not isolated). F-S-style: aligned low-side direction
+  on PR1/PR2 (the {10,4,11,1} family, recorded).
+  **W-a verdict: F-T (PR3 ladder) — but really a MULTI-clause fail
+  (F-T PR3 + F-P all budget-limited + F-H all metric).** The end-to-end
+  pipeline did NOT certify the certified carousel at this budget.
+  **What this ESTABLISHES (proposed):** (i) the PROBE concept is sound — a
+  cheap broad-init probe with cumulative-convergence readiness reproduces the
+  certified ladder + β_min (2/3 clean; the 3rd is a readiness-timing bug, not
+  a concept failure); (ii) the readiness needs the disjoint-window hardening
+  + a firmer floor NOW (early-fires 1/3 on the carousel); (iii) production
+  needs 1500 rounds, not 1000 (budget miss); (iv) the C-28 metric inflation
+  persists (menu still open). NEXT (for the human): re-run at ROUNDS 1500 +
+  hardened readiness (disjoint-tail [t/2:t] vs [100:t/2] + floor ≥ ~80 rounds
+  so the round-40 early-fire can't happen), OR reconsider. Cost this gate:
+  3 arms × (~30 min probe + ~131 min prod) ≈ 8 GPU·h. DIAGNOSIS UNDER
+  GRADER REVIEW before the re-run decision.
+
 - **2026-07-14 (HUMAN DECISION + probe-cost finding — Option A chosen; the
   dedicated cheap probe is CONFIRMED cheap from existing data, GPU-free):**
   after the PT-5a F-NEVER result, the human chose **Option A: replace the

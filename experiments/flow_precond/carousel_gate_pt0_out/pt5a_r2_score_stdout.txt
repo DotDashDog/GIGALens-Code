@@ -1,0 +1,80 @@
+=== GATE PT-5a-r2 scorer: reference artifacts ===
+reference ladder (recomputed, full precision): ['0.359381', '0.438796', '0.537301', '0.659766', '0.811601', '1.000000']
+  beta_min_rule -> 0.3593813664; knot se (delta method) = ['0.00e+00', '8.34e-04', '1.32e-03', '1.45e-03', '1.31e-03', '0.00e+00']; max|sd_npz - sd_json| = 0.0e+00
+
+[PR1] probe companion: readiness_fired=True t_ready_steps=180 (cap 2000); beta_min=0.359381; knots=[0.3594, 0.4406, 0.5422, 0.6686, 0.8201, 1.0]
+  [readiness trace] 16 rows; first [30.0, nan, nan]; last [180.0, 0.3593813663804626, 0.006067295829074948]
+  [readiness trace] FIRE row (t=180): [180.0, 0.3593813663804626, 0.006067295829074948] (t, beta_min, max_knot_dev)
+  [W-R PR1] pr_readiness_fired=True pr_t_ready_steps=180 vs cap 2000 -> PASS
+  [crossing-counts PR1] pr_crossing_counts=[204.0, 242.0, 278.0, 306.0, 297.0, 260.0, 260.0, 214.0, 107.0, 30.0] (report-only sanity floor N_x>=12, demoted per rd-1 B1/B2, NOT gating)
+  [W-T PR1] rung count 6 == 6: True; beta_min 0.359381 == 0.359381 (exact grid point, no rescue): True
+    knot 0: ref=0.359381 probe=0.359381 |d|=0.00e+00 3se_comb=0.00e+00 ok
+    knot 1: ref=0.438796 probe=0.440645 |d|=1.85e-03 3se_comb=5.45e-03 ok
+    knot 2: ref=0.537301 probe=0.542175 |d|=4.87e-03 3se_comb=8.81e-03 ok
+    knot 3: ref=0.659766 probe=0.668581 |d|=8.82e-03 3se_comb=9.92e-03 ok
+    knot 4: ref=0.811601 probe=0.820145 |d|=8.54e-03 3se_comb=8.56e-03 ok
+    knot 5: ref=1.000000 probe=1.000000 |d|=0.00e+00 3se_comb=0.00e+00 ok
+  [W-T PR1] -> PASS
+  [W-H PR1] eevpd_med(post-lo)=['3.8e-04', '3.9e-04', '3.9e-04', '3.9e-04', '3.9e-04', '4.5e-04'] in [1e-4,2e-3]: True; pair acc [0.547, 0.548, 0.521, 0.532, 0.552] in [0.25,0.65]: True; NaN reverts=0 -> PASS
+  [W-P PR1] RT_pocket=73 vs floor 117 (117 op-7-scaled): FAIL; per-arm occ m=0.2089+-0.0345 (report; pooled is primary)
+  *** [PR1] RT below floor — rising coldocc trace: budget-limited zone (report) ***
+  [W-G PR1] cold-rung gen-eig vs Sigma_ref(w=0.209): [0.134, 34.689]; axes>10: 2 (<=1 required), max<=30.0: False -> F-H FIRES
+    PT-4 zone labels (REPORT-ONLY — metric menu open, C-28 class rides along): (3,10] on 2 axes; [0.1,1/3) on 2; <0.1 on 0
+  *** [PR1] F-H: gen-eig EXCEEDS the C-28 measured class (max 34.7 vs 30 / 2 axes > 10 vs 1) — a HANDOFF finding, explicitly NOT metric-menu adjudication ***
+    inflated-axis attribution vs {19,2,3,20} family (report): g=7.6->z[20](fam), g=10.0->z[2](fam), g=14.5->z[3](fam), g=34.7->z[19](fam)
+    [F-S-style check] low-side axis g=0.134: |cos(stored pt3 dir)| = 0.851 -> aligned (report)
+    [F-S-style check] low-side axis g=0.300: |cos(stored pt3 dir)| = 0.513 (distinct)
+
+[PR2] probe companion: readiness_fired=True t_ready_steps=60 (cap 2000); beta_min=0.359381; knots=[0.3594, 0.4412, 0.542, 0.6661, 0.817, 1.0]
+  [readiness trace] 4 rows; first [30.0, nan, nan]; last [60.0, 0.3593813663804626, 0.0022717667710262512]
+  [readiness trace] FIRE row (t=60): [60.0, 0.3593813663804626, 0.0022717667710262512] (t, beta_min, max_knot_dev)
+  [W-R PR2] pr_readiness_fired=True pr_t_ready_steps=60 vs cap 2000 -> PASS
+  [crossing-counts PR2] pr_crossing_counts=[61.0, 66.0, 126.0, 98.0, 55.0, 97.0, 81.0, 34.0, 35.0, 9.0] (report-only sanity floor N_x>=12, demoted per rd-1 B1/B2, NOT gating)
+    *** rung index(es) [9] below the 12-count sanity floor (report-only) ***
+  [W-T PR2] rung count 6 == 6: True; beta_min 0.359381 == 0.359381 (exact grid point, no rescue): True
+    knot 0: ref=0.359381 probe=0.359381 |d|=0.00e+00 3se_comb=0.00e+00 ok
+    knot 1: ref=0.438796 probe=0.441215 |d|=2.42e-03 3se_comb=7.85e-03 ok
+    knot 2: ref=0.537301 probe=0.542043 |d|=4.74e-03 3se_comb=1.25e-02 ok
+    knot 3: ref=0.659766 probe=0.666106 |d|=6.34e-03 3se_comb=1.49e-02 ok
+    knot 4: ref=0.811601 probe=0.817038 |d|=5.44e-03 3se_comb=1.37e-02 ok
+    knot 5: ref=1.000000 probe=1.000000 |d|=0.00e+00 3se_comb=0.00e+00 ok
+  [W-T PR2] -> PASS
+  [W-H PR2] eevpd_med(post-lo)=['3.7e-04', '3.9e-04', '4.5e-04', '3.8e-04', '4.2e-04', '4.2e-04'] in [1e-4,2e-3]: True; pair acc [0.527, 0.524, 0.54, 0.551, 0.558] in [0.25,0.65]: True; NaN reverts=0 -> PASS
+  [W-P PR2] RT_pocket=91 vs floor 117 (117 op-7-scaled): FAIL; per-arm occ m=0.2298+-0.0315 (report; pooled is primary)
+  *** [PR2] RT below floor — rising coldocc trace: budget-limited zone (report) ***
+  [W-G PR2] cold-rung gen-eig vs Sigma_ref(w=0.230): [0.094, 42.695]; axes>10: 2 (<=1 required), max<=30.0: False -> F-H FIRES
+    PT-4 zone labels (REPORT-ONLY — metric menu open, C-28 class rides along): (3,10] on 2 axes; [0.1,1/3) on 0; <0.1 on 1
+  *** [PR2] F-H: gen-eig EXCEEDS the C-28 measured class (max 42.7 vs 30 / 2 axes > 10 vs 1) — a HANDOFF finding, explicitly NOT metric-menu adjudication ***
+    inflated-axis attribution vs {19,2,3,20} family (report): g=3.2->z[4], g=7.7->z[20](fam), g=11.9->z[2](fam), g=42.7->z[19](fam)
+    [F-S-style check] low-side axis g=0.094: |cos(stored pt3 dir)| = 0.837 -> aligned (report)
+
+[PR3] probe companion: readiness_fired=True t_ready_steps=40 (cap 2000); beta_min=0.359381; knots=[0.3594, 0.4401, 0.5376, 0.6525, 0.7695, 0.8853, 1.0]
+  [readiness trace] 2 rows; first [30.0, 0.3593813663804626, nan]; last [40.0, 0.3593813663804626, 0.006306299635122303]
+  [readiness trace] FIRE row (t=40): [40.0, 0.3593813663804626, 0.006306299635122303] (t, beta_min, max_knot_dev)
+  [W-R PR3] pr_readiness_fired=True pr_t_ready_steps=40 vs cap 2000 -> PASS
+  [crossing-counts PR3] pr_crossing_counts=[57.0, 42.0, 57.0, 59.0, 50.0, 57.0, 44.0, 38.0, 16.0, 10.0] (report-only sanity floor N_x>=12, demoted per rd-1 B1/B2, NOT gating)
+    *** rung index(es) [9] below the 12-count sanity floor (report-only) ***
+  [W-T PR3] rung count 7 == 6: False; beta_min 0.359381 == 0.359381 (exact grid point, no rescue): True
+  [W-T PR3] -> FAIL (F-T)
+  [W-H PR3] eevpd_med(post-lo)=['3.1e-04', '4.2e-04', '3.8e-04', '4.0e-04', '3.8e-04', '4.1e-04', '4.0e-04'] in [1e-4,2e-3]: True; pair acc [0.558, 0.555, 0.556, 0.622, 0.668, 0.701] in [0.25,0.65]: False; NaN reverts=0 -> FAIL
+  [W-P PR3] RT_pocket=87 vs floor 117 (117 op-7-scaled): FAIL; per-arm occ m=0.1550+-0.0337 (report; pooled is primary)
+  *** [PR3] RT below floor — rising coldocc trace: budget-limited zone (report) ***
+  [W-G PR3] cold-rung gen-eig vs Sigma_ref(w=0.155): [0.214, 43.402]; axes>10: 2 (<=1 required), max<=30.0: False -> F-H FIRES
+    PT-4 zone labels (REPORT-ONLY — metric menu open, C-28 class rides along): (3,10] on 1 axes; [0.1,1/3) on 2; <0.1 on 0
+  *** [PR3] F-H: gen-eig EXCEEDS the C-28 measured class (max 43.4 vs 30 / 2 axes > 10 vs 1) — a HANDOFF finding, explicitly NOT metric-menu adjudication ***
+    inflated-axis attribution vs {19,2,3,20} family (report): g=7.8->z[20](fam), g=12.3->z[2](fam), g=43.4->z[19](fam)
+    [F-S-style check] low-side axis g=0.214: |cos(stored pt3 dir)| = 0.268 (distinct)
+    [F-S-style check] low-side axis g=0.251: |cos(stored pt3 dir)| = 0.702 (distinct)
+
+W-P pooled occupancy: m_pool=0.1979+-0.0193 (n=48) in (0.32, 0.49): False — OUT of band beyond near-edge
+  between-arm var 1.488e-03 vs within/nsys 1.106e-03 (report)
+
+W-s [PR1/PR2]: |0.2089-0.2298|=0.0209 <= 0.0934: True
+W-s [PR1/PR3]: |0.2089-0.1550|=0.0539 <= 0.0965: True
+W-s [PR2/PR3]: |0.2298-0.1550|=0.0748 <= 0.0923: True
+
+W-a verdict: F-T — ladder reproduction failed on arm(s) ['PR3']; F-T: fresh probe ladder != certified within tol => probe/recipe bug OR the fresh realization genuinely differs (recompute; the arm-A subsampling says it should reproduce) => report — QUALIFIERS (pt4 B3-1: must reach the verdict string): PR1: 2 axis(es) in (3,10] (PT-4 zone label, report-only this gate); PR1: 2 low-side axis(es) (< 1/3, report-only); PR1: F-S-style aligned low-side direction (recorded); PR2: 2 axis(es) in (3,10] (PT-4 zone label, report-only this gate); PR2: 1 low-side axis(es) (< 1/3; <0.1 present, report-only); PR2: F-S-style aligned low-side direction (recorded); PR3: 1 axis(es) in (3,10] (PT-4 zone label, report-only this gate); PR3: 2 low-side axis(es) (< 1/3, report-only)
+
+Reminder: gen-eig is REPORTED with PT-4 zone labels, NOT a gating clause here beyond the max<=30/<=1-axis>10 W-G threshold (layering pin) — the PT-4 human menu (bounded metric vs accept-(3,28] vs both) remains OPEN.
+
+-> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/pt5a_r2_score.json
