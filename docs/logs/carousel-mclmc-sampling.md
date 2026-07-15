@@ -3273,8 +3273,38 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   persists (menu still open). NEXT (for the human): re-run at ROUNDS 1500 +
   hardened readiness (disjoint-tail [t/2:t] vs [100:t/2] + floor ≥ ~80 rounds
   so the round-40 early-fire can't happen), OR reconsider. Cost this gate:
-  3 arms × (~30 min probe + ~131 min prod) ≈ 8 GPU·h. DIAGNOSIS UNDER
-  GRADER REVIEW before the re-run decision.
+  3 arms × (~30 min probe + ~131 min prod) ≈ 8 GPU·h.
+  **GRADER DIAGNOSIS REVIEW (2026-07-15): NEEDS-MORE — re-run NOT cleared as
+  scoped. My budget diagnosis (iii above) was WRONG; the metric point (iv)
+  UNDER-STATED. 3rd causal-inversion instance: I treated the metric as an
+  incidental bystander and transport as an independent budget issue — they
+  are ONE coupled freeze-on-transient problem (my OWN PT-5a mechanism,
+  unapplied). All my NUMBERS reproduced exactly; the INTERPRETATION was
+  wrong. Grader recomputations (incl. PT-4 arrays):** (1) the "PT-4 needed
+  1500 to equilibrate" justification is FALSE — PT-4 MAP arms equilibrated by
+  ~round 550 and scored 1000–1500 for MARGIN; at round 500–600 PT-4 is
+  0.22–0.32 vs PR ~0.09 ⇒ **PR transports 2–4× SLOWER than PT-4 on a
+  near-identical config** (RT rate 0.073–0.091 vs 0.14–0.21) — REAL,
+  UNDIAGNOSED, not budget. (2) PR3 early-fire CONFIRMED (signature: PR3
+  cold-rung sd(u) 7.64 > neighbor 7.38, a transient inversion; PR1/PR2 settle
+  to ~4.4; PR3's own settling not directly checkable — probe truncated at
+  40). (3) **W-G is DECISIVE: the metric FREEZES at round 500 and gen-eig is
+  CONSTANT thereafter (PR1 35.8 from 500→999); PR fails W-G (35.8/43.8/44.1,
+  2–3 axes >10) where PT-4 PASSED (25–29, 1 axis). ROUNDS 1500 PROVABLY
+  CANNOT move W-G ⇒ since W-a requires W-G, the proposed re-run CANNOT
+  certify regardless of budget.** CAUSAL LINK: metric freezes at 500 when PR
+  occ ~0.10 (transient) vs PT-4's ~0.32 (equilibrated) ⇒ preconditioner off
+  an under-transported ensemble ⇒ worse gen-eig ⇒ slower mixing ⇒ slower
+  transport — ONE problem. **REVISED FIX SCOPE: (a) DIAGNOSE the slow
+  transport before spending (candidate: PR knots systematically WARMER than
+  certified — 0.4406 vs 0.4388, 0.6686 vs 0.6598, 0.8201 vs 0.8116 —
+  widening cold-end β-gaps; or the handoff); (b) FREEZE-TIMING fix (freeze
+  after occ equilibrates, NOT rounds) — INTERSECTS the OPEN C-28 metric menu,
+  and C-27 falsified naive later-freeze so it is non-trivial; (c) readiness
+  floor DERIVED from ~120–180-round settling, not the 40-round fire. ROUNDS
+  1500 alone addresses NONE of the W-a-blocking clauses.** Re-run redesign
+  required; ESCALATED to human — the transport root + C-28-menu intersection
+  are decisions above a mechanical re-run.
 
 - **2026-07-14 (HUMAN DECISION + probe-cost finding — Option A chosen; the
   dedicated cheap probe is CONFIRMED cheap from existing data, GPU-free):**
