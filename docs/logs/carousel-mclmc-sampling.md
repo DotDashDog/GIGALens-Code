@@ -3221,6 +3221,71 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-15 (carousel GATE PT-5a-r2 — DIAGNOSTIC RE-EXAMINATION, no-GPU forensics on
+  archived arrays; PROPOSED, UNCERTIFIED; grader NEEDS-MORE rd2 applied — PARTIALLY SUPPORTED):
+  the prior "coupled freeze-on-transient catastrophe" diagnosis is OVERSTATED but NOT a mirage —
+  one proximate cause (warmth) is falsified, one (ss_max) is a LIVE untested confound the
+  producer wrongly refuted, the 2–4× transport figure deflates to a REAL ~1.4× matched-window
+  residual, and the metric shortfall is the OPEN C-28 ridge-axis pathology (shared with PT-4) by
+  degree. Point-and-go has ≥2 blockers: reference-SEEDED probe init AND the in-run adaptive
+  metric.** After the grader's NEEDS-MORE (2026-07-15 rd1) rejected the budget diagnosis, the
+  human REDIRECTED: "work on the problems that STOP point-and-go FIRST, then efficiency"
+  (point-and-go = from a MAP or SVI start, no info from other sampling algorithms). A login-node
+  forensic re-examination (screen + step_mean + matched-window occupancy + exact W-G replication)
+  ran to isolate the cause before any GPU spend; reductions verified bit-for-bit vs archived
+  pt4_score.json / pt5a_r2_score.json. **Findings (as amended by grader rd2):**
+  1. **LADDER-WARMTH — grader's warm-knots→depressed-cold-swap→slow-transport MECHANISM
+     FALSIFIED** (not "warmth refuted" wholesale). Realized cold-end swap acceptance at/above
+     design target for all arms (PT-4 0.50–0.54, PR 0.52–0.56; PR3's WARMEST cold-end knot has
+     the HIGHEST acceptance, 0.70; no boundary <0.50). Other warmth mechanisms (e.g. too-few
+     barrier-spanning levels) UNTESTED — no swap bottleneck appears, but not excluded.
+  2. **ss_max — PRODUCER "REFUTED" WITHDRAWN; ss_max is a LIVE UNTESTED CONFOUND.** The producer
+     dismissed ss_max using POST-FREEZE `step_mean` (~0.55, cap unbound) — the WRONG WINDOW; the
+     cap operates PRE-freeze. Grader recomputed by window: PR `step_mean` is pinned at exactly
+     1.0 for ~98% of [0:250] and 23–26% of [250:500], while PT-4 runs to 3.87 in the same window
+     (PT-4 cap ≥3.87, PR cap 1.0 — confirmed via saturation; the C-24 config specifies ss_max=5,
+     so PR at default 1.0 is a config divergence, cf. the prior PT-4 knob-default op-incident).
+     A larger pre-freeze integration step is a textbook transport accelerant → less-equilibrated
+     ensemble at freeze → worse frozen gen-eig. **ss_max is thus a candidate ROOT feeding the
+     freeze-on-transient coupling, NOT a refutation of it. UNTESTED.**
+  3. **TRANSPORT "2–4×" — deflates to a REAL ~1.4× matched-window residual** (not "unmeasurable").
+     The 2–4× was a CUMULATIVE round-trip-rate comparison (PR 1000 rounds vs PT-4 1500, more
+     transient-weighted). Grader reconstructed matched-window pocket round-trips from
+     `wid_thin`/`ind_thin` (THIN_B=5, ~72% recovery, undercount applied equally): window[500:1000]
+     PT-4 {78,70,52,76} vs PR {37,60,47} → **~1.4×**, vs 2.2× full-run cumulative. Matched-window
+     cold-rung occupancy overlaps heavily (window[750–1000] PR 0.19–0.33 vs PT-4 0.24–0.42; PR
+     still CLIMBING at round 1000, not plateaued below PT-4; PT-4 arm D2_G2 froze at occ 0.056 —
+     as low as PR — and recovered to 0.42). So the catastrophe framing was too strong AND the
+     "largely a confound" read understated a real ~1.4× gap.
+  4. **METRIC W-G — PR genuinely worse, SAME C-28 pathology, by degree (VERIFIED, kept).** Exact
+     scored max gen-eig (cold rung, `metric_frozen[-1]` vs `sigma_ref(m)`; frozen flat after
+     round 500 for ALL arms): PT-4 19.7 / 24.7 / 23.3 / 27.6 (1 axis>10 each); PR 34.7 / 42.7 /
+     43.4 (2 axes>10 each). PR fails pinned W-G (max≤30 & ≤1 axis>10) on magnitude (PR2/PR3
+     +42–45%) AND axis-count (2 vs ≤1). BUT (a) the max≤30 clause is PR-scorer-ONLY; (b) PT-4's
+     OWN stricter gate (0 axes>10) is FAILED by all four PT-4 arms too (1 each) — moot only
+     because PT-4 was F-M-blocked upstream. Neither config yields a clean adaptive metric by its
+     own standard; PR worse by +1 contaminated ridge axis + higher magnitude, consistent with
+     PR's lower occupancy-at-freeze → more C-28 cross-mode dispersion.
+  **SYNTHESIS (UNCERTIFIED, grader-amended):** the PT-5a-r2 "failure" is NOT a clean coupled
+  freeze-on-transient catastrophe, but neither is it fully a confound. Warmth-mechanism falsified;
+  transport gap deflates to ~1.4× (real); ss_max is a live untested pre-freeze confound;
+  metric shortfall = the pre-existing SHARED C-28 pathology, worse in PR by degree.
+  **Point-and-go has ≥2 blockers, not one:** (A) the probe seeds its broad init from MAMS64
+  (`draw_init(M["pool_M"/"pool_P"])`, carousel_gate_pt0.py:3050-51; PT-4's certified ladder is
+  ALSO reference-seeded, so NEITHER is fully point-and-go); (B) the in-run adaptive metric — a
+  reference-free run must estimate the C-28-afflicted metric from its OWN under-transported
+  ensemble with no reference fallback, so the metric is a point-and-go blocker too, not just a
+  shared quality issue. **CONSEQUENCES:** (a) the grader's warm-knots-diagnosis fix-item is
+  retired (mechanism falsified); freeze-timing + readiness-floor items STAND; (b) ss_max=5-vs-1
+  is a cheap CONTROLLED ABLATION to run FIRST — it may recover pre-freeze transport → frozen-metric
+  quality and cleanly attribute how much of PR's shortfall is a config default vs the C-28 metric;
+  (c) reference-free broad init (MAP+inflated-cov / SVI / prior draws) is the other blocker;
+  a matched 1500-round multi-seed design can address both. **Producer-honesty note:** the ss_max
+  wrong-window error was NOT self-surfaced — the grader recomputed step_mean by window; logged as
+  a fooling-myself instance (see [[memory-for-artifact-substitution]]). **Cost:** login-node
+  only, 0 GPU·h. Artifacts: carousel_gate_pt0_out/diag_warmth/ (swap_accept_vs_boundary.png,
+  occupancy_vs_round.png); carousel_gate_pt0_out/_wg_repro.py (verified vs archived JSONs).
+
 - **2026-07-14 (carousel GATE PT-5a-r2 RAN — dedicated-probe pipeline: PROBE
   concept VALIDATED (2/3 arms reproduce the certified ladder), but W-a FAILS
   — 1/3 readiness early-fired (the grader-predicted metastable-plateau,
