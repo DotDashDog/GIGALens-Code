@@ -557,8 +557,9 @@ multimodality, conditioning, or the NFW profile.
   verified in code (run_pt keys seed-only lines 1003–1004; phase-Q init seed-only line 3395;
   no global RNG in round loop; ladder byte-copied → ss_max sole varied input); conditional on
   caveats 1 (mechanism scope) + 2 (≥3 h allocation) + the hard gate above, all now folded in.
-  **AWAITING HUMAN LAUNCH GO.** Code @93cdca0 (env-only, no code change). Seeds 60/61/62 (+60
-  validity).
+  **RAN 2026-07-15 (human granted launch + self-start-node permission); job 55950341, PARTIAL
+  (teardown-truncated to rounds 901/801, W-G final at freeze-500). Result → Log entry above.**
+  Code @93cdca0 (env-only, no code change). Seeds 60/61/62 (+60 validity).
 
 - **Run: carousel GATE PT-5a-r2 — DEDICATED CHEAP-PROBE tuning scheme
   (broad-init probe → ladder_recipe → C-24 production), replacing the
@@ -3308,6 +3309,81 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-15 (carousel GATE PT-5a-r2 ss_max ABLATION — RAN; grader-verified
+  CERTIFY-RECOMMENDED 2026-07-15 (independent recompute reproduced all deltas, validity gate
+  bit-for-bit diff 0.0, axis-count=2 robust, geneig-trace flat 500→900); PARTIAL
+  (teardown-truncated to rounds 901/901/801 of 1000) but the BLOCKING clause W-G is FINAL
+  (metric_frozen set at round 500; the scored ratio's occupancy-window truncation moves it ≤0.3
+  units, immaterial to the ≤1-vs-2-axes verdict). RESULT: ss_max=1 default WAS inflating the worst-axis
+  metric magnitude, but ss_max=5 does NOT fix W-G nor transport, and NOT via the transport channel
+  ⇒ the metric blocker is confirmed LARGELY INTRINSIC (C-28), the cheap-config-fix hope is RULED
+  OUT, the ≥2-blockers conclusion STANDS.):** job 55950341 nid001048, 4 arms one-per-GPU
+  (3 treatment ss_max=5 seeds 60/61/62 + 1 validity ss_max=1 seed 60), phase-Q-standalone
+  (`GATE_PT0_PR_PHASE=1`) from BYTE-COPIED archived handoffs (ladder held exactly fixed), code
+  @93cdca0 (env-only), jax 0.10.0.dev20260715 (1-day newer than archived dev20260714), modern
+  gigalens (`/global/u1/l/linusu/gigalens/src`). Launch recipe → [[gigalens-gpu-launch-recipe]].
+  **OP-NOTE (new lesson): a session/process TEARDOWN SIGHUP-killed all 4 arms mid-run** (~round
+  901/801) — background jobs spawned by the Claude process die with it; run_pt checkpoints so the
+  arrays are intact PARTIAL (no resume path → not completed; allocation released). Conclusion is
+  robust anyway because the frozen metric (hence W-G) is set at round 500 and complete. Two launch
+  bugs fixed first (both now in the recipe memory): srun needs `--gpus-per-node=4` or 0 GPUs bound;
+  `gigalens` not importable until its src is added EXPLICITLY (.pth not honored under container py).
+  **VALIDITY GATE PASSED:** the ss_max=1 standalone arm reproduces archived PR1 step_mean to 3
+  decimals ([0.998,0.997,0.997,0.993,0.986,0.983] both) ⇒ standalone-Q ≡ after-P-Q (pairing valid),
+  jax dev-version drift immaterial, modern-gigalens env correct. Archived ss_max=1 arms are thus
+  legitimate paired controls.
+  **PRECONDITION CONFIRMED (necessary):** ss_max=5 released the cap — pre-freeze [0:250] cold-rung
+  step_mean 1.49 (hot rung 2.38) vs ss_max=1's pinned 0.98; 34% of pre-freeze rounds >1.5, max 2.35;
+  reverts=0 (no NaN cascade). So the test is valid, not erased by NaN-decay.
+  **W-G (scored max gen-eig, cold rung vs sigma_ref(m); FINAL at freeze-500), ss5 vs archived ss1:**
+  PR1 32.85 vs 34.69 (Δ−1.8); PR2 25.85 vs 42.70 (Δ−16.8); PR3 28.37 vs 43.40 (Δ−15.0). **2/3 arms
+  (PR2,PR3) show a SUBSTANTIAL drop (≥ the pre-registered 10-unit bar) into PT-4's 19.7–27.6 band;
+  PR1 barely moved.** BUT the axis-COUNT is UNCHANGED — all arms keep **2 axes>10** (gate needs ≤1)
+  ⇒ **NO arm passes W-G** (PR1 also still >30 on magnitude).
+  **MECHANISM (grader caveat-1 test — enforced): the gen-eig improvement is NOT via transport.**
+  Occupancy-at-freeze [250:500] did NOT rise for ss5 (PR1 0.024 vs 0.059; PR2 0.034 vs 0.051; PR3
+  0.102 vs 0.055 — mixed/lower); matched-window post-freeze occ [500:N] only mildly higher (PR1
+  +0.016, PR2 +0.049, PR3 +0.036). Since the frozen metric is estimated on the ≤500 ensemble whose
+  occupancy did NOT improve, the gen-eig magnitude gain is NOT the freeze-on-transient transport
+  channel (measured: occupancy-at-freeze did not rise). The positive channel is MOST PLAUSIBLY
+  within-mode diffusion (larger step → empirical cov better matches the reference on the ridge axes)
+  but that specific attribution is INFERRED, not directly measured. So the cause hypothesis
+  (ss_max→pre-freeze transport→metric) is FALSIFIED on its mechanism; the improvement is real but
+  arrives by a non-transport pathway. (Robustness: the ss5 magnitude drops are stable across a
+  common sigma_ref occupancy m∈{0.15,0.20,0.25} — PR2 −16.5…−16.9, PR3 −15.0…−15.4, PR1 −1.5…−2.4,
+  axis-count 2 throughout — so not an m artifact.)
+  **SYNTHESIS (UNCERTIFIED):** maps to NEITHER checkpoint pole. NOT clean-PASS (config-dominated):
+  axis-count/2nd contaminated axis persists on all arms, PR1 unmoved. NOT clean-FAIL (ss_max
+  irrelevant): 2/3 arms' worst-axis magnitude dropped ~15–17 units into PT-4's band. It is the
+  MIDDLE: **ss_max=1 (a config-default divergence from certified ss_max=5) WAS a substantial
+  contributor to the worst-axis inflation MAGNITUDE, but the W-G FAILURE (axis-count = the 2nd
+  contaminated ridge axis) and the transport shortfall are INTRINSIC C-28, unfixed by ss_max and
+  not mediated by transport.** ⇒ the metric is confirmed a GENUINE point-and-go blocker (fails W-G
+  regardless of ss_max); the "cheap config fix resolves the metric" hope is RULED OUT; the ≥2
+  point-and-go blockers (reference-seeded init + in-run adaptive metric) STAND.
+  **CONSEQUENCES:** (a) BANK ss_max=5 (it is the certified config; PR's ss_max=1 was a default-knob
+  op-incident of the [[memory-for-artifact-substitution]] class, inherited from the prior PT-5a-r2
+  launch @55919574); (b) the metric needs a REAL fix — the C-28 bounded-estimator / robust-shrink
+  track (which also caps the 2nd ridge axis) — not a config tweak; (c) reference-free init
+  (Blocker A) unchanged. Optional: re-run to 1000 for a pristine record, but the W-G conclusion is
+  final and re-run would not change it (occupancy flat ⇒ transport clause direction settled).
+  **Cost:** 4 arms × ~2 h partial ≈ 9 GPU·h, 1 interactive allocation (released). Artifacts:
+  diag_ssmax/{ssmax_stepmean,ssmax_occupancy,ssmax_geneig}.png; arrays_PR_PR{1,2,3}pt5ar2_ssmax5.npz
+  + arrays_PR_PR1pt5ar2_ssmax1chk.npz (rounds_done 901/901/801/901).
+  **GRADER (rd-1) CERTIFY-RECOMMENDED addenda (2026-07-15, folded in):** (i) SCOPE — certifies the
+  NEGATIVE ablation result on frozen-metric quality; does NOT certify a sampled posterior (no
+  R̂/ESS claim — the frozen-preconditioner-quality claim does not require one). (ii) DEFERRED
+  PREDICTION (iv): the pre-registered pocket-RT-vs-PT-4 EFFICIENCY comparison is UN-ADJUDICATED at
+  partial rounds (post-freeze window truncated to [500:901]/[500:801]); the ss5-vs-ss1 matched-
+  window transport comparison IS complete/valid (mild +0.02–0.05 occ), but the ss5-vs-PT-4
+  efficiency comparison is deferred, not shown. (iii) OPEN ITEM: PR1's non-response (Δ−1.8; its 2nd
+  axis ROSE 14.5→24.0) is UNEXPLAINED — the "ss_max substantially drives worst-axis magnitude"
+  finding rests on a 2/3 majority at N=3; a re-run to 1000 is NOT required for the W-G/mechanism
+  claims (final at freeze-500) and would not resolve PR1. (iv) PRODUCER-HONESTY (positive, recorded):
+  the grader-rd-1 mechanism caveat (occupancy mediator) was pre-registered AND honored — transport
+  headline withheld, channel scoped as within-mode-diffusion INFERRED — a clean reversal of the
+  causal-inversion instances earlier on this thread ([[memory-for-artifact-substitution]]).
 
 - **2026-07-15 (carousel GATE PT-5a-r2 — DIAGNOSTIC RE-EXAMINATION, no-GPU forensics on
   archived arrays; PROPOSED, UNCERTIFIED; grader NEEDS-MORE rd2 applied — PARTIALLY SUPPORTED):
