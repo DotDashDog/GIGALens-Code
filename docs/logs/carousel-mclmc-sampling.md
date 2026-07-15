@@ -472,6 +472,94 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-5a-r2 ss_max ABLATION — ss_max=5 vs 1 on the PR production
+  leg (phase-Q-standalone from archived handoffs); isolates how much of PR's W-G /
+  transport shortfall is the CONFIRMED config default (PR ran ss_max=1.0 vs C-24's 5.0)
+  vs the intrinsic C-28 metric pathology. First fix-test after the 2026-07-15 diagnostic
+  re-examination (grader NEEDS-MORE rd2).**
+  **Claim + classification:** stochastic-estimator / dynamical-behaviour claim — transport
+  rate and the resulting FROZEN-metric quality are stochastic outcomes of the sampler. This
+  tests ONE link in the "why did PT-5a-r2 fail W-a" chain; it does NOT test reference-free
+  init (Blocker A, separate). Not a deterministic identity → tested by a controlled paired
+  comparison across matched seeds.
+  **Cause hypothesis:** the PR production leg ran at the default `ss_max=1.0` (CONFIRMED:
+  `step_mean` pinned at exactly 1.0 for ~98% of the pre-freeze window [0:250]) while C-24/PT-4
+  use `ss_max=5` (PT-4 reaches step 3.87 in the same window). The cap throttles pre-freeze
+  integration steps → slower pre-freeze transport → ensemble under-transported at the round-500
+  metric freeze → cross-mode-dispersion-contaminated frozen metric (C-28 mechanism) → W-G
+  failure (2 axes>10; max gen-eig 34.7/42.7/43.4). So `ss_max` is hypothesised a SUBSTANTIAL
+  contributor, not the intrinsic C-28 pathology alone.
+  **Design (clean paired isolation):** phase-Q-standalone (`GATE_PT0_PR_PHASE=1`) from each
+  arm's BYTE-COPIED archived handoff (`handoff_PR_PR_PR{1,2,3}pt5ar2.npz` → `_ssmax5` copy),
+  so the ladder is held EXACTLY fixed to the archived ss_max=1 ladder and `ss_max=5` touches
+  ONLY production (phase P does not run). `GATE_PT0_SSMAX=5`, seeds 60/61/62, `ROUNDS_B=1000`,
+  `METRIC_EST=within` — identical to archived except `ss_max` and output tag
+  (`PR{n}pt5ar2_ssmax5`). Phase Q re-seeds numpy (`default_rng(seed)`, line 3395) AND `run_pt`
+  (line 3474) deterministically from `SEED_B`, independent of phase P ⇒ the archived ss_max=1
+  arms are valid PAIRED controls (identical init + kernel RNG at the same seed; only ss_max
+  differs). **Validity arm:** 1 extra arm ss_max=1 phase-Q-standalone seed 60 (tag
+  `_ssmax1chk`) on the 4th GPU — MUST reproduce archived `arrays_PR_PR1pt5ar2.npz`
+  (step_mean/occupancy) to confirm standalone-Q ≡ after-P-Q before trusting the pairing; if it
+  diverges, RNG threading exists → revert to a 6-arm both-standalone design.
+  **Prediction (direction + magnitude):** (i) [necessary precondition] `step_mean` over [0:250]
+  rises from the pinned ~1.0 toward PT-4's ~2–4 (the cap is MEASURED to bind there); (ii)
+  occupancy at the round-500 freeze rises from PR's ~0.05–0.10 toward PT-4's ~0.13–0.23; (iii)
+  frozen W-G max gen-eig drops from 34.7/42.7/43.4 toward PT-4's 19.7–27.6, and axes>10 from 2
+  toward 1; (iv) matched-window [500:1000] pocket-RT gap vs PT-4 narrows from ~1.4× toward ~1×.
+  **Falsifier + derived threshold:** PRECONDITION gate — if (i) fails (`step_mean[0:250]` stays
+  ~1.0 despite ss_max=5) the ceiling was erased by NaN-decay (0.8×/NaN in `handle_nans`); run is
+  INCONCLUSIVE on ss_max → diagnose `n_nan_reverts`, not a scientific result. GIVEN (i) holds,
+  the SCIENTIFIC FALSIFIER for "ss_max substantially causes the metric degradation": on ≥2 of 3
+  paired arms, W-G max gen-eig does NOT drop below ~35 AND axes>10 stays at 2 (no material move
+  toward PT-4's ≤28 / 1-axis regime). Threshold: "substantial" ⟺ paired per-arm max-gen-eig drop
+  ≥ ~10 units (from ~40 toward ~28, into/near PT-4's band and clearing or approaching the pinned
+  W-G max≤30); "minor / not-the-cause" ⟺ drop < ~5 units. (30 = pinned W-G threshold; 19.7–27.6
+  = PT-4's MEASURED band — neither invented.) Clear PASS (all 3 land <30, ≤1 axis>10) ⟺ ss_max was
+  the dominant cause → the "in-run metric is a hard point-and-go blocker" conclusion weakens to
+  "was largely a config default." Clear FAIL ⟺ metric pathology is intrinsic (C-28) → bounded-
+  estimator track needed regardless of init.
+  **MECHANISM SCOPE (grader rd-1 caveat 1):** the scored falsifier tests "ss_max affects
+  FROZEN-METRIC QUALITY," NOT specifically "via pre-freeze TRANSPORT." A larger step also changes
+  within-mode diffusion and the NaN-revert trajectory directly, so a gen-eig drop need not be a
+  transport change. Therefore prediction (ii) occupancy-at-freeze RISING is a JOINT condition for
+  the transport-channel reading: if gen-eig drops ≥10 but occupancy-at-freeze stays flat vs the
+  paired ss_max=1 arm, the result is scoped to "config default affects frozen-metric quality
+  (CHANNEL UNRESOLVED — within-mode-diffusion / NaN-revert confound not excluded)," NOT "ss_max
+  fixes the freeze-on-transient coupling." Do not write the transport-mechanism headline without
+  the occupancy mediator moving.
+  **Metric blind spot:** W-G max gen-eig (cold rung vs `sigma_ref(m)`) is a point summary — blind
+  to improvements on unscored axes or a metric well-conditioned on the ridge but wrong elsewhere;
+  occupancy-at-freeze is noisy at N=3 with the large MAP-seed spread. Mitigation: the PAIRED
+  design cancels seed/init/RNG variance (only ss_max differs per pair) → per-pair DELTAS are the
+  primary readout, not group means; and traces (plots) are read before scored numbers.
+  **Expected plot:** per-arm overlay (ss_max=1 archived vs ss_max=5 new, SAME seed) of (a)
+  step_mean vs round per rung — pre-freeze [0:250] visibly separates (5 rises above the 1.0
+  plateau); (b) cold-rung occupancy vs round with the round-500 freeze line — 5 rises earlier;
+  (c) frozen gen-eig per rung. Hypothesis-holds: 5-curves show higher early steps + earlier
+  occupancy + lower frozen gen-eig. Falsifier: early steps rise (i holds) but occupancy/gen-eig
+  curves lie ON TOP of the 1-curves.
+  **Cost:** 4 arms (3 treatment + 1 validity) parallel on 4 GPUs, phase-Q only (probe skipped,
+  cached handoff), ROUNDS=1000 ≈ 130–151 min/arm incl. compile → **request a ≥180-min (3 h)
+  interactive allocation** (grader rd-1 caveat 2: the 151-min worst-case arm leaves no margin at
+  "2.5 h"; sibling PT-5a-r2 refit to 240 min citing the PT-4/PT-5a margin-misjudgment history),
+  ~9 GPU·h. Login-node pre-stage (cp 3 handoffs) trivial. Interactive node ONLY.
+  **Op-notes / risks (from recon):** (1) `GATE_PT0_PR_PHASE=1` is documented "debugging/restart"
+  — OFF-LABEL here; model card + result log MUST state phase P was NOT re-run and the ladder is
+  byte-copied from the archived ss_max=1 probe (no independent re-derivation). (2) Do NOT reuse
+  archived tags — output suffixes `PR{n}pt5ar2_ssmax5` / `_ssmax1chk`. (3) verify
+  CUDA_VISIBLE_DEVICES per arm + shifter image tag against the LIVE env before launch (not
+  recorded in log). (4) watch `n_nan_reverts` + step_mean saturation in the new summaries.
+  **HARD GATE (grader rd-1, pre-committed):** the validity arm `_ssmax1chk` (seed 60,
+  standalone-Q) MUST reproduce archived `arrays_PR_PR1pt5ar2.npz` step_mean/occupancy; on ANY
+  divergence the paired comparison is VOID → revert to a 6-arm both-standalone design before
+  scoring. Carry `n_nan_reverts` + step_mean saturation per arm into the result entry.
+  **Status: grader rd-1 CERTIFY-RECOMMENDED (clear to launch) 2026-07-15** — pairing validity
+  verified in code (run_pt keys seed-only lines 1003–1004; phase-Q init seed-only line 3395;
+  no global RNG in round loop; ladder byte-copied → ss_max sole varied input); conditional on
+  caveats 1 (mechanism scope) + 2 (≥3 h allocation) + the hard gate above, all now folded in.
+  **AWAITING HUMAN LAUNCH GO.** Code @93cdca0 (env-only, no code change). Seeds 60/61/62 (+60
+  validity).
+
 - **Run: carousel GATE PT-5a-r2 — DEDICATED CHEAP-PROBE tuning scheme
   (broad-init probe → ladder_recipe → C-24 production), replacing the
   PT-5a-falsified in-run u-stationarity trigger; carousel END-TO-END
