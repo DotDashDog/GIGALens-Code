@@ -472,6 +472,77 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-6 (ADAPTIVE-PT) step-1 — reference-free PRESET-LADDER viability: does a
+  MAP-init ensemble with a preset conservatively-hot GEOMETRIC ladder transport (cross-mode
+  round-trips + pocket occ off the floor) with NO reference-run info, BEFORE building online
+  adaptation?** Architecture chosen by human 2026-07-15 (adaptive-PT over fix-the-probe; MAP-only
+  start), because the PT-5a-r2 probe's β_min derivation structurally needs two-group (mode-known)
+  leak. This step establishes the reference-free BASELINE the adaptation will refine.
+  **Claim + classification:** stochastic/dynamical-estimator claim (transport is a stochastic
+  outcome). Tests ONE link — reference-free preset-ladder MAP-init transport VIABILITY. Does NOT
+  test online adaptation (step 2) nor metric quality (Blocker B / C-28, deferred).
+  **Cause hypothesis:** cross-mode transport needs (a) β_min hot enough to melt the barrier and (b)
+  nonzero swap acceptance at every adjacent pair. The certified ladder achieved this via
+  reference-tuned equal-cost spacing + β_min=0.3594. A PRESET GEOMETRIC ladder with a conservatively
+  low β_min floor should ALSO discover the pocket + round-trip from a MAP (single-mode) init —
+  because the hot rungs melt the barrier regardless of spacing, and geometric spacing still gives
+  nonzero (just non-uniform) acceptance everywhere. If so, reference-free transport is VIABLE and
+  online adaptation is a refinement (spacing optimization), not a prerequisite.
+  **Design (CONFIG-ONLY, no code change): arm D2 (`run_arm_b`: MAP z_best + 1e-3 diagonal init +
+  adaptive windowed metric — ALL reference-free) + preset ladder via `GATE_PT0_BETAS_B`.** FOUR
+  arms parallel on 4 GPUs (one wave): **L-cert = the CERTIFIED equal-cost ladder
+  `[0.3594,0.4388,0.5373,0.6598,0.8116,1.0]` — POSITIVE CONTROL / known-answer (grader rd-1
+  required)**, identical D2 config, to (a) anchor the round-trip scale on THIS apparatus (replacing
+  the cross-run 209–316 import, which predates the ss_max=5 fix) and (b) disambiguate a preset FAIL
+  from C-28 adaptive-metric suppression; L-a `geomspace(0.3594,1,6)` (certified β_min & K but
+  GEOMETRIC not equal-cost → isolates spacing-tuning effect); L-b `geomspace(0.10,1,8)`
+  (conservative floor, +2 rungs, a naive default); L-c `geomspace(0.05,1,10)` (very conservative
+  floor). **Point-and-go viability rests on L-b/L-c (the genuinely naive floors); L-a reuses the
+  reference-derived β_min=0.3594 and isolates SPACING only.** NSYS=16, K=10, ss_max=5 (banked),
+  ROUNDS=1000, 1 seed/arm this wave (4 GPUs); multi-seed follow-up if the single-seed signal is
+  borderline (large MAP-seed spread). DETACH launcher (setsid) per the teardown lesson
+  [[gigalens-gpu-launch-recipe]].
+  **Prediction (direction + magnitude):** L-cert (control) transports — occ into 0.32–0.49, sets
+  the within-run RT anchor. The presets transport too — cold-rung pocket occupancy rises off the
+  ≈0 INIT floor (the MAP is the MAIN basin; C-22 multistart found the pocket 0/1024, and 1e-3
+  jitter cannot cross z[6]=−22.35, so init cold-pocket occ ≈ 0, NOT 0.10) toward the band (≥0.2 by
+  round 1000); round_trips_pocket > 0 sustained. L-a (certified β_min, geometric spacing): RT within
+  ~2× of L-cert's within-run RT. L-b/L-c (lower β_min): easier melting, comparable-or-better
+  discovery, but more rungs at fixed budget ⇒ thinner per-rung sampling. Swap acceptance NON-UNIFORM
+  across pairs (geometric ≠ equal-cost) — revealing where adaptation must fix spacing (informs
+  step 2). (0.10 is a separate BEAT-THE-BIASED-ESTIMATE benchmark = MAMS64's occupancy, NOT the
+  init floor.)
+  **Falsifier + derived threshold:** "transports" ⟺ occ ≥ 0.2 by round 1000 (derived: init floor
+  ≈ 0; 0.32 = certified band lower edge; 0.2 = conservative "clearly discovered + partially
+  equilibrated," below the band to allow non-optimal spacing). VIABILITY FALSIFIER: a preset ladder
+  shows NO cross-mode transport — round_trips_pocket ≈ 0 AND cold-rung pocket occ stays ≈ 0 (no
+  discovery) — on ≥2 of the 3 PRESET ladders (L-a/b/c; L-cert excluded). **MIDDLE ZONE pre-stated:
+  occ ∈ (0, 0.2) WITH round_trips > 0 = PARTIAL viability (transport occurred, spacing sub-optimal)
+  → routed to step-2 adaptation, NOT a clean pass or a falsification.** **CONTROL ROUTING (grader
+  rd-1): if L-cert transports but the presets do not → the failure isolates to spacing/β_min
+  (falsifier valid, "rethink hot-end/init" warranted). If L-cert ALSO fails → the failure is the D2
+  MAP-init/adaptive-metric APPARATUS (candidate: C-28 metric suppression), NOT the preset ladder,
+  and the "rethink ladder/init" attribution is VOID — that would itself be a finding (reference-free
+  transport blocked by the metric, i.e. Blocker B is on the critical path).**
+  **Metric blind spot:** RT + occupancy are transport-HEALTH metrics; blind to metric quality
+  (C-28/W-G, Blocker B) and to whether the occupancy is UNBIASED (needs full convergence, not this
+  viability test). This asks only "does it transport reference-free," not "is it certified-accurate."
+  **Expected plot:** per-arm cold-rung pocket occ vs round (L-cert + presets climb off the ≈0 init
+  floor toward the band if hypothesis holds; flat at ≈0 = falsifier); round-trip trace; swap
+  acceptance per adjacent pair (non-uniform for the geometric presets, motivating adaptation).
+  **Cost:** 4 arms (L-cert + L-a/b/c), 1 seed each, ONE wave on 4 GPUs, ~2 h/arm → ~2.5 h wall,
+  ~9–12 GPU·h. Interactive node ONLY; detached launcher.
+  **Op-notes:** config-only (arm D2 + GATE_PT0_BETAS_B, which run_arm_b validates strictly
+  increasing / ∈(0,1] / ends at 1.0); ss_max=5 pinned (banked, via GATE_PT0_SSMAX=5); verify model
+  card (betas/ss_max/MAP init) before leaving unattended.
+  **Status: grader rd-2 CERTIFY-RECOMMENDED (clear to launch) 2026-07-15 — both rd-1 additions
+  verified folded in and internally consistent: (1) L-cert positive control + control-routing with
+  within-run RT anchor replacing the 209–316 import; (2) threshold repair (init floor ≈ 0 not 0.10;
+  transports ⟺ occ ≥ 0.2; falsifier occ ≈ 0 on ≥2 of L-a/b/c, L-cert excluded; middle zone
+  pre-stated). CAVEAT carried to result: a PASSING L-cert anchors the RT scale ONLY — it does not
+  validate D2 init as neutral (metric regime co-varies); do not quote "D2 init validated" from an
+  L-cert pass.** Code @da8f65e (config-only). Human granted launch + self-start-node permission.
+
 - **Run: carousel GATE PT-5a-r2 ss_max ABLATION — ss_max=5 vs 1 on the PR production
   leg (phase-Q-standalone from archived handoffs); isolates how much of PR's W-G /
   transport shortfall is the CONFIRMED config default (PR ran ss_max=1.0 vs C-24's 5.0)
