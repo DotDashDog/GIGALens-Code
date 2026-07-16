@@ -12,12 +12,13 @@ with ``fig.savefig(...)``.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+from ..param_index import ParamSite
 from .convergence import (
     plot_chain_traces,
     plot_loss_history,
@@ -280,13 +281,22 @@ class PosteriorReport:
         *,
         truth=None,
         overplots: Optional[Dict[str, Any]] = None,
+        kind: Any = None,
+        plane: Any = None,
+        component: Any = None,
+        select: Optional[Callable[[ParamSite], bool]] = None,
         plot_params: Optional[List[str]] = None,
         latex: bool = True,
     ) -> Figure:
         """Corner plot of this posterior. ``truth`` defaults to the
         ``truth_x`` supplied at init (if any); pass it explicitly to override
         or pass ``truth=False`` to skip the overlay even when ``truth_x`` was
-        set."""
+        set.
+
+        ``kind``/``plane``/``component``/``select`` narrow which parameters are
+        drawn, and ``plot_params`` names columns explicitly; both work exactly as
+        in :func:`~gigalens_research.plotting.plot_corner`.
+        """
         if truth is None:
             truth = self.truth_x
         elif truth is False:
@@ -294,6 +304,7 @@ class PosteriorReport:
         return plot_corner(
             self.posterior,
             truth=truth, overplots=overplots,
+            kind=kind, plane=plane, component=component, select=select,
             plot_params=plot_params, latex=latex,
         )
 
@@ -302,7 +313,7 @@ class PosteriorReport:
     def z_score_panel(
         self,
         *,
-        group: str = "mass",
+        kind: Optional[str] = "mass",
         truth_x=None,
         threshold: float = 2.0,
         sort_by_abs: bool = False,
@@ -310,8 +321,8 @@ class PosteriorReport:
         """Bar plot of per-parameter z-scores against truth.
 
         Requires ``truth_x`` to have been supplied at init or passed in here.
-        ``group`` is one of ``'mass'`` (default), ``'lens_light'``,
-        ``'src_light'``, ``'all'``, or ``None``.
+        ``kind`` is one of ``'mass'`` (default), ``'cosmology'``,
+        ``'geometry'``, ``'light'``, ``'all'``, or ``None``.
         """
         truth_x = truth_x if truth_x is not None else self.truth_x
         if truth_x is None:
@@ -321,7 +332,7 @@ class PosteriorReport:
             )
         fig, ax = plt.subplots(figsize=(max(6, 0.45 * self.posterior.n_params), 3.5))
         plot_z_scores(ax, self.posterior, truth_x,
-                      group=group, threshold=threshold, sort_by_abs=sort_by_abs)
+                      kind=kind, threshold=threshold, sort_by_abs=sort_by_abs)
         return self._finalize(fig)
 
     def source_comparison_panel(
@@ -388,7 +399,7 @@ class PosteriorReport:
         observed: Optional[np.ndarray] = None,
         truth=None,
         save_dir: Optional[str] = None,
-        z_score_group: str = "mass",
+        z_score_kind: Optional[str] = "mass",
     ) -> Dict[str, Figure]:
         """Build all panels and (optionally) save each as a PNG to ``save_dir``.
 
@@ -399,7 +410,7 @@ class PosteriorReport:
         If the report was constructed with truth inputs (``truth_x`` or
         ``truth_source_image``), this also generates a z-score bar plot
         (``z_scores``) and a source-plane comparison (``source_comparison``).
-        Use ``z_score_group`` to switch which parameter group is shown
+        Use ``z_score_kind`` to switch which parameter class is shown
         (default ``'mass'``).
 
         Returns a dict ``{name: fig}`` so callers can post-process before
@@ -420,7 +431,7 @@ class PosteriorReport:
         if (truth if truth is not None else self.truth_x) is not None \
                 and hasattr(self.posterior, "quantiles_z"):
             figs["z_scores"] = self.z_score_panel(
-                truth_x=truth, group=z_score_group,
+                truth_x=truth, kind=z_score_kind,
             )
         if self.truth_source_image is not None or self.truth_source_fn is not None:
             figs["source_comparison"] = self.source_comparison_panel()
@@ -564,6 +575,10 @@ class PipelineReport:
         truth=None,
         overplots_stage: Optional[str] = None,
         overplot_label: str = "MAP",
+        kind: Any = None,
+        plane: Any = None,
+        component: Any = None,
+        select: Optional[Callable[[ParamSite], bool]] = None,
         plot_params: Optional[List[str]] = None,
         colors: Optional[Dict[str, str]] = None,
         latex: bool = True,
@@ -573,6 +588,10 @@ class PipelineReport:
         ``stages`` defaults to all stages that have sample-like posteriors
         (i.e. excluding pure point estimates). Pass ``overplots_stage`` to mark
         e.g. the MAP optimum as stars on top of the contours.
+
+        ``kind``/``plane``/``component``/``select`` and ``plot_params`` select
+        the columns exactly as in
+        :func:`~gigalens_research.plotting.plot_corner_overlay`.
         """
         if stages is None:
             stages = [n for n, p in self.stages.items() if hasattr(p, "flat_x")]
@@ -587,7 +606,8 @@ class PipelineReport:
                 overplots = {overplot_label: point.z_to_x(point.median_z)}
 
         return plot_corner_overlay(
-            posteriors, plot_params=plot_params, truth=truth,
+            posteriors, kind=kind, plane=plane, component=component,
+            select=select, plot_params=plot_params, truth=truth,
             overplots=overplots, colors=colors, latex=latex,
         )
 

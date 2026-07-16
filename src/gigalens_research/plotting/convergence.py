@@ -3,61 +3,82 @@
 Each plotter takes a :class:`Posterior` (or a raw 1-D loss array, for MAP/SVI
 histories) and renders into a provided axes. They share no state and don't
 modify the posterior.
+
+Two parameter spaces, never mixed
+---------------------------------
+R-hat and ESS are computed per column of the sampler's unconstrained ``z``
+vector, so ``params=`` selects **z columns** and they are named from
+``prob_model.z_param_names``. Chain traces are pushed through the bijector and so
+live in **x space**, indexed and named from
+:func:`~gigalens_research.param_index.param_sites` — the same records, in the same
+order, that the corner plot resolves. The bijector reorders, so an index means
+different things in the two spaces; each helper below states which one it is in.
 """
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 from matplotlib.axes import Axes
 
-from .labels import flatten_param_names, flatten_params, latex_label
+from ..param_index import ParamSite, param_sites, site_labels, sites_to_matrix
+from .labels import z_column_labels
 
 
-def _param_labels(posterior) -> list:
-    """Best-effort parameter labels in sampler-column order.
+def _z_labels(posterior) -> List[str]:
+    """Display labels for the sampler's z columns, in z-column order.
 
-    COLUMN ORDER NOTE: Running R-hat, ESS, and trace diagnostics are indexed by
-    sampler column ``i`` (i.e. position ``i`` in the unconstrained z-vector).
-    The bijector output dict iterates in reversed-alphabetical order for TFP's
-    ``JointDistributionNamed`` bijector, so ``flatten_param_names(bij_output)``
-    returns names where position ``a`` corresponds to sampler column ``DIM-1-a``.
-    Sorting the scene-API flat output dict keys alphabetically recovers JAX's
-    pytree-leaf order, which IS the sampler column order.
+    Z-SPACE. ``rhat`` / ``ess`` and their running variants return one entry per
+    column of the unconstrained z vector, so ``rhat[:, i]`` is z column ``i``.
+    ``prob_model.z_param_names`` is the scene's own column→name map and the ONE
+    correct source for it (see ``gigalens.jax.scene._z_param_names``): names read off
+    a bijector output dict's key order are in a *different* order, which is the
+    recurring "C-8" mislabel. There is therefore no safe fallback — every other name
+    order disagrees with the sampler's — so a missing or mismatched map raises.
+    """
+    prob_model = getattr(getattr(posterior, "ctx", None), "prob_model", None)
+    names = getattr(prob_model, "z_param_names", None)
+    if not names:
+        raise AttributeError(
+            "this posterior's prob_model publishes no z_param_names, so the "
+            "sampler's column→name map is unknown and its z columns cannot be "
+            "labelled. Only a scene-backed prob_model publishes it. There is no "
+            "fallback on purpose: every name order derivable without it disagrees "
+            "with the sampler's, so a guess would silently mislabel every line."
+        )
+    if len(names) != posterior.n_params:
+        raise ValueError(
+            f"prob_model.z_param_names carries {len(names)} names but this "
+            f"posterior has {posterior.n_params} sampler columns, so the "
+            "column→name map does not belong to these samples."
+        )
+    return z_column_labels(names)
 
-    Falls back to ``flatten_param_names`` natural order for legacy nested
-    bijector output, and to generic ``param[i]`` labels if the bijector call
-    fails entirely.
+
+def _samples_x_chains(
+    posterior,
+) -> Tuple[Optional[List[ParamSite]], Optional[np.ndarray]]:
+    """The chains in physical space: ``(sites, samples_x)``, with ``samples_x``
+    shaped ``(n_chains, n_steps, len(sites))``.
+
+    X-SPACE. One column per free parameter, in :func:`param_sites` order — the same
+    records and the same order :func:`~gigalens_research.plotting.plot_corner`
+    resolves — so trace column ``i`` and corner column ``i`` are the same parameter.
+
+    Returns ``(None, None)`` when x space is unreachable (no bijector, or a
+    posterior with no scene behind it and hence no path space); the caller then
+    plots raw z and says so, rather than passing z off as physical.
     """
     try:
-        x = posterior.z_to_x(posterior.median_z)
-        # Scene-API flat form: a dict whose top-level values are all scalars.
-        # Sorting keys recovers JAX pytree-leaf order = sampler column order.
-        if isinstance(x, dict) and x and all(
-                not isinstance(v, (dict, list)) for v in x.values()):
-            return sorted(x.keys())
-        return list(flatten_param_names(x))
-    except Exception:
-        return [f"param[{i}]" for i in range(posterior.n_params)]
-
-
-def _samples_x_chains(posterior):
-    """Push ``samples_z`` through the bijector and flatten to a matrix.
-
-    Returns ``(keys, samples_x)`` where ``keys`` is a list of flat parameter
-    names and ``samples_x`` has shape ``(n_chains, n_steps, n_flat_params)``.
-    Returns ``(None, None)`` if the bijector is unavailable.
-    """
-    try:
-        sz = posterior.samples_z          # (n_chains, n_steps, n_params)
+        sz = posterior.samples_z                       # (n_chains, n_steps, n_params)
         n_chains, n_steps, _ = sz.shape
-        flat_z = sz.reshape(-1, sz.shape[-1])          # (n_chains*n_steps, n_params)
-        x = posterior.z_to_x(flat_z)                   # nested list-of-dicts, batch dim 0
-        flat_dict = flatten_params(x)                  # {name: (n_chains*n_steps,)}
-        keys = list(flat_dict.keys())
-        mat = np.stack([np.asarray(flat_dict[k]) for k in keys], axis=-1)
-        return keys, mat.reshape(n_chains, n_steps, -1)
+        sites = param_sites(posterior)
+        # z_to_x over the chain-flattened draws: one bijector call, and the flat
+        # {unique_key: (n_chains*n_steps,)} dict sites_to_matrix expects.
+        x = posterior.z_to_x(sz.reshape(-1, sz.shape[-1]))
+        mat = sites_to_matrix(sites, x)                # (n_chains*n_steps, len(sites))
+        return sites, mat.reshape(n_chains, n_steps, len(sites))
     except Exception:
         return None, None
 
@@ -81,6 +102,10 @@ def plot_running_rhat(
     expresses the convergence cut-off in *R-hat* units; it is drawn at
     ``threshold - 1`` on the plot.
 
+    ``params`` selects **sampler (z) columns** by index, since that is what R-hat
+    is computed per; ``prob_model.z_param_names`` is the column→name map. This is a
+    different indexing from :func:`plot_chain_traces`, which is x space.
+
     ``aggregate`` selects how to collapse the per-parameter R-hats:
 
     - ``None`` (default): one line per parameter (or per index in ``params``).
@@ -89,18 +114,22 @@ def plot_running_rhat(
     - ``'mean'``: the mean across parameters.
     """
     schedule_arr, rhat = posterior.running_rhat(schedule=schedule)
-    labels = _param_labels(posterior)
     if params is not None:
         rhat = rhat[:, list(params)]
-        labels = [labels[i] for i in params]
 
     # Clip to avoid log(0) when a chain is so well-converged that the
     # estimator returns exactly 1.0 (or, more rarely, slightly less).
     y = np.maximum(rhat - 1.0, 1e-6)
 
     if aggregate is None:
+        # Only this branch names a line, and _z_labels refuses to guess a
+        # column→name map; an aggregate plot that labels nothing shouldn't inherit
+        # that requirement.
+        labels = _z_labels(posterior)
+        if params is not None:
+            labels = [labels[i] for i in params]
         for i, lbl in enumerate(labels):
-            ax.plot(schedule_arr, y[:, i], label=latex_label(lbl), alpha=0.7)
+            ax.plot(schedule_arr, y[:, i], label=lbl, alpha=0.7)
         if y.shape[1] <= 12:
             ax.legend(fontsize=8, ncol=2, loc="upper right")
     elif aggregate == "max":
@@ -137,16 +166,20 @@ def plot_running_ess(
     ``aggregate`` is ``'min'`` by default (worst-parameter ESS, which is the
     most useful single number for "are we done sampling"). ``None`` plots one
     line per parameter.
+
+    As in :func:`plot_running_rhat`, ``params`` selects **sampler (z) columns** by
+    index — not x-space / corner-plot columns.
     """
     schedule_arr, ess = posterior.running_ess(schedule=schedule)
-    labels = _param_labels(posterior)
     if params is not None:
         ess = ess[:, list(params)]
-        labels = [labels[i] for i in params]
 
     if aggregate is None:
+        labels = _z_labels(posterior)
+        if params is not None:
+            labels = [labels[i] for i in params]
         for i, lbl in enumerate(labels):
-            ax.plot(schedule_arr, ess[:, i], label=latex_label(lbl), alpha=0.7)
+            ax.plot(schedule_arr, ess[:, i], label=lbl, alpha=0.7)
         if ess.shape[1] <= 12:
             ax.legend(fontsize=8, ncol=2)
     elif aggregate == "min":
@@ -175,32 +208,42 @@ def plot_chain_traces(
 ) -> None:
     """Plot the per-chain trace for a single parameter (by index).
 
-    Traces are shown in **physical space** (bijector applied), so the y-axis
-    matches the corner plot and convergence diagnostics. ``param`` indexes into
-    the flat physical-space parameter vector in the same order as
-    ``flatten_param_names`` / the corner plot columns.
+    Traces are shown in **physical (x) space** (bijector applied), so the y-axis
+    matches the corner plot. ``param`` indexes the free parameters in
+    :func:`~gigalens_research.param_index.param_sites` order, which *is* the corner
+    plot's column order — index ``i`` is the same parameter in both figures. It is
+    not the sampler's z-column order that :func:`plot_running_rhat` and
+    :func:`plot_running_ess` index with ``params=``; the bijector reorders.
 
-    Falls back to raw ``z``-space (with a note in the title) if the bijector
-    is unavailable.
+    Falls back to raw ``z``-space (with a note in the title and generic ``z[i]``
+    labels) if the bijector is unavailable.
 
     Caps at ``max_chains`` lines for readability.
     """
-    keys, samples_x = _samples_x_chains(posterior)
+    sites, samples_x = _samples_x_chains(posterior)
     if samples_x is not None:
         samples = samples_x
-        labels = keys
-        space_note = ""
+        labels = site_labels(sites)
+        space, space_note = "x", ""
     else:
+        # Raw sampler columns are a different space in a different order; label them
+        # generically and say so rather than pass them off as physical.
         samples = posterior.samples_z
-        labels = [f"param[{i}]" for i in range(samples.shape[-1])]
-        space_note = " [z-space]"
+        labels = [f"z[{i}]" for i in range(samples.shape[-1])]
+        space, space_note = "z", " [z-space]"
+
+    if not 0 <= param < len(labels):
+        raise IndexError(
+            f"param={param} is out of range: this trace's {space} space has "
+            f"{len(labels)} parameters (0..{len(labels) - 1})."
+        )
 
     n_chains = samples.shape[0]
     chains_to_show = list(range(min(n_chains, max_chains)))
     for c in chains_to_show:
         ax.plot(samples[c, :, param], alpha=alpha, linewidth=0.8)
     ax.set_xlabel("step")
-    ax.set_ylabel(latex_label(labels[param]) if param < len(labels) else f"param[{param}]")
+    ax.set_ylabel(labels[param])
     ax.set_title(f"Chain traces ({len(chains_to_show)}/{n_chains} chains){space_note}")
 
 

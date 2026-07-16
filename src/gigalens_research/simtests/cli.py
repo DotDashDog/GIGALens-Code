@@ -116,7 +116,7 @@ def cmd_plot(args: argparse.Namespace) -> None:
         base_dir,
         panels=panels,
         stage=args.stage,
-        z_score_group=args.z_score_group,
+        z_score_kind=args.z_score_kind,
         shard_i=shard_i,
         shard_n=shard_n,
         include_failed=args.include_failed,
@@ -231,9 +231,9 @@ def build_parser() -> argparse.ArgumentParser:
                              "Default: all. Drop 'corner' for fast lightweight plots.")
     p_plot.add_argument("--stage", default=None,
                         help="Stage to report on (default: auto-pick the sampler).")
-    p_plot.add_argument("--z-score-group", default="mass",
-                        help="Parameter group for the z-score panel "
-                             "(mass/lens_light/src_light/all). Default: mass.")
+    p_plot.add_argument("--z-score-kind", default="mass",
+                        help="Parameter class for the z-score panel "
+                             "(mass/light/geometry/cosmology/all). Default: mass.")
     p_plot.add_argument("--include-failed", action="store_true",
                         help="Also plot runs whose run.json status != ok.")
     p_plot.add_argument("--overwrite", action="store_true",

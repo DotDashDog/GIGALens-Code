@@ -15,9 +15,8 @@ print("log_prob(MAP) =", val)
 struct = prob_model.bij.forward(list(np.asarray(z_best).reshape(-1,1)))
 print("\nidx | name | z_MAP | constrained_MAP")
 flat_constr = None
-from gigalens_research.plotting.labels import flatten_params
 try:
-    fp = flatten_params(struct)  # maybe returns dict name->val
+    fp = dict(struct)  # maybe returns dict name->val
 except Exception as e:
     fp = None
 for i,n in enumerate(names):

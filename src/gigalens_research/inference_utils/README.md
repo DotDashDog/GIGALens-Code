@@ -57,7 +57,7 @@ pipeline.add(HMCStage(n_hmc=64, num_burnin_steps=500, num_results=1000))
 artifacts = pipeline.run(out_dir="results/system_07", resume=True)
 
 post = pipeline.posterior()   # picks HMC (richest terminal stage)
-print(post.rhat())            # per-parameter R-hat
+print(post.rhat)              # per-parameter R-hat, shape (n_params,)
 ```
 
 On the second call with the same `out_dir`, stages whose inputs haven't
@@ -283,8 +283,9 @@ All posterior types share a common interface:
 | Property / method | Description |
 |---|---|
 | `post.ctx` | The `InferenceContext` |
+| `post.scene` | The scene `LensModel` — the authority on what the parameters are |
 | `post.n_params` | Number of free parameters |
-| `post.z_to_x(z)` | Unconstrained → physical params (nested list-of-dicts) |
+| `post.z_to_x(z)` | Unconstrained → physical params (the scene's flat `{unique_key: array}` dict) |
 | `post.median_x` | Physical params at the posterior median |
 | `post.median_z` | Median in unconstrained z-space |
 | `post.mean_z` | Mean in unconstrained z-space |
@@ -293,6 +294,24 @@ All posterior types share a common interface:
 | `post.err_map_at(predicted)` | Per-pixel noise σ (auto-selects Forward or Backward noise model) |
 | `post.normalized_residual(observed, point)` | `(obs − pred) / σ` |
 | `post.is_backward` | True for `BackwardProbModel` (lstsq amplitudes) |
+
+Physical params come back as the scene's own flat dict, keyed by the parameter's
+**scene path** — `planes/0/mass/0/theta_E`, `planes/1/geometry/redshift`,
+`cosmo/H0`. Nothing here reconstructs parameter names: `post.scene` is the model
+itself, and anything that needs the structure (which plane, which component,
+which kind) reads it from there via `gigalens_research.param_index.param_sites`:
+
+```python
+from gigalens_research.param_index import param_sites, select_sites, sites_to_matrix
+
+sites = param_sites(post)                        # one record per free parameter
+mass = select_sites(sites, kind="mass", plane=0)
+cols = sites_to_matrix(mass, post.flat_x)        # (n_samples, len(mass))
+```
+
+A `shared()` parameter is one free parameter feeding several sites, so it is one
+record (and one column) here — matching `scene.num_free_params` — with every site
+it feeds in `site.paths`.
 
 ### PointEstimate
 
@@ -330,13 +349,15 @@ From `HMCStage` or `MCLMCStage`. Holds the full chain; subsampled to
 ```python
 post.samples_z        # full chain: (n_chains, n_steps, n_params)
 post.flat_z           # chain-flattened + subsampled: (N, n_params)
-post.flat_x           # same in physical space (nested list-of-dicts)
+post.flat_x           # same in physical space: the scene's flat
+                      # {unique_key: (N,) array} dict
 
-# Convergence diagnostics:
-post.rhat()           # per-parameter R-hat as dict {param_name: value}
-post.ess()            # per-parameter ESS
-post.running_rhat()   # (n_windows, n_params) array for convergence plots
-post.running_ess()
+# Convergence diagnostics. These are per *sampler (z) column*, so they are
+# arrays, not path-keyed dicts; prob_model.z_param_names is the column→name map.
+post.rhat             # rank-normalized split-R-hat, shape (n_params,)
+post.ess              # rank-normalized bulk-ESS, shape (n_params,)
+post.running_rhat()   # (schedule, rhat) — rhat is (n_windows, n_params)
+post.running_ess()    # (schedule, ess)
 
 # Marginal quantiles:
 lo_z = post.quantiles_z(0.159)   # shape (n_params,)
@@ -353,10 +374,11 @@ Use `seed_artifacts` to inject a pre-computed artifact before stage 1.
 The pipeline skips MAP and runs SVI → HMC directly from the truth point.
 
 ```python
-import jax.numpy as jnp
+import numpy as np
 
-# truth_x is your nested list-of-dicts with the true parameters
-z_truth = jnp.stack(prob_model.bij.inverse(truth_x)).T.reshape(-1)
+# truth_x is the scene-nested truth point ({"planes": {...}, "cosmo": {...}}),
+# complete over the model's free parameters. The scene maps it to flat z:
+z_truth = np.asarray(ctx.model_seq.scene_model.unconstrained(truth_x))
 
 pipeline = Pipeline(ctx, seed=0)
 pipeline.add(SVIStage(num_steps=3000, n_vi=500))
@@ -473,7 +495,7 @@ model_seq = ModellingSequence(phys_model, prob_model, sim_config)
 ctx = InferenceContext.from_modelling_sequence(model_seq)
 
 post = posterior_from_disk("results/system_07", "hmc", ctx)
-print(post.rhat())
+print(post.rhat)
 
 # Load multiple stages for a PipelineReport without re-running:
 from gigalens_research.plotting import PipelineReport
@@ -560,24 +582,45 @@ The pipeline hashes:
 
 ## Truth-aware diagnostics
 
-When you have access to the ground truth (simulated systems), three
+When you have access to the ground truth (simulated systems), four
 data-layer functions are provided. The matching plots live in
 `gigalens_research.plotting`; see the plotting README or `PosteriorReport`
 for the integrated report-level interface.
+
+The truth is given the way the model names things — either **scene-nested**,
+
+```python
+truth_x = {
+    "planes": {0: {"mass": {0: {"theta_E": 1.5, "gamma": 2.0, ...}}},
+               1: {"light": {0: {"R_sersic": 0.3, ...}}}},
+    "cosmo": {"H0": 70.0, "Om0": 0.3},
+}
+```
+
+or **path-keyed** (`{"planes/0/mass/0/theta_E": 1.5, "cosmo/H0": 70.0}`). Both
+locate a parameter by *where it lives*, so nothing is matched against a
+reconstructed label. Either form may be partial; parameters it doesn't define are
+skipped with a `UserWarning`.
 
 ```python
 from gigalens_research.inference_utils import (
     z_scores,
     source_comparison,
     truth_source_from_light_model,
-    filter_labels_by_group,
+    filter_keys_by_kind,
 )
 
 # Per-parameter z-scores: (truth − median) / σ with asymmetric ±1σ quantiles.
-# Parameters in truth_x that are absent from the model (e.g. ImageBasedLight
-# center_x vs shapelet src_beta) are skipped with a UserWarning.
+# Returns a dict keyed by scene path. Parameters the truth is silent on (e.g. an
+# ImageBasedLight truth fit with a shapelet source) are skipped with a
+# UserWarning; the shared mass/center parameters are still scored.
 zs = z_scores(post, truth_x)
-mass_params = filter_labels_by_group(list(zs.keys()), "mass")
+# {"planes/0/mass/0/theta_E": 0.42, "cosmo/H0": -1.7, ...}
+
+# Subset to one parameter class — "cosmology", "geometry", "mass", "light", or
+# "all"/None. It classifies by scene path, so a new kind cannot leak into the
+# mass panel the way the old prefix-by-negation rule let it.
+mass_params = filter_keys_by_kind(list(zs.keys()), "mass")
 
 # Source plane comparison — pre-rendered truth array:
 truth, recovered, residual, extent = source_comparison(
@@ -589,11 +632,13 @@ truth, recovered, residual, extent = source_comparison(
 from gigalens_research.simulations import load_vela_source
 vela = load_vela_source("vela_sources/vela07_cam0_a0.500_f814w")
 
-# Either wrap explicitly:
-truth_fn = lambda X, Y: vela.light.light(X, Y, **truth_x[2][0])
+# The source's light params live at their own path in the truth — here plane 1,
+# light component 0. Either wrap explicitly:
+src_truth = truth_x["planes"][1]["light"][0]
+truth_fn = lambda X, Y: vela.light.light(X, Y, **src_truth)
 
 # Or use the helper (coerces params to static floats for JAX tracing):
-truth_fn = truth_source_from_light_model(vela.light, truth_x[2][0])
+truth_fn = truth_source_from_light_model(vela.light, src_truth)
 
 truth, recovered, residual, extent = source_comparison(
     post, truth_fn, grid_pix=400, fov_arcsec=2.0,

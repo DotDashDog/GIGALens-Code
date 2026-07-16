@@ -82,6 +82,5 @@ def make_prob_model(conv_precision="float32"):
     return ProbModel(model, [_ds("4-5", sees=[src4, src5]), _ds("9", sees=[src9])], mode="lstsq")
 
 def param_names(dim):
-    from gigalens_research.plotting.labels import flatten_param_names
     probe = np.zeros((1, dim))
-    return flatten_param_names(prob_model.bij.forward(list(probe.T)))
+    return list(prob_model.bij.forward(list(probe.T)).keys())
