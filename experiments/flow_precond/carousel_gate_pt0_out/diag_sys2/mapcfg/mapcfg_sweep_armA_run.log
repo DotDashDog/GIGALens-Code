@@ -1,0 +1,20 @@
+Selected arms: ['A_baseline_lr1e-2_2000']
+==============================================================================
+S2-MAPCFG -- MAP optimizer-config sweep -- MODEL CARD (pre-compute)
+==============================================================================
+jax version        : 0.10.0.dev20260716
+jax.devices()       : [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+jax.device_count()  : 4
+jax_enable_x64      : True
+out_dir (THIS run)  : /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/diag_sys2/mapcfg  (NOT the archive)
+archive (READ-ONLY) : /global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/debug_carousel/1_2_3_4_5_9
+_ADABELIEF_HAS_NESTEROV: True
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_model_s2.py:262: UserWarning: [plausibility] SHEAR[plane 0 mass 4].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.131 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+dataset[0] class    : ImageData
+ASSERTED: dataset[0] is plain ImageData (archive-matched, non-adaptive).
+model.num_free_params: 46
+==============================================================================
+
+--- ARM A_baseline_lr1e-2_2000: baseline reproduction: adabelief lr=1e-2, 2000 steps, n=128 (archive config) ---
+MAP: remat_basis effective for 4/4 simulator(s) (MAP-scoped override, ss<3).

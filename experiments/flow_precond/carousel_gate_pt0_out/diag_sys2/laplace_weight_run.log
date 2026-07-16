@@ -1,0 +1,98 @@
+==============================================================================
+SYSTEM-2 LAPLACE WEIGHT MEASUREMENT (sampling-free)
+==============================================================================
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_model_s2.py:262: UserWarning: [plausibility] SHEAR[plane 0 mass 4].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.131 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+renderer                 = ImageData
+z_param_names[37]         = 'planes/3/light/1/beta'
+THR (2-means boundary)   = -3.092
+samples_z flat shape     = (80000, 46)
+
+--- reproducing established best-of-3000-subsample representatives ---
+sharp   : n_pool= 60792  lp0(best-of-3000)=-521043.109  z0[37]=-2.7697
+compact : n_pool= 19208  lp0(best-of-3000)=-520956.073  z0[37]=-3.4275
+
+compact_best0 - sharp_best0 = +87.04 nats (should reproduce the reported +87.00 nats)
+
+--- local optimization: stage 1 L-BFGS-B, stage 2 trust-ncg (exact hessp) ---
+sharp    [stage1 L-BFGS-B]: converged=False  nit=362  |grad|_inf=7.298e+01  lp=-521036.3995  msg='ABNORMAL_TERMINATION_IN_LNSRCH'
+sharp    [stage2 trust-ncg]: raw scipy message='A bad approximation caused failure to predict improvement.'
+sharp    [stage2 trust-ncg]: converged=False  nit=41  |grad|_inf=2.614e+01
+          lp0=-521043.1089 -> lp*=-521035.1586  (delta=+7.9503)
+          z[37]: z0=-2.7697 -> z*=-2.7517   path min/max=(-2.7697,-2.7454)  CROSSED_THR=False
+          *** FINDING: |grad|_inf=2.614e+01 at the reported 'converged' point for 'sharp' is NOT small -- optimization has NOT reached a stationary point. Treat lp*/z* and any downstream Hessian at this point as an approximate, not exact, mode location. ***
+sharp    [stage3 damped-Newton, exact H]:
+          it=0  lp=-521035.1586  |grad|_inf=2.614e+01  z[37]=-2.7517
+          it=1  lp=-521035.1149  |grad|_inf=1.696e+01  z[37]=-2.7511
+          it=2  lp=-521035.1143  |grad|_inf=1.010e-01  z[37]=-2.7511
+          it=3  lp=-521035.1143  |grad|_inf=9.173e-02  z[37]=-2.7511
+          it=4  lp=-521035.1143  |grad|_inf=1.076e-01  z[37]=-2.7511
+          it=5  lp=-521035.1142  |grad|_inf=9.159e-02  z[37]=-2.7511
+          it=6  lp=-521035.1142  |grad|_inf=9.485e-02  z[37]=-2.7511
+          it=7  lp=-521035.1141  |grad|_inf=9.468e-02  z[37]=-2.7511
+          Newton: no improving step found along the Newton direction after 15 halvings -- stopping (this IS informative: the exact-Hessian quadratic model does not predict an improving direction here either).
+          [stage3 FINAL] lp*=-521035.1141  |grad|_inf=9.468e-02  z[37]*=-2.7511  CROSSED_THR=False
+          *** FINDING (post-Newton): |grad|_inf=9.468e-02 still NOT small at 'sharp' -- the point is NOT a true stationary point even after an exact-Hessian damped-Newton refinement. The Laplace estimate below is computed AT THIS POINT ANYWAY (per instructions, to report raw numbers), but should be read as an approximate/lower-confidence estimate, not an exact result. ***
+compact  [stage1 L-BFGS-B]: converged=False  nit=697  |grad|_inf=3.102e+01  lp=-520947.9876  msg='ABNORMAL_TERMINATION_IN_LNSRCH'
+compact  [stage2 trust-ncg]: raw scipy message='A bad approximation caused failure to predict improvement.'
+compact  [stage2 trust-ncg]: converged=False  nit=34  |grad|_inf=2.875e+01
+          lp0=-520956.0732 -> lp*=-520945.8894  (delta=+10.1837)
+          z[37]: z0=-3.4275 -> z*=-3.4132   path min/max=(-3.4336,-3.4085)  CROSSED_THR=False
+          *** FINDING: |grad|_inf=2.875e+01 at the reported 'converged' point for 'compact' is NOT small -- optimization has NOT reached a stationary point. Treat lp*/z* and any downstream Hessian at this point as an approximate, not exact, mode location. ***
+compact  [stage3 damped-Newton, exact H]:
+          it=0  lp=-520945.8894  |grad|_inf=2.875e+01  z[37]=-3.4132
+          it=1  lp=-520945.6678  |grad|_inf=2.406e+03  z[37]=-3.4152
+          it=2  lp=-520945.3372  |grad|_inf=8.790e+01  z[37]=-3.4155
+          it=3  lp=-520945.3252  |grad|_inf=8.957e+01  z[37]=-3.4153
+          it=4  lp=-520945.3248  |grad|_inf=1.563e-01  z[37]=-3.4154
+          it=5  lp=-520945.3246  |grad|_inf=2.260e-02  z[37]=-3.4153
+          it=6  lp=-520945.3246  |grad|_inf=1.734e-02  z[37]=-3.4153
+          it=7  lp=-520945.3245  |grad|_inf=1.224e-02  z[37]=-3.4153
+          Newton: no improving step found along the Newton direction after 15 halvings -- stopping (this IS informative: the exact-Hessian quadratic model does not predict an improving direction here either).
+          [stage3 FINAL] lp*=-520945.3245  |grad|_inf=1.224e-02  z[37]*=-3.4153  CROSSED_THR=False
+          *** FINDING (post-Newton): |grad|_inf=1.224e-02 still NOT small at 'compact' -- the point is NOT a true stationary point even after an exact-Hessian damped-Newton refinement. The Laplace estimate below is computed AT THIS POINT ANYWAY (per instructions, to report raw numbers), but should be read as an approximate/lower-confidence estimate, not an exact result. ***
+
+--- Hessian via sequential exact Hessian-vector products, float64 ---
+sharp   : Hessian computed in 3.8s, shape=(46, 46)
+          max|H - H^T| (asymmetry) = 5.481e+00
+          eigenvalues: min=-1.488452e+08  max=-9.469928e-01
+          eigenvalue count >= 0 (should be 0 at a true max) = 0 / 46
+          slogdet(-H): sign=1.0  logdet=398.2562
+          cond(-H) = 1.572e+08
+          Laplace sd along z[37] = 0.017581890403990035
+          per-mode log-volume [d/2 log(2pi) - 0.5 logdet(-H)] = -156.8569
+compact : Hessian computed in 3.8s, shape=(46, 46)
+          max|H - H^T| (asymmetry) = 5.505e+00
+          eigenvalues: min=-1.690176e+08  max=-9.162402e-01
+          eigenvalue count >= 0 (should be 0 at a true max) = 0 / 46
+          slogdet(-H): sign=1.0  logdet=404.7534
+          cond(-H) = 1.845e+08
+          Laplace sd along z[37] = 0.01861555184786717
+          per-mode log-volume [d/2 log(2pi) - 0.5 logdet(-H)] = -160.1055
+
+--- Laplace weight prediction ---
+peak-gap term   [lp_compact* - lp_sharp*]                = +89.7896 nats
+volume term     [0.5*(logdet(-H_sharp)-logdet(-H_compact))] = -3.2486 nats
+total log(w_compact/w_sharp)                              = +86.5410 nats
+predicted w_compact = 1/(1+exp(-log_ratio))                = 1
+predicted w_sharp                                          = 0
+
+(sampled/stopwatch weight for comparison: w_compact=0.2401, w_sharp=0.7599)
+
+both Hessians negative-definite = True
+any optimization path crossed THR = False
+
+--- 'compact is broader' sanity check (z[37] sd + total log-volume) ---
+sharp   : sd_z37=0.0176   log_volume=-156.8569
+compact : sd_z37=0.0186   log_volume=-160.1055
+=> along z[37], 'compact' IS the wider mode -- consistent with the step-0 1-D impression.
+=> in TOTAL 46-d log-volume, 'sharp' is the larger-volume basin (volume in the other 45 dims can reverse a 1-D impression).
+eigenvalue |lambda| dynamic range (sharp) = max/min = 1.572e+08 (8.2 orders of magnitude)
+eigenvalue |lambda| dynamic range (compact) = max/min = 1.845e+08 (8.3 orders of magnitude)
+
+CAVEAT: max cond(-H) across modes = 1.845e+08. Laplace is a local Gaussian approx; with 164 profiled lstsq amplitudes the profile likelihood may not be smooth, and a wide/ill-conditioned spectrum means the volume term above should be read as an order-of-magnitude statement, not a precise number.
+
+plot saved: /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/diag_sys2/laplace_eigenspectra.png
+results json saved: /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/diag_sys2/laplace_weight_results.json
+
+TOTAL WALL TIME: 640.0s

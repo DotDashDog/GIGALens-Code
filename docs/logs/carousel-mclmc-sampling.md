@@ -472,6 +472,76 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: S2-MAPCFG — is system-2's stored bad MAP (lp=-521150.351, z[37]=-1.8553, OUTSIDE the
+  sampled posterior range [-3.601,-2.262], 194 nats below the compact-mode MCLMC peak, and
+  30.26 nats below even the WORST sharp-cluster MCLMC draw) a fixable OPTIMIZER-CONFIG
+  artifact, or a genuine structural attractor of the MAP objective under gradient descent?
+  Follow-up to the 2026-07-16 GENERALIZATION step-0b Finding #3/#4 entry (log, above) — the
+  Hessian/Laplace-volume measurement is a separate, DERIVABLE-and-not-yet-done item; this
+  checkpoint is scoped ONLY to the optimizer-config question.**
+  **Claim + classification:** stochastic-estimator / dynamical-behaviour claim about
+  gradient-based optimization outcomes (lr, schedule, step count, restart count), NOT a
+  claim about the posterior itself — the posterior's shape/modes are already characterized
+  by the certified MCLMC draws (step-0b). This tests whether ADABELIEF lr=1e-2, 2000 steps,
+  128 starts (the archive's exact config) is under-tuned, using the MAPStage API's existing
+  `optimizer_factory` hook (no library-code changes needed — confirmed by reading
+  `gigalens_research/inference_utils/pipeline.py:1359-1416` and
+  `gigalens/src/gigalens/jax/inference.py` `ModellingSequence.MAP`).
+  **Cause hypothesis:** lr=1e-2 is too high to settle into a narrow valley near a mode — the
+  archive's own `lp_hist` OSCILLATES over its last 10% (net −0.228 nats, not a rising tail;
+  it plateaued, was not truncated) — so a lower/decaying LR and/or more restarts (better
+  basin coverage) will find a materially better optimum than the archived one.
+  **Prediction (direction + magnitude):**
+  (A, baseline repro: lr=1e-2, 2000 steps, n=128, seed 42) should reproduce lp ≈ −521150 to
+  within ~1 nat (the existing `carousel_model_s2.verify()` gate's own tolerance) — a control,
+  not a discovery; failure to reproduce is itself reported as a finding.
+  (B, lr=1e-3, 6000 steps) predicted to REDUCE terminal-oscillation amplitude (a direct
+  step-size effect) but the LP GAIN is UNCERTAIN a priori: if lr was the dominant cause,
+  predict closing a substantial fraction of the ~194-nat gap to the compact peak (order of
+  magnitude: tens of nats, i.e. lp materially above −521120); if the basin itself is the
+  limit, predict <10-nat gain and a similar/nearby final lp.
+  (C, decaying lr 1e-2→1e-5 over 6000 steps) predicted to show the SMOOTHEST terminal trace
+  of all arms (decay directly removes step-size-driven jitter) — this isolates "was the
+  oscillation itself just unconverged step size" from "is there a better basin".
+  (D, n_samples=512 at the archived lr) tests basin-of-attraction coverage, not step size: if
+  128 starts is too few to find the good basin, predict a QUALITATIVELY different result — a
+  best z[37] landing inside the compact-cluster band (< −3.092) with lp materially closer to
+  the sharp-cluster mean (−521069.58); if the bad basin has a large/dominant basin of
+  attraction under gradient descent from these priors, predict D lands in the SAME regime as
+  A (z[37] ≈ −1.8 to −2, lp ≈ −521150, i.e. no material change from 4× more restarts).
+  **Falsifier + derived threshold:** the derived bar is −521120.07, the WORST sharp-cluster
+  MCLMC draw — in 46-d the typical set sits below the mode, so any bona fide MAP must clear
+  this value; the archive sits 30.26 nats below it. PASS-for-"config-artifact": at least one
+  of B/C/D reaches or exceeds −521120.07 (ideally approaching the sharp/compact cluster means,
+  −521069.58 / −520992.89) AND lands z[37] inside the sampled range [-3.601,-2.262].
+  FAIL-for-"config-artifact" (⇒ structural attractor): ALL of B/C/D plateau within roughly the
+  same 30-nat band below −521120 as the archive, regardless of the 3× step or 4× restart
+  budget increase. Landing in DIFFERENT basins across arms is a third, separately-reported
+  outcome (config-lottery-dependent MAP).
+  **Metric blind spot:** lp comparisons only test whether a run reaches high density
+  SOMEWHERE, not whether the discovered point is specifically the compact or sharp basin, nor
+  whether an unsampled higher basin exists outside this bounded sweep (n_samples ≤ 512,
+  steps ≤ 6000 — not an unbounded global search). Also: `MAPStage`/`ModellingSequence.MAP`
+  with `output_type="best_step"` records, at each step, only the SINGLE best-across-chains
+  sample at that instant (not full per-chain histories) — the recorded trace can jump between
+  different chains' identities step-to-step, so "oscillation" partly reflects this
+  best-of-ensemble bookkeeping, not necessarily one chain's own trajectory degrading. This
+  will be stated explicitly when reporting oscillation.
+  **Expected plot:** `lp_hist` for arms A-D overlaid on shared axes, with horizontal reference
+  lines at the archive MAP (−521150.351) and the derived falsifier bar (−521120.07), plus a
+  zoom on the last 10% of steps. Hypothesis-holds appearance: B/C/D visibly above the
+  −521120 line with flat (non-oscillating) tails. Falsifier appearance: all curves
+  plateau/oscillate at or below the archive's level, all below the −521120 line.
+  **Cost:** MAP-only (no Bridge/MCLMC stages) on the already-allocated 4-GPU node (job
+  55991565, 4× A100, TimeLimit 04:00:00, ends 2026-07-16T17:31:42, ~2.4 h remaining at
+  write-time) via `srun` in the foreground — MAP is cheap relative to the 10k+10k-step MCLMC
+  stage this archive also ran, so each arm (≤6000 steps, ≤512 samples, sharded /4 GPUs) is
+  expected to run in low single-digit minutes; 4 arms sequential, run A first as a timing +
+  reproduction control before committing to B-D given the finite window. No environment
+  mutations; writes only under a NEW `debug_carousel/1_2_3_4_5_9_mapdiag/` dir (or a
+  script-local dir under `experiments/flow_precond/`), never the archive.
+  **Status: awaiting approval.**
+
 - **Run: S2-ART — IS THE src5 SOURCE-SIZE BIMODALITY OF SYSTEM 2 A RENDERING ARTIFACT OF
   `supersample=1`? This GATES the entire generalization: if the bimodality does not survive correct
   rendering, system 2 is not a multimodal test case and the 2nd system must be replaced.**
@@ -3905,6 +3975,79 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-16 (GENERALIZATION step-0c — LAPLACE MEASUREMENT: SYSTEM 2 IS **NOT BIMODAL**. It is ONE
+  dominant mode + a METASTABLE TRAP holding 2.5e-38 of the equilibrium mass. Sampling-free (no MCMC).
+  Human-approved diagnostic. PROPOSED, UNCERTIFIED — grader not yet run on this.)**
+  **HEADLINE: predicted equilibrium w_compact = 1.0 to float64 precision; w_sharp ~ 2.5e-38.** Laplace at
+  two properly-converged local maxima on the archive-matched PLAIN build (artifacts:
+  diag_sys2/{laplace_weight_measurement.py, laplace_weight_results.json, laplace_weight_run.log,
+  laplace_eigenspectra.png}):
+  | term | nats |
+  | peak gap (lp_compact* - lp_sharp*) | **+89.79** |
+  | volume term 0.5*[logdet(-H_sharp) - logdet(-H_compact)] | **-3.25** |
+  | **total log(w_compact/w_sharp)** | **+86.54** |
+  **⇒ THE SAMPLED WEIGHT 0.2401/0.7599 IS PURE NON-CONVERGENCE, now established by an ENERGETIC argument
+  that uses NO sampling at all — independent of, and agreeing with, the stopwatch/drainage finding.** The
+  step-0b re-frame (Finding #4) is CONFIRMED: **the sampling problem on system 2 is ESCAPE FROM A
+  METASTABLE TRAP, not two-mode WEIGHT ESTIMATION.** The dPIE-inherited framing ("estimate the pocket
+  weight, certify against a converged band") DOES NOT TRANSFER — there is no weight to estimate here.
+  **BOTH MODES ARE GENUINE LOCAL MAXIMA (precondition satisfied, not assumed): Hessians negative-definite,
+  0/46 non-negative eigenvalues at EACH mode. Basins cleanly separated: z[37] never crossed THR=-3.092 at
+  any point of either optimization trajectory (sharp -2.7697->-2.7517; compact -3.4275->-3.4153).** So the
+  bimodality is REAL as topology — there ARE two maxima — but IRRELEVANT as probability: one of them holds
+  e^-86.54 of the mass.
+  **CORRECTION #3 (MINE — a 1-D read that did not survive the 46-d check; 4th such instance):** I logged
+  the compact mode as "the BROADER one". Along z[37] SPECIFICALLY that is CONFIRMED (Laplace sd 0.01862
+  compact vs 0.01758 sharp) — but the TOTAL 46-d log-volume is LARGER FOR **SHARP** (-156.86 vs -160.11):
+  **the ordering FLIPS once the other 45 dimensions are integrated.** My step-0 "higher peak AND broader ⇒
+  dominates" argument was therefore right in its CONCLUSION but wrong in one of its PREMISES. Immaterial
+  here only because the ~90-nat peak gap dwarfs the ~3-nat volume term by ~30x — i.e. I got the right
+  answer partly by luck, and the volume term the grader flagged as missing turns out to point the OTHER
+  WAY from my assumption.
+  **FINDING — THE POSTERIOR IS SEVERELY ILL-CONDITIONED, AND THIS IS PROBABLY THE ROOT CAUSE OF THE BROKEN
+  MAP (step-0b Finding #3).** Hessian condition number **~1.6-1.8e8**; eigenvalues span **8.2-8.3 orders of
+  magnitude** (|lambda| from ~1.5-1.7e8 down to ~0.92-0.95). The PLOT (laplace_eigenspectra.png) shows the
+  two modes' spectra are NEAR-IDENTICAL and form a SMOOTH CONTINUUM over those 8 decades — **no spectral
+  gap, no "few stiff directions + flat rest" structure.** Corroborating evidence from the measurement
+  itself: **TWO independent optimizer families (L-BFGS-B; trust-region Newton-CG with exact HVP) BOTH
+  STALLED at |grad|_inf ~ 26-29** — only a third stage (damped Newton on the EXACT Hessian, with
+  backtracking) converged (|grad| 0.095 sharp / 0.012 compact). Two different methods stalling at a
+  similar large gradient is evidence of REAL ill-conditioning, not an optimizer bug.
+  **⇒ PRE-REGISTERED PREDICTION FOR THE RUNNING MAP-CONFIG SWEEP (recorded BEFORE its arms report, so it
+  can be scored honestly): `adabelief` is FIRST-ORDER, and on a landscape conditioned at ~1e8 a
+  first-order method cannot converge — lowering or decaying the learning rate does NOT fix conditioning.
+  I therefore predict arms B (lr=1e-3), C (decay), and D (n=512 restarts) ALL FAIL to reach the MCLMC
+  cluster means (-521069.58 sharp / -520992.89 compact), plateauing near the archive's -521150. IF SO, my
+  own mundane "it's just lr=1e-2" explanation is DEAD and the broken MAP is FUNDAMENTAL. FALSIFIER: any
+  arm reaching lp above the sharp cluster mean ⇒ the MAP failure WAS config, my ill-conditioning story is
+  not needed to explain it, and the point-and-go premise is intact.**
+  **CONSEQUENCE FOR THE SAMPLER (this is where it bites, and it is NOT a system-2 curiosity): the implied
+  posterior Laplace sds span ~8e-5 to ~1.04 — a factor of ~1.3e4. D2 initialises `inv_mass =
+  (D2_INIT_SCALE^2) * I` with D2_INIT_SCALE = 1e-3 (carousel_gate_pt0.py:120,1643) — a DIAGONAL metric
+  asserting sd ~ 1e-3 in EVERY direction, i.e. wrong by ~1e3x in the flattest directions and ~12x in the
+  stiffest. A DIAGONAL METRIC CANNOT WORK ON THIS POSTERIOR.** This is almost certainly the same wall as
+  **Blocker B / C-28 (in-run adaptive-metric quality), which we DEFERRED as optional — it now looks
+  CENTRAL.** Note the adaptive windowed metric estimates a FULL covariance, so it is the right shape; the
+  open question is whether it can estimate a 1e8-conditioned covariance from in-run samples at all.
+  **CAVEATS (grader-anticipated, not buried):** Laplace is a LOCAL GAUSSIAN approximation and can be badly
+  wrong for curved/banana basins — and this project has PRIOR EVIDENCE of exactly that (C-25/C-5 curved
+  degeneracy). With 164 unregularized lstsq-profiled amplitudes the profile likelihood may not even be
+  smooth. Given the 8+ decade spread, the VOLUME term is an order-of-magnitude statement, not a precise
+  number. **However: the conclusion is robust to the volume term being wrong by tens of nats — it would
+  take an ~87-nat volume error to overturn, ~27x the measured value.** The PEAK GAP (+89.79) is a direct
+  log_prob difference at two converged points and does NOT depend on the Gaussian approximation at all.
+  **WHAT THIS DOES NOT ESTABLISH:** it says nothing about whether the compact (dominant) mode is
+  PHYSICALLY correct — the S2-ART artifact question is untouched and its certified test remains
+  structurally unavailable (step-0b Finding #2). Note the artifact question INVERTS under this result: it
+  is no longer "is the 2nd mode spurious?" (that mode is negligible) but **"is the DOMINANT mode
+  spurious?"** — which is a MODELING question about the human's science, not a sampler question, and it
+  now matters MORE, not less. Also untouched: the shear-plausibility flag, and whether beta is even
+  identifiable against 164 profiled amplitudes.
+  **IMPLEMENTATION NOTE (real ceiling, reported not patched): `jax.hessian` (vmapped forward-over-reverse)
+  OOM'd the GPU twice under two different XLA workarounds — batching all 46 tangents over 300x300x4-band
+  renders exceeds memory. Worked around by building the Hessian column-by-column via grad-then-jvp (same
+  math, unbatched). Anyone repeating this needs the unbatched form.**
 
 - **2026-07-16 (GENERALIZATION step-0b — THREE FINDINGS THAT RESHAPE THE PROBLEM, plus a CORRECTION to my
   own step-0 headline. No sampler run. PROPOSED, UNCERTIFIED. All numbers re-derived from artifacts by me,
