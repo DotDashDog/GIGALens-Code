@@ -3828,7 +3828,61 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   the opposite under-claim).
   **UNCERTIFIED — corrections applied, awaiting grader rd-2.**
 
-- **2026-07-16 (RE-SCOPED SAME DAY — the entry below OVER-CLAIMED. The PT-7↔PT-8 divergence is CONFOUNDED
+- **2026-07-16 (A/A DIAGNOSTIC RAN — VERDICT: THE HARNESS IS GENUINELY NON-DETERMINISTIC. This RESTORES
+  the original finding and OVERTURNS my own "it's just build drift" re-scope below. Job 55986915.)**
+  **RESULT (exact, binary — no thresholds):** 2 arms, BYTE-IDENTICAL config (arm D2, betas
+  geomspace(0.70,1,3), seed 60, NSYS=16, K=10, ss_max=5, devar=5e-4, metric_est=pooled,
+  METRIC_WINDOWS=100,250,500, ROUNDS=200), SAME allocation, SAME node, **SAME build (both model cards
+  report `jax 0.10.0.dev20260716` — verified, that was the point)** → **DIVERGED. `cold_ind` first
+  divergent round = 122**; `swap_accepts` maxdiff 44, `swap_attempts` 22, `step_mean` 0.150, `eevpd` 0.384,
+  `metric_frozen` 1.96e-05, `round_trips_pocket` 3, `walker_id` 2 — every array differs. **⇒ the harness is
+  NON-DETERMINISTIC at fixed seed WITHIN one build. The pre-registered falsifier fired.**
+  **I WAS WRONG TWICE OVER, IN OPPOSITE DIRECTIONS — and the SECOND error was the one dressed as rigor.**
+  The original entry ("fixed seeds do not reproduce", mechanism ≈ non-deterministic GPU reductions, grader
+  + me) is **CORRECT AND RESTORED**. My same-day "AP-3 violation / exotic-before-mundane" self-correction —
+  which declared the divergence CONFOUNDED by sidecar build drift (dev20260715 vs dev20260716) — was
+  **PREMATURE: the build difference is REAL and IS a genuine confound for the PT-7↔PT-8 pair, but it is NOT
+  the cause; non-determinism alone suffices (A/A, one build, diverges at 122 ≈ PT-7/PT-8's 126).**
+  **LESSON (new, sharp): "prefer the mundane explanation" (AP-3) is a HEURISTIC FOR CHOOSING WHAT TO TEST
+  FIRST — it is NOT an adjudication. I found a plausible mundane confound and used it to CONVICT the
+  correct hypothesis of being "exotic", writing an AP-3 accusation against myself and the grader for
+  reaching the RIGHT answer. A confound must be ELIMINATED BY A CONTROL, not by an argument about
+  plausibility. (The A/A test — the right move — is what settled it; I should have run it BEFORE re-scoping
+  the record, not after.)**
+  **STANDING CONSEQUENCE (unchanged from the original, now on firmer ground): every "same-seed" comparison
+  in this engagement — same-build OR cross-build — is a STOCHASTIC REPLICATE, not a matched control.** This
+  weakens any design claiming EXACT pairing (flagged: the PT-5a-r2 ss_max ablation explicitly claimed
+  "identical init + kernel RNG at the same seed ⇒ valid paired controls" — BUT note its validity arm DID
+  reproduce archived PR1 bit-for-bit, which CONTRADICTS blanket non-determinism and is UNEXPLAINED; the
+  phase-Q path may differ. NOT diagnosed — do not assume either way). PT-7/PT-8's arms used different
+  ladders so they were never exact pairs; their science is unaffected (seed was for fairness, not pairing).
+  **MECHANISM LOCALISED + FIXED (both follow-ups RAN, same session, same node/build):**
+  **(i) The round-100 metric-window hypothesis is REFUTED — it was a RED HERRING (mine AND the grader's).**
+  `cold_ind` is a DISCRETE 0/1 indicator, so its "first divergent round = 122" is merely when accumulated
+  FP noise first FLIPPED a discrete outcome — NOT the divergence onset. Checking the CONTINUOUS arrays (a
+  free check on the arrays I already had): **`eevpd` differs at ROUND 0 (8.4e-9) and `step_mean` at ROUND 0
+  (2.3e-3)** ⇒ the non-determinism is in the CORE GPU compute path FROM THE FIRST ROUND. The round-100
+  metric update does not CAUSE it, it AMPLIFIES it (eevpd |diff| 1.2e-5 @r50 → 3.8e-1 @r100). ~1e-8 at
+  round 0 = the classic signature of non-deterministic float64 GPU reductions/atomics.
+  **(ii) THE FIX WORKS — `XLA_FLAGS=--xla_gpu_deterministic_ops=true` restores BITWISE determinism.**
+  Controlled 4-arm test (ROUNDS=20 suffices BECAUSE divergence starts at round 0; same node/build/seed):
+  · **WITH the flag: 2 arms BITWISE IDENTICAL** — `eevpd`, `step_mean`, `cold_ind`, `swap_accepts` all
+  `array_equal` ✓
+  · **WITHOUT (control): DIVERGED at round 0** — eevpd max|diff| 1.34e-05, step_mean 3.86e-03,
+  swap_accepts differ by 2 ✓ (so the test is powered and the flag is what changed)
+  **COST: ~8% wall** (flagged arms 210 s / 207 s vs control 193 s / 193 s @ 20 rd).
+  **STANDING RULE (adopted): any paired / A-B / exact-pairing design MUST set
+  `XLA_FLAGS=--xla_gpu_deterministic_ops=true` (and run in ONE allocation on ONE build). Without it, two
+  identical-config identical-seed runs are stochastic REPLICATES.** Recorded in
+  [[gigalens-gpu-launch-recipe]]. Retrospective scope: past "same-seed" comparisons were replicates (PT-7/
+  PT-8 arms used different ladders so were never exact pairs — their science is unaffected); the PT-5a-r2
+  ss_max ablation's bit-for-bit validity-arm reproduction remains UNEXPLAINED under this finding and is NOT
+  re-litigated here (flagged, not diagnosed). **Claim type = deterministic identity ⇒ exact test, no
+  thresholds invented. UNCERTIFIED (result graded only if it enters a science claim; it is an apparatus
+  fix).**
+  ————————————————————————————————————————————————————————————
+- **[SUPERSEDED — MY RE-SCOPE WAS WRONG; SEE THE A/A VERDICT ABOVE] 2026-07-16 (RE-SCOPED SAME DAY — the
+  entry below OVER-CLAIMED. The PT-7↔PT-8 divergence is CONFOUNDED
   BY A JAX BUILD DIFFERENCE and does NOT establish harness non-determinism.) CORRECTION (mine, found by
   checking the model cards — which BOTH the grader and I failed to do before hypothesising):
   `ablog_pt7_L70.log` reports `"jax": "0.10.0.dev20260715"`; `ablog_pt8_L70_s60.log` reports
