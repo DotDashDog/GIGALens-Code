@@ -473,9 +473,144 @@ multimodality, conditioning, or the NFW profile.
 ## Design checkpoints (criteria awaiting approval)
 
 - **Run: S2-ART — IS THE src5 SOURCE-SIZE BIMODALITY OF SYSTEM 2 A RENDERING ARTIFACT OF
-  `supersample=1`? (status: AWAITING APPROVAL, 2026-07-16.) This GATES the entire generalization: if the
-  bimodality does not survive correct rendering, system 2 is not a multimodal test case and the 2nd
-  system must be replaced.**
+  `supersample=1`? This GATES the entire generalization: if the bimodality does not survive correct
+  rendering, system 2 is not a multimodal test case and the 2nd system must be replaced.**
+  **STATUS: rigor-grader rd-1 NEEDS-MORE (2026-07-16) — NOT CLEAR TO LAUNCH AS DESIGNED. rd-1 fixes
+  being applied; the design below is SUPERSEDED where marked and is preserved, not excised.**
+  **GRADER'S LOAD-BEARING FINDING — MY CENTRAL PREMISE IS WRONG. `AdaptiveImageData` IS NOT A
+  SUPERSAMPLER.** It is an SNR-driven COST REDUCER that refines the arcs and COARSENS the sky
+  (`adaptive_supersample.py:114-121`, DEFAULT_SNR_LEVELS). Measured by the grader on THIS system's own
+  FITS (`newnewcutouts/source4-5.fits`, the band that renders src5), reproducing `from_snr`'s exact
+  smooth/dilate/select path: **92.1% of unmasked likelihood pixels at factor 0.25 (ONE sample per 4x4
+  block), 4.0% at 0.5, 2.0% native, 0.7% at 2x, 1.2% at 4x ⇒ 96.1% COARSER than plain ss=1, 1.9%
+  FINER.** The mask screens nothing (99.3% kept). Same on all 4 bands (96.5/98.7/96.1/99.1% coarser).
+  **My hypothesis is about the 1.9%.** My checkpoint said "a matched A/B whose ONLY variable is the
+  renderer" — true and MISLEADING: that one variable is a BUNDLE of two changes in OPPOSITE directions,
+  and the one I care about touches 2% of pixels while the other touches 96%. A >=22-nat demotion is
+  more plausibly the SKY COARSENING than src5 refinement, and **the design as written cannot tell them
+  apart.** The instrument would have answered a question about `supersample=1` using a renderer that
+  mostly does the OPPOSITE of supersampling — and would very likely have delivered a demotion in my
+  predicted direction for the wrong reason, which I would have read as confirmation.
+  **STRIKE "independent support (3)" ENTIRELY — I read a coincidence of timing as corroboration, and
+  the evidence points the OTHER WAY.** I wrote "the human independently added adaptive supersampling 3
+  days later" as support. The withdrawal established only "the archive is non-adaptive"; it does NOT
+  establish "the adaptive code is a fix for this system's compact source". Git says otherwise: commit
+  501334a's message and the module docstring (lines 5-9) motivate it by **SPEED** ("Uniform
+  supersampling pays ss**2 light evaluations on EVERY pixel, but the pixels that need sub-pixel
+  quadrature are the few..."); it was calibrated on the BUNDLED DEMO, not this system; and the human's
+  2026-07-13 follow-up (f813a9a) made it **LESS accurate** (deleted the 8x tier; moved the subsample
+  tiers from (1.0,1.0),(0.4,0.5) to (2.0,1.0),(1.0,0.5)) WITHOUT updating the comment at
+  `adaptive_supersample.py:106-113` that certifies 2x2 blocks only for SNR<1.0 and 4x4 only for SNR<0.5.
+  **Consequence: 40.2% of unmasked pixels on source4-5 are now subsampled OUTSIDE the module's own
+  documented 0.1-sigma band (35,892 px at f=0.25 above SNR 0.5; 3,614 at f=0.5 above SNR 1.0),
+  budgeting ~180 nats on that band / ~700 across four at the module's own tolerance — THE SAME ORDER AS
+  THE 1394-NAT GAP I MEASURED.** (Grader flags this as a tolerance-budget BOUND, not a measurement.)
+  **So "adaptive = correct rendering" (my words, twice) is FALSE on this system: it is uncalibrated
+  here (the module MANDATES per-system re-calibration: docstring 36-38, 55-58), running past its own
+  certified bands, and capped at ALLOWED_FACTORS=4.0 (8x removed by f813a9a) ⇒ finest adaptive sampling
+  0.25 px vs the compact mode's ~0.063 px finest shapelet structure ⇒ the "correct" arm may ALSO
+  under-resolve.**
+  **WITHDRAWN — THE 22-NAT DERIVATION (arithmetic right, logic wrong FOUR ways; grader).** (a) It is
+  the MARGINAL prior of ONE coordinate, not the prior DIFFERENCE: measured, 23/46 dims differ by >0.5
+  sd and 41/46 by >0.1 sd, and z[37] is only 65% of the L2 displacement between mode centres — the
+  actual `log_prior(z_sharp) - log_prior(z_compact)` is ONE LINE OF CODE and I never computed it, I
+  asserted a number I could have measured. (b) It silently drops the Laplace VOLUME ratio log(V_B/V_A)
+  — and my own log calls the compact mode "broader", so this is uncontrolled and plausibly O(10) nats
+  in 46-d. (c) **It derives the magnitude FROM THE POSTERIOR WEIGHT (0.2401 vs 0.7599) THAT THIS SAME
+  ENTRY DISQUALIFIES TWELVE LINES EARLIER AS A STOPWATCH READING — one rule used in both directions
+  inside one document. This is the THIRD logged instance of this exact pattern against me (cf. PT-8).**
+  (d) "therefore THE RENDERING must be supplying ~22 nats" ASSUMES THE CONCLUSION — *something* supplies
+  ~20 nats; naming it "the rendering" is the hypothesis, not a derivation.
+  **DEMOTED — "0 of 200,000 prior draws" is an ANALYTIC TAUTOLOGY, not a measurement.** P(z < -3.0920)
+  under N(-2.3026, 0.15) = Phi(-5.269) = **6.9e-8** ⇒ 0.014 draws expected in 200k; observing 0 is
+  exactly what the closed form says, and my rule-of-three bound (1.5e-5) is 200x LOOSER than the
+  analytic value. It carries NO information beyond "-7.32 sigma of a tight hand-set prior". I presented
+  it as "Independent support (1)". Demoted to a restatement.
+  **THE LEADING MUNDANE RIVAL I MISSED ENTIRELY (AP-3, squarely — "exotic before mundane"):
+  `use_lstsq=True` PROFILES OUT 164 UNREGULARIZED LINEAR AMPLITUDES at every evaluation** (model card's
+  own warning: "NO physical regularization"). So the "likelihood" is a MAXIMIZED-over-164-amplitudes
+  PROFILE likelihood with **no Occam/determinant term**. As beta shrinks the shapelet basis narrows and
+  can chase noise, with nothing charging it for the flexibility. **This is the textbook signature of an
+  unregularized profile likelihood, and it predicts BOTH of my surviving "independent support" items —
+  one-way drainage toward smaller beta AND posterior mass beyond the prior — WITH NO RENDERER
+  INVOLVED.** My items (1) and (2) therefore do NOT discriminate renderer-vs-lstsq. Also AP-2 adjacent
+  (164 flexible unregularized amplitudes absorbing misspecification is exactly AP-2's mechanism).
+  **TWO MORE MUNDANE ALTERNATIVES, UNLISTED BY ME:** (i) **src5's prior IS sub-pixel BY CONSTRUCTION** —
+  `LogNormal(log(0.1), 0.15)`, median 0.1" = **0.5 px** (`carousel_model_s2.py:226`), the ONLY source not
+  at `log(0.4)` = 2 px (lines 198/214/220/233). My "deeply sub-pixel ⇒ pathological" therefore indicts
+  the PRIOR, and both modes (0.31 px, 0.17 px) are within a factor of 3 of where the prior median was
+  put. (ii) **sigma=0.15 is boilerplate copy-pasted across all 5 sources and BOTH modes violate it**
+  (the SHARP mode is already -3.22 prior-sigma, p~6e-4) ⇒ the WHOLE beta posterior is in prior-data
+  conflict; "a hand-set source-size guess is wrong by exp(7.32*0.15) ~ 3x" is the most mundane reading
+  in the document, and the BIMODALITY is a separate feature that the sigma-counting does not bear on.
+  **DOUBT REPORT — MY STRONGEST DOUBT NEVER REACHED THE RECORD (producer-honesty hit, grader; I accept
+  it).** I told the grader in its dispatch prompt that the sub-pixel-beta argument may fail because the
+  source is LENSED and MAGNIFIED (image-plane extent >> source-plane beta), and called it "a live threat
+  to the whole hypothesis". **The checkpoint contained no mention of magnification, lstsq profiling, or
+  the sub-pixel prior. A doubt disclosed to the grader but absent from the log is NOT disclosed — the
+  record is the durable artifact, the grader is not.** Recorded here. Substance: beta is a SOURCE-plane
+  scale and the renderer traces image-plane samples back, so effective source-plane sampling ~
+  delta_pix/sqrt(mu); the finest structure in an n_max=6 shapelet is ~beta/sqrt(7) = 0.063 px, so ss=1
+  is ADEQUATE at mu >~ 10 — routine for arcs. **This is now measured, not argued (must-fix 2).**
+  **INSTRUMENT DEFECTS (grader, all real):** (i) **NO POSITIVE CONTROL / VOID BRANCH** — I pre-committed
+  two appearances (plain W-shaped; both W-shaped) and OMITTED the third: *plain is NOT W-shaped*. That is
+  live, because my endpoints were cluster MEANS. If plain shows no interior maximum the path is bad and
+  the instrument is BLIND — yet the adaptive curve would look exactly as my hypothesis predicts. (ii)
+  **My blind-spot MITIGATION pointed at the confirmatory MCLMC run that this same entry disqualified two
+  paragraphs earlier.** (iii) **The endpoints are CONTAMINATED by the same non-stationarity that
+  disqualifies the weight**: chain 1 arrived ~draw 8300 and is STILL DRIFTING (mean_below -3.2836,
+  last-1000 -3.3067) vs arrived chains 3/5/6 (~-3.44); pooled z_compact = -3.3997 vs stationary-only
+  -3.4234. The endpoint is pulled TOWARD THE BARRIER ⇒ t=1 likely sits on the compact basin's SHOULDER,
+  which is exactly when the positive control fails. (iv) **The `S2.AdaptiveImageData = ImageData`
+  monkeypatch is a PROCESS-GLOBAL mutation**: building both arms in one process without restoring it
+  yields two IDENTICAL curves — and "both W-shaped" is my FALSIFIER branch, so a silent op error would
+  read as REFUTED. (v) The 5-nat floor is numerology derived from the wrong noise source (a cross-build
+  single-point residual, for a same-build deterministic difference-of-differences whose reproducibility
+  is ~machine precision); it errs AGAINST my hypothesis, but it is not derived.
+  **AMBIGUITIES THAT WERE POST-HOC DOF (grader):** "demoted >=22 relative to t~0" never said whether it
+  meant Delta_adaptive or (Delta_adaptive - Delta_plain) — only the second is meaningful (it differences
+  out the ~1394-nat common-mode shift); and "DISAPPEARS **or** demoted >=22" conflates a TOPOLOGICAL
+  claim with a HEIGHT claim, so "a clean interior max at t~1, demoted 40 nats" would have scored as
+  HYPOTHESIS HOLDS even though the mode demonstrably SURVIVED.
+  **rd-1 MUST-FIXES BEING APPLIED (7):** (1) **PRIMARY ARM CHANGE — refinement-only**: primary contrast
+  becomes plain ss=1 vs `AdaptiveImageData(snr_levels=((10.0,4.0),(7.0,2.0),(-np.inf,1.0)))` = factor
+  >=1 EVERYWHERE = a STRICT REFINEMENT of ss=1, differing only on the 1.9% of pixels the mechanism
+  names (the disable-subsampling recipe is the module's own, docstring 63-70). The default-levels
+  adaptive arm is retained as a THIRD, LABELLED arm ("the notebook's current model"), NOT the artifact
+  instrument. (2) **MEASURE THE MIDDLE LINK, do not disclaim it**: run `compare_to_reference(plain_sim,
+  z, error_map=..., psf_mode="bin_first" AND "subgrid", reference_supersample=8)` at z_sharp and
+  z_compact BEFORE the profile — the module's OWN declared falsifier, which I wrongly called
+  unavailable ("no ground truth") when it SHIPS IN THE REPO. **If sum((delta/sigma)^2) is small at both
+  endpoints, THE HYPOTHESIS IS DEAD PRE-RUN and no GPU is spent.** (3) **REPLACE the magnitude**:
+  predicted demotion = `0.5*[sum((delta/sigma)^2)|_compact - sum((delta/sigma)^2)|_sharp]` — deterministic,
+  MEASURED, same units as the profile, available BEFORE the run; plus evaluate `log_prior` along the
+  path (free) so `log_lik = log_post - log_prior` becomes an OBSERVABLE not an estimate. (4) **PIN ONE
+  STATISTIC + POSITIVE CONTROL**: `D = [LP(t1)-LP(t0)]_plain - [LP(t1)-LP(t0)]_refine-only`, t0/t1 =
+  argmax within each half-path; NEW BRANCH — if the PLAIN profile does NOT show two local maxima
+  separated by a barrier the instrument is **VOID** (no conclusion, redesign the path); NEW BRANCH — `D
+  < 0` (adaptive PROMOTES the compact mode) is its own named outcome, not folded into "survives";
+  decide in advance that "artifact" means TOPOLOGY (no interior max), reporting D separately; endpoints
+  from the STATIONARY segment only. (5) Record + exclude the mundane alternatives above. (6) Retitle
+  "correct rendering" and bound it; add that beta at fixed n_max against 164 profiled amplitudes is only
+  WEAKLY IDENTIFIABLE (method-discipline §1; source-size/magnification is a KNOWN lensing degeneracy).
+  (7) Doubt report written in (above). **OP-NOTE: replace the monkeypatch with `build(renderer=...)`;
+  per arm assert+print `type(pm.datasets[i]).__name__` AND the factor-map tier histogram in the model
+  card. `model_card.json` has no `conv_precision` field and CANNOT record the adaptive tier map at all —
+  both are card SCHEMA gaps (scoping claim (ii) stands).**
+  **GRADER CREDIT (recorded because the process worked, not to soften the above):** the plain-vs-adaptive
+  control (0.998 nats vs 1394.35, a 1400x separation on the same build) is repeat-before-extending done
+  right and caught version drift that would have scored one posterior with another's instrument; the
+  refusal to use mode WEIGHT or mode ABSENCE as falsifiers is correct and well-argued; the withdrawal of
+  claim (i) is honest, complete, and independently verifiable on every fact; and the plot-over-statistic
+  self-catch is the discipline working. Grader also independently CONFIRMED BY PLOT that the
+  multimodality itself is genuine (two cleanly separated non-overlapping clusters; one-way drainage,
+  zero returns).
+  **GRADER OBSERVATION, NOT YET RESOLVED:** z[19] ~ -14.4 in BOTH modes (gap 1.70 sd) — a value that deep
+  often means a bijector-SATURATED parameter railed at its bound. Worth one `verify()` line. Also the
+  shear-plausibility warning (|shear| prior mass 0.131 outside 0.2) with z[27]=gamma2 the 2nd
+  most-mode-separating coordinate ⇒ "is the compact mode an implausible high-shear solution?" is a live
+  MUNDANE alternative sitting in my own log and unlisted in this checkpoint.
+  **SUPERSEDED DESIGN FOLLOWS (rd-0, preserved for the record — do NOT launch it):**
   **CLASSIFICATION (method-discipline §2): a DISTRIBUTIONAL claim comparing TWO MODEL SPECIFICATIONS
   (non-adaptive vs adaptive rendering) on the SAME parameter vector — NOT a claim about any sampler.
   Deliberately chosen so that no sampler property (mixing, convergence, budget) can confound it. The
