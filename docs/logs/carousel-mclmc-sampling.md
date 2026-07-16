@@ -3543,6 +3543,118 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-16 (carousel GATE PT-7 (ADAPTIVE-PT) step-2 link-1 — reference-free warmest-viable β_min
+  sweep — RAN CLEAN, job 55965837, 4/4 arms rounds_done=1000; RESULT: PARTIALLY-SUPPORTED /
+  UNCERTIFIED-detector — grader CERTIFY-RECOMMENDED (narrow scope), 4 edits applied, see foot of entry).
+  My pre-registered prediction was WRONG and the sweep OVERTURNS the "sharp β_min* threshold" framing —
+  I am flagging this as a prediction-failure, not smoothing it over.**
+  Design certified rd-2 (this file, checkpoints §). Ran arm D2 (MAP-init + adaptive pooled metric, all
+  reference-free), extent-controlled 4-arm sweep {L40,L50,L60,L70} = β_min {0.40,0.50,0.60,0.70} with
+  per-rung ratio ≈1.19–1.20 → per-boundary swap acceptance MATCHED ≈0.58 (control verified, see below).
+  All knobs pinned+verified (NSYS=16, K=10, ss_max=5, devar=5e-4, metric_est=pooled, seed=60,
+  ROUNDS=1000). Analysis diag_pt7/pt7_analysis.py (validated: PART-A reproduces pt6_report_table.json
+  EXACTLY 4/4; detector null-whitened, BC\*=0.4275 @ N=1600,d=33,200-draw null).
+  **Prediction (from checkpoint):** β_min*≈0.50, bracket [0.40,0.60]; L40/L50 transport, L60/L70 FAIL;
+  the barrier "unlikely to melt at only 30% suppression (β=0.70)."
+  **Result — the prediction FAILED: NO hard transport failure anywhere in [0.40,0.70].** All 4 arms
+  transport the pocket cold (pre-registered NULL case → β_min* for HARD failure > 0.70, not bracketed):
+  per-rung profiles FLAT (not the monotone-decay-to-0.04 of PT-6's failing L-b/L-c), RT_pocket 128–242,
+  cold occ rising over [500:1000]. Per arm (β_min, n_rungs, transport_verdict, cold/hot ratio, RT_pocket,
+  hot_rung_occ, cold_occ[500:1000], endpoint cold_occ from cold_occ_t):
+  (transport_verdict below = the pre-registered SCALE-FREE ratio criterion; it certifies "NO DILUTION,"
+  NOT healthy/strong pocket sampling — see the blind-spot caveat):
+  · **L40** 0.40, 6: SUCCESS, ratio 1.079, RT 128, hot 0.229, cold 0.247, endpoint ≈0.42 (enters the
+    C-25 converged pocket-weight band 0.32–0.49, but STILL RISING — not itself converged)
+  · **L50** 0.50, 5: SUCCESS, ratio 0.810, RT 138, hot 0.182, cold 0.147, endpoint ≈0.20
+  · **L60** 0.60, 4: SUCCESS, ratio 1.002, RT 242, hot 0.233, cold 0.233, endpoint ≈0.34 (near C-25
+    band low edge, rising)
+  · **L70** 0.70, 3: SUCCESS, ratio 0.814, RT 166, hot 0.099, cold 0.080, endpoint ≈0.15 (lowest —
+    weak discovery, see blind-spot)
+  **Swap-acceptance control held in SPIRIT, letter tripped on one boundary** (pt7_swap_acc.png): all
+  boundaries ≈0.58, tightly clustered; L40/L50/L70 fully inside the pinned matched-α band [0.45,0.60],
+  but **L60 boundary-2 = 0.6005 is 0.0005 ABOVE the band** — a literal trip of the pinned no-DOF rule.
+  It is in the OVER-acceptance direction (opposite of dilution, which the band exists to catch), so it
+  is immaterial to the "dilution controlled" conclusion — but it is NOT "inside the band," and L60 is
+  the arm the detector would recommend, so it is stated, not smoothed. β_min is the only material
+  variable; dilution (the confound that broke PT-6's L-b/L-c) is controlled. Mechanism "GIVEN α≈0.5,
+  (occupancy-)discovery ⇒ transport" HOLDS 4/4 on the PINNED ground-truth definition (hot_rung_occ>0.02
+  AND transport, α in-band) — note this is the OCCUPANCY definition, which diverges from the detector's
+  bimodality definition on L70 (see detector §).
+  **What varies is CROSSING RATE / discovery STRENGTH, not a sharp threshold** (pt7_occ_profile.png +
+  pt7_cold_occ_t.png): warmer β_min → weaker/slower pocket crossing → lower cold occupancy at fixed
+  1000-round budget. Endpoint ranking L40 0.42 > L60 0.34 > L50 0.20 > L70 0.15. **The MONOTONIC "warmer
+  = smoothly worse" reading is a SINGLE-SEED HYPOTHESIS, NOT shown — the 4-point ordering is
+  NON-MONOTONIC (L50 0.20 < L60 0.34); "smooth degradation" is unsupported by these points.** ALL arms
+  STILL RISING at round 1000 (BUDGET-LIMITED, none clearly plateaued; L50 meanders late) — so "warm arm
+  plateaus below a useful weight" vs "warm arm just rises slower" is UNRESOLVED at this budget (the key
+  open caveat, and the one the scale-free SUCCESS metric is blind to).
+  **Detector (pt7_detector.png — histograms DECISIVE, not clustering artifacts):** L40/L50/L60 hot rungs
+  genuinely BIMODAL (two peaks + deep valley; BC 0.697/0.768/0.807 ≥ BC\*=0.4275 → FIRE); L70 hot rung
+  genuinely UNIMODAL (single broad blob, no valley; BC 0.416 < BC\* → NO-FIRE). So the detector fires
+  β_min≤0.60, not 0.70. Detector vs ground-truth (hot_rung_occ>0.02) = **3/4 → DETECTOR NOT CERTIFIED**;
+  the SOLE disagreement is L70 (hot_rung_occ 0.099 ≈ f\*; BC 0.416 just below 0.4275) — EXACTLY the
+  pre-registered transition-arm under-power carve-out → routes to multi-seed, NOT detector rejection, but
+  ALSO not a validation. **Pre-registration CONFLATION (grader-caught):** the checkpoint used
+  "hot_rung_occ>0" and "detector-positive" as ONE notion of discovery; PT-7 shows they DIVERGE at the
+  warm edge (L70: occupancy-discovers at 0.099 via z[6] TAIL excursions, but is detector-UNIMODAL — no
+  resolved mode). The mechanism claim is judged on the PINNED occupancy ground-truth (so it holds 4/4);
+  the detector's L70 miss is a SEPARATE, uncertified under-power result. Any β_min≈0.60 recommendation
+  therefore rests on an UNCERTIFIED detector (single seed) and must be multi-seed-confirmed first.
+  **The physically meaningful refinement (from the histograms):** at β_min=0.70 the pocket is present
+  only as ~10% TAIL EXCURSIONS past the z[6] line, NOT a RESOLVED second mode — yet it STILL transports
+  cold (0.15, rising, RT 166). So "hot-rung bimodality" is NOT strictly necessary for transport; it
+  tracks discovery STRENGTH/rate. The z[6]>-22.35 occupancy flag counts tail mass as "discovery"; the
+  bimodality detector requires a resolved cluster. These legitimately differ at the warm edge, which is
+  why they split on L70.
+  **REFRAMING (proposed, load-bearing for step-2 — but note it is built AFTER a failed prediction, so
+  treat as a HYPOTHESIS to test, not a finding):** the SUPPORTED claim is the NEGATIVE one — there is NO
+  sharp barrier-melt threshold in [0.40,0.70] (all arms pass the scale-free no-dilution criterion). The
+  POSITIVE reframe — a **COST/RATE TRADEOFF** (warmer β_min = fewer rungs, cheaper per round, cost ∝
+  n_rungs, but weaker/slower cold-occupancy rise) — is a single-seed hypothesis: the endpoint occupancies
+  suggest it (L70 weakest at ~0.10–0.15) but the ordering is non-monotonic and budget-limited, so it is
+  NOT established. Whether 0.60 or 0.40 is OPTIMAL for wall-clock-to-band is UNTESTED (needs time-to-band
+  at longer budget + multi-seed). **Robustness caveat (the grader's strongest point):** "reference-free
+  transport is ROBUST across [0.40,0.70]" draws its optimism from the SCALE-FREE metric's BLIND SPOT —
+  the metric certifies "no dilution," NOT strong pocket sampling, and the warm arms (esp. L70, occ ~0.10,
+  unresolved mode) succeed only because the LITTLE they discover propagates proportionally. Whether a
+  warm arm reaches a useful pocket weight or plateaus low is exactly what this budget/seed cannot see. So
+  the honest headline is: reference-free MAP-init transport is NOT knife-edge (no sharp fail in
+  [0.40,0.70]) — but "cheap warm ladders are as GOOD as cold ones" is UNSHOWN and likely false in
+  strength. Open frontier: EFFICIENCY (time-to-band vs β_min/rungs, multi-seed) and the deferred metric
+  quality (Blocker B / C-28).
+  **Scope / caveats (do not over-read):** single seed (L50 non-monotonicity is noise; L70 borderline);
+  budget-limited (plateau-vs-slow unresolved — a warm arm that merely rises slower is fine for
+  point-and-go, one that plateaus below band is not, and 1000 rounds cannot tell them apart); tests
+  transport health + discovery, NOT unbiasedness or metric quality; β_min* for hard failure >0.70 NOT
+  located (pre-registered warmer re-run 0.75–0.90 available but its value is reduced by the reframing).
+  Minor: report_table serializes detector_vs_truth_agree as null (build_report drops the key set in
+  analyze_arms) — agreement recomputed by hand as 3/4, matches summary agree_str; cosmetic, no science
+  impact. Artifacts: diag_pt7/{pt7_analysis.py, pt7_report_table.json, pt7_occ_profile.png,
+  pt7_detector.png, pt7_cold_occ_t.png, pt7_swap_acc.png}; arrays arrays_D2_pt7_{L40,L50,L60,L70}.npz
+  (rounds_done=1000, pos_thin saved).
+  **GRADER (rigor-grader, opus, 2026-07-16): CERTIFY-RECOMMENDED, NARROW scope, conditional on 4 record
+  edits (ALL APPLIED above): (1) swap-band L60 0.6005 trip stated, not "inside"; (2) "smooth degradation"
+  → single-seed HYPOTHESIS (non-monotonic L50<L60); (3) band language cited to C-25 converged reference,
+  L40 endpoint "rising not converged"; (4) detector marked NOT CERTIFIED (3/4) + the occupancy-vs-
+  bimodality conflation named. Numbers reproduce from raw npz (no memory-substitution); prediction-failure
+  owned. Grader's strongest self-fooling catch: the scale-free SUCCESS metric is BLIND to discovery
+  STRENGTH, so "robust across [0.40,0.70]" is inflated by that blind spot (folded into the Robustness
+  caveat).**
+  **CLAIMS-REGISTER (grader wording): PT-7 (β_min sweep [0.40,0.70], D2 apparatus, single seed) —
+  PARTIALLY-SUPPORTED / UNCERTIFIED-detector.** Pre-registered sharp β_min*≈0.50 threshold FALSIFIED.
+  SUPPORTED: no hard transport failure in [0.40,0.70] — all 4 pass the scale-free ratio criterion at
+  matched α≈0.58; profiles FLAT, distinct from PT-6 dilution failures. CAVEATS: SUCCESS = "no dilution"
+  NOT healthy sampling (strength degrades to occ≈0.10 unresolved-mode at β_min=0.70); budget-limited,
+  plateau-vs-slow UNRESOLVED; single seed, non-monotonic ordering ⇒ "smooth cost/rate tradeoff" is a
+  HYPOTHESIS; L60 boundary-2=0.6005 trips band (over-acceptance, immaterial). DETECTOR 3/4 NOT certified
+  → multi-seed before any online-loop use. Does NOT cover: optimal β_min, unbiasedness, metric quality.
+  **NEXT = direction decision (surface to human — this reframes the free-hand step-2): candidates: (a)
+  multi-seed + longer-budget frontier to resolve plateau-vs-slow AND denoise the detector before ANY loop
+  build (the rigor path — detector is uncertified); (b) build the online loop now with the (uncertified)
+  detector → β_min≈0.60, accept the risk; (c) given transport is NOT knife-edge, pivot emphasis to
+  EFFICIENCY (time-to-band) and/or the deferred metric quality (Blocker B / C-28); (d) generalize to the
+  1_3_4_5_9 carousel. Recommend (a) then (c).**
+
 - **2026-07-15 (carousel GATE PT-6 (ADAPTIVE-PT) step-1 VIABILITY — RAN, CLEAN (detached launcher
   survived, all 4 arms round 1000, summaries written, n_revert=0); PROPOSED, UNCERTIFIED; grader
   NEEDS-MORE (2026-07-15) applied → PARTIALLY-SUPPORTED. HEADLINE (RESCOPED per grader): the D2
