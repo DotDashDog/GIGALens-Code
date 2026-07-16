@@ -472,6 +472,165 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-7 (ADAPTIVE-PT) step-2, LINK-1 — reference-free WARMEST-VIABLE β_min:
+  an extent-controlled β_min sweep that isolates the "hot rung discovers the 2nd basin" transition
+  from acceptance dilution, and validates a REFERENCE-FREE hot-rung-multimodality detector against
+  the z[6]-calibrated ground truth. This is the primitive the online ladder loop (step-2, link-2 /
+  PT-8) will use to select β_min MAP-only; validated HERE before it is automated.**
+  Follows PT-6 (viability PARTIALLY-SUPPORTED: the D2 apparatus transports GIVEN β_min≈0.36 / ~0.5
+  acceptance-per-boundary; naive reference-free floors 0.05/0.10 FAIL via acceptance dilution — cold
+  occ 0.043, RT_pocket 1–2, monotone-decaying per-rung profile — vs L-cert/L-a cold occ 0.245,
+  RT_pocket 52–54, FLAT profile, swap_acc 0.53). PT-6 leaves the load-bearing axis UNTESTED: every
+  arm had β_min ≤ 0.36, so how WARM the hottest rung can be and still discover the pocket is unknown.
+  **Claim + classification (chain):** stochastic/dynamical-estimator claim (transport + the detector
+  statistic are stochastic outcomes). **This run tests LINK-1:** with per-boundary swap acceptance
+  held ≈0.5 (extent-controlled via rung count, so dilution is NOT the variable), cold-pocket transport
+  succeeds iff β_min ≤ β_min* (a "hot-enough-to-melt-the-barrier" threshold), AND a reference-free
+  hot-rung-multimodality detector fires on exactly the arms where the ground truth shows hot-rung
+  discovery. **LINK-2 (NOT tested here → PT-8):** an online loop that lowers β_min from warm until the
+  detector fires and equalizes spacing to α≈0.5 converges to β_min* MAP-only and reproduces
+  C-24-class transport. Does NOT test metric quality (Blocker B / C-28, deferred) nor unbiasedness.
+  **Cause hypothesis:** the reference-free point-and-go blocker is HOT-END SELECTION, and it is
+  SEPARABLE from spacing/dilution. Transport needs the hottest rung hot enough to melt the inter-mode
+  barrier so a MAP-init replica discovers the pocket at the hot rung and carries it cold. Over-heating
+  (β_min ≪ β_min*) is not "safe": it forces more rungs to hold acceptance → a longer cold↔hot path →
+  slower cold transport (PT-6's 0.05/0.10 dilution failure). So the transport-optimal β_min is the
+  WARMEST that still discovers at the hot rung. **The mechanism is CONDITIONAL: GIVEN per-boundary
+  acceptance α≈0.5 (held by design here, empirically confirmed via plot 4), hot-rung discovery ⇒ cold
+  transport — discovery is NECESSARY-NOT-SUFFICIENT, the second condition being adequate (undiluted)
+  swap acceptance. PT-6 L-b/L-c (hot_rung_occ 0.4075/0.38375 yet cold_occ 0.04175/0.04475) are NOT
+  counterexamples to this conditional claim: they DID discover at the hot rung but failed the
+  ACCEPTANCE condition (swap_acc_mean 0.328/0.329, not 0.5) — exactly the axis PT-7 holds fixed. The
+  PT-8 online loop MUST inherit the conditional (β_min via hot-rung discovery AND spacing equalized to
+  α≈0.5), never the unqualified "discovery ⇒ transport."** "Hot rung discovered the 2nd basin" is a
+  MAP-only-detectable transition: below β_min* the hot-rung ensemble is UNIMODAL near the MAP (pocket
+  never found); at/above hotness (β_min ≤ β_min*) it becomes MULTIMODAL (pocket present). Detect
+  reference-free per the PINNED detector below — no z[6] threshold, no mode labels.
+  **Design (extent-controlled sweep; arm D2 = MAP z_best + 1e-3 diagonal init + adaptive windowed
+  metric, ALL reference-free; preset ladders via `GATE_PT0_BETAS_B`).** FOUR arms, one wave, 4 GPUs,
+  each a GEOMETRIC ladder with per-rung ratio held ≈1.19–1.20 (⇒ per-boundary acceptance ≈0.5,
+  MATCHED across arms so DILUTION is a CONTROL, not a variable — contrast PT-6 where β_min and rung
+  count were confounded):
+  · **L40** β_min=0.40, R=6 `[0.4000,0.4804,0.5771,0.6931,0.8326,1.0]` (ratio 1.201)
+  · **L50** β_min=0.50, R=5 `[0.5000,0.5946,0.7071,0.8409,1.0]` (ratio 1.189)
+  · **L60** β_min=0.60, R=4 `[0.6000,0.7114,0.8434,1.0]` (ratio 1.186)
+  · **L70** β_min=0.70, R=3 `[0.7000,0.8367,1.0]` (ratio 1.195)
+  L40 sits just warmer than the certified 0.3594 (near-positive-control: should behave ≈ L-cert); L70
+  is the warm extreme. **What is controlled vs not (honest scoping):** per-boundary acceptance is
+  MATCHED (dilution controlled); total round-trip PATH LENGTH is NOT (L40 has 5 boundaries, L70 has 2).
+  This confounds CONSERVATIVELY — the warmer (predicted-to-FAIL) arms have the SHORTER paths, so the
+  discovery-mechanism and the path-length-mechanism predict OPPOSITE arm orderings (discovery → warm
+  arms fail; path-length → warm arms would transport BETTER). An observed "warm arms fail" transition is
+  therefore attributable to hot-rung discovery, not path length. **Pinned knobs (set EVERY one
+  explicitly in the launch env — [[memory-for-artifact-substitution]] op-rule): NSYS=16, K=10, ss_max=5,
+  ROUNDS=1000 (matches PT-6's [500:1000] scoring window so the derived transport thresholds stay
+  directly comparable), METRIC_WINDOWS=(100,250,500) (freeze 500), seed=60, D2_INIT_SCALE=1e-3,
+  metric_est=POOLED (VERIFIED from arrays_D2_pt6_*.npz `metric_estimator=pooled` — this is PT-6's
+  default and the baseline these thresholds derive from; `run_arm_b` DEFAULTS to pooled at line 1620,
+  so it must be set EXPLICITLY via GATE_PT0_METRIC_EST=pooled — do NOT confuse with the phase-Q
+  'within' default), adaptive metric seeded 1e-6·I.** Single seed (diagnostic locating a threshold;
+  multi-seed robustness is PT-8+). Detach launcher (setsid) [[gigalens-gpu-launch-recipe]].
+  **Instrumentation (small code add, smoke-verified before the sweep — treat the smoke as a LAUNCH
+  GATE, not an op-note): env-gated `GATE_PT0_SAVE_POS=1` saves `pos_thin` (n_thin, R, NSYS, dim) at the
+  existing THIN_B=5 cadence** (mirrors `ind_thin`; DONE at 2574b01, off-flag byte-identical verified in
+  the diff) so hot-rung raw positions are available for reference-free clustering. (~<100 MB/arm.)
+  **DETECTOR (PINNED before run — the reference-free hot-rung-multimodality decision procedure; NO
+  post-hoc rule choice, NO z[6]-keyed projection):** per arm, pool the HOTTEST rung's (index 0)
+  `pos_thin` over rounds [500:1000] × all NSYS chains → cloud X (N≈100·16=1600 × d). (i) Whiten with
+  full ZCA using the pooled sample covariance + ridge ε=1e-6·tr(Σ̂)/d, using ALL d coordinates at EQUAL
+  weight — NO z[6] selection, NO variance-based dim reduction (a low-variance split is retained). (ii)
+  k-means k=2 (n_init=20, fixed seed 0) → split axis v=(c₂−c₁)/‖·‖; project y=X_w·v (1-D); minority
+  fraction f=min(n₁,n₂)/N. (iii) bimodality coefficient BC(y)=(skew²+1)/kurtosis. **FIRE (hot-enough /
+  multimodal) ⟺ BC(y) ≥ BC\* AND f ≥ f\*=0.05.** **Derived threshold BC\*** = the 99th percentile of BC
+  from the IDENTICAL whiten→kmeans2→project→BC pipeline run on a matched UNIMODAL Gaussian null (same N,
+  d, pooled Σ̂; 200 draws, seeds 0–199) — this null-calibration removes the "k-means selects the
+  most-bimodal axis" upward bias (so the nominal BC>5/9 is NOT used) and controls the false-multimodal
+  rate at 1%. **f\*=0.05 is the sensitivity FLOOR** (below 5% minority the split is a tail artifact;
+  0.05 ≪ the ~0.26 hot_rung_occ expected for a genuine discovery, so a real split is not missed). The
+  detector uses ONLY raw positions; the z[6] ground truth is used ONLY to SCORE agreement, never in the
+  decision. Report BC, BC\*, f, centroid separation for ALL arms (full transparency, not just binary).
+  Deps: numpy/scipy (+sklearn KMeans if available, else a fixed-seed 2-means in numpy).
+  **Prediction (direction + magnitude):** transport (ground truth) SUCCEEDS for β_min ≤ β_min* —
+  cold_occ over [500:1000] rising off the ≈0 init floor, FLAT per-rung occupancy profile (cold/hot
+  ratio > 0.5), RT_pocket ≳ 10, hot_rung_occ > 0 — and FAILS for β_min > β_min* — cold_occ ≲ 0.06,
+  MONOTONE-DECAYING or ≈0 profile, RT_pocket ≤ 2, hot_rung_occ ≈ 0 (pocket never discovered). **PRIOR
+  (not derived) β_min* ≈ 0.50, bracket [0.40, 0.60]** — a plausibility prior only: a barrier tall enough
+  that C-22 multistart found the pocket 0/1024 is unlikely to melt at only 30% suppression (β=0.70),
+  likely melts by ~0.5–0.4. So expected: L40, L50 transport; L60, L70 fail; transition at 0.50–0.60. If
+  instead only L40 transports → β_min*≈0.40, i.e. the certified 0.36 is near-optimal and point-and-go
+  cannot go warmer. **Detector prediction: the reference-free detector fires on exactly the
+  transporting arms (hot_rung_occ>0), matching ground truth 4/4.**
+  **Falsifier + derived thresholds:**
+  · TRANSPORT success/fail (per arm, over [500:1000], matching PT-6): SUCCESS ⟺ per-rung profile FLAT
+  (cold/hot occ ratio > 0.5) AND RT_pocket ≥ 10; FAIL ⟺ profile MONOTONE-DECAYING (cold/hot < 0.2) AND
+  RT_pocket ≤ 2. *Derivation (MEASURED, not invented):* PT-6 gives a 5–10× gap between regimes — cold/hot
+  ratio ≈0.93 (L-cert 0.243/0.265) vs ≈0.12 (L-c 0.0448/0.384); RT_pocket 52–54 vs 1–2; cold_occ 0.245
+  vs 0.043. Thresholds sit at the geometric midpoints. (RT_pocket≥10 is conservative at NSYS=16 —
+  healthy expected ~50–100, fail ≤4 — the NSYS-robust primary is the cold/hot RATIO, RT_pocket
+  corroborating.) A result IN the gap (ratio 0.2–0.5, or RT_pocket 3–9) = MIDDLE ZONE = partial/
+  borderline transport → flagged, not forced to a verdict.
+  · DETECTOR agreement: the detector's firing set must match the ground-truth (hot_rung_occ>0) firing
+  set on ALL 4 arms. *Derivation:* the online loop steps β_min by ~0.10/iteration, so a detector whose
+  decision boundary is off by ≥1 arm (0.10 in β_min) is too coarse to drive it — 4/4 is the fitness bar.
+  **SINGLE-SEED SOFTENING (mirrors the transport middle zone): ≤3/4 on this ONE seed → route to
+  multi-seed confirmation BEFORE declaring the detector rejected/redesign, NOT an immediate rejection.
+  In particular, if the SOLE disagreement is at the transition arm where hot_rung_occ is near the floor
+  (≲0.10 ≈ f\*), the detector is UNDER-POWERED there (small minority mass), so a miss is uninformative,
+  not a refutation.** A ≥2-arm mismatch, or a mismatch at an arm with hot_rung_occ well above the floor,
+  IS a rejection → redesign (fallback: round-trip-based or cold-multi-basin signal).
+  · MECHANISM falsifier (CONDITIONAL on α≈0.5, which plot 4 confirms held): at matched α≈0.5, an arm
+  with hot-rung discovery (hot_rung_occ>0, detector-positive) that still FAILS to transport cold, OR an
+  arm that transports cold WITHOUT hot-rung discovery → the conditional "given α≈0.5, discovery ⇒
+  transport" link is false and the β_min criterion must be redesigned (itself a finding: discovery ≠
+  transport even at matched acceptance). NOTE: because plot 4 verifies α, a failure at α materially ≠0.5
+  on some arm does NOT falsify the mechanism — it means the dilution control slipped (diagnose the
+  spacing), routing to a re-run, not a mechanism rejection. **MATCHED-α BAND (pinned, no judgment DOF):
+  an arm's dilution control HELD iff every one of its boundaries has swap_acc in [0.45, 0.60]; any
+  boundary outside that band = control slipped on that arm (route to spacing-diagnosis/re-run, not a
+  mechanism verdict). PT-6's looser-ratio L-cert already gave swap_acc_min 0.509, so the tighter PT-7
+  ladders are expected well inside the band.**
+  · NULL: all 4 transport (incl. L70) ⇒ β_min* > 0.70, sweep didn't bracket it → re-run warmer
+  (0.75–0.90); still informative (point-and-go is cheap) but detector transition unvalidated.
+  **Metric blind spot (two):** (1) The hot-rung-multimodality detector CANNOT distinguish "unimodal
+  because too COLD (stuck near MAP)" from "unimodal because too HOT (both modes merged into one wide
+  blob, β_min ≪ β_min*)". This bites only far hotter than this sweep's warm-edge [0.40,0.70] range, and
+  outside where the online loop operates (it approaches β_min* from the WARM side and STOPS at first
+  multimodality, never entering the merged-blob regime) — so it does not bite link-2. Noted + scoped.
+  (2) Reference-free clustering may fail to RESOLVE the two basins if the pocket separates along a
+  low-variance coordinate (z[6]) swamped by higher-variance directions. The PINNED detector mitigates
+  this by projecting onto the k-means SPLIT axis (a bimodality-seeking direction, not a variance-PC) and
+  null-calibrating BC on that same axis; the L40 positive control EMPIRICALLY tests recovery (does the
+  detector fire on the known-bimodal transporting arm?). If it fails to fire on L40 despite ground-truth
+  discovery, that is a sub-finding → the detector's projection is inadequate (escalate to
+  projection-pursuit / multi-axis), reported as such, not silently passed.
+  **Expected plot:** (1) per-arm per-rung occupancy profile (hot→cold): FLAT for β_min≤β_min*,
+  MONOTONE-DECAYING-to-≈0 for β_min>β_min*, switching at one arm. (2) DETECTOR panel: hot-rung positions
+  projected on the k-means split axis per arm (histogram) with BC and BC\* annotated — bimodal/BC≥BC\*
+  (fires) for transporting arms, unimodal near the MAP for failing arms, switching at the SAME arm as
+  (1). (3) cold_occ(t) [500:1000]: rising for viable, flat-near-0 for fail. (4) swap-acceptance per
+  pair: ≈0.5 and roughly uniform ALL arms (empirically confirms the dilution control held — load-bearing
+  for the conditional mechanism claim).
+  **Cost:** 4 arms (R 3–6, fewer rungs than PT-6 ⇒ cheaper per round), NSYS=16, ROUNDS=1000, one wave on
+  4 GPUs; smoke (~10 min) then pilots ~2–3 h wall → ~8–12 GPU·h. Interactive node ONLY; detached launcher.
+  **Op-notes:** (a) [LAUNCH GATE] smoke `pos_thin` FIRST — verify the array saves, shape
+  (n_thin,R,NSYS,dim), and a flag-off run is unchanged; (b) launch env sets ALL pinned knobs explicitly
+  incl. GATE_PT0_NSYS_B=16 (do NOT rely on the NSYS default — the exact slip in PT-6) and
+  GATE_PT0_SAVE_POS=1; (c) dump the model_card JSON per arm and diff NSYS/K/ss_max/ROUNDS/seed/betas
+  against this line before leaving unattended.
+  **Status: grader rd-2 CERTIFY-RECOMMENDED 2026-07-15 (clear to launch).** rd-1 NEEDS-MORE (3 must-fix)
+  → all three verified CLOSED not cosmetic: (1) DETECTOR fully pinned — full-ZCA all-dims (no z[6]
+  projection), k-means-axis Sarle BC with a NULL-CALIBRATED procedure-matched threshold BC\* (grader
+  confirmed the null passes through the SAME k-means axis-selection so the post-selection bias is
+  removed, no residual fishing DOF) + floor f\*=0.05; (2) MECHANISM restated CONDITIONAL on α≈0.5 with
+  L-b/L-c named non-counterexamples + PT-8-inheritance warning (grader confirmed the α escape is gated
+  on the OBSERVABLE plot-4, not unfalsifiable); (3) 4/4 bar SOFTENED under single seed (≤3/4 → multi-seed
+  before redesign; transition-arm under-power carve-out bounded, not blanket). Nice-to-haves folded:
+  path-length uncontrolled-but-conservative (opposite orderings); ROUNDS 800→1000 (match PT-6 [500:1000]);
+  β_min*≈0.50 relabeled PRIOR; pos_thin smoke = LAUNCH GATE. rd-2 residual (non-blocking, DONE): pinned
+  MATCHED-α BAND [0.45,0.60] per boundary. Also self-caught + fixed: metric_est POOLED (VERIFIED from
+  arrays_D2_pt6_*.npz — PT-6 ran pooled by default; must set GATE_PT0_METRIC_EST=pooled explicitly).
+  Code: 6f44cf6 + `pos_thin` @2574b01 (commit post-smoke). Launch cleared pending the pos_thin smoke gate.
+
 - **Run: carousel GATE PT-6 (ADAPTIVE-PT) step-1 — reference-free PRESET-LADDER viability: does a
   MAP-init ensemble with a preset conservatively-hot GEOMETRIC ladder transport (cross-mode
   round-trips + pocket occ off the floor) with NO reference-run info, BEFORE building online

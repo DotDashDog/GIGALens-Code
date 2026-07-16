@@ -998,6 +998,7 @@ def run_pt(tag, seed, spec):
     betas = np.asarray(spec["betas"], dtype=np.float64)  # rung 0 = hottest
     R = len(betas)
     NSYS, K, ROUNDS = spec["NSYS"], spec["K"], spec["ROUNDS"]
+    save_pos = bool(spec.get("save_pos", False))
     indicator = spec["indicator"]
     ind_label = spec.get("ind_label", "pocket")
     swap_rng = np.random.default_rng(seed + 10_000)
@@ -1077,6 +1078,10 @@ def run_pt(tag, seed, spec):
     n_thin = (ROUNDS + THIN_B - 1) // THIN_B
     ind_thin = np.zeros((n_thin, R, NSYS), dtype=np.uint8)
     wid_thin = np.zeros((n_thin, R, NSYS), dtype=np.int16)  # rd-2 A4: F-2 forensics
+    # GATE_PT0_SAVE_POS (opt-in): raw thinned per-rung positions, same
+    # cadence/sizing as ind_thin above; None (no alloc) when flag is off.
+    pos_thin = (np.zeros((n_thin, R, NSYS, dim), dtype=np.float64)
+                if save_pos else None)
     cold_ind = np.zeros((ROUNDS, NSYS), dtype=np.uint8)
     ev = np.zeros((ROUNDS, R))
     ssm = np.zeros((ROUNDS, R))
@@ -1104,6 +1109,8 @@ def run_pt(tag, seed, spec):
                 metric_n0=n0,
                 metric_estimator=np.array(metric_est),
             )
+        if save_pos:   # opt-in raw thinned per-rung positions (GATE_PT0_SAVE_POS)
+            extra["pos_thin"] = pos_thin[:t // THIN_B + 1]
         np.savez(npz_path, betas=betas, ind_thin=ind_thin[:t // THIN_B + 1],
                  wid_thin=wid_thin[:t // THIN_B + 1],
                  cold_ind=cold_ind[:t + 1], eevpd=ev[:t + 1], step_mean=ssm[:t + 1],
@@ -1211,6 +1218,9 @@ def run_pt(tag, seed, spec):
         if t % THIN_B == 0:
             ind_thin[t // THIN_B] = ind_post
             wid_thin[t // THIN_B] = wid
+            if save_pos:   # pos here is POST-swap (swaps mutate in place above;
+                           # ind_post/cold_ind already reflect this same state)
+                pos_thin[t // THIN_B] = pos
         if adapt_metric and not metric_frozen_flag:
             # per-rung Welford over ROUND-END (post-swap) positions
             for r in range(R):
@@ -1568,6 +1578,11 @@ def run_arm_b(arm, tag, equiv=False):
         rounds = ROUNDS_B
     ss_max, ssmax_src = _env_num("GATE_PT0_SSMAX", SS_MAX0, float)
     devar, devar_src = _env_num("GATE_PT0_DEVAR", DEVAR, float)
+    # GATE_PT0_SAVE_POS (opt-in, OFF by default): save raw THINNED per-rung
+    # positions to the npz for a downstream reference-free clustering
+    # detector. Mirrors ind_thin exactly (same THIN_B cadence, same n_thin
+    # sizing, same save slicing); byte-identical output when unset.
+    save_pos = os.environ.get("GATE_PT0_SAVE_POS", "0") == "1"
 
     # PT-3: metric window/freeze schedule for ADAPTIVE arms only.
     # Precedence (explicit): SMOKE > env GATE_PT0_METRIC_WINDOWS > default --
@@ -1741,7 +1756,8 @@ def run_arm_b(arm, tag, equiv=False):
                 metric_windows=metric_windows if adaptive else None,
                 metric_n0=(10 * nsys if adaptive else None),
                 metric_estimator=metric_est,
-                metric_ref=(M["cov_pool"] if adaptive else None))
+                metric_ref=(M["cov_pool"] if adaptive else None),
+                save_pos=save_pos)
     if equiv:
         return run_equiv_check(tag, seed, spec)
     return run_pt(tag, seed, spec)
