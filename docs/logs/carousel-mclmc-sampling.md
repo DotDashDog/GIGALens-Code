@@ -498,8 +498,9 @@ multimodality, conditioning, or the NFW profile.
   GEOMETRIC not equal-cost → isolates spacing-tuning effect); L-b `geomspace(0.10,1,8)`
   (conservative floor, +2 rungs, a naive default); L-c `geomspace(0.05,1,10)` (very conservative
   floor). **Point-and-go viability rests on L-b/L-c (the genuinely naive floors); L-a reuses the
-  reference-derived β_min=0.3594 and isolates SPACING only.** NSYS=16, K=10, ss_max=5 (banked),
-  ROUNDS=1000, 1 seed/arm this wave (4 GPUs); multi-seed follow-up if the single-seed signal is
+  reference-derived β_min=0.3594 and isolates SPACING only.** NSYS=16 [PINNED — but the run LEFT
+  GATE_PT0_NSYS_B AT DEFAULT and executed at NSYS=8; see result-entry deviation note], K=10,
+  ss_max=5 (banked), ROUNDS=1000, 1 seed/arm this wave (4 GPUs); multi-seed follow-up if borderline
   borderline (large MAP-seed spread). DETACH launcher (setsid) per the teardown lesson
   [[gigalens-gpu-launch-recipe]].
   **Prediction (direction + magnitude):** L-cert (control) transports — occ into 0.32–0.49, sets
@@ -542,6 +543,8 @@ multimodality, conditioning, or the NFW profile.
   pre-stated). CAVEAT carried to result: a PASSING L-cert anchors the RT scale ONLY — it does not
   validate D2 init as neutral (metric regime co-varies); do not quote "D2 init validated" from an
   L-cert pass.** Code @da8f65e (config-only). Human granted launch + self-start-node permission.
+  **RAN 2026-07-15 (job 55955113, CLEAN, detached-survived); result → Log entry above (viability
+  CONFIRMED; naive low-β_min ladders fail via swap-acceptance dilution).**
 
 - **Run: carousel GATE PT-5a-r2 ss_max ABLATION — ss_max=5 vs 1 on the PR production
   leg (phase-Q-standalone from archived handoffs); isolates how much of PR's W-G /
@@ -3380,6 +3383,85 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 ---
 
 ## Log (newest first)
+
+- **2026-07-15 (carousel GATE PT-6 (ADAPTIVE-PT) step-1 VIABILITY — RAN, CLEAN (detached launcher
+  survived, all 4 arms round 1000, summaries written, n_revert=0); PROPOSED, UNCERTIFIED; grader
+  NEEDS-MORE (2026-07-15) applied → PARTIALLY-SUPPORTED. HEADLINE (RESCOPED per grader): the D2
+  APPARATUS (reference-free MAP init + adaptive metric) transports WHEN GIVEN a ladder with
+  β_min≈0.36 (equal-cost OR naive geometric — spacing is NOT the bottleneck); the two GENUINELY
+  reference-free β_min floors (0.05, 0.10) FAIL via swap-acceptance dilution (discovery-without-
+  propagation, not a discovery failure). So reference-free β_min SELECTION is NOT yet shown — the
+  transporting arms' β_min=0.3594 was REFERENCE-IMPORTED (pre-reg said viability rests on the
+  failed L-b/L-c); reference-free β_min discovery is the STEP-2 target, not a step-1 result. My
+  "hotter β_min ⇒ easier" prediction is FALSIFIED.):** job 55955113 nid001092 (released),
+  4 arms all arm D2 (`run_arm_b`: MAP z_best + 1e-3 diagonal init + adaptive windowed metric — ALL
+  reference-free; MAMS64 cov diagnostic-only), preset ladders via GATE_PT0_BETAS_B, ss_max=5,
+  **NSYS=8 (DEVIATION from pre-registered NSYS=16 — the GATE_PT0_NSYS_B override was left at
+  default → ran at 8; op-incident of the default-knob / verify-a-subset class, [[memory-for-artifact
+  -substitution]]; my config-snapshot check grepped seed/betas/ss_max/ROUNDS but NOT NSYS. All 4
+  arms share NSYS=8 so the cross-arm control is INTACT; RT counts are over 8 walkers, would ~double
+  at 16; occupancy is a fraction, unbiased by NSYS in expectation — conclusion holds, record
+  corrected)**, K=10, ROUNDS=1000, seed 60 (same across arms → ladder is the only variable), jax
+  0.10.0.dev20260715, modern gigalens. Launch [[gigalens-gpu-launch-recipe]] (DETACHED via setsid —
+  teardown-survival lesson applied, worked). init cold-pocket occ = 0.000 per rung all arms
+  (grader's threshold-repair VALIDATED: MAP = main basin).
+  **RESULT (occ[500:1000] / RT_pocket / n_rungs / swap-acc mean):** L-cert (certified equal-cost
+  `[0.359..1.0]`) 0.246 / **52** / 6 / 0.53; L-a `geomspace(0.3594,1,6)` 0.253 / **54** / 6 / 0.54;
+  L-b `geomspace(0.10,1,8)` 0.042 / 2 / 8 / 0.33; L-c `geomspace(0.05,1,10)` 0.045 / 1 / 10 / 0.33.
+  **VERDICT (pre-registered thresholds):** L-cert TRANSPORTS (occ 0.246 ≥ 0.2, RT 52) → POSITIVE
+  CONTROL passes: the D2 MAP-init + adaptive-metric + ss_max=5 apparatus CAN transport reference-free;
+  within-run RT anchor = 52; a preset FAIL is therefore NOT attributable to the metric. L-a
+  TRANSPORTS (0.253, RT 54) → geometric-vs-equal-cost spacing at fixed β_min=0.3594 makes NO material
+  difference (equal-cost tuning bought nothing here). L-b/L-c: occ 0.042/0.045 (< 0.2), RT 2/1 (>0) →
+  MIDDLE ZONE = PARTIAL viability per pre-reg (transport occurred but sub-optimal), NOT the falsifier
+  (which needs occ≈0 AND RT≈0). **CONTROL ROUTING (grader rd-1): L-cert transports ⇒ the L-b/L-c
+  shortfall ISOLATES to the LADDER (β_min-range / rung-count), not the apparatus/metric.**
+  **FAILED PREDICTION (owned, method-discipline): I pre-registered "L-b/L-c (lower β_min) → easier
+  melting → comparable-or-better." FALSIFIED — lower β_min transported dramatically WORSE (RT 1-2 vs
+  52-54).**
+  **MECHANISM (confirmed from artifacts; plots diag_pt6/): discovery-without-propagation via
+  swap-acceptance DILUTION, NOT a single bottleneck.** (a) Per-rung pocket occupancy (ind_thin,
+  verified bit-for-bit vs cold_ind + log hot-occ): L-cert/L-a FLAT ~0.21–0.32 across ALL rungs (found
+  → propagates cold); L-b/L-c MONOTONE DECAY 0.38–0.41 (hottest) → 0.04 (cold) — the pocket IS
+  robustly discovered hot but decays before reaching β=1 (pt6_discovery.png, decisive). (b) Per-
+  boundary swap acceptance UNIFORM within each ladder but ~0.29–0.37 for L-b/L-c vs ~0.51–0.55 for
+  L-cert/L-a (pt6_swap_accept.png): a wider β-range (β_min 0.05–0.10) gives LARGER geometric log-gaps
+  (~0.33 vs ~0.20/gap) ⇒ lower per-boundary acceptance across MORE boundaries (7–9 vs 5) ⇒ cumulative
+  hot↔cold round-trip transmission (~0.30^8) collapses vs (~0.52^5). NUANCE (pt6_occupancy.png):
+  L-b/L-c show a TRANSIENT cold excursion to ~0.2–0.3 around rounds 250–450 before decaying back — so
+  the bottleneck throttles cold-arrival RATE (occasional lucky transport) rather than a hard block;
+  "discovered + transiently propagated, not sustained." n_revert=0 all arms (metric-on-hot-rung sane;
+  not a NaN pathology).
+  **SYNTHESIS (UNCERTIFIED, rescoped per grader): the D2 APPARATUS (reference-free MAP init +
+  adaptive metric) transports at NSYS=8 / single seed — occ ≥ 0.2 with RT distributed over all 8
+  walkers (L-cert 52, L-a 54; not one lucky walker) — WHEN GIVEN a ladder with β_min≈0.36 (the
+  transporting arms' β_min was REFERENCE-IMPORTED). occ ~0.25–0.30 is still RISING at round 1000
+  (transient, not stationary — do not read as the equilibrium pocket weight). The two genuinely
+  reference-free β_min floors (0.05, 0.10) FAILED. NOT yet shown: reference-free β_min SELECTION,
+  unbiasedness, multi-seed robustness, metric quality (C-28).** Two lessons for adaptive-PT: (1) on
+  THIS carousel at β_min≥0.05, DISCOVERY is EASY (the pocket is found on the hot rungs, occ
+  0.38–0.41) — the hard part is TRANSPORTING it cold, governed by swap acceptance + rung-count;
+  (2) β_min hotter than ~0.36 is UNNECESSARY and HARMFUL unless paired with more rungs (dilutes
+  acceptance). The adaptation TARGET is now concrete: drive the ladder toward the L-cert regime
+  (~0.5 acceptance/boundary, β_min≈0.36, ~6 rungs) reference-free, via online swap-acceptance
+  adaptation (adjust spacing + rung-count + β_min for uniform good acceptance + round-trip health).
+  This is precisely the standard adaptive-PT update, and the result is its strongest motivation.
+  **CAVEAT (grader): a passing L-cert anchors the RT scale ONLY — it does NOT validate D2 init as
+  neutral (metric regime co-varies); not over-read.** Metric QUALITY (C-28/W-G) NOT assessed here
+  (Blocker B, deferred). **NEXT: step-2 = build + validate the online swap-acceptance ladder
+  adaptation (design-checkpoint + grader before GPU).** Cost: 4 D2 arms parallel, ~1.75 h wall,
+  ~9–12 GPU·h, 1 allocation (released). Artifacts: diag_pt6/{pt6_occupancy,pt6_swap_accept,
+  pt6_discovery}.png + pt6_report_table.json; arrays_D2_pt6_{Lcert,La,Lb,Lc}.npz (rounds_done 1000).
+  **GRADER (rd-1) NEEDS-MORE → corrections folded in (2026-07-15):** independent recompute
+  reproduced every number to the digit (occ 0.246/0.253/0.042/0.045, RT 52/54/2/1, acc 0.53/0.53/
+  0.33/0.33) and every plot agrees; control-routing + failed-prediction honesty PASS. Two record
+  defects fixed: (1) NSYS=16→8 (ran at default; deviation noted above); (2) headline rescoped — the
+  transporting arms used a REFERENCE-IMPORTED β_min=0.3594, the genuinely reference-free floors
+  FAILED, so "reference-free transport VIABLE" was a goalpost-shift past the pre-reg (which named
+  L-b/L-c as where viability rests). Status: PARTIALLY-SUPPORTED (apparatus transports given a good
+  β_min; reference-free β_min selection = step-2). Note: whether the certified band 0.32–0.49 was
+  measured at NSYS=16 is unverified — the within-run L-cert anchor (occ 0.246, rising) absorbs the
+  scale, non-blocking.
 
 - **2026-07-15 (carousel GATE PT-5a-r2 ss_max ABLATION — RAN; grader-verified
   CERTIFY-RECOMMENDED 2026-07-15 (independent recompute reproduced all deltas, validity gate
