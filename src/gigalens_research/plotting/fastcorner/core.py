@@ -406,21 +406,32 @@ def corner(
                         fill_polys.append(poly)
                         fill_colors.append(contour_cmap[k])
             elif plot_density:
-                # pcolormesh, not imshow: corner draws this with ax.pcolor, and
-                # imshow *resamples* the histogram onto the display grid where
-                # pcolor rasterizes exact cell polygons. The two round bin
-                # boundaries differently, which shows up as a grid of 1px
-                # differences -- 0.9% of pixels at bins=35, and worse the more
-                # bins you ask for. pcolormesh is pcolor's cheap twin (one
-                # QuadMesh instead of a polygon per cell) and shares its
-                # geometry. The autoscaled norm is pcolor's own, so the array
-                # and cmap go in unconverted, exactly as corner passes them.
-                dens_artists.append(tri.pcolor(
+                # corner draws this with ax.pcolor. pcolormesh(snap=False) is
+                # pixel-for-pixel identical to it -- verified at every bin count
+                # in tests/test_fastcorner_density.py -- for ~1/3 the cost (one
+                # QuadMesh, not a polygon per cell).
+                #
+                # snap=False is the whole trick, and it is not cosmetic. The two
+                # agree exactly whenever a cell happens to span a whole number of
+                # pixels, and disagree otherwise, because matplotlib snaps mesh
+                # edges to the pixel grid under a heuristic the two apply
+                # differently. Turning snapping off makes the geometry the
+                # literal cell edges in both, so they agree at any bin count.
+                #
+                # imshow is NOT an option here: it *resamples* the histogram onto
+                # the display grid rather than rasterizing cells, and lands only
+                # ~66% pixel-identical. It also could not draw log-spaced bins,
+                # which are not a uniform grid.
+                #
+                # The autoscaled norm is pcolor's own, so the array and cmap go
+                # in unconverted, exactly as corner passes them.
+                dens_artists.append(tri.pcolormesh(
                     grid.x_to_grid(col, edges[j], rng[j]),
                     grid.y_to_grid(row, edges[i], rng[i]),
                     H.max() - H.T,
                     cmap=dens_cmap,
                     zorder=1,
+                    snap=False,
                     **(pcolor_kwargs or {}),
                 ))
 
