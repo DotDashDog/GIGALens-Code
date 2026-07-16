@@ -472,6 +472,98 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: S2-ART — IS THE src5 SOURCE-SIZE BIMODALITY OF SYSTEM 2 A RENDERING ARTIFACT OF
+  `supersample=1`? (status: AWAITING APPROVAL, 2026-07-16.) This GATES the entire generalization: if the
+  bimodality does not survive correct rendering, system 2 is not a multimodal test case and the 2nd
+  system must be replaced.**
+  **CLASSIFICATION (method-discipline §2): a DISTRIBUTIONAL claim comparing TWO MODEL SPECIFICATIONS
+  (non-adaptive vs adaptive rendering) on the SAME parameter vector — NOT a claim about any sampler.
+  Deliberately chosen so that no sampler property (mixing, convergence, budget) can confound it. The
+  chain being tested is: [supersample=1 under-resolves src5] -> [renderer quadrature error is
+  exploitable] -> [spurious likelihood ridge at small beta] -> [2nd posterior mode]. THIS RUN TESTS THE
+  LAST LINK ONLY (does the 2nd mode survive correct rendering); the middle links remain UNTESTED and I
+  will not claim them.**
+  **CAUSE HYPOTHESIS.** src5's shapelet scale is fit at beta = 0.0620" (sharp mode) and 0.0334" (compact
+  mode) against delta_pix=0.2" — i.e. **0.310 and 0.167 PIXELS**, both deeply sub-pixel, at
+  `supersample=1` (measured, not assumed: diag_sys2/s2_prior_check.py). Below the sampling scale the
+  renderer evaluates the source at effectively discrete points, so quadrature error becomes a free
+  parameter the fit can exploit to buy likelihood by shrinking beta. Adaptive per-pixel supersampling
+  (`AdaptiveImageData`, added 2026-07-12, THREE DAYS AFTER this archive) resolves the source and removes
+  the spurious gain. **Independent support (each measured, not asserted): (1) the compact mode sits at
+  -7.32 prior-sigma where the prior produced ZERO of 200,000 draws (P(prior < -3.0920) = 0.000e+00,
+  rule-of-three upper bound 1.5e-5) yet holds 0.2401 of the posterior — the likelihood is beating a
+  ~22-nat prior penalty (relative to the sharp mode) to put mass there; (2) the drainage direction is
+  toward SMALLER beta = MORE compact = WORSE rendered, which is the direction a rendering-error ridge
+  would pull; (3) the human independently added adaptive supersampling 3 days later.**
+  **WHY THE OBVIOUS TEST IS THE WRONG TEST (pre-registered, so I cannot retreat to it later).** Using the
+  adaptive MCLMC baseline to answer this is UNSOUND in BOTH directions: (a) mode WEIGHT cannot be the
+  falsifier — this same scoping established that the weight is a STOPWATCH READING (one-way drainage,
+  zero returns), so a weight change proves nothing; (b) mode ABSENCE cannot be the falsifier either —
+  the archive's first hop took ~3000 draws, so "adaptive MCLMC found no 2nd mode" is indistinguishable
+  from "did not reach it yet". Absence of evidence. **Therefore the PRIMARY instrument is
+  SAMPLING-FREE.**
+  **PRIMARY TEST (sampling-free, ~60 log_prob calls, seconds).** Take the archive's two mode centers
+  z_sharp = mean(draws | z[37] > -3.0920) and z_compact = mean(draws | z[37] < -3.0920) (both 46-d, from
+  the 07-09 archive). Evaluate log_posterior along the straight path z(t) = (1-t)*z_sharp + t*z_compact
+  for t in [-0.3, 1.3] (~40 knots), under BOTH renderings — plain `ImageData` (reproduces the archive to
+  0.998 nats, verified) and `AdaptiveImageData` — with EVERYTHING else identical (same z path, same
+  build, same flags, one allocation, XLA_FLAGS=--xla_gpu_deterministic_ops=true). This is a matched
+  A/B whose ONLY variable is the renderer.
+  **PREDICTION (direction AND magnitude, pre-registered).** Under PLAIN: the profile shows TWO local
+  maxima in log_post (t~0 and t~1) separated by a barrier — reproducing the sampled structure.
+  **Under ADAPTIVE: the t~1 (compact) local maximum DISAPPEARS or is demoted by >= 22 nats relative to
+  t~0.** Magnitude derivation: the compact mode currently holds 0.2401 vs 0.7599 posterior mass against
+  a prior penalty of (7.32^2 - 3.19^2)/2 = 21.7 nats, so the rendering must be supplying ~22 nats of
+  likelihood advantage; removing the artifact should remove ~that much. I predict the adaptive profile
+  is MONOTONE-ish toward t=0 with no interior maximum near t=1.
+  **FALSIFIER (concrete, and it is a real one — this hypothesis can lose).** If the ADAPTIVE profile
+  STILL shows a distinct interior local maximum near t~1, separated by a barrier, and demoted by < 5
+  nats relative to t~0 => the 2nd mode SURVIVES correct rendering => **the bimodality is GENUINE, the
+  artifact hypothesis is REFUTED, and the PT campaign proceeds on the adaptive model.** Demotion in
+  [5, 22) nats => PARTIAL: rendering contributes but does not create the mode; report as such, do not
+  round to either pole.
+  **DERIVED THRESHOLDS (units + why THAT number).** (i) 22 nats = the measured prior penalty the compact
+  mode currently overcomes (computed above from the prior N(-2.3022, 0.1499) verified against 200k
+  draws); a rendering artifact supplying the mode must supply at least this. (ii) 5 nats = the
+  "survives" floor: ~2x the largest non-renderer numerical discrepancy I have MEASURED on this model
+  (the 0.998-nat plain-vs-archive residual), so a demotion below it cannot be attributed to the renderer
+  above noise. (iii) NOT derivable and NOT invented: any threshold on mode WEIGHT — the weight is
+  undetermined (see above), so no weight threshold is pre-registered and none will be introduced
+  post hoc.
+  **METRIC BLIND SPOT (one sentence, required).** A straight path between two mode centers can MISS a
+  curved barrier or a mode that has MOVED under the adaptive rendering — so "no interior maximum on this
+  path" does NOT prove "no 2nd mode anywhere"; it proves the archive's compact mode is not a mode of the
+  adaptive posterior, which is the question actually asked. (Mitigation: the CONFIRMATORY run below can
+  still find a moved/new mode.)
+  **PRE-COMMITTED APPEARANCE.** Plot: log_post vs t, two curves (plain, adaptive), shared axes, with the
+  22-nat and 5-nat decision bands drawn. HYPOTHESIS HOLDS => plain is W-shaped (two maxima, barrier
+  between); adaptive is single-peaked at t~0, falling monotonically toward t=1. FALSIFIER FIRES =>
+  BOTH curves are W-shaped with comparable interior maxima.
+  **CONFIRMATORY RUN (human-approved 2026-07-16; runs only after the profile, and its role is now
+  DEMOTED to reference-generation + a check for MOVED/NEW modes, NOT the primary artifact test):**
+  MAP -> Bridge -> MCLMC on the ADAPTIVE model, config mirrored EXACTLY from the archive manifests
+  (seed 42; MAP n_samples=128/num_steps=2000/adabelief_1e-2_b1_0.95_b2_0.99_nesterov; MCLMC
+  n_chains=8/num_results=10000/num_burnin=10000/devar=5e-4/frac_tune 0.2,0.6,0.2/
+  regularize_mass_matrix=True), SHARDED ACROSS 4 GPUs (human directive 2026-07-16: "run this sharded
+  across 4 gpus to get it quick"), written to a NEW dir `1_2_3_4_5_9_adaptive`. **The human's 07-09
+  archive is IRREPLACEABLE and is NOT written to; the runner must REFUSE if out_dir holds a manifest.**
+  If the profile REFUTES the artifact hypothesis, this run also supplies the matched mode-location
+  reference + indicator that the PT campaign needs (the stale 07-09 indicator is NOT transferable —
+  1394 nats).
+  **COST.** Profile: ~60 log_prob evals, < 2 min on 1 GPU (node 55991565 already allocated). Confirmatory:
+  archive wall-times were MAP 835s + MCLMC 1235s single-GPU; sharded over 4 GPUs, target ~10-15 min.
+  Total well under 1 GPU-hour.
+  **CODE VERSION / SEEDS / CONFIG.** carousel_model_s2.py (verified: num_free_params=46; adaptive build
+  reproduces NOTHING of the archive at 1394 nats; plain build reproduces best_lp to 0.998 nats and
+  red_chi2 to 5.1e-6 — the hard gate that caught the version drift). jax 0.10.0.dev20260716 (PINNED —
+  sidecar drifts daily; ALL arms in ONE allocation on THIS build). XLA_FLAGS=--xla_gpu_deterministic_ops
+  =true. Archive read-only at debug_carousel/1_2_3_4_5_9/.
+  **WHAT THIS RUN DOES NOT COVER (stated up front):** it does not test whether the ADAPTIVE posterior is
+  itself correctly rendered (no ground truth); it does not test the middle links of the mechanism chain
+  (quadrature error -> exploitable ridge); it says nothing about any sampler; and it does not address
+  the flagged shear-prior plausibility warning (|shear| mass 0.131 outside 0.2) or whether the 2nd mode
+  is an implausible high-shear solution.
+
 - **Run: A/A DETERMINISM DIAGNOSTIC (labeled DIAGNOSTIC, not a science claim) — is the harness BITWISE
   REPRODUCIBLE at fixed seed within ONE build/environment?** Motivation: PT-7↔PT-8 same-seed divergence at
   round 126 was first logged as "fixed seeds do not reproduce", then RE-SCOPED (same day) when I checked
@@ -3695,14 +3787,58 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   [NFW_ELLIPSE_SLOPE, dPIE, EPL(niter=18), dPIE, SHEAR]; source_light = 4x Shapelets (n_max 8,8,8,6) +
   1x SersicEllipse; 164 linear amplitudes via lstsq with model-card warning "NO physical
   regularization"; MAP best_chisq=1.148182863187924, best_lp=-521149.3527310094, z_best (46,).
-  **TWO MODEL-CARD GAPS FOUND (non-negotiable 6 class — the card does not record what was actually
-  run):** (i) the notebook wraps `SimulatorConfig` in `AdaptiveImageData`
-  (gigalens.jax.experimental.adaptive_supersample) — the human's "adaptive super sampling" — but the card
-  records only `grid.supersample=1`; (ii) the card records `likelihood_precision=float64` but NOT
-  `conv_precision="float32"` — system 2 runs MIXED PRECISION where dPIE ran float64 throughout.
-  Mitigating evidence (NOT a clearance): the stored MCLMC ran on this same model at
-  desired_energy_variance=5e-4 — the same DEVAR our harness uses — and adapted without incident, so the
-  fp32-conv noise floor is not obviously above the EEVPD target. Flagged, not diagnosed.
+  **~~TWO MODEL-CARD GAPS FOUND~~ — CLAIM (i) IS WRONG AND IS WITHDRAWN 2026-07-16 (same day, before
+  any run depended on it). STRIKETHROUGH PRESERVED, NOT EXCISED (excising would curate the log; the
+  PT-8 grader ruled on this).** I wrote: "(i) the notebook wraps `SimulatorConfig` in
+  `AdaptiveImageData` ... but the card records only `grid.supersample=1`", filing it as a
+  non-negotiable-6 card gap ("the card does not record what was actually run"). **That is backwards.
+  The card is ACCURATE: the archived run genuinely WAS non-adaptive.** `adaptive_supersample.py` was
+  first committed 2026-07-12 (gigalens 501334a) and the notebook was edited to swap
+  `Dataset -> AdaptiveImageData` on 2026-07-13 (GIGALens-Code eb2a09b) — but the archive's manifests are
+  timestamped 2026-07-09T19:22Z (map) / 19:43Z (mclmc). **The archive PREDATES the existence of the
+  adaptive code by 3 days.** There was no gap; the NOTEBOOK moved, not the card. **Self-fooling
+  mechanism (logged): I observed a mismatch between notebook and card and inferred which side was at
+  fault WITHOUT CHECKING WHICH SIDE MOVED — and the direction I picked was the one that made the
+  artifact look defective rather than my own reading of it. A `git log` on two files settled it in
+  seconds. Cf. the AP-3 over-correction lesson: eliminate a confound with a CONTROL, not an inference.**
+  Claim (ii) STANDS but is narrowed: `model_card.json` has no `conv_precision` field at all (a card
+  SCHEMA gap), so it cannot record the notebook's current `conv_precision="float32"`. Whether the
+  2026-07-09 archive itself ran fp32 conv is NOT established and is NOT claimed here.
+  **VERSION DRIFT CONFIRMED BY CONTROL, NOT BY ARGUMENT (I ran both myself; artifacts
+  diag_sys2/s2_plain_control.py):** `log_prob(z_best)` under the notebook's CURRENT adaptive build =
+  **-522543.70** vs manifest `best_lp` -521149.35 → **off by 1394.35 nats**. Swapping ONLY
+  `AdaptiveImageData -> ImageData` (plain, non-adaptive; nothing else changed) → **-521150.35, off by
+  0.998 nats**, red_chi2 off by 5.1e-6. **A 1400x separation ⇒ the archive is the NON-ADAPTIVE model,
+  unambiguously.** This is exactly the hard gate ("reproduce best_lp at the stored z_best") doing its
+  job; without it the campaign would have sampled one posterior and scored it with another's
+  instrument.
+  **CONSEQUENCE — THE SCOPING'S MODE CHARACTERIZATION IS ATTACHED TO THE NON-ADAPTIVE POSTERIOR.**
+  Everything above (mode locations z[37]~-2.78/-3.40, the pinned indicator z[37] < -3.0920, the
+  one-way-drainage baseline) was measured on the 07-09 archive = the model the notebook NO LONGER
+  BUILDS. It is NOT transferable to the adaptive posterior without re-measurement (1394 nats is not a
+  perturbation).
+  **z_param_names RECOVERED (they are stored NOWHERE on disk; only obtainable by building the model) —
+  and they give the bimodality PHYSICAL MEANING: z[37] = `planes/3/light/1/beta` = the SHAPELET SCALE
+  (size) of src5 on plane 3 (z=1.432); z[27] = `planes/0/mass/4/gamma2` = external shear gamma2. So the
+  two modes are a COMPACT-vs-EXTENDED SOURCE-SIZE degeneracy in src5, coupled to shear — a physically
+  sensible lensing degeneracy, not obviously numerical.**
+  **BUT — NEW HYPOTHESIS RAISED BY THE VERSION DRIFT (this is now the FIRST question, ahead of any PT
+  work): IS THE src5 SOURCE-SIZE BIMODALITY A RENDERING ARTIFACT OF `supersample=1`?** A compact source
+  spanning ~1 pixel is badly integrated on a 1x grid; adaptive per-pixel supersampling is precisely the
+  fix for that failure mode, and the human added it 3 days AFTER the archive. If the second mode is an
+  under-resolution artifact, then a sampler tuned to hunt it down is solving a problem that should not
+  exist, and the whole generalization target is void. Cannot be settled from the archive alone.
+  **HUMAN DECISION 2026-07-16 (asked directly, given the 3 options incl. the unsound one): target the
+  notebook's CURRENT adaptive model AND re-run MAP+MCLMC into a NEW directory (~40 min GPU; archive
+  wall-times MAP 835s + MCLMC 1235s) to obtain a MATCHED mode-location reference + indicator. NOTHING
+  is written over the human's existing archive.** Explicitly REJECTED as unsound: "adaptive posterior +
+  stale archive indicator" — that scores a new posterior with the other model's instrument (the
+  "silently meaningless" failure this same scoping flagged in the porting map).
+  **PLAUSIBILITY WARNING SURFACED BY THE CONTROL RUN (recorded, not chased): gigalens itself warns
+  SHEAR[plane 0 mass 4] prior puts estimated mass 0.131 outside |shear|<=0.2 (probe K=3e6), exceeding
+  its 0.05 threshold — "much larger than realistic line-of-sight shear on galaxy/group scales". Note
+  z[27]=gamma2 is the SECOND most mode-separating coordinate, so "is the 2nd mode an implausible
+  high-shear solution?" is a live question. NOT investigated; flagged.**
   **REFERENCE STATUS — the load-bearing finding. System 2 has NO reference weight and one CANNOT be
   built from the stored MCLMC.** Stored MCLMC = 8 chains x 10000 draws, dim 46. NO R-hat and NO ESS are
   stored anywhere (ABSENT in diagnostics.npz and all manifests); no manifest makes a convergence claim.
