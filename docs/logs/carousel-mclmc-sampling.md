@@ -3679,6 +3679,112 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-16 (GENERALIZATION step-0 SCOPING — system 2 ("1_3_4_5_9") characterization + porting map.
+  NO GPU RUN; all findings from artifacts already on disk. PROPOSED, UNCERTIFIED — no claim about PT
+  here, only about the TARGET SYSTEM and the HARNESS COUPLING. Human directive: generalize (everything
+  certified so far is ONE posterior).**
+  **NAMING RESOLVED (was an open ambiguity): the human's "1_3_4_5_9" == on-disk `1_2_3_4_5_9`. The
+  notebook `experiments/sim_carousel/debug_carousel_1_3_4_5_9.ipynb` contains the string "1_3_4_5_9"
+  ZERO times and writes `out_dir="debug_carousel/1_2_3_4_5_9"`. The FILENAME names the SOURCES fit
+  (1,3,4,5,9 — src2 is commented out, never instantiated); the DIRECTORY follows the redshift-group
+  label `z1_2`. Same system, two conventions. The sibling `3_4_5_9` on disk is a DIFFERENT, SMALLER run
+  (source 1 + its z=0.962 plane dropped; dim 46->43, n_basis 164->119 = exactly src1's n_max=8 basis)
+  and is NOT produced by this notebook. TARGET PINNED = `1_2_3_4_5_9`, dim=46.**
+  **SYSTEM 2 FACTS (from model_card.json / manifests / arrays.npz):** dim=46 (dPIE: 33); 4 bands; 4 light
+  planes (z=0.962/1.166/1.432/1.506) + lens plane z=0.49 with 5 mass components
+  [NFW_ELLIPSE_SLOPE, dPIE, EPL(niter=18), dPIE, SHEAR]; source_light = 4x Shapelets (n_max 8,8,8,6) +
+  1x SersicEllipse; 164 linear amplitudes via lstsq with model-card warning "NO physical
+  regularization"; MAP best_chisq=1.148182863187924, best_lp=-521149.3527310094, z_best (46,).
+  **TWO MODEL-CARD GAPS FOUND (non-negotiable 6 class — the card does not record what was actually
+  run):** (i) the notebook wraps `SimulatorConfig` in `AdaptiveImageData`
+  (gigalens.jax.experimental.adaptive_supersample) — the human's "adaptive super sampling" — but the card
+  records only `grid.supersample=1`; (ii) the card records `likelihood_precision=float64` but NOT
+  `conv_precision="float32"` — system 2 runs MIXED PRECISION where dPIE ran float64 throughout.
+  Mitigating evidence (NOT a clearance): the stored MCLMC ran on this same model at
+  desired_energy_variance=5e-4 — the same DEVAR our harness uses — and adapted without incident, so the
+  fp32-conv noise floor is not obviously above the EEVPD target. Flagged, not diagnosed.
+  **REFERENCE STATUS — the load-bearing finding. System 2 has NO reference weight and one CANNOT be
+  built from the stored MCLMC.** Stored MCLMC = 8 chains x 10000 draws, dim 46. NO R-hat and NO ESS are
+  stored anywhere (ABSENT in diagnostics.npz and all manifests); no manifest makes a convergence claim.
+  Its failure mode is not noise — it is ONE-WAY DRAINAGE (artifact `sys2_z37.png`, traces + per-chain
+  marginals): all 8 chains start at z[37]~-2.8; chains 3,5 leave at ~draw 3000, chain 6 at ~5500, chain 1
+  at ~8300, all to z[37]~-3.4, and NOT ONE RETURNS in 10000 draws. Zero return crossings => the pooled
+  mode weight (0.7599 above the 2-means boundary -3.0920) is a STOPWATCH READING — "how many chains have
+  drained by now" — a function of run length, not a posterior quantity. **Consequence: mode LOCATIONS are
+  trustworthy (geometry), mode WEIGHTS are not. There is no C-25 analogue for system 2 and this MCLMC
+  run cannot be promoted into one.**
+  **MULTIMODALITY IS GENUINE AND STRUCTURALLY ANALOGOUS TO THE dPIE POCKET (checked by PLOT, not by
+  statistic).** Artifact `sys2_map_vs_modes.png`: in (z[37], z[27]) the two modes are CLEANLY SEPARATED,
+  non-overlapping clusters — not a 1-D shadow of a skewed marginal. Pooled z[37] marginal shows a sharp
+  peak at -2.78 and a broader mode at -3.45 with a real density gap ~[-3.2,-3.0]. **SELF-FOOLING CAUGHT
+  BY THE PLOT (logged as method debt avoided): from the per-chain NUMBERS alone I inferred the 4
+  "segregated" chains might merely be stuck in a left-skewed unimodal tail — because they are also the
+  4 NARROWEST (chain2 spans 0.14; mixers span ~1.0) — which is exactly the PT-8 detector's rejected
+  failure (BC+k-means firing on skew, not modes). The PLOT overturned it: the narrow chains are narrow
+  because they sit in the SHARP mode; the wide ones are wide because they SPAN BOTH after hopping. The
+  BC statistic could not distinguish these; the trace could. Plots-before-metrics earned its keep.**
+  **MAP-vs-MODES (determines the D2 experiment):** MAP z[37]=-1.8553 sits OUTSIDE BOTH modes (pooled
+  z[37] range [-3.601,-2.262]) — ~0.4 beyond the max sampled value, on the FAR SIDE of the sharp mode.
+  Checked for the parameterization-mismatch confound that would have voided every index comparison:
+  REJECTED — MAP vs pooled draws has median |z-score| 0.77 with 37/46 dims INSIDE range (a mismatched
+  ordering would be nonsense in most dims, not coherent in 37). The 9 outside dims sit at 3.3-4.1 sd and
+  are EXPECTED, not a defect: in 46-d the mode of the density generically sits off the typical set, and
+  the card itself warns of 164 unregularized lstsq amplitudes. **So the D2 test is well-posed: start at
+  MAP (right side), DISCOVER the left mode at z[37]~-3.4.**
+  **SCORING INDICATOR — PINNED, HUMAN-APPROVED 2026-07-16.** Human answered the direct question: score
+  from MCLMC, sampler stays blind. Pre-registered indicator = **z[37] < -3.0920** (2-means boundary on
+  the pooled draws). **SIGN CONVENTION PINNED DELIBERATELY: dPIE's convention is "pocket" = the
+  HARD-TO-FIND mode and its test is `>`; here MAP is on the RIGHT and the discovery target is the LEFT
+  mode, so the faithful port is `<` — the OPPOSITE SENSE from a naive copy. A silent flip here would
+  invert every occupancy number while still looking plausible; I have a logged history of exactly this
+  error (see [[memory-for-artifact-substitution]], sign-flipped drift feeding directional commentary).**
+  Rigor note (why this is not a cheat): using MCLMC for SCORING while the sampler never reads it also
+  PRE-REGISTERS the indicator, removing the fishing DOF the PT-7 grader flagged; the alternative
+  (post-hoc clustering of PT's own output) is that same un-pinned DOF, and the PT-8 detector that would
+  have automated it was REJECTED. The human's constraint ("no previously determined posterior
+  information from other sampling algorithms") binds the SAMPLER, not the VALIDATION.
+  **WIN CONDITION (reference-free, forced by the no-reference finding): ROUND TRIPS IN BOTH DIRECTIONS.**
+  A weight backed by two-way crossings is an equilibrium estimate; a weight backed by drainage is not.
+  MCLMC's baseline is ZERO returns, so this is a qualitative, checkable contrast that needs no known
+  answer. Secondary: weight stability across seeds AND across run length (stationarity). **NOT claimable
+  on system 2: "PT recovers the correct weight" — there is nothing to check it against.**
+  **PORTING MAP (harness coupling).** `carousel_model.build()` takes ZERO arguments and hardcodes
+  everything (priors, planes, paths); `model_card.json` is ONE-WAY diagnostic output written by
+  introspecting an already-built context — there is NO reverse "build from card" path in the repo
+  (grepped). **So system 2 needs a NEW sibling builder module** (extraction of the notebook's model
+  cells, mirroring how carousel_model.py extracted prelim_sim_carousel.ipynb) — a config change cannot
+  do it. **D2's init IS reference-free in code, not merely in principle** (verified by trace): it reads
+  only MAP_NPZ z_best; `pos[r] = map_zbest + D2_INIT_SCALE*randn`, `inv_mass = D2_INIT_SCALE^2 * I`. It
+  never reads MAMS/SVI. The MAMS coupling that reaches D2 is INCIDENTAL: (i) setup_model()'s
+  unconditional load + asserts (`z_param_names[6]=="planes/0/mass/1/center_x"`, `mams.shape==(64,1000,
+  DIM)`) which block ANY arm != control; (ii) spec["metric_ref"]=M["cov_pool"], used ONLY for the
+  geneig DIAGNOSTIC trace (already labeled "DIAGNOSTIC ONLY, NOT the scored clause instrument") and
+  cleanly None-guarded at run_pt:1033-1034/1277; (iii) spec["indicator"], host-side post-round
+  bookkeeping ONLY — it does NOT affect swap accept/reject or the kernel. Known rough edge: run_pt's
+  `indicator` is a REQUIRED spec key with no None path (unlike metric_ref) — but with the indicator
+  PINNED above we WANT it, so this does not bite us; the round-trip/occupancy/worms machinery ports and
+  stays MEANINGFUL, and it is precisely the instrument that measures the two-way crossings MCLMC lacks.
+  **LADDER TRANSFER — the actual scientific question for step-1.** The dPIE product answer (fixed
+  cold-ish ladder, β_min≈0.36-0.40, ~6 rungs) CANNOT be transferred wholesale: the record already holds
+  that ladder SPACING is not transferable across data sizes (rung density scales with sd(u|β), which
+  grows with data; system 2 has more bands/planes) and that β_min is the LEAST presettable knob. Reusing
+  dPIE's 6 rungs would likely collapse swap acceptance and FAIL FOR A KNOWN, UNINTERESTING REASON (the
+  geomspace-12 op-incident precedent: acc 0.16-0.31, RT 0 in 1500 rounds) — a bad experiment.
+  **Therefore step-1 design = PRESET β_min≈0.36 (the hypothesis under test) + spacing MEASURED by a
+  cheap sd(u|β) probe.** Note the payoff: presetting β_min means the probe needs NO leak rates, hence NO
+  mode classifier — which sidesteps the rejected-detector wall entirely. `ladder_recipe.py` is
+  system-agnostic (measure_sd_u/design_ladder/knot_se take arrays, no system constants) and is the
+  transferable piece. **NOTE the wall this avoids: `beta_min_rule` needs leak_rates => needs a basin
+  classifier => on dPIE that was the hand-built pocket indicator. So the dPIE "point-and-go" was
+  point-and-go GIVEN a hand-built mode indicator; the indicator itself was never reference-free. That is
+  the true scope of what is certified, and preset-β_min is the only path that does not require
+  re-litigating it.**
+  **NEXT (in order): (1) build carousel_model_s2.py; HARD GATE = reproduce best_lp=-521149.3527310094 /
+  chisq=1.148 at the stored z_best, and recover z_param_names (ABSENT on disk — needed to name z[37]/
+  z[27]); (2) port harness behind GATE_PT0_SYSTEM with the dPIE path byte-identical when unset (smoke
+  A/B); (3) DESIGN CHECKPOINT + rigor-grader BEFORE any GPU; (4) probe -> ladder; (5) D2 production, 2
+  seeds, WITH XLA_FLAGS=--xla_gpu_deterministic_ops=true, ONE allocation, ONE build.**
+
 - **2026-07-16 (carousel GATE PT-8 (ADAPTIVE-PT) step-2 — CHARACTERIZE β_min-dependent equilibrium —
   RAN CLEAN, job 55979206, 4/4 arms FULL (no truncation): L60 {s60,s61}@2500, L70 {s60,s61}@3200,
   NSYS=16, ~3.5 h/arm. RESULT: PARTIALLY-SUPPORTED / UNCERTIFIED — grader rd-1 NEEDS-MORE, CORRECTIONS
