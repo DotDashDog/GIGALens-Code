@@ -1,4 +1,4 @@
-Selected arms: ['A_baseline_lr1e-2_2000']
+Selected arms: ['B_lowlr_1e-3_6000']
 ==============================================================================
 S2-MAPCFG -- MAP optimizer-config sweep -- MODEL CARD (pre-compute)
 ==============================================================================
@@ -16,19 +16,19 @@ ASSERTED: dataset[0] is plain ImageData (archive-matched, non-adaptive).
 model.num_free_params: 46
 ==============================================================================
 
---- ARM A_baseline_lr1e-2_2000: baseline reproduction: adabelief lr=1e-2, 2000 steps, n=128 (archive config) ---
+--- ARM B_lowlr_1e-3_6000: lower LR: adabelief lr=1e-3, 6000 steps, n=128 ---
 MAP: remat_basis effective for 4/4 simulator(s) (MAP-scoped override, ss<3).
-Final Chi-squared: 1.14823
-[A_baseline_lr1e-2_2000] wall_time_s        = 704.7
-[A_baseline_lr1e-2_2000] best_step/n_steps  = 1980/2000
-[A_baseline_lr1e-2_2000] best_lp            = -521148.8868
-[A_baseline_lr1e-2_2000] best_chisq         = 1.148181
-[A_baseline_lr1e-2_2000] last-10% net gain  = -2.4507 nats (still oscillating/negative-net)
-[A_baseline_lr1e-2_2000] z[37]              = -1.8542  -> basin = sharp (OUTSIDE sampled range!)
-[A_baseline_lr1e-2_2000] vs archive MAP (-521150.351): delta = +1.464 nats
-[A_baseline_lr1e-2_2000] vs falsifier bar (-521120.07, worst sharp MCLMC draw): DOES NOT CLEAR (delta = -28.817)
-[A_baseline_lr1e-2_2000] vs sharp-cluster mean (-521069.58): delta = -79.307
-[A_baseline_lr1e-2_2000] vs compact-cluster mean (-520992.89): delta = -155.997
+Final Chi-squared: 1.14773
+[B_lowlr_1e-3_6000] wall_time_s        = 1726.8
+[B_lowlr_1e-3_6000] best_step/n_steps  = 5999/6000
+[B_lowlr_1e-3_6000] best_lp            = -520924.3699
+[B_lowlr_1e-3_6000] best_chisq         = 1.147734
+[B_lowlr_1e-3_6000] last-10% net gain  = +9.0750 nats (rising tail)
+[B_lowlr_1e-3_6000] z[37]              = -2.1044  -> basin = sharp (OUTSIDE sampled range!)
+[B_lowlr_1e-3_6000] vs archive MAP (-521150.351): delta = +225.981 nats
+[B_lowlr_1e-3_6000] vs falsifier bar (-521120.07, worst sharp MCLMC draw): CLEARS (beats typical set) (delta = +195.700)
+[B_lowlr_1e-3_6000] vs sharp-cluster mean (-521069.58): delta = +145.210
+[B_lowlr_1e-3_6000] vs compact-cluster mean (-520992.89): delta = +68.520
 
 Saved raw arrays -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/diag_sys2/mapcfg/mapcfg_sweep_arrays.npz
 
@@ -36,7 +36,7 @@ Saved raw arrays -> /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-pre
 SUMMARY
 ====================================================================================================
 arm                            wall_s        best_lp       z37      basin  last10%gain  beats_falsifier
-A_baseline_lr1e-2_2000          704.7   -521148.8868   -1.8542 sharp (OUTSIDE sampled range!)      -2.4507               no
+B_lowlr_1e-3_6000              1726.8   -520924.3699   -2.1044 sharp (OUTSIDE sampled range!)       9.0750              YES
 
 archive MAP lp = -521150.3510  z37 = -1.8553
 falsifier bar (worst sharp MCLMC draw) = -521120.0700

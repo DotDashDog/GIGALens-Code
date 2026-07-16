@@ -3976,6 +3976,68 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-16 (GENERALIZATION step-0d — S2-MAPCFG SWEEP: **MY PRE-REGISTERED PREDICTION IS FALSIFIED.**
+  The broken MAP WAS largely an OPTIMIZER-CONFIG artifact. And arm B found a HIGHER-DENSITY REGION THAT
+  MCLMC NEVER VISITED — which puts my OWN step-0c headline in question. PROPOSED, UNCERTIFIED; arms C/D
+  NOT RUN.)**
+  **PREDICTION SCORED — FAILED.** In step-0c I pre-registered, BEFORE these arms reported: *"adabelief is
+  FIRST-ORDER and at cond ~1e8 cannot converge; lowering/decaying lr does NOT fix conditioning. I predict
+  arms B/C/D ALL FAIL to reach the MCLMC cluster means (-521069.58 sharp / -520992.89 compact),
+  plateauing near -521150 ⇒ the broken MAP is FUNDAMENTAL. FALSIFIER: any arm reaching lp above the sharp
+  cluster mean ⇒ it WAS config."* **Arm B cleared that bar by +145.2 nats. The falsifier FIRED. My
+  ill-conditioning explanation for the broken MAP is DEAD.**
+  | arm | config | wall | best_lp | z[37] | last-10% net | vs archive MAP |
+  | A | adabelief lr=1e-2, 2000 steps, n=128 (ARCHIVE config) | 704.7 s | **-521148.887** | -1.8542 | **-2.45** (oscillating) | +1.46 |
+  | B | adabelief **lr=1e-3, 6000 steps**, n=128 | 1726.8 s | **-520924.370** | **-2.1044** | **+9.08 (RISING)** | **+225.98** |
+  | C (decay), D (n=512) | — | — | **NOT RUN** (node budget; agent paused before launch) | — | — | — |
+  **ARM A REPRODUCES THE ARCHIVE (a real control, and it passed): best_lp -521148.887 vs archive
+  -521150.351 (1.46 nats), z[37] -1.8542 vs -1.8553 — the SAME off-posterior point. So the bad MAP is
+  REPRODUCIBLE, a genuine attractor of adabelief@1e-2, not a fluke. Arm A's own last-10% net gain
+  (-2.45 nats, oscillating) independently CONFIRMS the step-0b plateau-not-truncation correction.**
+  **ARM B BEATS EVERYTHING:** vs archive MAP **+225.98**; vs sharp cluster mean **+145.21**; vs compact
+  cluster mean **+68.52**; vs the BEST compact draw AND the compact mode's damped-Newton converged Laplace
+  maximum (-520956.07) **+31.70**. **A 10x lower LR + 3x steps bought +226 nats. The MAP failure was
+  SUBSTANTIALLY A CONFIG ARTIFACT — the archive's MAP config (lr=1e-2 / 2000 steps) is simply badly tuned
+  for this posterior.** **SELF-FOOLING, 6th INSTANCE AND THE SAME SHAPE AS THE GRADER'S AP-3 CATCH: I had
+  the mundane explanation ("lr=1e-2 is too high — the trace oscillates") IN HAND, then talked myself OUT of
+  it with an exotic one (8-decade conditioning ⇒ first-order methods are hopeless) built on a REAL
+  measurement that nonetheless did not license the conclusion. Ill-conditioning is TRUE (cond ~1.6-1.8e8,
+  measured) and it did NOT prevent adabelief from gaining 226 nats. A true premise does not make an
+  argument sound. The grader warned me about exactly this pattern one round earlier and I repeated it.**
+  **BUT THE RESULT IS STRANGER THAN "I WAS WRONG", AND THIS PART MATTERS MORE — arm B's optimum is at
+  z[37] = -2.1044, which is OUTSIDE the posterior's ENTIRE sampled range [-3.601, -2.262].** So **there is
+  a higher-density region that the archive MCLMC NEVER VISITED.** And it is **PRIOR-CONSISTENT**: z[37] =
+  -2.1044 ⇒ beta = 0.122" = **+1.35 prior-sigma** from the prior median (log 0.1 = -2.3026), versus the
+  "compact mode" at **-7.32 prior-sigma**. **A better-optimized MAP finds a solution that AGREES with the
+  prior and has HIGHER posterior density than either mode MCLMC found.**
+  **⇒ MY STEP-0c HEADLINE IS NOW IN QUESTION (flagging against myself before a grader does).** "System 2
+  is ONE dominant mode + a metastable trap (w_sharp ~ 2.5e-38)" was computed over a **TWO-MODE set taken
+  from the MCLMC archive**. If a third, higher region exists, that Laplace result may be LOCALLY correct
+  (sharp vs compact) but GLOBALLY INCOMPLETE — the mode set it conditioned on may simply be the wrong one.
+  **The +86.54-nat sharp-vs-compact ratio is unaffected as a PAIRWISE statement; the words "ONE dominant
+  mode" are not licensed.** Note the compounding: step-0b/0c framed system 2 around a mode structure
+  inherited from a NON-CONVERGED sampler, which is precisely the error class this engagement keeps hitting.
+  **CAVEATS (mine, not to be skipped): arm B is NOT CONVERGED — best_step 5999/6000 with a RISING tail
+  (+9.08 nats over the last 10%), so it was still improving when it ran out of steps and its best point may
+  not be a local maximum at all.** DENSITY IS NOT MASS: a narrow overfit spike can hold high density and
+  negligible weight — and **164 unregularized lstsq amplitudes (model card: "NO physical regularization")
+  are exactly the machinery that manufactures such spikes**, i.e. the grader's mundane rival is ALSO the
+  leading explanation for arm B's point. UNTESTED: whether z[37]~-2.10 is a genuine mode (needs a Hessian
+  + local optimization, as done for the other two), and what its Laplace WEIGHT is.
+  **NEXT (do NOT build on step-0b/0c until this is settled): (1) run arm B to CONVERGENCE (it is still
+  rising) and then damped-Newton + Hessian at its optimum — is z[37]~-2.10 a genuine local max, is it
+  negative-definite, and what is its Laplace weight vs the other two? (2) Re-do the weight analysis over
+  the FULL mode set, not the MCLMC-inherited pair. (3) Only then re-open "what is the sampling problem on
+  system 2?". (4) The archive MCLMC is now suspect not merely as non-converged but as EXPLORING THE WRONG
+  REGION — it may never have been near the dominant part of the posterior. (5) dPIE's MAP used the same
+  optimizer family and shows the same best_step-at-the-end signature (3998/4000) with a genuinely rising
+  tail — **the certified dPIE work may rest on a similarly under-tuned MAP; NOT audited, and now a live
+  question about FINISHED work, not just the generalization.**
+  Artifacts: diag_sys2/mapcfg/{mapcfg_sweep.py, mapcfg_sweep_armA_run.log, mapcfg_sweep_armB_run.log,
+  mapcfg_sweep_lp_hist.png, mapcfg_sweep_arrays.npz}. Design checkpoint: "Run: S2-MAPCFG" (checkpoints §,
+  written by the sweep agent pre-run). Node 55991565, jax dev20260716, plain (archive-matched) renderer
+  asserted per build.
+
 - **2026-07-16 (GENERALIZATION step-0c — LAPLACE MEASUREMENT: SYSTEM 2 IS **NOT BIMODAL**. It is ONE
   dominant mode + a METASTABLE TRAP holding 2.5e-38 of the equilibrium mass. Sampling-free (no MCMC).
   Human-approved diagnostic. PROPOSED, UNCERTIFIED — grader not yet run on this.)**
