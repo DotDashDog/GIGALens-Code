@@ -472,6 +472,112 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: carousel GATE PT-8 (ADAPTIVE-PT) step-2 — CHARACTERIZE the β_min-dependent EQUILIBRIUM: do warm
+  ladders share the C-25 pocket weight (unbiased, rate-limited) or ASYMPTOTE to β_min-dependent LOWER
+  values (a shortfall/bias)? + efficiency frontier where arms reach band. NOT a blocker-clearance or
+  unbiasedness PROOF — a rate/equilibrium CHARACTERIZATION.** Human chose "confirm + efficiency frontier"
+  2026-07-16; rd-1 NEEDS-MORE (grader, 7 must-fix) REDESIGNED this entry. **Trigger for the redesign
+  (must-fix #1 calc, done):** fitting w(t)=A(1−e^−(t−500)/τ) to PT-7's [500:1000] cold-occ trajectories
+  gives asymptotes Â = L40 0.387 (reaches band, round-to-0.32 ≈858), L60 0.319 (edge), **L70 0.221 →
+  NEVER reaches 0.32** (τ = 204/149/496). If those asymptotes are real, warmer β_min asymptotes LOWER =
+  a β_min-dependent shortfall (bias), which would make cheap warm ladders NON-viable regardless of
+  efficiency — the crux question, bigger than the frontier. BUT the fits extrapolate an asymptote from a
+  half-completed, noisy rise (measured rolling resid σ ≈ 0.06–0.08 at NSYS=16), so they are a HINT, not a
+  result — PT-8 runs the warm arms long enough to READ the asymptote directly instead of extrapolating.
+  **Claim + classification (chain):** stochastic/dynamical-estimator claim. (Q1, the crux) does each warm
+  β_min's cold pocket occupancy ASYMPTOTE inside the C-25 band [0.32,0.49] (⇒ shared equilibrium,
+  rate-limited, cheap-warm viable) or below it (⇒ β_min-dependent shortfall)? (Q2) efficiency frontier
+  (time-to-band × wall/round) for the arms that DO reach band — contingent, ≤3 β_min points. (Q3) does the
+  reference-free detector's fire/no-fire label reproduce across 2 seeds. Does NOT PROVE unbiasedness (a
+  shared-band asymptote is CONSISTENCY evidence; a converged-reference cornerplot is the deferred real
+  test), nor metric quality (Blocker B/C-28), nor the online loop (gated on this).
+  **Cause hypothesis + the bias channel (must-fix #7):** PT swaps target-preserve IN PRINCIPLE ⇒ every
+  β_min's β=1 rung shares the true pocket weight (~0.42), ladder sets only the RATE. BUT the kernel is
+  UNADJUSTED MCLMC (C-24 A3: EEVPD heavy tail = discretization bias) and the metric is FROZEN at round 500
+  on a β_min-dependent (more/less transported) ensemble — either can inject a β_min-DEPENDENT equilibrium
+  shortfall, so the shared-0.42 fixed point is NOT guaranteed. Hypothesis (rate-limited): warm arms reach
+  the band, just slower. Alternative to resolve (shortfall): warm arms asymptote below band (the PT-7-fit
+  hint) — then diagnose bias-vs-freeze-artifact next.
+  **Design (long-budget, NSYS=16 — NSYS=8 was a false economy, grader must-fix #3: 2 seeds×NSYS8 ≈ PT-7's
+  1 seed×NSYS16 noise, no gain; DATA-CONFIRMED). Focus the budget on the WARM arms where the shortfall
+  question lives; L40 (already reaches band, Â 0.387) anchored from PT-7.** 4 arms, ONE wave, one GPU each
+  (NO chaining — the pivotal arm must not be truncated, must-fix #6): **L60 {s60, s61} @ 2500 rd** and
+  **L70 {s60, s61} @ 3200 rd** — 2 warm β_min × 2 seeds, reusing PT-7 ladders geomspace(0.60,1,4) /
+  geomspace(0.70,1,3) (ratio ≈1.19 → swap acc ≈0.58 matched). **Budget derivation (must-fix #1):** L60
+  τ≈149 → flat by ~500+5τ≈1245, so 2500 gives a ~1250-rd flat window = **~13τ, FULLY converged → L60 is
+  the CLEAN shortfall verdict at β_min=0.60 regardless of L70**; L70 τ≈496 → ~4.5τ of post-transient
+  data by 3200, ~99% complete at the MEDIAN τ. **τ-CI CHECK (rd-2 condition 1, done): bootstrap-over-chains
+  τ CI = [152, 2694], asymptote A CI = [0.10, 0.60] — the PT-7 half-rise does NOT pin L70; 3200 rd is
+  adequate only if τ≈median (~500), and L70 may land UNRESOLVED if τ is high-end (3200 is the NSYS=16 4-h
+  ceiling — can't afford more). So L70 is BEST-EFFORT: it resolves iff τ is near median; the dual-estimator
+  guard (fit Â vs direct flat-window mean must AGREE, else → unresolved) prevents a still-rising L70 from
+  being misread as a shortfall. The crux does not depend on it — L60 answers it.** **Pinned knobs (ALL explicit): NSYS=16, K=10, ss_max=5,
+  devar=5e-4, metric_est=pooled, METRIC_WINDOWS=(100,250,500) (freeze 500), D2_INIT_SCALE=1e-3,
+  GATE_PT0_SAVE_POS=1; ROUNDS per-arm as above.** Detach (setsid). Analysis: extend
+  diag_pt7/pt7_analysis.py — (a) cold_occ(t) full trajectory + exponential-approach fit → Â with an
+  autocorrelation-corrected CI; (b) time-to-band + wall-to-band frontier (with PT-7 L40); (c) detector on
+  a LATE window, **BC\* RE-DERIVED at the run's actual N (must-fix #4), NOT PT-7's 0.4275.**
+  **Prediction (held loosely):** if the PT-7-fit asymptotes are real, L60 asymptotes ≈ band edge
+  (0.32±), L70 asymptotes BELOW band (~0.22–0.30) and FLATTENS by ~round 2800 → shortfall. If instead
+  rate-limited, both climb into the band (L60 by ~1500, L70 approaching by ~3200). I do NOT pre-commit
+  which — the fit hint says shortfall, the theory says shared-band; PT-8 adjudicates. Detector: L60 FIRE,
+  L70 borderline/no-fire, reproduced across seeds.
+  **Falsifier + derived thresholds:**
+  · C-25 BAND [0.32, 0.49] — converged cross-method pocket weight (C-25 line 451, MH-exact MAMS + PT
+  bracket) — EXTERNAL converged reference, not this run's endpoint.
+  · ASYMPTOTE Â per arm = fitted A from w(t)=A(1−e^−(t−t0)/τ) over the FULL post-freeze trajectory, AND
+  the direct mean over the late flat window [flat_start:end] as a cross-check. **SHORTFALL** (per β_min,
+  both seeds agree) ⟺ the late-window asymptote CI **upper edge < 0.32** (i.e. Â + 1.96·SE_ac < 0.32),
+  where SE_ac is the autocorrelation-corrected SE of the flat-window mean (must-fix #2: separate the LEVEL
+  from the band edge by a CI, not a hardcoded 0.30 that sits inside the 0.06 noise). **REACHES-BAND** ⟺
+  late-window CI lower edge ≥ 0.32. **UNRESOLVED** ⟺ CI straddles 0.32, or the arm is still RISING at end
+  (fit τ ≫ remaining budget) — logged as unresolved, not forced. SE_ac derived from the MEASURED per-round
+  occupancy autocorrelation (IAT) on the flat window, NOT assumed.
+  · β_min-DEPENDENCE test (rd-2 condition 2): the title claims β_min-DEPENDENT shortfall, which must be
+  distinguished from a UNIFORM sub-band kernel bias pulling ALL arms down equally. Test the SLOPE of Â vs
+  β_min across {L40 (PT-7, Â 0.387), L60, L70}: β_min-DEPENDENT iff Â decreases with β_min beyond the arms'
+  combined CIs; UNIFORM-BIAS iff all three sit at a common sub-band level. Leans on PT-7 L40's cross-run
+  comparability (same NSYS=16 / seed-60 family). CAVEAT: PT-7 L40 itself asymptotes Â 0.387 < the C-25
+  POINT 0.42 — a faint UNIFORM sub-0.42 pull may already exist (unadjusted-kernel bias, C-24 A3); a
+  β_min-dependent shortfall would sit ON TOP of that.
+  · FRONTIER (Q2, scoped per must-fix #5): report time-to-band + wall-to-band for the arms that REACH band
+  (L40 from PT-7 + whichever of L60/L70 reach); "interior optimum" is only testable if ≥3 reach band, and
+  the {0.40,0.60,0.70} grid drops PT-7's anomalous L50 (acknowledged, cost-driven, not a clean 4-point
+  frontier). If <3 reach band → report the frontier as endpoint-only, optimum untestable.
+  · DETECTOR (Q3): fire/no-fire per β_min must AGREE across the 2 seeds; a flip = seed-unstable
+  (CONFOUNDED with the NSYS change vs PT-7 — a flip is NOT proven seed-instability alone, must-fix #4).
+  **Metric blind spot:** (1) even 3200 rd may leave L70 short of a fully flat window — the fit Â carries
+  extrapolation risk, which is exactly why BOTH the fit AND the direct flat-window mean are reported and a
+  disagreement between them flags "not yet flat" → unresolved. (2) a measured SHORTFALL cannot by itself
+  distinguish TRUE bias (unadjusted-kernel / broken balance) from a metric-FREEZE artifact (frozen on an
+  under-transported warm ensemble) — that discrimination is the NEXT run (unfreeze / longer / metric
+  variants), not this one. (3) NSYS=16, occupancy still noisy (σ≈0.06–0.08); the asymptote is beaten down
+  by averaging the long flat window (effective SE ≈ σ/√(N_eff), N_eff = flat-rounds/IAT × chains) — the
+  design's whole power rests on getting a long-enough flat window, hence the L70 budget. (4) unbiasedness
+  not proven (Q1 is equilibrium-CONSISTENCY, not a bias proof).
+  **Expected plot:** (1) cold_occ(t) full per arm (2 seeds) + exponential fit + Â CI + C-25 band shaded —
+  climbs-into-band vs flattens-below. (2) Â vs β_min (L40 PT-7, L60, L70) — flat (shared equilibrium) vs
+  decreasing (β_min-dependent shortfall). (3) frontier where applicable. (4) detector per arm/seed.
+  **Cost:** 4 arms, NSYS=16, one 4 h interactive node, per-arm ~3.5–3.6 h (L70@3200 ≈3.56 h, L60@2500
+  ≈3.58 h — from PT-7 wall 4010s/5162s per 1000 rd), single wave one-arm-per-GPU (0.4 h margin, no chained
+  critical path). ~14 GPU·h. Interactive ONLY; detached; login-node analysis OMP_NUM_THREADS=4
+  ([[gigalens-gpu-launch-recipe]]).
+  **Op-notes:** (a) launch env sets ALL pinned knobs explicitly incl. GATE_PT0_NSYS_B=16 and
+  GATE_PT0_SAVE_POS=1, and PER-ARM GATE_PT0_ROUNDS_B (2500 vs 3200); (b) dump model_card JSON per arm, diff
+  NSYS/K/ss_max/ROUNDS/seed/betas/metric_est vs this line before leaving unattended.
+  **Status: rigor-grader rd-2 CERTIFY-RECOMMENDED (2026-07-16, CLEAR TO LAUNCH).** rd-1 NEEDS-MORE (7
+  must-fix) → REDESIGNED → rd-2 certified the design (grader certifies NO result). 7 must-fixes all
+  verified closed: (1) budget from PT-7 τ-fit [drove redesign]; (2) shortfall via autocorr-corrected CI
+  excluding 0.32; (3) NSYS kept 16 (false-economy data-confirmed) + budget on warm arms; (4) BC\* re-derived
+  at run N + seed/NSYS confound named; (5) frontier scoped; (6) no chaining, L70 own GPU; (7)
+  bias-channel named + RE-TITLED CHARACTERIZE. 4 rd-2 non-blocking conditions FOLDED: (1) L70 τ-CI check
+  done → L70 = BEST-EFFORT (may be unresolved if τ high-end), L60 (13τ) = clean verdict; (2) Â-vs-β_min
+  SLOPE test added (β_min-dependent vs uniform sub-band bias) + L40 0.387<0.42 uniform-pull caveat; (3)
+  register wording = "shortfall, mechanism UNRESOLVED" never "bias"; (4) graceful truncation pre-accepted
+  (a cut at ≥3000 rd still ≈5τ; report rounds_done). Grader's key structural point: L60 answers the crux
+  regardless of L70; run cannot return nothing nor a false shortfall. Code: e708482 (config +
+  analysis-extension only, to be written+self-tested before result plots).
+
 - **Run: carousel GATE PT-7 (ADAPTIVE-PT) step-2, LINK-1 — reference-free WARMEST-VIABLE β_min:
   an extent-controlled β_min sweep that isolates the "hot rung discovers the 2nd basin" transition
   from acceptance dilution, and validates a REFERENCE-FREE hot-rung-multimodality detector against
