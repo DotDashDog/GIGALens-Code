@@ -3660,7 +3660,10 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   Design grader-certified rd-2 (checkpoints §). Analysis diag_pt8/pt8_analysis.py (self-test reproduces
   the PT-7 τ-fits EXACTLY: L40 A=0.3872/τ=204, L60 0.3185/149, L70 0.2211/496; imports the validated
   PT-7 primitives).
-  **(1) THE ALARM IS REFUTED — no shortfall at β_min=0.60.** The PT-7 τ-fit had predicted L60 asymptotes
+  **[SUPERSEDED — THE ITEMS (1)–(6) BELOW ARE THE ORIGINAL DRAFT AND CONTAIN WRONG CLAIMS; READ THE
+  'CORRECTED READING' SECTION AT THE FOOT. Preserved deliberately as evidence of the self-fooling
+  instance, not as findings.]**
+  **(1) [SUPERSEDED — OVER-CLAIMED: refuted at 0.60 ONLY, and 'no shortfall' ≠ 'asymptotes in band'] THE ALARM IS REFUTED — no shortfall at β_min=0.60.** The PT-7 τ-fit had predicted L60 asymptotes
   at 0.319 (below the C-25 band). At 2500 rd the MEASURED late-window occupancy is **L60_s60 A_flat=0.388
   [0.366,0.410], L60_s61 A_flat=0.397 [0.375,0.418]** — BOTH CIs lie ENTIRELY INSIDE the C-25 band
   [0.32,0.49], near the 0.42 point. **The PT-7-extrapolated 0.319 asymptote was a FITTING ARTIFACT of
@@ -3672,13 +3675,15 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   late-window occupancy CIs exclude 0.32 from BELOW, i.e. both are measurably IN the band. The
   still_rising override is over-conservative for the REACHES direction (being still-rising means the
   asymptote is ≥ the current in-band level) — flagged for grader adjudication, not silently fixed.**)
-  **(2) β_min=0.70 asymptote UNRESOLVED — the pre-warned high-τ case fired.** Both seeds still RISING at
+  **(2) [SUPERSEDED IN PART — 'both seeds still RISING' is FALSE: s61 is statistically FLAT from ~2200 at
+  0.236 and TRIPS the pre-registered SHORTFALL branch; only s60 is rising] β_min=0.70 asymptote UNRESOLVED — the pre-warned high-τ case fired.** Both seeds still RISING at
   3200 rd (fit τ≈4112/3958 — far above the PT-7 point estimate 496, at/beyond the pre-registered
   bootstrap τ-CI [152,2694]; the fit RAILED at the A=0.65 bound; dual-estimator guard DISAGREED → correctly
   forced UNRESOLVED). Its late-window means (0.328 [0.305,0.350] s60; 0.236 [0.223,0.250] s61 — note the
   large seed spread) are **NOT asymptotes** — they are means of still-rising windows and UNDER-estimate.
   No shortfall shown, no band-reach shown. The τ-CI check earned its keep: this outcome was pre-accepted.
-  **(3) RATE-LIMITED, not biased (trajectory-level, pt8_asymptote.png):** every arm climbs from ≈0 toward
+  **(3) [SUPERSEDED — WITHDRAWN AS FALSE: 'none flattens below' is contradicted by L70_s61, flat at 0.236]
+  RATE-LIMITED, not biased (trajectory-level, pt8_asymptote.png):** every arm climbs from ≈0 toward
   the ~0.4 band, warmer = slower; none flattens below. Consistent with a shared equilibrium + β_min
   setting only the RATE.
   **(4) THE Â-vs-β_min SLOPE TEST IS INVALID AS COMPUTED (self-caught) — β_min-DEPENDENCE NOT ANSWERABLE
@@ -3698,7 +3703,9 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   touches but dips back, never satisfying the pre-registered ≥100-rd hold. L40's time-to-band is CENSORED,
   so 0.40-vs-0.60 is UNRESOLVED and "colder is fastest" is NOT supported.** My pre-registered "interior
   optimum ≈0.50–0.60" prediction is UNTESTABLE with a censored endpoint (not falsified, not confirmed).
-  **(6) DETECTOR — NEW NEGATIVE FINDING: the fire/no-fire signal is BUDGET-dependent, not a β_min
+  **(6) [SUPERSEDED — MECHANISM FALSIFIED by a within-run control: it is REPLICATE variance, not budget;
+  and 3 of 5 fires are NON-POCKET (purity 0.06–0.40). Rejection stands, reason was wrong]
+  DETECTOR — NEW NEGATIVE FINDING: the fire/no-fire signal is BUDGET-dependent, not a β_min
   property.** At the LATE window (BC\* RE-DERIVED at run N=960 → 0.454), **ALL FIVE arms FIRE**: L60
   BC=0.799/0.801, **L70 BC=0.876/0.839**, anchor 0.796 — including L70, which did NOT fire in PT-7's early
   [500:1000] window (BC 0.416 < 0.4275). So PT-7's "β_min≤0.60 fires, 0.70 doesn't" actually meant "at
@@ -3756,12 +3763,31 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   cluster is 0.060 (L60_s60), 0.299 (L60_s61), 0.397 (L70_s61) vs 0.986 (L70_s60) and 0.936 (anchor) — 3 of
   5 late "fires" are NOT the pocket.** So "ALL FIVE FIRE ⇒ all discovered" and "seeds agree ⇒ reproducible"
   are BOTH WITHDRAWN (the same threshold is crossed by different underlying structure). **DETECTOR REJECTED
-  as a β_min selector — replicate-unstable AND not pocket-specific.** BLOCKING: `pt8_detector.png` and
-  `pt8_frontier.png` are BLANK (the script dropped `y`/filtered arms) — histograms + purity are REQUIRED
-  before any further detector claim; regenerating.
+  as a β_min selector — replicate-unstable AND not pocket-specific.** **PLOTS — RESOLVED (was BLOCKING):
+  `pt8_detector.png` and `pt8_frontier.png` WERE BLANK (script dropped `y` / filtered every arm out) and I
+  CITED A DETECTOR FINDING WITHOUT EVER OPENING ITS PLOT — a straight "plots before metrics" violation,
+  logged. NOW REGENERATED and grader-re-opened: all five histograms are GENUINELY bimodal (two peaks, deep
+  valley — NOT k-means artifacts on a blob), and the purity split is visible. The plot says something
+  SHARPER than my text: at β_min=0.60 the hot rung carries a LARGE, NEAR-EQUAL-MASS NON-POCKET bimodality
+  (f=0.417, purity 0.060) — i.e. real structure that is not the pocket. Frontier plot now shows all 5 arms
+  with censoring marked (cosmetic residuals: the y-label says "PT-8-measured s/round" but the L40 point
+  necessarily uses PT-7's 7.87; plot ">3.50h" vs text ">3.49h", same 12586 s; L70_s61's marker hides under
+  L70_s60's).
   · Corrections to quoted numbers: the τ-CI is **[151.88, 2933.83]** (I quoted a stale [152,2694]); the
   fit's A upper bound moved 0.60 (checkpoint) → 0.65 (shipped code) — an UN-PRE-REGISTERED DOF, disclosed
   (immaterial: both L70 fits rail either way).
+  · **DESIGN NOTE for the next run (grader inference from the fit residuals; changes NO verdict here):
+  the pre-registered approach model `w(t)=A(1−e^−(t−500)/τ)` is MISSPECIFIED for these trajectories — they
+  have a LAG phase (sigmoidal rise), which an exponential cannot represent. Consequences: τ is biased HIGH,
+  A RAILS at its bound (both L70 fits did), and the `still_rising` flag is therefore UNRELIABLE IN BOTH
+  DIRECTIONS.** Evidence: structured (non-white) residuals, e.g. L70_s61 block means −0.001/−0.015/−0.030/
+  +0.031/+0.021/−0.017 against a block SE ≈0.005. **⇒ the next run must pre-register a LAG-ADMITTING model
+  (or drop model-fitting for direct late-window slope tests).** This ALSO means my A_fit=0.548 for L60_s60
+  is plausibly a model artifact — a point in FAVOUR of my in-band reading that I did NOT make. Grader's
+  even-handed note: L60_s61 looks equilibrated at 0.396 while s60 rises through 0.388, and both target the
+  SAME β=1 distribution, so the parsimonious reading is a SHARED asymptote ~0.40 with s60 arriving later.
+  **BUT this CANNOT close the question: "the arms share an equilibrium" is precisely what PT-8 was built to
+  test, so assuming it to conclude it is CIRCULAR. The unresolved call STANDS.**
   **GRADER'S STRONGEST CATCH (accepted): every discretionary call in the draft landed on "the alarm was
   wrong" — overriding `still_rising` where it blocked the wanted REACHES call at 0.60 while relying on it
   silently where it blocked the unwanted SHORTFALL call at 0.70; quoting A_flat but not A_fit=0.55–0.60;
@@ -3781,8 +3807,9 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   for the whole engagement): every cross-run "same-seed" comparison is a STOCHASTIC REPLICATE comparison,
   NOT a matched control** — including PT-8's PT-7-L40 anchor (the checkpoint's "same NSYS=16/seed-60
   family" comparability premise, which is thereby WEAKER than assumed) and, retrospectively, any earlier
-  paired-seed reasoning. Silver lining: β_min=0.70 now has THREE replicates (PT-7 L70, PT-8 s60, s61) and
-  they disagree substantially — corroborating that the 0.70 question is genuinely seed-split, not a fluke.
+  paired-seed reasoning. NARROWED (grader): PT-7's L70 stopped at 1000 rd, nowhere near a plateau, so it CANNOT corroborate
+  anything about the ASYMPTOTE — the three-way spread (0.0804 vs 0.0398 at [500:1000]) evidences
+  EARLY-WINDOW replicate spread ONLY, not the seed-split asymptote question.
   Mechanism UNDIAGNOSED (plausible: non-deterministic GPU reductions in the round-100 metric-window update;
   divergence at 126 is suspiciously just past the first metric window at 100). **Action: do NOT claim
   matched-control status for same-seed cross-run pairs until diagnosed; treat them as replicates. Needs its
