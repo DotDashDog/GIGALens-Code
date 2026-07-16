@@ -7,8 +7,14 @@ imported by both modeling and plotting code.
 
 Conventions
 -----------
-- ``truth_x`` follows the same nested structure as the posterior's physical
-  parameters: ``[[mass_dicts], [lens_light_dicts], [source_light_dicts]]``.
+- ``truth_x`` names parameters the way the model does: either scene-nested
+  (``{"planes": {0: {"mass": {0: {...}}}}, "cosmo": {...}}``) or path-keyed
+  (``{"planes/0/mass/0/theta_E": ...}``). A parameter is matched by *where it
+  lives*, so results are keyed by scene path.
+- A truth persisted by ``simtests`` is still in the old 3-group form; it is
+  adapted at the boundary by
+  :func:`gigalens_research.inference_utils.params.truth_x_to_scene_params`
+  rather than re-persisted (D2).
 - Asymmetric ±1σ z-scores match :func:`vela_utilities.stdev_calc` — the
   ``sigma`` denominator is the *upper* quantile gap when truth is above the
   median, otherwise the *lower* gap. With ``low_q=0.159`` / ``high_q=0.841``
@@ -24,52 +30,38 @@ import jax.numpy as jnp
 import numpy as np
 
 
-def _flatten_params(nested_x):
-    """Local import of :func:`plotting.labels.flatten_params`. Lazy to avoid
-    a circular import (the plotting package eagerly pulls in ``reports``,
-    which in turn imports this module)."""
-    from ..plotting.labels import flatten_params
-    return flatten_params(nested_x)
+from ..param_index import (
+    KINDS,
+    kind_of_key,
+    param_sites,
+    sites_to_matrix,
+    truth_row,
+)
 
 
-# Group ordering matches gigalens' params convention:
-#   params[0] = mass, params[1] = lens light, params[2] = source light.
-_GROUP_PREFIX_BY_NAME = {
-    "mass": "",
-    "lens_light": "lens_",
-    "src_light": "src_",
-    "source_light": "src_",  # convenience alias
-    "cosmo": "cosmo_",
-}
+def filter_keys_by_kind(keys: Sequence[str], kind: Optional[str]) -> list:
+    """Subset path keys to one parameter class: ``'cosmology'``, ``'geometry'``,
+    ``'mass'``, ``'light'``, or everything for ``'all'`` / ``None``.
 
-
-def filter_labels_by_group(labels: Sequence[str], group: str) -> list:
-    """Subset a flat parameter-label list to a single group ('mass',
-    'lens_light', 'src_light'), or return everything for 'all' / ``None``.
-
-    Mass params have no prefix; lens light has ``lens_``; source light has
-    ``src_``. See :mod:`plotting.labels` for the flattening convention.
+    Classifies by scene path (``planes/0/mass/0/theta_E`` -> mass), so it reads
+    the model's own structure rather than matching name prefixes. The old
+    prefix version defined "mass" by *negation* — anything without a
+    ``lens_``/``src_``/``cosmo_`` prefix — so every new group silently leaked
+    into the mass panel until someone remembered to add it here.
     """
-    if group is None or group == "all":
-        return list(labels)
-    if group not in _GROUP_PREFIX_BY_NAME:
+    if kind is None or kind == "all":
+        return list(keys)
+    if kind not in KINDS:
         raise ValueError(
-            f"group must be one of 'mass', 'lens_light', 'src_light', 'cosmo', "
-            f"'all', or None; got {group!r}."
+            f"kind must be one of {', '.join(repr(k) for k in KINDS)}, 'all', or "
+            f"None; got {kind!r}."
         )
-    prefix = _GROUP_PREFIX_BY_NAME[group]
-    if group == "mass":
-        # Mass params are the prefix-less ones; exclude every other group's prefix
-        # (cosmo included) so cosmology bars don't leak into the mass panel.
-        return [l for l in labels
-                if not l.startswith(("lens_", "src_", "cosmo_"))]
-    return [l for l in labels if l.startswith(prefix)]
+    return [k for k in keys if kind_of_key(k) == kind]
 
 
-def _flat_floats(nested_x) -> Dict[str, float]:
-    """Flatten a posterior point ``x`` and reduce each leaf to a plain float."""
-    flat = _flatten_params(nested_x)
-    return {k: float(np.squeeze(np.asarray(v))) for k, v in flat.items()}
+def _flat_floats(x_flat) -> Dict[str, float]:
+    """Reduce each leaf of a flat bijector output to a plain float."""
+    return {k: float(np.squeeze(np.asarray(v))) for k, v in x_flat.items()}
 
 
 def z_scores(
@@ -84,14 +76,17 @@ def z_scores(
 
     ``z = (truth - median) / sigma`` where ``sigma`` is the *upper* (high_q)
     quantile gap when ``truth > median`` and the *lower* (low_q) gap otherwise.
-    Returns a flat dict keyed by the same labels :func:`flatten_params`
-    produces. Parameters with degenerate (zero-width) intervals get ``NaN``.
+    Returns a flat dict keyed by scene path (``planes/0/mass/0/theta_E``).
+    Parameters with degenerate (zero-width) intervals get ``NaN``.
 
-    Only parameters present in *both* the truth and the posterior are scored.
-    This is the common case when the truth and fitted models differ in their
-    light parameterization (e.g. an ``ImageBasedLight`` truth fit with a
-    shapelet source): the shared mass/center parameters are scored and the
-    unmatched light parameters are skipped with a warning.
+    Only parameters the truth actually defines are scored. Truth and fitted
+    models legitimately differ in their light parameterization (an
+    ``ImageBasedLight`` truth fit with a shapelet source, say): the shared
+    mass/center parameters are scored and the rest are skipped with a warning.
+
+    ``truth_x`` is a scene-nested point (``{"planes": {...}, "cosmo": {...}}``)
+    or a path-keyed dict. Both name parameters the way the model does, so a
+    parameter is matched by *where it lives*, not by a reconstructed label.
 
     Works on any :class:`Posterior` that supports :meth:`quantiles_z`
     (samplers and surrogates); not meaningful for :class:`PointEstimate`.
@@ -101,36 +96,20 @@ def z_scores(
             f"z_scores requires a posterior with quantiles_z(); "
             f"{type(posterior).__name__} has no posterior uncertainty."
         )
-    # grouped_free_x regroups a scene-backed flat bijector output into the legacy
-    # 3-group label space (pass-through for legacy posteriors), so the truth (3-group)
-    # and the posterior points share labels and the shared params are actually scored.
-    # In multi-profile groups every parameter carries a ``__<i>`` profile-index
-    # suffix (see plotting.labels.flatten_params), so each profile's params are
-    # scored separately rather than colliding onto one column. This requires the
-    # truth's profiles to be in the same order as the model's within each group.
-    # Regroup a scene-nested truth ({"planes":..,"cosmo":..}) into the same
-    # 3-group + cosmo label space the posterior points below use (pass-through for
-    # an already-grouped truth), so labels match and the cosmo dict flattens.
-    if hasattr(posterior, "regroup_truth"):
-        truth_x = posterior.regroup_truth(truth_x)
-    flat_truth = _flat_floats(truth_x)
-    flat_med = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.median_z)))
-    flat_lo = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.quantiles_z(low_q))))
-    flat_hi = _flat_floats(posterior.grouped_free_x(posterior.z_to_x(posterior.quantiles_z(high_q))))
-    skipped = [k for k in flat_truth if k not in flat_med]
-    if skipped:
-        warnings.warn(
-            f"z_scores: {len(skipped)} truth parameter(s) are not in the "
-            f"posterior and will be skipped: {skipped}.",
-            stacklevel=2,
-        )
+    sites = param_sites(posterior)
+    median = sites_to_matrix(sites, posterior.z_to_x(posterior.median_z))[0]
+    lower = sites_to_matrix(sites, posterior.z_to_x(posterior.quantiles_z(low_q)))[0]
+    upper = sites_to_matrix(sites, posterior.z_to_x(posterior.quantiles_z(high_q)))[0]
+    # NaN wherever the truth is silent on a parameter; truth_row warns about it.
+    truth = truth_row(sites, truth_x, what="z_scores truth")
+
     out: Dict[str, float] = {}
-    for k, t in flat_truth.items():
-        if k not in flat_med:
+    for i, site in enumerate(sites):
+        if not np.isfinite(truth[i]):
             continue
-        m = flat_med[k]
-        sigma = (flat_hi[k] - m) if t > m else (m - flat_lo[k])
-        out[k] = (t - m) / sigma if sigma > 0 else float("nan")
+        m = median[i]
+        sigma = (upper[i] - m) if truth[i] > m else (m - lower[i])
+        out[site.key] = (truth[i] - m) / sigma if sigma > 0 else float("nan")
     return out
 
 

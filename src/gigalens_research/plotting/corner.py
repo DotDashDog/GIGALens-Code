@@ -6,15 +6,30 @@ Two entry points:
 - :func:`plot_corner_overlay` — multiple posteriors on the same figure,
   with a built-in legend.
 
-Both consume :class:`Posterior` views directly (they grab ``flat_x`` for
-samples, ``median_x`` for the median, etc.), so callers don't have to know
+Both consume :class:`Posterior` views directly, so callers don't have to know
 about array shapes or the bijector.
+
+Selecting what to plot
+----------------------
+Everything is plotted by default. To narrow it, combine any of ``kind``,
+``plane`` and ``component`` — they AND together::
+
+    plot_corner(post)                            # all parameters
+    plot_corner(post, kind="cosmology")
+    plot_corner(post, kind=["cosmology", "mass"])
+    plot_corner(post, plane=0)
+    plot_corner(post, kind="mass", plane=1)
+    plot_corner(post, component=("mass", 0))
+    plot_corner(post, select=lambda s: s.param.startswith("e"))   # escape hatch
+
+Panels are ordered cosmology, geometry, mass, light; then by plane, then by
+component. See :mod:`gigalens_research.param_index` for the parameter records
+these filters run against.
 """
 
 from __future__ import annotations
 
-import warnings
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import corner as _corner_pkg
 import numpy as np
@@ -22,73 +37,79 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
-from .labels import flatten_params, flatten_param_names, latex_label
+from ..param_index import (
+    ParamSite,
+    param_sites,
+    select_sites,
+    site_labels,
+    sites_to_matrix,
+    truth_row,
+)
 
 
-def _samples_to_matrix(
-    posterior,
-    plot_params: Optional[Sequence[str]] = None,
-) -> Tuple[np.ndarray, List[str]]:
-    """Pull samples out of a posterior as an ``(n, p)`` matrix and the matching
-    parameter labels. For point estimates (no flat_x), a single-row matrix is
-    returned for completeness, though corner plots aren't meaningful in that case.
-    """
-    # ``_index_collisions=True`` (the default) is essential here: without it,
-    # two profiles in the same group that share a parameter name (e.g.
-    # ``e1``/``center_x`` across several mass profiles, or ``center_x`` across
-    # multiple source profiles) collapse to a single column and the rest are
-    # silently dropped — a multi-profile / multi-band model would lose ~half its
-    # parameters. The ``__<i>`` profile-index suffix keeps every parameter a
-    # distinct, attributable column. Passed explicitly to pin the behavior.
+def _flat_x(posterior) -> Dict[str, Any]:
+    """The posterior's physical params as the scene's flat ``{unique_key: array}``
+    dict — samples for a sampler, a single point for a point estimate."""
     if hasattr(posterior, "flat_x"):
-        flat = flatten_params(posterior.flat_x, _index_collisions=True)
-    else:
-        flat = flatten_params(posterior.x if hasattr(posterior, "x") else
-                              posterior.z_to_x(posterior.median_z),
-                              _index_collisions=True)
-    if plot_params is None:
-        plot_params = list(flat.keys())
-    cols = [np.asarray(flat[k]).reshape(-1) for k in plot_params]
-    samples = np.vstack(cols).T
-    return samples, list(plot_params)
+        return posterior.flat_x
+    if hasattr(posterior, "x"):
+        return posterior.x
+    return posterior.z_to_x(posterior.median_z)
 
 
-def _point_to_row(
-    point_x: Any,
-    plot_params: Sequence[str],
+def _resolve_columns(
+    posterior,
     *,
-    what: str = "truth",
-) -> np.ndarray:
-    """Convert a single physical-space point (nested-dict structure with batch
-    dim 1) into a 1-D array in ``plot_params`` order.
+    kind: Any = None,
+    plane: Any = None,
+    component: Any = None,
+    select: Optional[Callable[[ParamSite], bool]] = None,
+    plot_params: Optional[Sequence[str]] = None,
+    latex: bool = True,
+) -> Tuple[np.ndarray, List[str], List[ParamSite]]:
+    """Everything a corner plot needs, with no plotting in it: the ``(n, p)``
+    sample matrix, the display labels, and the :class:`ParamSite` records.
 
-    Parameters the point does not define are filled with ``NaN`` (rather than
-    raising). This is the common case when the truth model and the fitted
-    model differ in their light parameterization — e.g. approximating a Vela
-    ``ImageBasedLight`` truth (``center_x``/``center_y``) with a shapelet
-    source (``src_beta``, ``src_n_max``, …). ``corner`` skips non-finite
-    truth/overlay entries, so unmatched parameters simply get no marker.
+    This is the seam. A faster corner backend replaces only the rendering that
+    consumes this — column resolution, selection, ordering and labelling are
+    backend-agnostic and stay put.
     """
-    # Must match _samples_to_matrix's disambiguation so truth columns align
-    # with the sample columns when profiles share parameter names.
-    flat = flatten_params(point_x, _index_collisions=True)
-    missing = [k for k in plot_params if k not in flat]
-    if missing:
-        warnings.warn(
-            f"{what} point is missing {len(missing)} of {len(plot_params)} "
-            f"plotted parameters; these will have no marker: {missing}.",
-            stacklevel=2,
+    sites = param_sites(posterior)
+
+    if plot_params is not None:
+        if any(f is not None for f in (kind, plane, component, select)):
+            raise ValueError(
+                "pass either plot_params (an explicit column list) or the "
+                "kind/plane/component/select filters, not both — otherwise it is "
+                "ambiguous whether plot_params is a selection or an ordering."
+            )
+        by_key = {s.key: s for s in sites}
+        missing = [k for k in plot_params if k not in by_key]
+        if missing:
+            raise KeyError(
+                f"plot_params names {len(missing)} parameter(s) this model does "
+                f"not have: {missing}. Parameters are keyed by scene path, e.g. "
+                f"{next(iter(by_key))!r}. Available: {sorted(by_key)}"
+            )
+        sites = [by_key[k] for k in plot_params]  # caller's order wins
+    else:
+        sites = select_sites(
+            sites, kind=kind, plane=plane, component=component, select=select
         )
-    return np.array([
-        float(np.squeeze(np.asarray(flat[k]))) if k in flat else np.nan
-        for k in plot_params
-    ])
+
+    samples = sites_to_matrix(sites, _flat_x(posterior))
+    labels = site_labels(sites, latex=latex)
+    return samples, labels, sites
 
 
 def plot_corner(
     posterior,
     *,
     fig: Optional[Figure] = None,
+    kind: Any = None,
+    plane: Any = None,
+    component: Any = None,
+    select: Optional[Callable[[ParamSite], bool]] = None,
     plot_params: Optional[Sequence[str]] = None,
     truth=None,
     overplots: Optional[Dict[str, Any]] = None,
@@ -103,41 +124,48 @@ def plot_corner(
     Parameters
     ----------
     posterior : Posterior
-        Source of samples (uses ``flat_x``).
+        Source of samples.
+    kind : str or list of str, optional
+        Restrict to ``"cosmology"``, ``"geometry"``, ``"mass"`` and/or
+        ``"light"``. Default: all.
+    plane : int or list of int, optional
+        Restrict to one or more planes. Default: all.
+    component : int, (role, index), or list, optional
+        Restrict to component indices within their ``(plane, role)``. Pass
+        ``("mass", 0)`` to pin the role.
+    select : callable, optional
+        Predicate on a :class:`~gigalens_research.param_index.ParamSite`, for
+        selections the keyword filters don't express.
     plot_params : list of str, optional
-        Subset of parameter labels (using the registry from :mod:`.labels`).
-        Default: all.
-    truth : nested-dict params, optional
-        A truth point in the same physical-space structure as
-        ``posterior.median_x``. Drawn as crosshairs.
+        Explicit columns by scene path key (``"planes/0/mass/0/theta_E"``), in
+        the order given. Mutually exclusive with the filters above.
+    truth : optional
+        A truth point, either scene-nested
+        (``{"planes": {0: {"mass": {0: {...}}}}, "cosmo": {...}}``) or path-keyed
+        (``{"planes/0/mass/0/theta_E": ...}``). Drawn as crosshairs. Parameters
+        it doesn't define simply get no marker.
     overplots : dict, optional
-        Map ``{legend_label: point_x}`` of additional points to overplot as
-        stars. Useful for marking a MAP point on top of HMC samples.
+        Map ``{legend_label: point}`` of extra points to overplot as stars, in
+        either truth form. Useful for marking a MAP point on top of HMC samples.
     """
-    samples, plot_params = _samples_to_matrix(posterior, plot_params)
-    labels = [latex_label(k) for k in plot_params] if latex else list(plot_params)
-
-    # A scene-nested truth ({"planes": ..., "cosmo": ...}) must be regrouped into
-    # the same label space as the samples (grouped_free_x) before flattening, or
-    # its keys won't align and its cosmo dict would break the flattener.
-    if truth is not None and hasattr(posterior, "regroup_truth"):
-        truth = posterior.regroup_truth(truth)
-    truth_row = None if truth is None else _point_to_row(truth, plot_params)
+    samples, labels, sites = _resolve_columns(
+        posterior, kind=kind, plane=plane, component=component, select=select,
+        plot_params=plot_params, latex=latex,
+    )
+    truths = None if truth is None else truth_row(sites, truth)
 
     defaults = dict(show_titles=True, title_fmt=".3f", color=color,
                     hist_kwargs={"density": True, "color": color})
     defaults.update(corner_kwargs)
 
     fig = _corner_pkg.corner(
-        samples, fig=fig, truths=truth_row, truth_color=truth_color,
+        samples, fig=fig, truths=truths, truth_color=truth_color,
         labels=labels, **defaults,
     )
 
     if overplots:
-        for _name, pt in overplots.items():
-            if hasattr(posterior, "regroup_truth"):
-                pt = posterior.regroup_truth(pt)
-            row = _point_to_row(pt, plot_params, what=f"overplot {_name!r}")
+        for name, point in overplots.items():
+            row = truth_row(sites, point, what=f"overplot {name!r}")
             _corner_pkg.overplot_points(
                 fig, row[None, :], marker="*", markersize=18,
                 mfc=overplot_color, mec=overplot_color,
@@ -148,6 +176,10 @@ def plot_corner(
 def plot_corner_overlay(
     posteriors: Dict[str, Any],
     *,
+    kind: Any = None,
+    plane: Any = None,
+    component: Any = None,
+    select: Optional[Callable[[ParamSite], bool]] = None,
     plot_params: Optional[Sequence[str]] = None,
     truth=None,
     overplots: Optional[Dict[str, Any]] = None,
@@ -168,6 +200,11 @@ def plot_corner_overlay(
     data range disagrees with the existing axes' range, which can produce
     duplicated single-posterior plots.
 
+    Selection (``kind``/``plane``/``component``/``select``/``plot_params``) works
+    as in :func:`plot_corner`. It is resolved once against the first posterior,
+    then every overlay is pinned to exactly those columns, so the figure's axes
+    mean the same thing for each.
+
     Parameters
     ----------
     range_quantile : float, default 0.999
@@ -180,20 +217,28 @@ def plot_corner_overlay(
     at the end.
     """
     import matplotlib.pyplot as plt
+
+    if not posteriors:
+        raise ValueError("plot_corner_overlay needs at least one posterior.")
+
     default_palette = ["blue", "black", "orange", "purple", "brown"]
     colors = colors or {name: default_palette[i % len(default_palette)]
                         for i, name in enumerate(posteriors)}
 
-    # Resolve plot_params from the first posterior if not provided, then
-    # collect per-posterior sample matrices in one pass so we can compute a
-    # shared axis range.
-    if plot_params is None:
-        first_post = next(iter(posteriors.values()))
-        _, plot_params = _samples_to_matrix(first_post)
+    # Resolve the column set once from the first posterior, then pin every other
+    # overlay to those exact keys. A posterior from a different scene surfaces
+    # here as a missing key rather than silently overlaying mismatched columns.
+    first = next(iter(posteriors.values()))
+    _, _labels, sites = _resolve_columns(
+        first, kind=kind, plane=plane, component=component, select=select,
+        plot_params=plot_params, latex=latex,
+    )
+    keys = [s.key for s in sites]
     name_to_samples = {
-        name: _samples_to_matrix(post, plot_params)[0]
+        name: _resolve_columns(post, plot_params=keys, latex=latex)[0]
         for name, post in posteriors.items()
     }
+
     combined = np.vstack(list(name_to_samples.values()))
     lo_q = (1.0 - range_quantile) / 2.0
     hi_q = 1.0 - lo_q
@@ -208,10 +253,9 @@ def plot_corner_overlay(
     pre_existing = set(plt.get_fignums())
 
     fig = None
-    for i, (name, _post) in enumerate(posteriors.items()):
-        post = posteriors[name]
+    for i, (name, post) in enumerate(posteriors.items()):
         fig = plot_corner(
-            post, fig=fig, plot_params=plot_params,
+            post, fig=fig, plot_params=keys,
             truth=truth if i == 0 else None,
             overplots=overplots if i == 0 else None,
             color=colors[name], latex=latex, range=shared_range,

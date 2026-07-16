@@ -194,11 +194,26 @@ def _plot_truth_recovery(df: Any, agg_dir: str, campaign_spec: Any) -> None:
     _plot_percent_errors(ok, z_cols, agg_dir, campaign_spec)
 
 
+def _mass_only(cols: List[str], *, suffix: str = "") -> List[str]:
+    """Keep only the mass-parameter columns.
+
+    Columns are named by scene path (``planes/0/mass/0/theta_E``), so the class
+    is read off the path. The old rule was a negation — anything without a
+    ``lens_``/``src_``/``cosmo_`` prefix counted as mass — which quietly swept
+    every new parameter class into the mass panel.
+    """
+    from gigalens_research.param_index import kind_of_key
+
+    def key(c: str) -> str:
+        return c[: -len(suffix)] if suffix and c.endswith(suffix) else c
+
+    return [c for c in cols if kind_of_key(key(c)) == "mass"]
+
+
 def _plot_zscore_scatter(ok: Any, z_cols: List[str], agg_dir: str, campaign_spec: Any) -> None:
     import matplotlib.pyplot as plt
 
-    mass_z_cols = [c for c in z_cols
-                   if not c.startswith("lens_") and not c.startswith("src_")]
+    mass_z_cols = _mass_only(z_cols, suffix="_z")
     if not mass_z_cols:
         mass_z_cols = z_cols
 
@@ -239,8 +254,7 @@ def _plot_abs_zscore_vs_sweep(
 ) -> None:
     import matplotlib.pyplot as plt
 
-    mass_z_cols = [c for c in z_cols
-                   if not c.startswith("lens_") and not c.startswith("src_")]
+    mass_z_cols = _mass_only(z_cols, suffix="_z")
     if not mass_z_cols or len(ok[sweep_cols[0]].unique()) < 2:
         return
 
@@ -300,8 +314,7 @@ def _plot_percent_errors(ok: Any, z_cols: List[str], agg_dir: str, campaign_spec
         return
 
     param_names = sorted(all_pct[0].keys())
-    mass_params = [p for p in param_names
-                   if not p.startswith("lens_") and not p.startswith("src_")]
+    mass_params = _mass_only(param_names)
     if not mass_params:
         mass_params = param_names
 

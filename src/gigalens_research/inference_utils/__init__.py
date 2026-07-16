@@ -34,7 +34,7 @@ from .posterior import (
     SurrogatePosterior,
 )
 from .truth_diagnostics import (
-    filter_labels_by_group,
+    filter_keys_by_kind,
     source_comparison,
     truth_source_from_light_model,
     z_scores,
@@ -69,7 +69,7 @@ __all__ = [
     "diagnostics_from_disk",
     "format_model_card",
     "model_card",
-    "filter_labels_by_group",
+    "filter_keys_by_kind",
     "posterior_from_disk",
     "register_stage",
     "source_comparison",

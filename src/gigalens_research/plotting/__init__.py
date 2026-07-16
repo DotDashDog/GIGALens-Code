@@ -7,10 +7,17 @@ Organized so each module does one thing:
 - :mod:`.convergence` — chain traces, running R-hat / ESS, loss histories.
 - :mod:`.corner` — corner plots from :class:`Posterior` objects.
 - :mod:`.diagnostics` — stage-specific debug run histories (e.g. MCLMC tuning).
-- :mod:`.labels` — LaTeX label registry and parameter flatteners.
+- :mod:`.labels` — LaTeX label registry.
 - :mod:`.reports` — compound multi-panel figures (single posterior or pipeline).
+
+Parameters are named by their scene path (``planes/0/mass/0/theta_E``,
+``cosmo/H0``). :class:`ParamSite`, :func:`param_sites` and :func:`select_sites`
+are re-exported from :mod:`gigalens_research.param_index` for building the
+``plot_params=`` / ``select=`` arguments the plotters take; that module has the
+rest of the index API.
 """
 
+from ..param_index import ParamSite, param_sites, select_sites
 from .convergence import (
     plot_chain_traces,
     plot_loss_history,
@@ -26,12 +33,7 @@ from .diagnostics import (
     register_diagnostic_plotter,
 )
 from .image import normalized_residual, plot_image, plot_residual_histogram
-from .labels import (
-    LATEX_LABELS,
-    flatten_param_names,
-    flatten_params,
-    latex_label,
-)
+from .labels import LATEX_LABELS, latex_label
 from .reports import PipelineReport, PosteriorReport
 from .source_plane import (
     plot_caustics,
@@ -44,13 +46,13 @@ from .truth import plot_source_comparison, plot_z_scores
 
 __all__ = [
     "LATEX_LABELS",
+    "ParamSite",
     "PipelineReport",
     "PosteriorReport",
-    "flatten_params",
-    "flatten_param_names",
     "has_diagnostic_plotter",
     "latex_label",
     "normalized_residual",
+    "param_sites",
     "plot_caustics",
     "plot_caustics_critical",
     "plot_chain_traces",
@@ -70,4 +72,5 @@ __all__ = [
     "plot_stage_diagnostics",
     "plot_z_scores",
     "register_diagnostic_plotter",
+    "select_sites",
 ]

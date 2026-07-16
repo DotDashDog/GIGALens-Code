@@ -99,7 +99,7 @@ def _try_truth_source(system: Any):
 
 
 def _render_panel(panel: str, report: Any, *, out_dir: str, ctx: Any,
-                  stage: str, z_score_group: str):
+                  stage: str, z_score_kind: str):
     """Return the Figure for one panel name (raises if not applicable)."""
     if panel == "image":
         return report.image_panel()
@@ -110,7 +110,7 @@ def _render_panel(panel: str, report: Any, *, out_dir: str, ctx: Any,
     if panel == "corner":
         return report.corner()
     if panel == "z_scores":
-        return report.z_score_panel(group=z_score_group)
+        return report.z_score_panel(kind=z_score_kind)
     if panel == "source_comparison":
         return report.source_comparison_panel()
     if panel == "diagnostics":
@@ -128,7 +128,7 @@ def _plot_one_run(
     out_dir: str,
     panels: Sequence[str],
     stage: Optional[str],
-    z_score_group: str,
+    z_score_kind: str,
     overwrite: bool,
     verbose: bool,
 ) -> Dict[str, bool]:
@@ -165,7 +165,7 @@ def _plot_one_run(
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 fig = _render_panel(panel, report, out_dir=out_dir, ctx=ctx,
-                                    stage=term, z_score_group=z_score_group)
+                                    stage=term, z_score_kind=z_score_kind)
             fig.savefig(targets[panel], bbox_inches="tight", dpi=150)
             plt.close(fig)
             results[panel] = True
@@ -187,7 +187,7 @@ def plot_campaign(
     *,
     panels: Optional[Sequence[str]] = None,
     stage: Optional[str] = None,
-    z_score_group: str = "mass",
+    z_score_kind: str = "mass",
     shard_i: int = 0,
     shard_n: int = 1,
     include_failed: bool = False,
@@ -242,7 +242,7 @@ def plot_campaign(
             ctx = InferenceContext.from_modelling_sequence(model_seq)
             _plot_one_run(
                 ctx=ctx, system=system, out_dir=out_dir, panels=panels,
-                stage=stage, z_score_group=z_score_group,
+                stage=stage, z_score_kind=z_score_kind,
                 overwrite=overwrite, verbose=verbose,
             )
             n_done += 1

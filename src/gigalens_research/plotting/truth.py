@@ -14,12 +14,12 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ..inference_utils.truth_diagnostics import (
-    filter_labels_by_group,
+    filter_keys_by_kind,
     source_comparison,
     z_scores,
 )
+from ..param_index import param_sites, site_labels
 from .image import plot_image
-from .labels import latex_label
 
 
 def plot_z_scores(
@@ -27,7 +27,7 @@ def plot_z_scores(
     posterior,
     truth_x,
     *,
-    group: str = "mass",
+    kind: Optional[str] = "mass",
     params: Optional[Sequence[str]] = None,
     color_pos: str = "C0",
     color_neg: str = "C3",
@@ -43,11 +43,12 @@ def plot_z_scores(
 
     Parameters
     ----------
-    group : str
-        ``'mass'`` (default), ``'lens_light'``, ``'src_light'``, ``'all'``,
-        or ``None``. Used only when ``params`` is not given.
+    kind : str
+        ``'mass'`` (default), ``'cosmology'``, ``'geometry'``, ``'light'``,
+        ``'all'``, or ``None``. Used only when ``params`` is not given.
     params : list of str, optional
-        Explicit subset of flat parameter labels (overrides ``group``).
+        Explicit subset of scene path keys (``"planes/0/mass/0/theta_E"``),
+        in the order given. Overrides ``kind``.
     threshold : float
         Reference horizontal lines at ±``threshold``σ; set ``None`` to skip.
     sort_by_abs : bool
@@ -55,8 +56,32 @@ def plot_z_scores(
     """
     zs = z_scores(posterior, truth_x)
     if params is None:
-        params = filter_labels_by_group(list(zs.keys()), group)
+        params = filter_keys_by_kind(list(zs.keys()), kind)
     params = list(params)
+
+    by_key = {s.key: s for s in param_sites(posterior)}
+    # z_scores drops any parameter the truth is silent on, so a key can be
+    # absent for two very different reasons. A bare KeyError on `zs` below reads
+    # the same for both.
+    unknown = [k for k in params if k not in zs]
+    if unknown:
+        unscored = [k for k in unknown if k in by_key]
+        raise KeyError(
+            f"cannot plot {len(unknown)} requested parameter(s). "
+            + (f"The truth does not define {unscored}. " if unscored else "")
+            + (
+                f"This model has no {[k for k in unknown if k not in by_key]}; "
+                f"parameters are keyed by scene path. "
+                if len(unscored) < len(unknown)
+                else ""
+            )
+            + f"Scored: {sorted(zs)}."
+        )
+    if not params:
+        raise ValueError(
+            f"nothing to plot: the truth scores no parameter of kind {kind!r}. "
+            f"Scored: {sorted(zs)}."
+        )
     if sort_by_abs:
         params = sorted(params, key=lambda k: -abs(zs[k]))
 
@@ -65,8 +90,12 @@ def plot_z_scores(
     xpos = np.arange(len(params))
     ax.bar(xpos, values, color=colors, edgecolor="black", linewidth=0.5)
     ax.set_xticks(xpos)
+    # Label from the ParamSite records, not the key: a bare label renders only
+    # the parameter name, so on a multiplane model every plane's `e1` would read
+    # `$\epsilon_1$` and the bars would be unattributable. site_labels adds the
+    # plane/component superscript exactly where two labels would collide.
     ax.set_xticklabels(
-        [latex_label(p) if latex else p for p in params],
+        site_labels([by_key[k] for k in params], latex=latex),
         rotation=45, ha="right",
     )
     ax.axhline(0, color="black", linewidth=0.8)
@@ -74,8 +103,8 @@ def plot_z_scores(
         ax.axhline(threshold, color="grey", linestyle="--", linewidth=0.8)
         ax.axhline(-threshold, color="grey", linestyle="--", linewidth=0.8)
     ax.set_ylabel(r"$z = (x_{\rm true} - x_{\rm med})/\sigma_{\pm 1}$")
-    title_group = "all" if group is None else group
-    ax.set_title(f"Truth z-scores ({title_group})")
+    title_kind = "all" if kind is None else kind
+    ax.set_title(f"Truth z-scores ({title_kind})")
 
 
 def plot_source_comparison(

@@ -28,6 +28,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
+from .labels import z_column_labels
+
 # Registry: stage-class name -> plotter(StageDiagnostics, **kwargs) -> Figure.
 _DIAGNOSTIC_PLOTTERS: Dict[str, Callable[..., Figure]] = {}
 
@@ -320,46 +322,23 @@ def plot_mams_diagnostics(
 
 
 def _z_space_labels(ctx, dim: int) -> Optional[list]:
-    """Best-effort unconstrained-space parameter labels, in z-dim (sampler column) order.
+    """Display labels for the sampler's z columns, in z-column order, or ``None``.
 
-    CANONICAL SOURCE: ``ctx.prob_model.z_param_names`` (from gigalens) is now the
-    authoritative column→name map and should be preferred where available; this helper
-    is the best-effort fallback.
+    Z-SPACE. ``ctx.prob_model.z_param_names`` is the scene's own column→name map and
+    the ONE correct source for it (see ``gigalens.jax.scene._z_param_names``). This
+    used to rebuild the names itself, by probing ``bij.forward`` and sorting the
+    output dict's keys — precisely the reconstruction that map exists to retire, and
+    the one whose off-by-reversal ("C-8") mislabel it was written to work around.
 
-    COLUMN ORDER NOTE: The sampler's z-vector is a flat array of shape ``(N, dim)``
-    fed through ``bij.forward(z)``, whose internal ``pack_sequence_as`` step orders
-    columns by JAX's pytree-leaf (alphabetical dict-key) order.  So sampler column
-    ``i`` maps to the alphabetically ``i``-th unique key — NOT to position ``i`` in the
-    bijector output dict's iteration order.  For TFP's ``JointDistributionNamed``
-    bijector the output dict iterates in reversed-alphabetical order, so reading names
-    from ``list(out.keys())`` or ``flatten_param_names(out)`` gives the WRONG
-    column→name assignment (position ``a`` gets the name for sampler column ``DIM-1-a``).
-
-    Fix: sort the output dict keys alphabetically to recover the sampler column order
-    before building the label list.
-
-    Only supports the scene-API flat form (a dict whose top-level values are all
-    scalars, not nested dicts/lists).  Returns ``None`` for legacy nested structures
-    or when the recovered count doesn't match ``dim``, so callers fall back to
-    generic ``z[i]`` labels.  We never guess a mismatched mapping.
+    Returns ``None``, so the caller falls back to generic ``z[i]``, when the map is
+    absent or its length disagrees with ``dim``: a z-space debug figure is worth
+    drawing unlabeled, but never worth mislabeling, and a captured ``samples_z`` can
+    outlive the model it came from.
     """
-    if ctx is None:
+    names = getattr(getattr(ctx, "prob_model", None), "z_param_names", None)
+    if not names or len(names) != dim:
         return None
-    try:
-        from .labels import latex_label
-        probe = np.zeros((1, dim))
-        out = ctx.prob_model.bij.forward(probe)
-        # Only handle the scene-API flat form (unique-key dict with scalar values).
-        # Sorting the keys recovers JAX's pytree-leaf order = sampler column order.
-        if not isinstance(out, dict) or not out or any(
-                isinstance(v, (dict, list)) for v in out.values()):
-            return None
-        names = sorted(out.keys())
-        if len(names) != dim:
-            return None
-        return [latex_label(n) for n in names]
-    except Exception:
-        return None
+    return z_column_labels(names)
 
 
 def plot_mclmc_surrogate_corner(

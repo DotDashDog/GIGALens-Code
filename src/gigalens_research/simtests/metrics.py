@@ -64,6 +64,22 @@ def nan_rate(posterior: Any, system: Any) -> float:
 # ---------------------------------------------------------------------------
 
 
+def _scene_truth(posterior: Any, system: Any):
+    """``system.truth_x`` as a scene-nested truth.
+
+    Persisted truths are in the OLD 3-group form (mass / lens light / source
+    light), which cannot say which plane a parameter is on; the truth-comparison
+    layer now works in the scene's path space. ``truth_x_to_scene_params`` maps
+    the old form onto the model's actual structure by role+index, which is the
+    only place that correspondence is recoverable.
+    """
+    truth = system.truth_x
+    if isinstance(truth, dict) and "planes" in truth:
+        return truth  # already scene-nested
+    from gigalens_research.inference_utils.params import truth_x_to_scene_params
+    return truth_x_to_scene_params(truth, posterior.scene)
+
+
 @register_metric("all_zscores")
 def all_zscores(posterior: Any, system: Any) -> Dict[str, float]:
     """Asymmetric ±1σ z-scores for all shared parameters (truth vs posterior).
@@ -79,7 +95,7 @@ def all_zscores(posterior: Any, system: Any) -> Dict[str, float]:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            scores = z_scores(posterior, system.truth_x)
+            scores = z_scores(posterior, _scene_truth(posterior, system))
         return {k: float(v) for k, v in scores.items()}
     except Exception as exc:
         warnings.warn(f"[metrics.all_zscores] failed: {exc}", stacklevel=2)
@@ -88,12 +104,10 @@ def all_zscores(posterior: Any, system: Any) -> Dict[str, float]:
 
 @register_metric("mass_zscores")
 def mass_zscores(posterior: Any, system: Any) -> Dict[str, float]:
-    """Z-scores for mass parameters only (no ``lens_`` or ``src_`` prefix)."""
+    """Z-scores for mass parameters only."""
+    from gigalens_research.inference_utils.truth_diagnostics import filter_keys_by_kind
     scores = all_zscores(posterior, system)
-    return {
-        k: v for k, v in scores.items()
-        if not k.startswith("lens_") and not k.startswith("src_")
-    }
+    return {k: scores[k] for k in filter_keys_by_kind(list(scores), "mass")}
 
 
 @register_metric("percent_error")
@@ -105,14 +119,18 @@ def percent_error(posterior: Any, system: Any) -> Dict[str, float]:
     if not hasattr(posterior, "median_z"):
         return {}
     try:
-        from gigalens_research.inference_utils.truth_diagnostics import _flat_floats
-        flat_truth = _flat_floats(system.truth_x)
-        flat_med = _flat_floats(posterior.z_to_x(posterior.median_z))
+        from gigalens_research.param_index import (
+            param_sites, sites_to_matrix, truth_row,
+        )
+        sites = param_sites(posterior)
+        median = sites_to_matrix(sites, posterior.z_to_x(posterior.median_z))[0]
+        truth = truth_row(sites, _scene_truth(posterior, system), warn=False)
         out: Dict[str, float] = {}
-        for k, t in flat_truth.items():
-            if k not in flat_med or abs(t) < 1e-12:
+        for i, site in enumerate(sites):
+            t = truth[i]
+            if not np.isfinite(t) or abs(t) < 1e-12:
                 continue
-            out[k] = 100.0 * (flat_med[k] - t) / abs(t)
+            out[site.key] = 100.0 * (median[i] - t) / abs(t)
         return out
     except Exception as exc:
         warnings.warn(f"[metrics.percent_error] failed: {exc}", stacklevel=2)

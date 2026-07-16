@@ -29,7 +29,7 @@ control display and saving.
   - [Convergence plots](#convergence-plots)
   - [Truth diagnostics](#truth-diagnostics)
   - [Debug diagnostics](#debug-diagnostics)
-- [Labels and parameter flattening](#labels-and-parameter-flattening)
+- [Parameter names and labels](#parameter-names-and-labels)
 
 ---
 
@@ -42,7 +42,7 @@ control display and saving.
 | `convergence.py` | `plot_chain_traces`, `plot_running_rhat`, `plot_running_ess`, `plot_loss_history` |
 | `corner.py` | `plot_corner`, `plot_corner_overlay` |
 | `diagnostics.py` | `plot_stage_diagnostics`, `plot_mclmc_diagnostics`, `register_diagnostic_plotter` |
-| `labels.py` | `LATEX_LABELS`, `latex_label`, `flatten_params`, `flatten_param_names` |
+| `labels.py` | `LATEX_LABELS`, `latex_label`, `z_column_labels` |
 | `truth.py` | `plot_z_scores`, `plot_source_comparison` |
 | `reports.py` | `PosteriorReport`, `PipelineReport` |
 
@@ -56,6 +56,12 @@ from gigalens_research.plotting import (
     # etc.
 )
 ```
+
+Parameters are named by their **scene path** — `planes/0/mass/0/theta_E`,
+`planes/1/geometry/redshift`, `cosmo/H0`. The records behind that naming live in
+`gigalens_research.param_index`; `ParamSite`, `param_sites` and `select_sites`
+are re-exported here for building the plotters' `plot_params=` / `select=`
+arguments. See [Parameter names and labels](#parameter-names-and-labels).
 
 ---
 
@@ -86,7 +92,9 @@ method returns its `Figure`; call `.savefig(...)` yourself or let
 report = PosteriorReport(
     posterior,
     prefix="",               # prepended to figure titles
-    truth_x=None,            # physical-space truth (nested list-of-dicts)
+    truth_x=None,            # physical-space truth: scene-nested
+                             # ({"planes": {0: {"mass": {0: {...}}}}, "cosmo": {...}})
+                             # or path-keyed ({"planes/0/mass/0/theta_E": ...})
     truth_source_image=None, # pre-rendered 2-D truth source image
     truth_source_extent=None,# (xmin, xmax, ymin, ymax) in arcsec — required
                              # when truth_source_image is provided
@@ -159,10 +167,17 @@ corresponding to `point`.
 ```python
 fig = report.corner(
     truth=None,        # defaults to self.truth_x; pass False to suppress
-    overplots=None,    # dict {label: physical_params} drawn as star markers
-    plot_params=None,  # subset of flat parameter names; default: all
+    overplots=None,    # dict {label: point} drawn as star markers
+    kind=None,         # ┐ the plot_corner filters, ANDed together;
+    plane=None,        # │ omitting them all plots every parameter
+    component=None,    # │
+    select=None,       # ┘
+    plot_params=None,  # explicit scene path keys; excludes the filters above
     latex=True,        # use LaTeX labels from the LATEX_LABELS registry
 )
+
+report.corner(kind="mass", plane=0)      # just plane 0's mass parameters
+report.corner(kind="cosmology")
 ```
 
 Parameters present in the posterior but missing from `truth_x` (e.g. when
@@ -180,7 +195,7 @@ Generates all applicable panels in one call and optionally saves each to
 ```python
 figs = report.full_report(
     save_dir="plots/system_07",  # None → don't save automatically
-    z_score_group="mass",        # parameter group shown in z-score bar plot
+    z_score_kind="mass",         # parameter class shown in the z-score bar plot
 )
 # Returns a dict. Keys depend on the posterior type and truth inputs:
 # "image"              — always included
@@ -199,12 +214,13 @@ These require truth inputs provided at `PosteriorReport` construction time
 (or passed directly to the method).
 
 **z_score_panel** — bar plot of `z = (truth − median) / σ` for each
-parameter in the chosen group. Bars exceeding ±2σ are accented to
+parameter of the chosen kind. Bars exceeding ±2σ are accented to
 highlight biased fits.
 
 ```python
 fig = report.z_score_panel(
-    group="mass",        # "mass", "lens_light", "src_light", "all"
+    kind="mass",         # "cosmology", "geometry", "mass", "light",
+                         # or "all" / None for everything
     threshold=2.0,       # horizontal reference lines at ±threshold
     sort_by_abs=False,   # True → sort bars by |z|, most biased on the left
 )
@@ -226,7 +242,10 @@ fig = report.source_comparison_panel(
 
 # Continuous truth function (e.g. Vela ImageBasedLight):
 from gigalens_research.inference_utils import truth_source_from_light_model
-truth_fn = truth_source_from_light_model(vela.light, truth_x[2][0])
+# The truth params of the source's light component, read out of the
+# scene-nested truth at its own path (here: plane 1, light component 0).
+truth_fn = truth_source_from_light_model(
+    vela.light, truth_x["planes"][1]["light"][0])
 fig = report.source_comparison_panel(
     truth_source_fn=truth_fn,
     grid_pix=400,
@@ -248,7 +267,8 @@ report = PosteriorReport(
     post,
     prefix="Vela07 ",
     truth_x=truth_x,
-    truth_source_fn=truth_source_from_light_model(vela.light, truth_x[2][0]),
+    truth_source_fn=truth_source_from_light_model(
+        vela.light, truth_x["planes"][1]["light"][0]),
 )
 figs = report.full_report(save_dir="plots/vela07")
 # Saves: image.png, convergence.png, source.png, corner.png,
@@ -297,7 +317,11 @@ fig = pr.compound_corner(
     truth=truth_x,          # physical-space truth overlay (optional)
     overplots_stage="map",  # mark the MAP point as star markers
     overplot_label="MAP",
-    plot_params=None,       # subset of flat parameter names
+    kind=None,              # ┐ the plot_corner_overlay filters; default: all
+    plane=None,             # │
+    component=None,         # │
+    select=None,            # ┘
+    plot_params=None,       # explicit scene path keys; excludes the filters
     colors=None,            # dict {stage_name: color}; auto-assigned if None
 )
 ```
@@ -435,25 +459,53 @@ to build one row (source plane + observed image) per source plane.
 ```python
 from gigalens_research.plotting import plot_corner, plot_corner_overlay
 
-# Single posterior:
+# Single posterior — every free parameter, by default:
 fig = plot_corner(
     posterior,
     fig=None,           # existing Figure to draw into (for manual overlays)
-    plot_params=None,   # subset of flat param names; default: all
-    truth=None,         # NaN used for params absent from truth_x
-    overplots=None,     # dict {label: physical_params} → star markers
+    kind=None,          # "cosmology" | "geometry" | "mass" | "light", or a list
+    plane=None,         # plane index, or a list of them
+    component=None,     # component index, ("mass", 0), or a list
+    select=None,        # predicate on a ParamSite — the escape hatch
+    plot_params=None,   # explicit scene path keys, in the order given
+    truth=None,         # scene-nested or path-keyed; NaN for params it omits
+    overplots=None,     # dict {label: point}, same forms → star markers
     color="black",
     truth_color="black",
     overplot_color="red",
     latex=True,
     **corner_kwargs,    # passed through to corner.corner
 )
+```
 
+The `kind` / `plane` / `component` / `select` filters AND together, and panels
+come out in a fixed order: cosmology → geometry → mass → light, then by plane,
+then by component.
+
+```python
+plot_corner(post)                                   # everything
+plot_corner(post, kind="cosmology")
+plot_corner(post, kind=["geometry", "mass"])
+plot_corner(post, plane=1)                          # one plane's parameters
+plot_corner(post, kind="mass", plane=1)
+plot_corner(post, component=("mass", 0))            # pin the role
+plot_corner(post, select=lambda s: s.param.startswith("e"))
+plot_corner(post, plot_params=["cosmo/H0", "planes/0/mass/0/theta_E"])
+```
+
+`plot_params` and the filters are mutually exclusive — otherwise it is ambiguous
+whether `plot_params` is a selection or an ordering. A filter that matches
+nothing raises, rather than quietly drawing a blank figure.
+
+```python
 # Multiple posteriors with a consistent shared axis range:
 fig = plot_corner_overlay(
     {"SVI": svi_post, "HMC": hmc_post},
+    kind="mass",           # filters work as in plot_corner; resolved once
+                           # against the first posterior, then every overlay is
+                           # pinned to exactly those columns
     truth=truth_x,
-    overplots={"MAP": map_x},
+    overplots={"MAP": map_post.x},
     colors={"SVI": "blue", "HMC": "black"},
     range_quantile=0.999,  # symmetric quantile bound for shared axis range
     range_pad=0.05,        # fractional padding beyond that range
@@ -472,7 +524,7 @@ from gigalens_research.plotting import (
     plot_loss_history,
 )
 
-# Raw chain values for one parameter index:
+# Chain values for one parameter, in physical (x) space:
 plot_chain_traces(ax, sampler_posterior, param=0)
 
 # Running R̂ − 1 on a log-y axis (aggregate="max" = worst-case parameter):
@@ -485,6 +537,14 @@ plot_running_ess(ax, sampler_posterior, aggregate="min")
 plot_loss_history(ax, loss_array, title="MAP χ²", ylabel="χ²", log_y=False)
 ```
 
+Two indexings, never mixed. `plot_chain_traces(param=i)` is in **x space**: `i`
+indexes `param_sites` order, which is the corner plot's column order, so column
+`i` is the same parameter in both figures. `plot_running_rhat(params=[...])` and
+`plot_running_ess(params=[...])` select **sampler (z) columns**, because that is
+what R̂ and ESS are computed per; those are named from
+`prob_model.z_param_names`, the model's own column→name map. The bijector
+reorders, so the same integer means different parameters in the two spaces.
+
 ---
 
 ### Truth diagnostics
@@ -495,8 +555,9 @@ from gigalens_research.plotting import plot_z_scores, plot_source_comparison
 # Z-score bar plot (requires SamplerPosterior or SurrogatePosterior):
 plot_z_scores(
     ax, posterior, truth_x,
-    group="mass",        # "mass", "lens_light", "src_light", "all"
-    params=None,         # explicit list overrides group
+    kind="mass",         # "cosmology", "geometry", "mass", "light",
+                         # or "all" / None for everything
+    params=None,         # explicit scene path keys; overrides kind
     threshold=2.0,       # horizontal reference lines at ±threshold
     sort_by_abs=False,
     latex=True,
@@ -551,34 +612,79 @@ def plot_nuts_diagnostics(diag, **kwargs):
 
 ---
 
-## Labels and parameter flattening
+## Parameter names and labels
 
-```python
-from gigalens_research.plotting import (
-    LATEX_LABELS,          # dict: short_name → LaTeX string
-    latex_label,           # e.g. latex_label("theta_E") → r"$\theta_E$"
-    flatten_params,        # nested list-of-dicts → {flat_name: array}
-    flatten_param_names,   # nested list-of-dicts → [flat_name, ...]
-)
+A parameter is named by **where it lives in the scene**:
+
+```
+cosmo/H0                      # cosmology
+planes/1/geometry/redshift    # plane 1's geometry
+planes/0/mass/0/theta_E       # plane 0, mass component 0
+planes/1/light/0/R_sersic     # plane 1, light component 0
 ```
 
-`flatten_params` applies the gigalens group-prefix convention:
-- **mass** params: no prefix (`theta_E`, `gamma`, `e1`, …)
-- **lens light** params: `lens_` prefix (`lens_R_sersic`, `lens_Ie`, …)
-- **source light** params: `src_` prefix (`src_beta`, `src_center_x`, …)
+This is the scene's own naming, not a derived one, so nothing has to be
+translated back to ask which plane or component a parameter belongs to. The
+records are `ParamSite`s from `gigalens_research.param_index`; the plotters build
+their columns from them, and so can you:
 
-This flat naming is used consistently by all plotters, the label registry,
-and the truth-diagnostics functions.
+```python
+from gigalens_research.plotting import param_sites, select_sites
+
+sites = param_sites(posterior)              # one record per free parameter
+[s.key for s in sites]                      # "planes/0/mass/0/theta_E", …
+[(s.kind, s.plane, s.component) for s in sites]
+select_sites(sites, kind="mass", plane=0)   # the same filters plot_corner takes
+```
+
+Each record carries `kind` (one of `param_index.KINDS`: `"cosmology"`,
+`"geometry"`, `"mass"`, `"light"`), `param` (the bare name, `theta_E`), `paths`
+(every site it feeds — longer than one only for a `shared()` parameter, which
+stays a single column), and `key`, the canonical path string `plot_params=`
+matches on.
+
+**Labels.** Identity and display are separate. `param_index.site_labels(sites)`
+renders a set of columns: the bare symbol (`$\theta_E$`) where it is unique on
+the figure, with a `(plane, component)` superscript (`$\theta_E^{(1,0)}$`) only
+where two columns would otherwise collide. `latex_label` renders one name and
+accepts either a path key or a bare parameter:
+
+```python
+from gigalens_research.plotting import latex_label, LATEX_LABELS
+
+latex_label("planes/0/mass/0/theta_E")   # r"$\theta_E$"
+latex_label("theta_E")                   # same — the registry is keyed by the
+                                         # bare name, the last path segment
+```
 
 **Adding custom LaTeX labels** (until profile classes carry them natively):
 
 ```python
-from gigalens_research.plotting.labels import LATEX_LABELS
+from gigalens_research.plotting import LATEX_LABELS
 
 LATEX_LABELS.update({
     "my_custom_param": r"$\alpha_{\rm custom}$",
-    "src_n_max":        r"$n_{\rm max}$",
+    "n_max":           r"$n_{\rm max}$",
 })
 ```
 
-Unregistered parameter names fall back to a readable plain-text form.
+Unregistered parameter names fall back to a readable plain-text form, so an
+unregistered profile still plots.
+
+For the sampler's unconstrained columns there is a separate helper,
+`plotting.labels.z_column_labels(names)`, since a z column need not correspond
+to a single site. Feed it `prob_model.z_param_names` and nothing else — that is
+the model's own column→name map, and any other name order disagrees with the
+sampler's.
+
+> **Why paths?** The retired label space flattened the scene into three groups
+> and named parameters `theta_E__1`, `lens_R_sersic`, `src_Ie`, `cosmo_H0`. Its
+> `__<i>` suffix was a *global running index* across planes, so `theta_E__1`
+> could not say which plane it was on — filtering by plane was impossible. And
+> its `lens_`/`src_` prefixes encoded a lens-light/source-light distinction the
+> model does not have: a `Plane` carries only `mass` and `light`, and the split
+> was synthesized from "light is source light iff an earlier plane has mass".
+> The plane index is the real distinction, and it is what these records carry.
+> The old space also silently dropped geometry parameters (a free `redshift` or
+> `deflection_ratio`), which now plot as `kind="geometry"`. `flatten_params` and
+> `flatten_param_names` are gone with it.

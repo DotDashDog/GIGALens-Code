@@ -321,7 +321,6 @@ def compute_bound_crowding(data_dir, post_flat, names, dim):
             sys.path.insert(0, data_dir)
         from build_model import prob_model  # type: ignore
         import jax.numpy as jnp
-        from gigalens_research.plotting.labels import flatten_params
     except Exception as e:  # noqa: BLE001
         return "skipped_no_bijector", None, f"{type(e).__name__}: {e}"
 
@@ -340,7 +339,7 @@ def compute_bound_crowding(data_dir, post_flat, names, dim):
 
     try:
         theta_struct = prob_model.bij.forward(list(jnp.asarray(post_flat).T))
-        theta_flat = {k: np.asarray(v) for k, v in flatten_params(theta_struct).items()}
+        theta_flat = {k: np.asarray(v) for k, v in dict(theta_struct).items()}
     except Exception as e:  # noqa: BLE001
         return "skipped_no_bijector", None, f"bijector forward failed: {type(e).__name__}: {e}"
 
@@ -531,10 +530,9 @@ def main():
                 sys.path.insert(0, data_dir_abs)
             import jax.numpy as jnp  # noqa: F401 (already imported successfully above)
             from build_model import prob_model  # type: ignore
-            from gigalens_research.plotting.labels import flatten_params
             theta_struct = prob_model.bij.forward(list(jnp.asarray(post_flat).T))
             theta_flat = {k: np.asarray(v).reshape(-1) for k, v in
-                          flatten_params(theta_struct).items()}
+                          dict(theta_struct).items()}
             skew_t, kurt_t = [], []
             for name in names:
                 v = theta_flat.get(name)

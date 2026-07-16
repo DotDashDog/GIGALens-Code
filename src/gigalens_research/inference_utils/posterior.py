@@ -129,14 +129,24 @@ class Posterior(ABC):
     # -- shared utilities ----------------------------------------------------
 
     @property
-    def _scene_model(self):
-        """The scene LensModel for this (scene-only) ctx."""
+    def scene(self):
+        """The scene ``LensModel`` behind this posterior.
+
+        The model is the authority on what the parameters *are* — which plane and
+        component each lives on, which are free, which are shared. Consumers that
+        need that structure (corner plots, z-scores) read it from here via
+        :func:`gigalens_research.param_index.param_sites` rather than
+        reconstructing it from parameter names.
+        """
         model = getattr(getattr(self.ctx, "model_seq", None), "scene_model", None)
         if model is None:
             raise TypeError(
                 "Posterior requires a scene-backed InferenceContext; the legacy "
                 "PhysicalModel path was removed with the old gigalens API.")
         return model
+
+    #: Back-compat alias for :attr:`scene`.
+    _scene_model = scene
 
     def _lens_sim(self):
         """Legacy fallback simulator over the whole scene (all light, single PSF).
@@ -214,136 +224,6 @@ class Posterior(ABC):
         z = jnp.atleast_2d(jnp.asarray(z))
         return self.ctx.prob_model.bij.forward(z)
 
-    def x_grouped(self, point: str = "median"):
-        """Physical params at ``point`` in the legacy 3-group nested form
-        ``{'lens_mass': {...}, 'lens_light': {...}, 'source_light': {...}}`` (keys
-        are stringified profile indices), for BOTH legacy and scene-backed ctx.
-
-        The scene bijector returns a flat unique-key dict (``planes/i/role/j/param``),
-        so plotting / source-plane consumers that index the old group keys would
-        ``KeyError`` on a scene-backed posterior. This funnels them through one place:
-        a legacy ctx returns its already-grouped ``x`` unchanged; a scene ctx scatters
-        to the structured ``planes`` params and regroups by role — mass -> lens_mass,
-        light on a lensed plane -> source_light, other light -> lens_light — in the SAME
-        order as :class:`_ScenePhysModelView`, so the regrouped param dicts line up
-        index-for-index with ``ctx.phys_model.{lenses,lens_light,source_light}``.
-        """
-        x = self.z_to_x(self._point_z(point))
-        scene = self._scene_model
-        params = scene.to_params(dict(x))
-        lens_mass, lens_light, source_light = {}, {}, {}
-        mi = li = si = 0
-        for i, plane in enumerate(scene.planes):
-            lensed = any(scene.planes[j].has_mass for j in range(i))
-            for j in range(len(plane.mass)):
-                lens_mass[str(mi)] = params["planes"][i]["mass"][j]; mi += 1
-            for j in range(len(plane.light)):
-                if lensed:
-                    source_light[str(si)] = params["planes"][i]["light"][j]; si += 1
-                else:
-                    lens_light[str(li)] = params["planes"][i]["light"][j]; li += 1
-        return {"lens_mass": lens_mass, "lens_light": lens_light,
-                "source_light": source_light}
-
-    def grouped_free_x(self, x_flat):
-        """Regroup the FREE params of a scene bijector output (flat
-        ``{unique_key: array}`` dict) into the legacy 3-group nested form, so the
-        flatten / latex-label / truth-overlay machinery (corner plots, z-scores)
-        applies unchanged and a 3-group truth aligns label-for-label.
-
-        Differs from :meth:`x_grouped` (which scatters ALL params incl. constants for
-        rendering): this places ONLY the sampled (free) params — constants are not
-        corner columns. A ``shared()`` param is fanned out to each of its sites (matching
-        how a 3-group truth carries it per site). Legacy (already-grouped) ``x_flat``
-        passes through unchanged. Accepts a single point or a batched bijector output
-        (values are carried as-is).
-        """
-        scene = self._scene_model
-        loc = {}  # (plane_i, role, local_j) -> (group_name, global_idx)
-        mi = li = si = 0
-        for i, plane in enumerate(scene.planes):
-            lensed = any(scene.planes[k].has_mass for k in range(i))
-            for j in range(len(plane.mass)):
-                loc[(i, "mass", j)] = ("lens_mass", mi); mi += 1
-            for j in range(len(plane.light)):
-                if lensed:
-                    loc[(i, "light", j)] = ("source_light", si); si += 1
-                else:
-                    loc[(i, "light", j)] = ("lens_light", li); li += 1
-        groups = {"lens_mass": {}, "lens_light": {}, "source_light": {}}
-        for path, ukey, cidx in scene._site_to_unique:
-            if not path:
-                continue
-            # cidx selects one component of a grouped (tuple-key) prior's vector value
-            # (e.g. e1/e2 of a DiskEllipticity); None for an ordinary scalar param.
-            val = x_flat[ukey] if cidx is None else x_flat[ukey][..., cidx]
-            if path[0] == "cosmo":
-                # Cosmology params (H0, Om0, w0, ...) form their OWN corner group
-                # instead of being dropped — for a cosmology run these are the
-                # parameters of interest. Keyed under a single pseudo-profile "0"
-                # so the flatten machinery labels them ``cosmo_<param>``.
-                groups.setdefault("cosmo", {}).setdefault("0", {})[path[1]] = val
-                continue
-            # Only mass/light profile sites are corner columns; plane geometry
-            # (redshift / deflection_ratio) — a 4-tuple path — is skipped, and the
-            # guard also keeps the 5-tuple unpack below from raising if a geometry
-            # or other non-profile site is ever free.
-            if path[0] != "planes" or len(path) != 5 or path[2] not in ("mass", "light"):
-                continue
-            _, i, role, j, param = path
-            info = loc.get((i, role, j))
-            if info is None:
-                continue
-            grp, idx = info
-            groups[grp].setdefault(str(idx), {})[param] = val
-        return groups
-
-    def regroup_truth(self, point):
-        """Regroup an EXTERNAL truth / overlay point into the same label space as
-        :meth:`grouped_free_x` (the legacy 3-group form plus a ``cosmo`` group), so
-        a physically-structured scene truth
-        (``{"planes": {i: {"mass"/"light": {j: {...}}}}, "cosmo": {...}}``) aligns
-        column-for-column with the sampled :attr:`flat_x`.
-
-        Pass-through for a point that is already grouped (a legacy 3-group dict, or
-        anything without a top-level ``planes`` key). Only the FREE cosmo params
-        (those actually sampled — read from the scene's site map) are carried, so
-        fixed cosmology constants don't become phantom truth columns. Missing
-        profiles / params are simply left absent; the corner and z-score layers
-        fill them with NaN.
-        """
-        if not (isinstance(point, dict) and "planes" in point):
-            return point  # already grouped, or not a scene-nested point
-        scene = self._scene_model
-        planes_t = point.get("planes", {}) or {}
-
-        def _get(d, k):
-            # truth dicts key planes/profiles by int; tolerate stringified keys too.
-            return d.get(k, d.get(str(k), {})) if isinstance(d, dict) else {}
-
-        groups = {"lens_mass": {}, "lens_light": {}, "source_light": {}}
-        mi = li = si = 0
-        for i, plane in enumerate(scene.planes):
-            lensed = any(scene.planes[k].has_mass for k in range(i))
-            pt = _get(planes_t, i)
-            tmass = _get(pt, "mass")
-            for j in range(len(plane.mass)):
-                groups["lens_mass"][str(mi)] = dict(_get(tmass, j)); mi += 1
-            tlight = _get(pt, "light")
-            for j in range(len(plane.light)):
-                prof = dict(_get(tlight, j))
-                if lensed:
-                    groups["source_light"][str(si)] = prof; si += 1
-                else:
-                    groups["lens_light"][str(li)] = prof; li += 1
-        free_cosmo = [p[1] for p, *_ in scene._site_to_unique
-                      if p and p[0] == "cosmo"]
-        if free_cosmo:
-            cosmo_t = point.get("cosmo", {}) or {}
-            groups["cosmo"] = {"0": {c: cosmo_t[c] for c in free_cosmo if c in cosmo_t}}
-        return groups
-
-    @property
     def is_backward(self) -> bool:
         """True iff the model solves linear amplitudes by least squares (lstsq mode).
 
@@ -688,10 +568,13 @@ class SamplerPosterior(Posterior):
 
     @cached_property
     def flat_x(self):
-        """Physical-space view of ``flat_z`` (nested dicts of arrays), in the legacy
-        3-group label space (scene-backed samples are regrouped so corner plots and
-        truth overlays align; see :meth:`grouped_free_x`)."""
-        return self.grouped_free_x(self.z_to_x(self.flat_z))
+        """Physical-space view of ``flat_z``: the scene's flat
+        ``{unique_key: array}`` dict, one entry per free parameter.
+
+        Pair it with :func:`gigalens_research.param_index.param_sites` to get the
+        plane / component / kind of each entry.
+        """
+        return self.z_to_x(self.flat_z)
 
     def subsample(self, n: Optional[int]) -> "SamplerPosterior":
         return SamplerPosterior(self.ctx, self._samples_z, subsample_n=n, seed=self.seed)
@@ -826,7 +709,7 @@ class SurrogatePosterior(Posterior):
 
     @cached_property
     def flat_x(self):
-        return self.grouped_free_x(self.z_to_x(self.flat_z))
+        return self.z_to_x(self.flat_z)
 
     def quantiles_z(self, q) -> np.ndarray:
         # No closed form for arbitrary q on a multivariate normal in general;
