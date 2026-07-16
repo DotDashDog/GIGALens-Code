@@ -33,6 +33,23 @@ _FACTOR = 2.0
 _WHSPACE = 0.05
 
 
+def points_to_grid(points: float) -> float:
+    """Convert a length in typographic points to grid units.
+
+    One grid unit is one panel, and a panel is ``_FACTOR`` inches on a side by
+    construction: the shared axes maps ``span = K + (K-1)*whspace`` grid units
+    onto ``plotdim = _FACTOR*K + _FACTOR*(K-1)*whspace`` inches, so a grid unit
+    is exactly ``_FACTOR`` inches at any K.
+
+    Needed because tick marks are sized in points but drawn, here, in grid
+    coordinates. This holds at the figure's constructed size; resizing the
+    figure afterwards would scale these marks where matplotlib's own would stay
+    fixed. corner's layout assumes its figsize too, so a resized corner plot is
+    already off-spec.
+    """
+    return points / 72.0 / _FACTOR
+
+
 @dataclass(frozen=True)
 class Grid:
     """Where every panel lives, in inches and in shared data coordinates.
