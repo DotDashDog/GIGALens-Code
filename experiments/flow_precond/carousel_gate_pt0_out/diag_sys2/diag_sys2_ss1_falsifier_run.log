@@ -1,0 +1,297 @@
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_model_s2.py:262: UserWarning: [plausibility] SHEAR[plane 0 mass 4].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.131 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+==============================================================================
+STEP 1: build PLAIN (non-adaptive) model via S2.AdaptiveImageData patch
+==============================================================================
+patched carousel_model_s2.AdaptiveImageData -> ImageData
+  dataset[0] type = ImageData
+  dataset[1] type = ImageData
+  dataset[2] type = ImageData
+  dataset[3] type = ImageData
+band index 2 image.shape = (300, 300), sim_config = SimulatorConfig(delta_pix=0.2, num_pix=300, supersample=1, kernel=array([[ 0.00000000e+00,  1.31569040e-03,  6.13376287e-04,
+         1.71585751e-04,  2.11197059e-03,  1.86420635e-03,
+         3.34454544e-03,  2.49624540e-03,  3.86156200e-03,
+         3.98191098e-03,  3.93401011e-03,  4.17862993e-03,
+         3.23609692e-03,  2.02412106e-03,  2.32842199e-03,
+         3.83499869e-03,  3.81091336e-03,  3.89994842e-03,
+         2.11457793e-03],
+       [ 0.00000000e+00,  1.20224568e-03,  6.65241521e-04,
+        -6.43774734e-05,  8.14680091e-04, -3.63126839e-04,
+         4.90527479e-04, -9.93377046e-04, -4.12339317e-05,
+        -4.15007060e-04, -1.35334909e-04,  1.16704450e-04,
+         4.33853260e-04, -2.05696058e-04, -8.56110595e-05,
+         7.79109340e-04,  1.53426594e-06,  1.04130267e-04,
+        -5.90849160e-04],
+       [ 0.00000000e+00,  1.23217879e-03,  9.89939543e-04,
+         3.82770519e-04,  1.07222557e-03, -2.05238013e-04,
+         9.84717492e-04,  5.24535222e-04,  1.05492974e-03,
+         4.28828462e-04,  7.31702087e-04,  2.16323332e-04,
+         7.83848951e-04,  2.92002271e-04,  1.70097224e-04,
+         2.43688826e-04,  7.74531905e-05,  9.51430003e-04,
+         1.20945269e-03],
+       [ 0.00000000e+00,  8.80052649e-05,  2.95745782e-04,
+        -7.01244213e-05,  8.88504467e-04, -2.14986315e-04,
+         8.88564391e-04,  9.50987964e-04,  1.02726150e-03,
+         1.91953617e-04,  3.79431490e-04,  2.25929732e-05,
+         6.65208055e-04,  2.04410024e-04, -2.05698825e-05,
+         2.99206933e-04, -1.39429802e-04,  1.34924481e-06,
+         6.87539371e-04],
+       [ 0.00000000e+00,  3.78932918e-04,  9.18287653e-04,
+         7.19262169e-04,  1.72532501e-03,  9.38712112e-04,
+         1.74562681e-03,  1.48303097e-03,  2.00961893e-03,
+         1.13567096e-03,  1.53640618e-03,  6.24227717e-04,
+         1.13773486e-03,  1.85916678e-04, -7.54276824e-05,
+         2.92228392e-04,  1.47552641e-04,  1.02569570e-04,
+         6.72767996e-04],
+       [ 0.00000000e+00,  2.94445837e-04,  1.09405842e-03,
+         4.16627182e-04,  1.04490210e-03,  6.77865088e-04,
+         1.87907357e-03,  2.20777998e-03,  2.38323796e-03,
+         2.82568169e-03,  2.52793352e-03,  1.73274007e-03,
+         1.85312061e-03,  4.40936743e-04,  1.45274857e-04,
+         3.97951792e-04, -2.18685835e-04, -3.08814196e-04,
+         3.23427661e-04],
+       [ 0.00000000e+00,  7.41076418e-04,  1.64486034e-03,
+         5.96335389e-04,  1.32841420e-03,  1.46903994e-03,
+         3.53143593e-03,  2.80246467e-03,  4.34026548e-03,
+         7.34614908e-03,  5.31052949e-03,  2.11928647e-03,
+         2.04620599e-03,  5.30114306e-04,  2.38282099e-04,
+         6.49156494e-04, -1.39126521e-04, -3.25831902e-04,
+         3.60826229e-04],
+       [ 0.00000000e+00,  2.99259401e-04,  1.38029166e-03,
+         6.11828624e-04,  1.29676408e-03,  1.85176472e-03,
+         4.49396536e-03,  5.81281900e-03,  1.45524620e-02,
+         2.59849656e-02,  1.75094572e-02,  7.34837821e-03,
+         2.91567100e-03,  9.59147924e-04,  7.54413353e-04,
+         1.10870052e-03,  2.72274385e-04, -3.52435405e-04,
+         2.44264314e-04],
+       [ 0.00000000e+00, -5.55788163e-06,  8.50660287e-04,
+         3.15520729e-04,  9.33530561e-04,  1.36768041e-03,
+         5.33046238e-03,  1.31079014e-02,  3.82937919e-02,
+         5.86849975e-02,  4.11957297e-02,  1.62049290e-02,
+         5.62187806e-03,  1.55814912e-03,  9.22643810e-04,
+         8.45772598e-04,  1.22564292e-04, -3.73220539e-04,
+        -2.73237245e-04],
+       [ 0.00000000e+00, -4.85419017e-05,  7.81205991e-04,
+         5.04389301e-04,  1.42159196e-03,  2.32073449e-03,
+         7.53797992e-03,  2.39096019e-02,  5.73836623e-02,
+         8.25931535e-02,  5.52782452e-02,  2.29138658e-02,
+         7.19604916e-03,  3.00887407e-03,  1.34991714e-03,
+         8.50990182e-04,  4.44606796e-04,  2.02899356e-04,
+         1.00054726e-04],
+       [ 0.00000000e+00, -1.48365084e-04,  4.28502748e-04,
+         3.16828139e-04,  1.27105499e-03,  1.93385899e-03,
+         6.14003157e-03,  1.68219861e-02,  4.35612573e-02,
+         6.22644236e-02,  3.89119021e-02,  1.32932026e-02,
+         4.13138635e-03,  1.20744972e-03,  7.14200413e-04,
+         1.32067991e-04,  2.05575466e-05, -2.97737749e-04,
+        -4.98040580e-04],
+       [ 0.00000000e+00, -1.13778676e-04,  3.39651748e-04,
+         1.76308391e-04,  1.22565402e-03,  1.41453812e-03,
+         1.89023783e-03,  4.86396889e-03,  1.52322072e-02,
+         2.74154926e-02,  1.43951470e-02,  5.62081877e-03,
+         2.28009906e-03,  1.80349958e-03,  1.15337566e-03,
+         3.40784840e-04,  5.70356918e-04, -4.75972694e-05,
+        -2.72365638e-04],
+       [ 0.00000000e+00, -3.42924019e-04,  8.17466347e-05,
+        -2.63180241e-04,  5.63026191e-04,  1.40520413e-03,
+         2.74255761e-03,  2.06689253e-03,  4.04881674e-03,
+         8.78163556e-03,  4.19400746e-03,  1.86234303e-03,
+         1.30890784e-03,  2.84955647e-04,  1.89276951e-04,
+        -1.48420205e-04, -7.62061618e-06, -3.50924248e-04,
+        -2.48605338e-04],
+       [ 0.00000000e+00, -7.07388415e-07,  5.46152388e-04,
+         2.41718770e-04,  2.43228787e-04,  6.34253222e-04,
+         1.34911620e-03,  1.89383629e-03,  2.39098287e-04,
+         3.14043146e-03,  2.06643333e-04,  8.75266878e-04,
+         2.65481775e-04,  6.61631452e-04,  2.66801020e-05,
+        -3.84313951e-04, -1.41433066e-04, -2.38480339e-04,
+        -9.33556471e-05],
+       [ 0.00000000e+00, -3.29871110e-04,  5.10225832e-04,
+         3.64271655e-04,  5.62786881e-04,  6.51239637e-04,
+         1.17367061e-03,  1.26121403e-03,  5.84304258e-04,
+         1.08893469e-03,  3.86471220e-04,  4.37557441e-04,
+         9.51137190e-04,  6.13774221e-04,  4.19266095e-04,
+         1.43248215e-04,  1.68966123e-04, -1.08919835e-05,
+         6.28956453e-04],
+       [ 0.00000000e+00, -4.11790814e-04,  3.69651353e-04,
+         1.97451881e-04,  1.69572346e-04,  5.27320181e-04,
+         6.75012848e-04,  9.13346206e-04,  3.26663641e-04,
+         9.53333914e-04,  6.27073648e-05,  2.78418093e-04,
+         2.51308400e-04,  2.93572353e-04, -2.39966893e-05,
+        -1.50839931e-04, -1.02864218e-05, -1.56903661e-04,
+         6.32153945e-04],
+       [ 0.00000000e+00, -9.69649645e-06,  4.88588770e-04,
+         1.63148880e-04, -1.74721458e-04, -1.44771495e-05,
+         2.25795633e-04,  1.24394002e-04,  1.74423981e-04,
+         1.79448630e-04, -6.69975734e-05, -2.14120021e-04,
+         1.22548814e-04,  2.65442945e-04,  9.11749106e-05,
+         3.50478427e-06, -2.52150270e-04, -3.58087415e-04,
+         3.73056322e-04],
+       [ 0.00000000e+00, -8.63649480e-05,  1.87028322e-04,
+         5.29169018e-04,  1.21177169e-04,  3.25145198e-04,
+         4.45182876e-04,  2.31790721e-04,  2.01989447e-04,
+         1.93694137e-04, -3.97452864e-05, -5.22957657e-05,
+         3.48735232e-04,  4.28109570e-04,  2.15491664e-04,
+        -1.20033314e-04,  6.62237996e-05, -1.83085036e-04,
+        -1.67070498e-04],
+       [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00]]), transform_pix2angle=None, pix_region=None, angular_shift=(0.0, 0.0), likelihood_precision=dtype('float64'), conv_precision=dtype('float32'), basis_precision=None, remat_basis=False)
+
+==============================================================================
+STEP 2: load MCLMC archive, build z_sharp / z_compact draw pools
+==============================================================================
+samples_z shape: (8, 10000, 46)
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/diag_sys2_ss1_falsifier.py", line 202, in <module>
+    rep = compare_to_reference(adaptive_sim, params, error_map=error_map,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 536, in compare_to_reference
+    a = np.asarray(adaptive_sim.simulate(params, no_deflection))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 449, in simulate
+    img = functools.reduce(jnp.add, contribs)                # (N, bs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufunc_api.py", line 182, in __call__
+    return call(*args)
+           ^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufuncs.py", line 1238, in add
+    out = lax.add(x, y)
+          ^^^^^^^^^^^^^
+TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/diag_sys2_ss1_falsifier.py", line 202, in <module>
+    rep = compare_to_reference(adaptive_sim, params, error_map=error_map,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 536, in compare_to_reference
+    a = np.asarray(adaptive_sim.simulate(params, no_deflection))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 449, in simulate
+    img = functools.reduce(jnp.add, contribs)                # (N, bs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufunc_api.py", line 182, in __call__
+    return call(*args)
+           ^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufuncs.py", line 1238, in add
+    out = lax.add(x, y)
+          ^^^^^^^^^^^^^
+TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/diag_sys2_ss1_falsifier.py", line 202, in <module>
+    rep = compare_to_reference(adaptive_sim, params, error_map=error_map,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 536, in compare_to_reference
+    a = np.asarray(adaptive_sim.simulate(params, no_deflection))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 449, in simulate
+    img = functools.reduce(jnp.add, contribs)                # (N, bs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufunc_api.py", line 182, in __call__
+    return call(*args)
+           ^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufuncs.py", line 1238, in add
+    out = lax.add(x, y)
+          ^^^^^^^^^^^^^
+TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+Traceback (most recent call last):
+  File "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/diag_sys2_ss1_falsifier.py", line 202, in <module>
+    rep = compare_to_reference(adaptive_sim, params, error_map=error_map,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 536, in compare_to_reference
+    a = np.asarray(adaptive_sim.simulate(params, no_deflection))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u1/l/linusu/gigalens/src/gigalens/jax/experimental/adaptive_supersample.py", line 449, in simulate
+    img = functools.reduce(jnp.add, contribs)                # (N, bs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufunc_api.py", line 182, in __call__
+    return call(*args)
+           ^^^^^^^^^^^
+  File "/opt/jax/jax/_src/numpy/ufuncs.py", line 1238, in add
+    out = lax.add(x, y)
+          ^^^^^^^^^^^^^
+TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+z_param_names[37] = 'planes/3/light/1/beta'
+z_sharp pool: 60792 draws (z[37] > -3.092)
+  per-chain sharp counts: [10000, 8256, 10000, 3209, 10000, 3752, 5575, 10000]
+per-chain arrival index (draws after which z[J]<THR for the remainder):
+  chain 0: arrival=10000  n_below_total=0
+  chain 1: arrival= 8256  n_below_total=1744
+  chain 2: arrival=10000  n_below_total=0
+  chain 3: arrival= 3222  n_below_total=6791
+  chain 4: arrival=10000  n_below_total=0
+  chain 5: arrival= 3755  n_below_total=6248
+  chain 6: arrival= 5579  n_below_total=4425
+  chain 7: arrival=10000  n_below_total=0
+chain 1 post-arrival (n=1744): first-third mean=-3.2486  last-third mean=-3.3367  -> DRIFTING, chain 1 EXCLUDED entirely per task directive.
+z_compact stationary segments used (chain, first_draw, last_draw, n):
+   (3, 3222, 9999, 6778)
+   (5, 3755, 9999, 6245)
+   (6, 5579, 9999, 4421)
+z_compact pool: 17444 draws total
+z_compact pool mean z[37] = -3.411630
+z_sharp  pool mean z[37] = -2.784324
+
+==============================================================================
+STEP 3: representative draw per cluster = highest log_prob under PLAIN model, subsample n=1000
+==============================================================================
+[sharp] subsample n=1000  lp range=[-521122.776, -521051.151]  best lp=-521051.151048  best red_chi2=1.147742  pool_idx=44740
+[compact] subsample n=1000  lp range=[-521039.879, -520955.967]  best lp=-520955.966699  best red_chi2=1.147088  pool_idx=9179
+z_sharp_rep[37]   = -2.784449
+z_compact_rep[37] = -3.435570
+
+==============================================================================
+STEP 4: z -> params conversion (model.bijector.forward then model.to_params)
+==============================================================================
+[sharp] planes/3/light/0 (src4) keys: ['beta', 'center_x', 'center_y']
+[sharp] planes/3/light/1 (src5) keys: ['beta', 'center_x', 'center_y']
+[compact] planes/3/light/0 (src4) keys: ['beta', 'center_x', 'center_y']
+[compact] planes/3/light/1 (src5) keys: ['beta', 'center_x', 'center_y']
+
+==============================================================================
+STEP 5: build all-factor-1 AdaptiveGrid for band 4-5 (verify uniformity)
+==============================================================================
+band 4-5 shape = (300, 300), factor-map tier histogram = {1.0: 90000}
+CONFIRMED: factor map is 1.0 at every one of 90000 pixels (this IS plain supersample=1).
+grid repr: AdaptiveGrid(shape=(300, 300), n_points=90000, pixels_per_factor={1.0: 90000})
+seen (identity-resolved) light components for band 4-5: [SHAPELETS, SHAPELETS]
+component depths (n_layers, use_lstsq basis size): [('Shapelets', 45, True), ('Shapelets', 28, True)]
+AdaptiveSceneSimulator built OK. n_points = 90000  (== H*W = 90000 for factor-1-everywhere)
+
+==============================================================================
+STEP 6: attempt compare_to_reference -- CHECK lstsq COMPATIBILITY
+==============================================================================
+[sharp/bin_first] FAILED: TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+---- full traceback ----
+-------------------------
+[sharp/subgrid] FAILED: TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+---- full traceback ----
+-------------------------
+[compact/bin_first] FAILED: TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+---- full traceback ----
+-------------------------
+[compact/subgrid] FAILED: TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+---- full traceback ----
+-------------------------
+
+==============================================================================
+SUMMARY
+==============================================================================
+sharp/bin_first: FAILED -- TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+sharp/subgrid: FAILED -- TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+compact/bin_first: FAILED -- TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+compact/subgrid: FAILED -- TypeError: add got incompatible shapes for broadcasting: (45, 90000, 1), (28, 90000, 1).
+
+saved representative-draw state to /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/flow-precond/experiments/flow_precond/carousel_gate_pt0_out/diag_sys2/diag_sys2_ss1_falsifier_state.npz
+DONE

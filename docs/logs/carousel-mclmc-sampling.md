@@ -3906,6 +3906,95 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-16 (GENERALIZATION step-0b — THREE FINDINGS THAT RESHAPE THE PROBLEM, plus a CORRECTION to my
+  own step-0 headline. No sampler run. PROPOSED, UNCERTIFIED. All numbers re-derived from artifacts by me,
+  on the archive-matched PLAIN build, jax dev20260716, job 55991565.)**
+  **CORRECTION #1 (MINE, committed and now WRONG AS STATED): "ZERO return crossings in 10000 draws" /
+  "NOT ONE RETURNS" is FALSE.** Audited directly (diag_sys2/crossing_audit.py) on the indicator
+  z[37] < -3.0920: **raw boundary crossings = 15 down, 11 UP.** Per chain: ch3 9down/8up, ch5 2down/1up,
+  ch6 3down/2up, ch1 1down/0up; ch0/2/4/7 never cross. I would have been caught quoting "zero" against a
+  trace in which chain 3 crosses back EIGHT times. **What is TRUE is the SUSTAINED version: requiring the
+  new side be held >= 500 consecutive draws gives 4 sustained-down, 0 sustained-up.** No chain that
+  SETTLED into the compact mode ever returned; the raw indicator FLICKERS across the boundary during
+  transit. The step-0 CONCLUSION survives (the weight is still a stopwatch reading) but the stated
+  evidence was overstated — I reported a clean "zero" where the honest statement needed a qualifier.
+  **METHODOLOGICAL CONSEQUENCE (this bites the DESIGN, not just the prose): a round-trip metric built on
+  RAW indicator crossings is CONTAMINATED BY BOUNDARY CHATTER.** My step-0 win condition (">= 100 round
+  trips in both directions") would have scored chain 3's 8 flickers as returns. **Round trips MUST be
+  defined on SUSTAINED transitions (dwell >= tau on the new side).** This likely also affects the dPIE
+  harness's existing round-trip state machine (run_pt:1193-1216) — FLAGGED, not audited.
+  **FINDING #2 — THE MODULE'S OWN FALSIFIER IS STRUCTURALLY UNAVAILABLE ON THIS SYSTEM.** The grader's
+  highest-value must-fix (run `compare_to_reference` at the two modes; "if the sums are small at both
+  endpoints THE HYPOTHESIS IS DEAD PRE-RUN") **CANNOT BE EXECUTED.** `compare_to_reference` calls
+  `adaptive_sim.simulate(params, ...)` — the FORWARD, non-lstsq path — but every light component of the
+  "4-5" band (the band that renders src5) is `use_lstsq=True`, so amplitudes are SOLVED per-evaluation and
+  never appear in `params`. For a lstsq Shapelets component `Shapelets.light()` returns the RAW UNWEIGHTED
+  BASIS STACK (n_layers,H,W,batch), not an image; simulate()'s render loop then tries to add src4's
+  45-mode stack to src5's 28-mode stack and JAX raises immediately: `TypeError: add got incompatible
+  shapes for broadcasting: (45, 90000, 1), (28, 90000, 1)`. All 4 requested combinations (2 endpoints x
+  bin_first/subgrid) crashed before producing any delta. **Verified upstream of the crash: the all-factor-1
+  AdaptiveGrid IS uniform ss=1 (tier histogram {1.0: 90000}, all 300x300 px — diag_sys2/
+  factor_map_all1_band4-5.png), and the params conversion (bij.forward -> model.to_params) works — it is
+  specifically the RENDER step that is incompatible.** So the middle link ("does ss=1 under-resolve src5")
+  remains **UNMEASURED — an honest I-DON'T-KNOW, not evidence either way.** Grader's must-fix (2) is
+  therefore NOT SATISFIABLE as written; the artifact hypothesis cannot be cheaply killed by the certified
+  tool. (A coefficient-weighted variant — solve real lstsq amplitudes once, difference the two quadratures
+  at FIXED coefficients — is adjacent but is a DIFFERENT measurement beyond the falsifier's validated
+  scope, and would need its own checkpoint. NOT done.)
+  **FINDING #3 — THE STORED MAP IS NOT THE POSTERIOR MODE. THIS IS THE BIGGEST RESULT OF THE SESSION AND
+  IT LANDS DIRECTLY ON THE HUMAN'S STATED GOAL ("point-and-go from a MAP or SVI start").** Measured by me
+  on the plain build (3000-draw subsamples per cluster, seed 0):
+  | quantity | log posterior |
+  | stored MAP lp(z_best) | **-521150.351** (z[37] = -1.8553) |
+  | sharp cluster: max / mean / min | -521043.07 / -521069.58 / **-521120.07** |
+  | compact cluster: max / mean / min | -520956.07 / -520992.89 / -521086.17 |
+  **EVERY SAMPLED DRAW BEATS THE MAP — even the WORST sharp draw, by +30 nats. Mean sharp = +80.77,
+  mean compact = +157.46 nats ABOVE the MAP.** In 46-d the typical set must sit BELOW the mode, so draws
+  exceeding the MAP is not a mode-vs-typical-set subtlety — **it is decisive that the MAP optimizer did
+  not find the mode.** Consistent with geometry: MAP z[37] = -1.8553 lies OUTSIDE the posterior's ENTIRE
+  sampled range [-3.601, -2.262] — a THIRD region the posterior never visits.
+  **CORRECTION #2 (MINE, caught by a PLOT before it reached a claim): the MAP is NOT "truncated".** From
+  `best_step=1928/2000` (and dPIE's `3998/4000`) plus a positive tail-slope FIT (+0.0214 nats/step,
+  "+42.8 nats if 2x steps") I was about to report "the MAP optimization was cut short". **The lp_hist plot
+  (diag_sys2/map_hist_convergence.png) REFUTES IT: system-2's last 10% OSCILLATES between ~-521150 and
+  ~-521156 and the last-10% gain is NEGATIVE (-0.228 nats). It PLATEAUED. `best_step=1928` is merely the
+  luckiest peak of an oscillating trace, and my slope fit was a straight line through an oscillation —
+  meaningless.** (dPIE's tail IS genuinely rising, but worth only ~10 nats — a different diagnosis from the
+  same plot.) **So the MAP CONVERGED — to a local optimum ~194 nats below the dominant mode, in a region
+  carrying no posterior mass.** That is WORSE for point-and-go than truncation would have been: more steps
+  will not fix it. **Third time this session that a PLOT overturned an inference I had drawn from a
+  summary statistic (cf. BC-vs-trace on chain segregation; slope-vs-oscillation here).**
+  **FINDING #4 — THE "BIMODALITY WITH WEIGHTS 0.24/0.76" FRAMING IS PROBABLY WRONG; IT LOOKS LIKE
+  METASTABILITY.** The compact mode's peak is **+87.00 nats above** the sharp mode's (-520956.07 vs
+  -521043.07) AND my step-0 read of the marginal calls it the BROADER mode. Higher peak AND larger volume
+  ⇒ **at equilibrium the compact basin should hold essentially ALL the mass** (the sharp basin's share
+  would be ~e^-87 x a volume ratio). The SAMPLED weight says 0.2401/0.7599. **These are irreconcilable
+  unless the weight is not a posterior quantity — which is exactly the stopwatch finding, now independently
+  CONFIRMED by an energetic argument that uses no sampling at all.** ⇒ **RE-FRAME: system 2 is plausibly
+  ONE dominant mode (compact) plus a METASTABLE basin (sharp) that all 8 chains start in and slowly drain
+  out of, one-way. The sampling problem is then ESCAPE FROM METASTABILITY, not two-mode WEIGHT
+  ESTIMATION.** UNCERTIFIED: "broader" is a step-0 read of a 1-D marginal, not a measured 46-d volume; the
+  Laplace volume ratio (the grader's point (b)) is still uncomputed, and it is exactly what this argument
+  needs. **DERIVABLE CHEAPLY and NOT YET DONE: Hessian/Laplace at each mode representative ⇒ log(V_B/V_A)
+  ⇒ an actual predicted equilibrium weight.**
+  **CONSEQUENCES FOR THE CAMPAIGN (all now open):** (a) **D2's MAP init starts system 2 in a converged
+  BAD local optimum, 194 nats below and outside the posterior** — "point-and-go from MAP" is not merely
+  untested here, its premise is BROKEN on this system; the honest question becomes whether PT can escape
+  it, or whether the init must change (SVI? prior? the compact mode itself?). (b) The win condition must
+  be re-derived: if the truth is "one dominant mode + metastable basin", then ">=100 sustained round
+  trips" is the WRONG target — the right one is closer to "all chains escape the metastable basin and the
+  weight STOPS depending on run length". (c) The S2-ART artifact question is UNRESOLVED and its cheap
+  certified test is unavailable (Finding #2). (d) The grader's mundane lstsq rival predicts drainage
+  toward smaller beta + mass beyond the prior but NOT, obviously, TWO DISCRETE MODES WITH A DENSITY GAP —
+  **noting explicitly that this observation preserves my own hypothesis and was constructed AFTER the
+  hypothesis was attacked, so it is exactly the reasoning I should distrust; it needs a test, not
+  assent.**
+  **NEXT: STOP AND RE-DESIGN. The S2-ART checkpoint (rd-1 NEEDS-MORE) is now further undermined by
+  Findings #2-#4 — its primary instrument is unavailable, its endpoint framing (two comparable modes) is
+  probably wrong, and a much more consequential question has surfaced (a broken MAP start on the human's
+  own stated use case). Do NOT patch S2-ART; re-scope it. Surface Findings #3/#4 to the human — they bear
+  on the ENGAGEMENT's premise, not just on system 2.**
+
 - **2026-07-16 (GENERALIZATION step-0 SCOPING — system 2 ("1_3_4_5_9") characterization + porting map.
   NO GPU RUN; all findings from artifacts already on disk. PROPOSED, UNCERTIFIED — no claim about PT
   here, only about the TARGET SYSTEM and the HARNESS COUPLING. Human directive: generalize (everything
