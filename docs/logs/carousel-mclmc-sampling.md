@@ -472,6 +472,36 @@ multimodality, conditioning, or the NFW profile.
 
 ## Design checkpoints (criteria awaiting approval)
 
+- **Run: A/A DETERMINISM DIAGNOSTIC (labeled DIAGNOSTIC, not a science claim) — is the harness BITWISE
+  REPRODUCIBLE at fixed seed within ONE build/environment?** Motivation: PT-7↔PT-8 same-seed divergence at
+  round 126 was first logged as "fixed seeds do not reproduce", then RE-SCOPED (same day) when I checked
+  the model cards: PT-7 ran `jax 0.10.0.dev20260715`, PT-8 `dev20260716` — DIFFERENT sidecar builds ⇒
+  confounded (the documented drift gotcha, [[gigalens-gpu-launch-recipe]]). Harness determinism is
+  therefore UNTESTED. This decides whether every paired/A-B design in this engagement is sound.
+  **Claim + classification:** deterministic-identity claim (bitwise reproduction) — the ONE claim type
+  that admits an exact test, so no thresholds are needed or invented.
+  **Hypothesis:** GIVEN one build + one environment, the harness IS bitwise deterministic (all RNG derives
+  from the int seed: `swap_rng=default_rng(seed+10000)`, `key=jax.random.key(seed)`), and the PT-7↔PT-8
+  divergence was ENTIRELY sidecar build drift. **Alternative:** genuine non-determinism (non-deterministic
+  GPU reductions/atomics in the round-100 metric update — the divergence at 126 sits just past it).
+  **Design:** 2 arms, byte-identical config, SAME allocation/build/node, one GPU each: arm D2, betas
+  `geomspace(0.70,1,3)` (cheapest, 3 rungs), **seed 60 BOTH**, NSYS=16, K=10, ss_max=5, devar=5e-4,
+  metric_est=pooled, METRIC_WINDOWS=100,250,500, **ROUNDS=200** (passes round 126 where PT-7/PT-8 split,
+  and includes the round-100 metric window = the suspected amplifier), SAVE_POS=0. Tags `aa_run1`/`aa_run2`.
+  **Prediction + falsifier (exact, no threshold):** `cold_ind`, `swap_accepts`, `metric_frozen` BITWISE
+  IDENTICAL across the two runs ⇒ deterministic ⇒ PT-7↔PT-8 was build drift (confirmed) ⇒ same-build
+  paired designs are SOUND; cross-build ones are NOT. **FALSIFIED** if ANY array differs ⇒ genuine
+  non-determinism ⇒ (a) all paired designs need same-build AND replicate-aware treatment, (b) next step is
+  XLA determinism flags. Record the first divergent round if any.
+  **Blind spot:** passing at 200 rd does not prove determinism at 3200 rd (longer runs have more chances to
+  hit a non-deterministic path); a PASS is scoped to "no non-determinism detected through round 200,
+  covering the round-100 metric window and the round-126 divergence point".
+  **Cost:** 2 arms × 200 rd × 3 rungs ≈ 13 min each, parallel on 2 GPUs → ~15 min, <1 GPU·h.
+  **Op-note:** BOTH arms must report the SAME `"jax"` build in their model card — verify before comparing
+  (that is the whole point).
+  **Status: DIAGNOSTIC, self-approved (cheap, exact, binary outcome; no derived threshold to grade). Result
+  will be graded if it produces a claim.** Code e708482/2492050 (config-only).
+
 - **Run: carousel GATE PT-8 (ADAPTIVE-PT) step-2 — CHARACTERIZE the β_min-dependent EQUILIBRIUM: do warm
   ladders share the C-25 pocket weight (unbiased, rate-limited) or ASYMPTOTE to β_min-dependent LOWER
   values (a shortfall/bias)? + efficiency frontier where arms reach band. NOT a blocker-clearance or
@@ -3798,8 +3828,23 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
   the opposite under-claim).
   **UNCERTIFIED — corrections applied, awaiting grader rd-2.**
 
-- **2026-07-16 (APPARATUS FINDING, grader-surfaced during PT-8 rd-1, INDEPENDENTLY VERIFIED — FIXED-SEED
-  RUNS ARE NOT REPRODUCIBLE on this harness/GPU stack). PT-7 `arrays_D2_pt7_L70.npz` vs PT-8
+- **2026-07-16 (RE-SCOPED SAME DAY — the entry below OVER-CLAIMED. The PT-7↔PT-8 divergence is CONFOUNDED
+  BY A JAX BUILD DIFFERENCE and does NOT establish harness non-determinism.) CORRECTION (mine, found by
+  checking the model cards — which BOTH the grader and I failed to do before hypothesising):
+  `ablog_pt7_L70.log` reports `"jax": "0.10.0.dev20260715"`; `ablog_pt8_L70_s60.log` reports
+  `"jax": "0.10.0.dev20260716"` — DIFFERENT SIDECAR BUILDS (PT-7 ran 07-15, PT-8 ran 07-16). This is the
+  DOCUMENTED sidecar date-drift gotcha in [[gigalens-gpu-launch-recipe]] ("sidecar drifts by date … treat
+  as ~1e-7 FP-drift; calibrate with a same-env control arm if bit-reproduction matters") — which I recorded
+  myself and then did not apply. Different compiled JAX ⇒ ~1e-7 FP differences ⇒ amplified by the chaotic
+  MCLMC dynamics ⇒ visible divergence a few dozen rounds later. **AP-3 violation (exotic cause before the
+  mundane one): the grader and I both jumped to "non-deterministic GPU reductions" with a plain
+  version-drift explanation sitting in the model card.** CORRECTED CLAIM: cross-run same-seed comparisons
+  ACROSS DAYS are CONFOUNDED by sidecar build drift (⇒ the "replicate not matched control" consequence for
+  the PT-7 L40 anchor STILL HOLDS, for this reason instead). **Harness determinism is UNTESTED — the proper
+  test is a SAME-BUILD A/A: identical config+seed run TWICE in one environment, check bitwise identity
+  (must pass round 126). NOT YET RUN.** Everything below is superseded to that extent. —
+  **[SUPERSEDED HEADLINE] (APPARATUS FINDING, grader-surfaced during PT-8 rd-1, INDEPENDENTLY VERIFIED —
+  FIXED-SEED RUNS ARE NOT REPRODUCIBLE on this harness/GPU stack). PT-7 `arrays_D2_pt7_L70.npz` vs PT-8
   `arrays_D2_pt8_L70_s60.npz` — IDENTICAL config (arm D2, betas geomspace(0.70,1,3), NSYS=16, K=10,
   ss_max=5, devar=5e-4, metric_est=pooled, seed 60 ⇒ swap_seed 10060) — are BITWISE IDENTICAL through
   round 125 and DIVERGE at round 126.** Downstream: frozen metrics differ by up to 0.32; cold_occ[500:1000]
