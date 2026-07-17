@@ -13,13 +13,23 @@ from gigalens_research.priors.ratio_coords import (
     validate_ratio_coords,
     validate_u_first_ratio_coords,
 )
+from gigalens_research.priors.ratio_pair_coords import (
+    RatioPairBijector,
+    RatioPairUniform,
+    deflection_ratio_pair_fn,
+    validate_ratio_pair,
+)
 
 __all__ = [
     "RatioCoordsBijector",
     "RatioCoordsUniform",
+    "RatioPairBijector",
+    "RatioPairUniform",
     "UFirstRatioCoordsBijector",
     "UFirstRatioCoordsUniform",
+    "deflection_ratio_pair_fn",
     "deflection_ratio_u_fn",
     "validate_ratio_coords",
+    "validate_ratio_pair",
     "validate_u_first_ratio_coords",
 ]
