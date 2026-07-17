@@ -185,6 +185,20 @@ class ParamSite:
         is a ``shared()`` parameter.
     key : str
         Canonical stable identity: the primary site path, slash-joined.
+    plane_tags : tuple of (int, str)
+        ``(plane index, display tag)`` for every plane this parameter acts on. The
+        tag is the scene's ``Plane(name=...)`` when it has one, else the index as a
+        string. Resolved at index time because a ``ParamSite`` outlives the scene.
+    comp_tags : tuple of (str, int, str)
+        ``(role, index, display tag)`` for every component this parameter acts on.
+        The tag is ``m1``/``l0`` when unnamed — unchanged — and ``m:host``/``l:host``
+        when the scene names it. The role letter survives naming because Component
+        names are unique only per *(plane, kind)*: a plane may hold a mass ``host``
+        AND a light ``host``, and only the letter tells those apart.
+    group_name : str or None
+        Display name of the ``shared()`` / ``coupled()`` handle behind this column,
+        when it has one. A shared parameter spans several sites, so it has no single
+        site to read a label from — this is the only name it can have.
     """
 
     ukey: str
@@ -193,6 +207,11 @@ class ParamSite:
     param: str
     paths: Tuple[tuple, ...]
     key: str
+    # Naming is additive and optional: a scene built before names, or by a caller who
+    # never passes them, indexes exactly as it did before.
+    plane_tags: Tuple[Tuple[int, str], ...] = ()
+    comp_tags: Tuple[Tuple[str, int, str], ...] = ()
+    group_name: Optional[str] = None
 
     @property
     def shared(self) -> bool:
@@ -233,6 +252,42 @@ class ParamSite:
 # ---------------------------------------------------------------------------
 # Building the index
 # ---------------------------------------------------------------------------
+
+
+def _plane_tag(scene: Any, i: int) -> str:
+    """A plane's display tag: its name, else its index (§names)."""
+    try:
+        name = getattr(scene.planes[i], "name", None)
+    except (AttributeError, IndexError, TypeError):
+        name = None
+    return name if name else str(i)
+
+
+def _comp_tag(scene: Any, i: int, role: str, j: int) -> str:
+    """A component's display tag: ``m1``/``l0`` unnamed, ``m:host`` named.
+
+    The role letter is kept in both forms. Scene Component names are unique only per
+    *(plane, kind)*, so a mass ``host`` and a light ``host`` — one galaxy's two
+    aspects — are distinguished by the letter alone.
+    """
+    name = None
+    try:
+        comps = scene.planes[i].mass if role == KIND_MASS else scene.planes[i].light
+        name = getattr(comps[j], "name", None)
+    except (AttributeError, IndexError, TypeError):
+        name = None
+    return f"{role[0]}:{name}" if name else f"{role[0]}{j}"
+
+
+def _group_name(scene: Any, ukey: str) -> Optional[str]:
+    """The ``shared()``/``coupled()`` handle name behind ``ukey``, if the scene records
+    one. Older scenes have no ``_unique_handles``; absence is not an error."""
+    for uk, handle in getattr(scene, "_unique_handles", ()) or ():
+        if uk == ukey:
+            n = getattr(handle, "name", None)
+            if n:
+                return n
+    return None
 
 
 def _classify(path: tuple) -> Optional[Tuple[str, str]]:
@@ -331,6 +386,15 @@ def param_sites(source: Any) -> List[ParamSite]:
         if spec is None:
             continue
         kind, param = spec
+        plane_tags = tuple(sorted({
+            (p[1], _plane_tag(scene, p[1]))
+            for p in paths if p and p[0] == "planes" and isinstance(p[1], int)
+        }))
+        comp_tags = tuple(sorted({
+            (p[2], p[3], _comp_tag(scene, p[1], p[2], p[3]))
+            for p in paths
+            if len(p) == 5 and p[0] == "planes" and p[2] in (KIND_MASS, KIND_LIGHT)
+        }))
         sites.append(
             ParamSite(
                 ukey=ukey,
@@ -339,6 +403,9 @@ def param_sites(source: Any) -> List[ParamSite]:
                 param=param,
                 paths=paths,
                 key="/".join(map(str, paths[0])),
+                plane_tags=plane_tags,
+                comp_tags=comp_tags,
+                group_name=_group_name(scene, ukey),
             )
         )
     sites.sort(key=_sort_key)  # stable: definition order survives within a component
@@ -352,25 +419,45 @@ def param_sites(source: Any) -> List[ParamSite]:
 
 def _suffix(site: ParamSite) -> str:
     """The tag used to break a label collision: plane, then component as
-    ``m<i>`` / ``l<i>``, e.g. ``0,m1`` for plane 0's mass component 1.
+    ``m<i>`` / ``l<i>``, e.g. ``0,m1`` for plane 0's mass component 1. Where the
+    scene names a plane or component, its name replaces the index: ``lens,m:host``.
 
-    The role letter is not decoration. Mass and light components are indexed
-    separately within a plane, so plane 0's mass[0] and plane 0's light[0] are
+    The role letter is not decoration, named or not. Mass and light components are
+    indexed separately within a plane, so plane 0's mass[0] and plane 0's light[0] are
     both "component 0" — and since ``e1``/``e2``/``center_x``/``center_y`` are
     parameter names common to mass *and* light profiles, a bare ``(plane,
-    component)`` tag collides on exactly the parameters most likely to need it.
+    component)`` tag collides on exactly the parameters most likely to need it. Names
+    do not retire the problem: they are unique only per (plane, kind), precisely so
+    that one galaxy's mass and light may both be ``host``.
 
     A shared parameter spanning several sites gets them joined (``0+1``), which
     is the honest reading: it is one parameter acting in both.
     """
     parts: List[str] = []
-    planes = sorted(site.planes)
-    if planes:
-        parts.append("+".join(str(p) for p in planes))
-    comps = sorted(site.components, key=lambda rc: (rc[1], rc[0]))
-    if comps:
+    if site.plane_tags:
+        parts.append("+".join(tag for _i, tag in sorted(site.plane_tags)))
+    elif site.planes:  # scene predating plane_tags
+        parts.append("+".join(str(p) for p in sorted(site.planes)))
+    if site.comp_tags:
+        # Sort by (index, role) exactly as before, so an unnamed model's tags are
+        # byte-for-byte unchanged; only the rendered tag substitutes a name.
+        comps = sorted(site.comp_tags, key=lambda t: (t[1], t[0]))
+        parts.append("+".join(tag for _r, _i, tag in comps))
+    elif site.components:
+        comps = sorted(site.components, key=lambda rc: (rc[1], rc[0]))
         parts.append("+".join(f"{role[0]}{idx}" for role, idx in comps))
     return ",".join(parts)
+
+
+def _mathtext_escape(s: str) -> str:
+    """Escape a name for math mode.
+
+    An unescaped ``_`` is the subscript operator, so a user's ``host_light`` renders
+    as ``host`` subscript ``light`` — silently, without raising. Measured: the
+    unescaped tag renders 142.8px wide against the escaped 150.6px. Names like
+    ``main_deflector`` are the norm, so this is the common case, not an edge one.
+    """
+    return s.replace("\\", r"\backslash ").replace("_", r"\_")
 
 
 def _decorate(base: str, site: ParamSite, *, latex: bool) -> str:
@@ -378,7 +465,7 @@ def _decorate(base: str, site: ParamSite, *, latex: bool) -> str:
     if not tag:
         return base
     if latex and base.startswith("$") and base.endswith("$"):
-        return f"${base[1:-1]}^{{({tag})}}$"
+        return f"${base[1:-1]}^{{({_mathtext_escape(tag)})}}$"
     return f"{base} ({tag})"
 
 
