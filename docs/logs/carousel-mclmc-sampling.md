@@ -3976,6 +3976,24 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-19 (ENGINEERING — PTMCLMCStage pipeline integration; PR DotDashDog/GIGALens-Code#11
+  (branch `pt-mclmc-stage`) onto `main`; no science claims):** human-directed follow-on to the
+  2026-07-18 module extraction. `PTMCLMCStage` in `inference_utils/pipeline.py` (placed after
+  `MCLMCStage`, same integration pattern: lazy import, canonical `samples_z`, debug-gated
+  diagnostics, `SamplerPosterior` view) + a registered `PTMCLMCStage` diagnostics plotter + CPU
+  tests. Design points: requires `z_best` ONLY (the validated D2 point-and-go entry — MAPStage →
+  PTMCLMCStage, no SVI); `num_burnin_rounds` default 1000 discarded from published samples
+  (cold-chain init-basin equilibration, 550–1500 rd measured); `indicator` callable hashed via a
+  mandatory `indicator_id` string (MAPStage optimizer_id pattern); zero-round-trip runs warn
+  loudly + set `transport_warning` metadata. Same log-density seam as `MCLMC_JIT`
+  (`prob_model.log_prob(z)[0]`, seam exercised in the test). Toy-bimodal test numbers match the
+  gigalens-side module tests exactly (RT 499, swap acc 0.60–0.64, occ_minor 0.158 vs 0.2).
+  NOTE FOR THE RECORD: the HUMAN merged gigalens PR #66 into `linusu-dev-merge` 2026-07-19
+  (a9ea472) — the user env now ships `pt_mclmc`; the stage test's final run was against that
+  installed build. Sonnet implementer; orchestrator audit + independent re-runs. Still no
+  lensing-posterior run through this API (parity run vs the harness remains the natural first
+  GPU use). System-2 status UNCHANGED.
+
 - **2026-07-18 (ENGINEERING — PT-MCLMC extracted into gigalens as a user-facing experimental
   module; PR seanxuseanxu/gigalens#66 (branch `pt-mclmc-experimental`) onto `linusu-dev-merge`;
   no science claims):** human-directed deliverable ("the version I can test myself, with knobs,
