@@ -3976,6 +3976,29 @@ Before a consequential run, the producer logs a checkpoint here and stops for gr
 
 ## Log (newest first)
 
+- **2026-07-18 (ENGINEERING — PT-MCLMC extracted into gigalens as a user-facing experimental
+  module; PR seanxuseanxu/gigalens#66 (branch `pt-mclmc-experimental`) onto `linusu-dev-merge`;
+  no science claims):** human-directed deliverable ("the version I can test myself, with knobs,
+  tested defaults, and docs a PT novice can use"). New `gigalens.jax.experimental.pt_mclmc`
+  (`sample_pt_mclmc` + `PTMCLMCResult` with `.summary()` health report), math extracted VERBATIM
+  from `carousel_gate_pt0.py`'s arm-D2 production path (adapt_one EEVPD adapter / regularize_cov /
+  fused one-jit-per-round runner with traced betas+inv_mass / even-odd host swaps / windowed-then-
+  frozen metric with pooled/within estimators / walker round-trip state machine; orchestrator
+  audited the module line-by-line against the harness). Defaults = the tested config; `n_walkers`
+  defaults to 8 per the HUMAN's observation + this log's evidence (PT-6 transport-equivalence at
+  NSYS=8; measured cost linearity 3.90 s/rd @8 vs 7.75 @16 on matched 6-rung ladders). Docstrings
+  state the validation scope honestly: single 33-dim system (gates PT-0b/1/2/6); `beta_min` is
+  USER-SUPPLIED (auto-selection is the open research problem, PT-5a-r2/PT-8); the windowed metric
+  is named the weakest validated component (C-28), with symptoms; no within-run multi-GPU sharding.
+  CPU self-test (`tests/test_pt_mclmc.py`, jax 0.9.1 CPU, fixed seed): 6-d bimodal mixture with
+  known 0.8/0.2 weights — u0-identity 2.3e-17, swap acc 0.60–0.64 all boundaries, 499 round trips
+  in 400 rounds, minor-mode cold occupancy 0.158 vs truth 0.2 (tol 0.12 pre-set, not tuned);
+  4-d anisotropic Gaussian sd-recovery ratios 0.965–0.985; indicator verified PURELY diagnostic
+  (same-seed run with/without indicator bit-identical). Implementer = sonnet subagent; orchestrator
+  independently re-ran the tests. **NOT yet run on any lensing posterior through this API — the
+  natural first GPU use is a carousel-config parity run against the harness (unclaimed, unrun).**
+  System-2 generalization status UNCHANGED (blocked per step-0d; no new evidence here).
+
 - **2026-07-16 (GENERALIZATION step-0d — S2-MAPCFG SWEEP: **MY PRE-REGISTERED PREDICTION IS FALSIFIED.**
   The broken MAP WAS largely an OPTIMIZER-CONFIG artifact. And arm B found a HIGHER-DENSITY REGION THAT
   MCLMC NEVER VISITED — which puts my OWN step-0c headline in question. PROPOSED, UNCERTIFIED; arms C/D
