@@ -321,6 +321,113 @@ def plot_mams_diagnostics(
     return fig
 
 
+# ---------------------------------------------------------------------------
+# PT-MCLMC (parallel-tempered MCLMC)
+# ---------------------------------------------------------------------------
+
+@register_diagnostic_plotter("PTMCLMCStage")
+def plot_pt_mclmc_diagnostics(
+    diagnostics,
+    *,
+    figsize: Tuple[float, float] = (10, 11),
+) -> Figure:
+    """Four stacked panels of a PT-MCLMC (parallel-tempered MCLMC) run, vs.
+    round, for a PT novice:
+
+    (a) cold-rung transport trace: mean occupancy of ``indicator`` per round
+        (over walkers) if captured, else mean ``cold_logdensity`` per round;
+        vertical dashed lines at the ``metric_windows`` boundaries and a
+        shaded burn-in region ``[0, num_burnin_rounds)``;
+    (b) swap acceptance (transport bottleneck check): a bar per rung
+        boundary, with a red 0.3 "bottleneck" reference line and a green
+        0.4-0.7 healthy band shaded;
+    (c) EEVPD per rung vs. round (log-y), one line per rung labeled by its
+        beta, with the 1e-4..2e-3 health band shaded;
+    (d) mean MCLMC step size per rung vs. round (log-y).
+
+    Requires the stage to have been run with ``debug=True``. Degrades
+    gracefully (skips/annotates a panel) when an expected array is absent.
+    """
+    arr = diagnostics.arrays
+    config = diagnostics.config
+    num_burnin = int(config.get("num_burnin_rounds", 0))
+    metric_windows = config.get("metric_windows", ())
+
+    fig, axs = plt.subplots(4, 1, figsize=figsize)
+    ax_transport, ax_swap, ax_eevpd, ax_step = axs
+
+    # (a) cold-rung transport trace.
+    if "cold_indicator" in arr:
+        occ = np.asarray(arr["cold_indicator"]).mean(axis=1)
+        ax_transport.plot(occ, color="tab:blue")
+        ax_transport.set_ylabel("cold occupancy\n(indicator, mean over walkers)")
+    elif "cold_logdensity" in arr:
+        occ = np.asarray(arr["cold_logdensity"]).mean(axis=1)
+        ax_transport.plot(occ, color="tab:blue")
+        ax_transport.set_ylabel("mean cold log-density")
+    if num_burnin > 0:
+        ax_transport.axvspan(0, num_burnin, color="grey", alpha=0.15,
+                              label=f"burn-in (0-{num_burnin})")
+    ax_transport.set_title("Cold-rung transport trace (has the ladder equilibrated?)")
+    ax_transport.legend(fontsize=8, loc="upper right")
+
+    # (b) swap acceptance per boundary: bottleneck check.
+    if "swap_attempts" in arr and "swap_accepts" in arr:
+        attempts = np.asarray(arr["swap_attempts"], dtype=np.float64)
+        accepts = np.asarray(arr["swap_accepts"], dtype=np.float64)
+        rate = np.divide(accepts, attempts,
+                          out=np.full_like(accepts, np.nan),
+                          where=attempts > 0)
+        x = np.arange(rate.shape[0])
+        colors = ["tab:red" if (np.isfinite(r) and r < 0.3) else "tab:blue" for r in rate]
+        ax_swap.bar(x, rate, color=colors)
+        ax_swap.axhspan(0.4, 0.7, color="tab:green", alpha=0.15, label="healthy 0.4-0.7")
+        ax_swap.axhline(0.3, color="tab:red", linestyle="--", linewidth=1,
+                         label="0.3 bottleneck threshold")
+        ax_swap.set_xticks(x)
+        ax_swap.set_xticklabels([f"{i}<->{i+1}" for i in x], fontsize=8)
+        ax_swap.set_ylim(0, 1)
+        ax_swap.legend(fontsize=8, loc="upper right")
+    ax_swap.set_title("Swap acceptance (transport bottleneck check)")
+    ax_swap.set_ylabel("p(accept)")
+
+    # (c) EEVPD per rung vs. round.
+    if "eevpd" in arr:
+        eevpd = np.asarray(arr["eevpd"])  # (n_rounds, n_rungs)
+        betas = np.asarray(arr.get("betas", np.arange(eevpd.shape[1])))
+        for r in range(eevpd.shape[1]):
+            label = f"rung {r} (beta={betas[r]:.3g})" if r < len(betas) else f"rung {r}"
+            ax_eevpd.plot(eevpd[:, r], label=label, alpha=0.8)
+        ax_eevpd.axhspan(1e-4, 2e-3, color="tab:green", alpha=0.12, label="health band")
+        ax_eevpd.set_yscale("log")
+        ax_eevpd.legend(fontsize=7, ncol=2, loc="upper right")
+    ax_eevpd.set_title("EEVPD per rung (step-size adapter target)")
+    ax_eevpd.set_ylabel("EEVPD")
+
+    # (d) mean step size per rung vs. round.
+    if "step_size_mean" in arr:
+        ss = np.asarray(arr["step_size_mean"])  # (n_rounds, n_rungs)
+        betas = np.asarray(arr.get("betas", np.arange(ss.shape[1])))
+        for r in range(ss.shape[1]):
+            label = f"rung {r} (beta={betas[r]:.3g})" if r < len(betas) else f"rung {r}"
+            ax_step.plot(ss[:, r], label=label, alpha=0.8)
+        ax_step.set_yscale("log")
+        ax_step.legend(fontsize=7, ncol=2, loc="upper right")
+    ax_step.set_title("Mean MCLMC step size per rung")
+    ax_step.set_ylabel("step size")
+    ax_step.set_xlabel("round")
+
+    if num_burnin > 0:
+        for ax in (ax_eevpd, ax_step):
+            ax.axvspan(0, num_burnin, color="grey", alpha=0.1)
+    for ax in (ax_transport, ax_eevpd, ax_step):
+        for w in metric_windows:
+            ax.axvline(int(w), color="tab:orange", linestyle="--", linewidth=1)
+
+    fig.tight_layout()
+    return fig
+
+
 def _z_space_labels(ctx, dim: int) -> Optional[list]:
     """Display labels for the sampler's z columns, in z-column order, or ``None``.
 

@@ -1781,6 +1781,257 @@ class MCLMCStage(InferenceStage):
         return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
 
 
+class PTMCLMCStage(InferenceStage):
+    """Parallel-tempered MCLMC for MULTIMODAL posteriors. Wraps
+    ``gigalens.jax.experimental.pt_mclmc.sample_pt_mclmc``.
+
+    Use this instead of :class:`MCLMCStage` when you suspect (or know) the
+    posterior has well-separated basins/modes that a single beta=1 MCLMC
+    chain essentially never crosses -- see that module's own docstring for
+    the full per-knob manual; this docstring intentionally does not
+    duplicate it (every constructor argument below mirrors
+    ``sample_pt_mclmc``'s, one-line summary only). Validated on exactly ONE
+    system so far: a 33-dimensional strong-lensing (dPIE, "carousel")
+    posterior with two basins (see
+    ``GIGALens-Code/docs/logs/carousel-mclmc-sampling.md``, gates
+    PT-0b/PT-1/PT-2/PT-6).
+
+    Point-and-go entry point: requires only ``z_best`` (a MAP estimate), NOT
+    ``qz`` -- every chain starts at ``z_best`` plus independent
+    ``init_scale``-jitter, with a matching diagonal seed metric
+    (``init_scale**2 * I``). This is the validated harness's cold-start "D2"
+    entry point; there is no support for seeding different walkers in
+    different basins.
+
+    Cross-repo dependency: this stage only runs against a gigalens build
+    that includes the experimental ``pt_mclmc`` module (added on branch
+    ``pt-mclmc-experimental``, merged into gigalens ``linusu-dev-merge`` via
+    PR seanxuseanxu/gigalens#66 on 2026-07-19; not on gigalens ``main`` or
+    in any release); ``run`` raises a descriptive ``ImportError`` if it is
+    missing.
+
+    Requires ``z_best``. Produces ``samples_z`` of canonical shape
+    ``(n_walkers, n_rounds - num_burnin_rounds, dim)`` -- the cold
+    (``beta=1``) rung's post-burn-in draws.
+    """
+
+    name: ClassVar[str] = "pt_mclmc"
+    schema_version: ClassVar[int] = 1
+    requires: ClassVar[Tuple[str, ...]] = ("z_best",)
+    produces: ClassVar[Tuple[str, ...]] = ("samples_z",)
+
+    def __init__(
+        self,
+        *,
+        beta_min: float,
+        n_rungs: Optional[int] = None,
+        betas: Optional[Iterable[float]] = None,
+        n_walkers: int = 8,
+        steps_per_round: int = 10,
+        n_rounds: int = 2000,
+        num_burnin_rounds: int = 1000,
+        init_scale: float = 1e-3,
+        adapt_metric: bool = True,
+        metric_windows: Iterable[int] = (100, 250, 500),
+        metric_estimator: str = "pooled",
+        eevpd_target: float = 5e-4,
+        step_size_init: float = 0.05,
+        step_size_max: float = 5.0,
+        decoherence_length: Optional[float] = None,
+        indicator: Optional[Callable[[Any], Any]] = None,
+        indicator_id: Optional[str] = None,
+        progress_every: int = 0,
+        debug: bool = False,
+        name: Optional[str] = None,
+        seed: Optional[int] = None,
+    ):
+        super().__init__(name=name, seed=seed)
+        # beta_min: hottest-rung inverse temperature. REQUIRED, no default --
+        # the single most consequential knob (see sample_pt_mclmc's docstring
+        # for the full manual). Tested 0.36 on the validated 33-dim system.
+        self.beta_min = float(beta_min)
+        self.n_rungs = None if n_rungs is None else int(n_rungs)
+        self.betas = None if betas is None else tuple(float(b) for b in betas)
+        self.n_walkers = int(n_walkers)
+        self.steps_per_round = int(steps_per_round)
+        self.n_rounds = int(n_rounds)
+        # num_burnin_rounds: rounds DISCARDED from the published samples_z
+        # while the cold chain equilibrates from its init basin (550-1500 on
+        # the validated system, ladder-dependent). Must be < n_rounds.
+        self.num_burnin_rounds = int(num_burnin_rounds)
+        if self.num_burnin_rounds >= self.n_rounds:
+            raise ValueError(
+                f"num_burnin_rounds ({self.num_burnin_rounds}) must be < "
+                f"n_rounds ({self.n_rounds}) -- otherwise zero post-burn-in "
+                f"rounds would be published as samples_z."
+            )
+        self.init_scale = float(init_scale)
+        self.adapt_metric = bool(adapt_metric)
+        self.metric_windows = tuple(int(w) for w in metric_windows)
+        self.metric_estimator = str(metric_estimator)
+        self.eevpd_target = float(eevpd_target)
+        self.step_size_init = float(step_size_init)
+        self.step_size_max = float(step_size_max)
+        self.decoherence_length = (
+            None if decoherence_length is None else float(decoherence_length)
+        )
+        # indicator: optional diagnostic-only basin labeler, an unhashable
+        # callable -- follows the MAPStage optimizer_id pattern: stored
+        # privately (excluded from config_hash_data's public-attrs default),
+        # with indicator_id (a short version string) required alongside it so
+        # something hashable still feeds the cache input-hash.
+        if indicator is not None and indicator_id is None:
+            raise ValueError(
+                "indicator was given without indicator_id: indicator is an "
+                "unhashable callable and cannot contribute to the stage's "
+                "config-hash cache key directly, so a short version string "
+                "identifying it (e.g. 'z6>-22.35_v1') is required whenever "
+                "indicator is supplied -- it feeds the cache input-hash in "
+                "its place."
+            )
+        self._indicator = indicator
+        self.indicator_id = indicator_id
+        self.progress_every = int(progress_every)
+        self.debug = bool(debug)
+
+    def diagnostics_config(self):
+        # What the PT-MCLMC diagnostic plotter needs (see
+        # plotting.diagnostics.plot_pt_mclmc_diagnostics).
+        return {
+            "n_rounds": self.n_rounds,
+            "num_burnin_rounds": self.num_burnin_rounds,
+            "metric_windows": self.metric_windows,
+            "steps_per_round": self.steps_per_round,
+            "beta_min": self.beta_min,
+            "n_walkers": self.n_walkers,
+            "eevpd_target": self.eevpd_target,
+        }
+
+    def run(self, ctx, artifacts, seed):
+        # Local import: the experimental PT-MCLMC sampler lives outside this
+        # repo (gigalens branch pt-mclmc-experimental, PR #66) and is not part
+        # of any merged gigalens release yet.
+        try:
+            from gigalens.jax.experimental.pt_mclmc import sample_pt_mclmc
+        except ImportError as e:
+            raise ImportError(
+                "PTMCLMCStage requires a gigalens build that includes "
+                "gigalens.jax.experimental.pt_mclmc (added on gigalens branch "
+                "pt-mclmc-experimental; on linusu-dev-merge since PR #66, "
+                "2026-07-19). Your installed gigalens does not have it."
+            ) from e
+
+        # Same seam as MCLMC_JIT (inference/mclmc.py): log_prob(z) ->
+        # log_prob only (drop the reduced-chi2 companion value).
+        def log_prob(z):
+            return ctx.model_seq.prob_model.log_prob(z)[0]
+
+        z_init = np.asarray(artifacts["z_best"], dtype=np.float64).reshape(-1)
+
+        t0 = time.perf_counter()
+        result = sample_pt_mclmc(
+            log_prob,
+            z_init,
+            beta_min=self.beta_min,
+            n_rungs=self.n_rungs,
+            betas=self.betas,
+            n_walkers=self.n_walkers,
+            steps_per_round=self.steps_per_round,
+            n_rounds=self.n_rounds,
+            seed=seed,
+            init_scale=self.init_scale,
+            adapt_metric=self.adapt_metric,
+            metric_windows=self.metric_windows,
+            metric_estimator=self.metric_estimator,
+            eevpd_target=self.eevpd_target,
+            step_size_init=self.step_size_init,
+            step_size_max=self.step_size_max,
+            decoherence_length=self.decoherence_length,
+            indicator=self._indicator,
+            progress_every=self.progress_every,
+            store_all_rungs=False,
+        )
+        wall_time_s = time.perf_counter() - t0
+
+        # Canonical (num_chains, num_steps, n_params) layout: drop burn-in
+        # rounds, then move the walker axis first (cold_positions is
+        # (n_rounds, n_walkers, dim)).
+        samples_z = np.asarray(
+            result.cold_positions[self.num_burnin_rounds:]
+        ).transpose(1, 0, 2)
+
+        round_trips_total = int(np.asarray(result.round_trips).sum())
+        transport_warning = round_trips_total == 0
+        if transport_warning:
+            warnings.warn(
+                "PTMCLMCStage: ladder never completed a round trip -- for a "
+                "multimodal target these samples are unreliable; check "
+                "beta_min / .summary() diagnostics",
+                stacklevel=2,
+            )
+
+        swap_attempts = np.asarray(result.swap_attempts, dtype=np.float64)
+        swap_accepts = np.asarray(result.swap_accepts, dtype=np.float64)
+        swap_acceptance = np.divide(
+            swap_accepts, swap_attempts,
+            out=np.full_like(swap_accepts, np.nan),
+            where=swap_attempts > 0,
+        ).tolist()
+
+        metadata = {
+            "wall_time_s": wall_time_s,
+            "num_chains": int(samples_z.shape[0]),
+            "num_steps": int(samples_z.shape[1]),
+            "n_params": int(samples_z.shape[2]),
+            "betas": np.asarray(result.betas, dtype=np.float64).tolist(),
+            "n_rungs": int(result.n_rungs),
+            "num_burnin_rounds": int(self.num_burnin_rounds),
+            "swap_acceptance": swap_acceptance,
+            "round_trips_total": round_trips_total,
+            "n_nan_reverts": int(result.n_nan_reverts),
+            "u0_identity_rel": float(result.u0_identity_rel),
+            "metric_frozen": bool(result.metric_frozen),
+            "transport_warning": bool(transport_warning),
+            "debug": self.debug,
+        }
+
+        diagnostics: Dict[str, np.ndarray] = {}
+        if self.debug:
+            # Full-run (all rounds, incl. burn-in) diagnostic arrays from the
+            # PTMCLMCResult -- never published as samples_z, only kept for the
+            # diagnostic plotter.
+            diagnostics = {
+                "cold_positions": np.asarray(result.cold_positions),
+                "cold_logdensity": np.asarray(result.cold_logdensity),
+                "eevpd": np.asarray(result.eevpd),
+                "step_size_mean": np.asarray(result.step_size_mean),
+                "swap_attempts": np.asarray(result.swap_attempts),
+                "swap_accepts": np.asarray(result.swap_accepts),
+                "betas": np.asarray(result.betas),
+                "inv_mass_final": np.asarray(result.inv_mass_final),
+                "round_trips": np.asarray(result.round_trips),
+            }
+            if self._indicator is not None:
+                diagnostics.update({
+                    "cold_indicator": np.asarray(result.cold_indicator),
+                    "round_trips_pocket": np.asarray(result.round_trips_pocket),
+                    "round_trips_main": np.asarray(result.round_trips_main),
+                    "swap_attempts_by_class": np.asarray(result.swap_attempts_by_class),
+                    "swap_accepts_by_class": np.asarray(result.swap_accepts_by_class),
+                })
+
+        return StageResult(
+            arrays={"samples_z": samples_z},
+            metadata=metadata,
+            diagnostics=diagnostics,
+        )
+
+    @classmethod
+    def to_posterior(cls, arrays, ctx):
+        from .posterior import SamplerPosterior
+        return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
+
+
 class MAMSStage(InferenceStage):
     """MAMS sampler (Metropolis-adjusted microcanonical). Wraps
     ``gigalens_research.inference.MAMS_JIT``.
