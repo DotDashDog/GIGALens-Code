@@ -190,7 +190,7 @@ class PosteriorReport:
             for _d, plane_i, dr in views:
                 for col in (0, 1):  # observed + model (both image plane)
                     plot_critical_curves(row_ax[col], self.posterior, point=point,
-                                         deflection_ratio=dr,
+                                         plane=plane_i, deflection_ratio=dr,
                                          label=f"crit z-plane {plane_i}")
         return self._finalize(fig)
 
@@ -271,7 +271,7 @@ class PosteriorReport:
             plot_image(axs[row][1], obs_disp, extent=extent,
                        title=f"Observed{band}", scale="asinh")
             plot_critical_curves(axs[row][1], self.posterior, point=point,
-                                 deflection_ratio=dr)
+                                 plane=plane_i, deflection_ratio=dr)
         return self._finalize(fig)
 
     # -- corner --------------------------------------------------------------
