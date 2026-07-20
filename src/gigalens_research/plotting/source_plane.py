@@ -34,6 +34,10 @@ from matplotlib.axes import Axes
 
 from .image import plot_image
 
+# Upper bound on the (square) grid used to trace critical/caustic curves; see
+# the comment at its use site in _critical_and_caustic_curves.
+_MAX_CAUSTIC_GRID_PIX = 800
+
 
 # ---------------------------------------------------------------------------
 # Native deflection from the gigalens lens model
@@ -119,6 +123,14 @@ def _critical_and_caustic_curves(
     num_pix = int(round(compute_window / grid_scale))
     if num_pix % 2 == 1:
         num_pix += 1
+    # num_pix scales as sc.num_pix * supersample, so for large images the
+    # default supersample=20 (inherited from the old lenstronomy tracer, whose
+    # base grid was much smaller than sc.num_pix) can demand a many-thousand^2
+    # grid; jax.vmap(jax.jacfwd(...)) over that OOMs during XLA autotuning.
+    # Cap the grid size directly, coarsening grid_scale but keeping the FOV.
+    if num_pix > _MAX_CAUSTIC_GRID_PIX:
+        num_pix = _MAX_CAUSTIC_GRID_PIX
+        grid_scale = compute_window / num_pix
     coord = (jnp.arange(num_pix) - (num_pix - 1) / 2.0) * grid_scale
     # X varies along axis 1 (columns), Y along axis 0 (rows): matches the skimage
     # find_contours convention (v[:, 0] = row = y, v[:, 1] = col = x).
