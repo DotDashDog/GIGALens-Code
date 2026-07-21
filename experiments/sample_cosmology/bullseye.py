@@ -392,13 +392,54 @@ def lens_cosmo_logprob(state, observation, cosmo, cosmo_prior):
     return log_like + log_prior
 
 
+def _chunked_logprob(states, observation, cosmo, cosmo_prior, chunk_size):
+    """Evaluate lens_cosmo_logprob over a batch of states, chunk by chunk.
+
+    The grid is embarrassingly parallel over grid points, but evaluating it in
+    one shot materializes several (n_planes, n_points) temporaries inside the
+    likelihood, which OOMs once n_grid gets large. Slice the batched entries of
+    `states` into pieces of at most `chunk_size` points, evaluate each under
+    jit, and concatenate. Results are identical to the unchunked version --
+    grid points do not interact.
+    """
+    batched = {k: v for k, v in states.items() if jnp.ndim(v) > 0}
+    if not batched:
+        return lens_cosmo_logprob(states, observation, cosmo, cosmo_prior)
+
+    n_points = len(next(iter(batched.values())))
+    chunk_size = int(min(chunk_size, n_points))
+
+    @jax.jit
+    def eval_chunk(sub, obs):
+        # Rebuild in the original key order; scalar entries pass through.
+        state = {k: sub.get(k, v) for k, v in states.items()}
+        return lens_cosmo_logprob(state, obs, cosmo, cosmo_prior)
+
+    out = []
+    for start in range(0, n_points, chunk_size):
+        stop = min(start + chunk_size, n_points)
+        sub = {k: v[start:stop] for k, v in batched.items()}
+        if stop - start < chunk_size:
+            # Pad the short final chunk by repeating its last point so every
+            # call hits the same compiled shape, then trim the padding off.
+            pad = chunk_size - (stop - start)
+            sub = {k: jnp.concatenate([v, jnp.repeat(v[-1:], pad, axis=0)])
+                   for k, v in sub.items()}
+            out.append(eval_chunk(sub, observation)[:stop - start])
+        else:
+            out.append(eval_chunk(sub, observation))
+
+    return jnp.concatenate(out, axis=0)
+
+
 def logsumexp_norm(log_prob):
     c = jnp.max(log_prob)
     logsumexp = c + jnp.log(jnp.nansum(jnp.exp(log_prob - c)))
     return log_prob - logsumexp
 
     
-def make_prob_grid(observation, cosmo, sample_wa=False, plane_indexes=None, n_grid=400):
+def make_prob_grid(observation, cosmo, sample_wa=False, plane_indexes=None, n_grid=400,
+                   chunk_size=1 << 16):
     Om0_grid, w0_grid = jnp.linspace(0, 1, n_grid), jnp.linspace(-2, -1/3, n_grid),
 
     if plane_indexes is None:
@@ -410,15 +451,15 @@ def make_prob_grid(observation, cosmo, sample_wa=False, plane_indexes=None, n_gr
         wa_grid = jnp.linspace(-3, 2.0, n_grid)
         Om0_grid, w0_grid, wa_grid = jnp.meshgrid(Om0_grid, w0_grid, wa_grid, indexing='ij')
         states = {
-            'Om0': Om0_grid.flatten(), 
-            'w0': w0_grid.flatten(),
-            'wa': wa_grid.flatten()
+            'Om0': Om0_grid.reshape(-1), 
+            'w0': w0_grid.reshape(-1),
+            'wa': wa_grid.reshape(-1)
         }
     else:
         Om0_grid, w0_grid = jnp.meshgrid(Om0_grid, w0_grid, indexing='ij')
         states = {
-                'Om0': Om0_grid.flatten(), 
-                'w0': w0_grid.flatten(),
+                'Om0': Om0_grid.reshape(-1), 
+                'w0': w0_grid.reshape(-1),
                 'wa': 0.0
             }
 
@@ -431,7 +472,12 @@ def make_prob_grid(observation, cosmo, sample_wa=False, plane_indexes=None, n_gr
     obs_p["deflect_ratio_cov_det"] = jnp.abs(jnp.linalg.det(selected_cov))
     obs_p["z_source"] = observation["z_source"][plane_indexes]
     
-    log_prob = lens_cosmo_logprob(states, obs_p, cosmo=cosmo, cosmo_prior=cosmo_prior_waCDM if sample_wa else cosmo_prior_wCDM)
+    log_prob = _chunked_logprob(
+        states, obs_p,
+        cosmo=cosmo,
+        cosmo_prior=cosmo_prior_waCDM if sample_wa else cosmo_prior_wCDM,
+        chunk_size=chunk_size,
+    )
     log_prob = log_prob.reshape(Om0_grid.shape)
     log_prob = np.array(log_prob).astype(np.float64)
     log_prob = logsumexp_norm(log_prob)
