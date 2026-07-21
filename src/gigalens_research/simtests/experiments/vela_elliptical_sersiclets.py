@@ -152,7 +152,7 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
     Migrated to the scene API: a :class:`gigalens.jax.scene.LensModel` (EPL+Shear mass +
     Sérsic lens light on plane 0; ``EllipticalSersiclets`` source on plane 1, lstsq amps)
     + a :class:`gigalens.jax.scene_prob_model.Dataset` + ``ProbModel(mode="lstsq")``,
-    wrapped in a scene-backed ``ModellingSequence`` (``from_scene``). The public return
+    wrapped in a scene-backed ``ModellingSequence``. The public return
     type and role are unchanged; only the internals are scene objects.
 
     Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
@@ -163,7 +163,7 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
     from gigalens_research.simulations.sersiclets import EllipticalSersiclets
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
-    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    from gigalens.jax.scene_prob_model import ImageData, ProbModel
 
     if "n_max" not in kwargs:
         raise TypeError(
@@ -181,7 +181,7 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
               light=[Component(EllipticalSersiclets(n_max=n_max, use_lstsq=True),
                                source_p)]),
     ])
-    ds = Dataset(
+    ds = ImageData(
         jnp.asarray(system.observed_image),
         system.sim_config,
         background_rms=system.background_rms,
@@ -189,4 +189,4 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
         sees="all",
     )
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence.from_scene(prob_model)
+    return ModellingSequence(prob_model)
