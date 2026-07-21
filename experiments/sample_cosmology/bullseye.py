@@ -45,7 +45,7 @@ class UniformBij(tfd.Uniform):
     def _default_event_space_bijector(self):
         return self._esb
 
-def make_5spl_bullseye(sample_wa):
+def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1.):
     z_lens = 0.5
     z_source1 = 1.0
     z_source2 = 1.5
@@ -53,7 +53,7 @@ def make_5spl_bullseye(sample_wa):
     z_source4 = 7.0
     z_source5 = 15.0
 
-    s = 13.2/0.9
+    s = theta_E/0.9
 
     s2 = s**2
     
@@ -167,35 +167,35 @@ def make_5spl_bullseye(sample_wa):
                 "geometry": {"redshift": z_source1},
                 "light": {
                     0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.05, "e2": 0.,
-                        "center_x": 0.15*s, "center_y": 0.*s, "Ie": Ie/s2},
+                        "center_x": 0.15*s, "center_y": 0.*s, "Ie": Ie*snr_scale/s2},
                 },
             },
             2: {
                 "geometry": {"redshift": z_source2},
                 "light": {
                     0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.*s, "center_y": 0.01*s, "Ie": Ie/s2},
+                        "center_x": 0.*s, "center_y": 0.01*s, "Ie": Ie*snr_scale/s2},
                 },
             },
             3: {
                 "geometry": {"redshift": z_source3},
                 "light": {
                     0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.*s, "center_y": 0.05*s, "Ie": Ie/s2},
+                        "center_x": 0.*s, "center_y": 0.05*s, "Ie": Ie*snr_scale/s2},
                 },
             },
             4: {
                 "geometry": {"redshift": z_source4},
                 "light": {
                     0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.05*s, "center_y": 0.05*s, "Ie": Ie/s2},
+                        "center_x": 0.05*s, "center_y": 0.05*s, "Ie": Ie*snr_scale/s2},
                 },
             },
             5: {
                 "geometry": {"redshift": z_source5},
                 "light": {
                     0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.1*s, "center_y": 0.0*s, "Ie": Ie/s2},
+                        "center_x": 0.1*s, "center_y": 0.0*s, "Ie": Ie*snr_scale/s2},
                 },
             },
         },
