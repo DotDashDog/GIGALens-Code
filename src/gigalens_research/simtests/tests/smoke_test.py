@@ -237,28 +237,28 @@ def test_scene_model_card_reports_noise():
 
     ctx = InferenceContext.from_modelling_sequence(model_seq)
     card = model_card(ctx)
-    kind = card["noise"]["kind"]
-    assert kind not in (None, "unknown"), (
-        f"scene-backed model_card reported an UNRECOGNIZED noise model (kind={kind!r}) "
-        "even though the Dataset carries an error_map — the §7 noise guard is blind here.")
-    # The scene noise must be reported via the error_map (not fabricated bkg_rms/exp_time).
-    assert "error_map" in kind, f"expected an error_map-based scene noise kind, got {kind!r}"
-    assert card["noise"].get("err_map_median") is not None, \
-        "scene noise must report the error_map median sigma"
-    # No 'unrecognized' warning should be present.
-    assert not any("unrecognized" in w.lower() for w in card["warnings"]), \
-        f"model_card still warns 'unrecognized': {card['warnings']}"
-    # The rendered card text must not show the ABSENT-noise marker.
+    # gigalens.jax.utils schema: per-dataset noise, never silent. Every section
+    # must actually have built (a guarded failure shows up as "unavailable").
+    for key, section in card.items():
+        assert not (isinstance(section, dict) and "unavailable" in section), \
+            f"model card section {key!r} failed to build: {section['unavailable']}"
+    ds_card = card["datasets"][0]
+    assert ds_card["noise"]["kind"] == "per-pixel error_map", ds_card["noise"]
+    assert ds_card["noise"]["sigma_median"] > 0, ds_card["noise"]
+    assert ds_card["psf"]["present"], ds_card["psf"]
+    # The §7 blind spots must be advisory-free on this well-formed system.
+    codes = {a["code"] for a in card["advisories"] if a["severity"] == "warning"}
+    assert "psf-absent" not in codes and "psf-not-normalized" not in codes, codes
     text = format_model_card(card)
-    assert "unrecognized" not in text.lower(), text
+    assert "ABSENT" not in text, text
 
-    # Phase 7b: the scene section must report amplitude mode, trace mode, and sees.
-    scene = card.get("scene")
-    assert scene is not None, "scene-backed model_card must carry a 'scene' section"
-    assert scene.get("amplitude_mode") == "lstsq", scene
-    assert scene.get("trace_mode") == "deflection_ratio", scene  # single source plane
-    assert scene.get("sees") is not None and len(scene["sees"]) == 1, scene
-    assert "Trace      :" in text and "Sees       :" in text, text
+    # Amplitude mode, trace mode, and sees, in the new sections.
+    assert card["likelihood"]["mode"] == "lstsq", card["likelihood"]
+    assert card["trace"]["mode"] == "deflection_ratio", card["trace"]
+    assert ds_card["sees"], ds_card  # resolved component labels
+    # The pipeline's own extra: the stable input hash rides on the card.
+    assert card["extras"]["context_hash"] == ctx.hash(), card["extras"]
+    assert "Trace      :" in text and "sees" in text, text
 
 
 def test_scene_model_card_multiplane_distances():
@@ -275,7 +275,7 @@ def test_scene_model_card_multiplane_distances():
     from gigalens.jax.profiles.mass.epl import EPL
     from gigalens.jax.profiles.light.sersic import SersicEllipse
     from gigalens.jax.scene import Component, Plane, LensModel
-    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    from gigalens.jax.scene_prob_model import ImageData, ProbModel
     from gigalens.jax.inference import ModellingSequence
     from gigalens.simulator import SimulatorConfig
     from gigalens_research.inference_utils.pipeline import (
@@ -288,7 +288,9 @@ def test_scene_model_card_multiplane_distances():
     psf = np.zeros((9, 9), dtype=np.float32); psf[4, 4] = 1.0
     epl0 = dict(theta_E=1.0, gamma=2.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0)
     epl1 = dict(theta_E=0.5, gamma=2.0, e1=0.0, e2=0.0, center_x=0.2, center_y=0.0)
-    cosmo = Component(wCDM_Cosmo(z_lens=0.4, z_source_ref=10.0), dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0))
+    # z_source_ref must equal the LAST plane's redshift (scene_simulator raises
+    # on a mismatch — reduced deflections are normalized to the last plane).
+    cosmo = Component(wCDM_Cosmo(z_lens=0.4, z_source_ref=2.5), dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0))
     model = LensModel([
         Plane(redshift=0.4, mass=[Component(EPL(50), epl0)]),
         Plane(redshift=0.8, mass=[Component(EPL(50), epl1)]),
@@ -298,16 +300,16 @@ def test_scene_model_card_multiplane_distances():
     ], cosmo=cosmo)
     cfg = SimulatorConfig(delta_pix=0.08, num_pix=num_pix, supersample=1, kernel=psf,
                           likelihood_precision="float64")
-    ds = Dataset(obs, cfg, background_rms=0.01, exp_time=1000.0, sees="all")
+    ds = ImageData(obs, cfg, background_rms=0.01, exp_time=1000.0, sees="all")
     pm = ProbModel(model, ds, mode="lstsq")
     ctx = InferenceContext.from_modelling_sequence(
-        ModellingSequence.from_scene(pm))
+        ModellingSequence(pm))
 
     card = model_card(ctx)
-    scene = card["scene"]
-    assert scene["trace_mode"] == "multiplane", scene
-    d = scene.get("distances_obs_to_plane")
-    assert d is not None and len(d) == 3, scene
+    trace = card["trace"]
+    assert trace["mode"] == "multiplane", trace
+    d = trace.get("distances_obs_to_plane_mpc")
+    assert d is not None and len(d) == 3, trace
     # transverse comoving distance is monotonically increasing with redshift.
     assert d[0] < d[1] < d[2], f"distances not monotonic in z: {d}"
     assert all(np.isfinite(d)) and all(x > 0 for x in d), d

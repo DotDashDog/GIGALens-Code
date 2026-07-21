@@ -147,7 +147,7 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
     from gigalens.jax.profiles.light.sersic_shapelets import SersicShapelets
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
-    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    from gigalens.jax.scene_prob_model import ImageData, ProbModel
     tfd = tfp.distributions
 
     if "n_max" not in kwargs:
@@ -188,9 +188,9 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
               light=[Component(SersicShapelets(n_max=n_max, use_lstsq=True,
                                                interpolate=False), source_p)]),
     ])
-    ds = Dataset(jnp.asarray(system.observed_image), system.sim_config,
+    ds = ImageData(jnp.asarray(system.observed_image), system.sim_config,
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence.from_scene(prob_model)
+    return ModellingSequence(prob_model)
 

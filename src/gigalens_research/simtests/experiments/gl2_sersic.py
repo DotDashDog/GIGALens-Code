@@ -233,7 +233,7 @@ def build_epl_shear_sersic_sersic(system: Any, **kwargs) -> Any:
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
-    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    from gigalens.jax.scene_prob_model import ImageData, ProbModel
 
     epl_p, shear_p, lens_light_p, source_p = _gl2_scene_priors()
     model = LensModel([
@@ -242,11 +242,11 @@ def build_epl_shear_sersic_sersic(system: Any, **kwargs) -> Any:
         Plane(deflection_ratio=1.0,
               light=[Component(sersic.SersicEllipse(use_lstsq=False), source_p)]),
     ])
-    ds = Dataset(jnp.asarray(system.observed_image), system.sim_config,
+    ds = ImageData(jnp.asarray(system.observed_image), system.sim_config,
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="forward")
-    return ModellingSequence.from_scene(prob_model)
+    return ModellingSequence(prob_model)
 
 
 # ---------------------------------------------------------------------------

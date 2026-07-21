@@ -224,7 +224,7 @@ class InferenceContext:
         if getattr(model_seq, "scene_model", None) is None:
             raise TypeError(
                 "InferenceContext.from_modelling_sequence requires a scene-backed "
-                "ModellingSequence (build it with ModellingSequence.from_scene). The "
+                "ModellingSequence (build it with ModellingSequence(prob_model)). The "
                 "legacy PhysicalModel path was removed with the old gigalens API.")
         phys_view = _ScenePhysModelView(model_seq.scene_model)
         return cls(
@@ -320,294 +320,40 @@ def _hash_sim_config(sc) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Model card: an explicit, loud summary of the *effective* forward model.
-#
-# Exists to make model misspecification visible. The fields that have
-# historically been set wrong *silently* — PSF, noise model, pixel grid,
-# likelihood precision, and whether the linear (lstsq) amplitudes carry any
-# physical regularization — are reported explicitly, and anything that looks
-# like a silent degradation (e.g. no PSF on data that are normally convolved)
-# is surfaced in ``warnings``. A flexible model can hide misspecification
-# behind a good chi^2; this card does not.
+# Model card: delegated to gigalens.jax.utils.model_card (the scene-native
+# rewrite of the card that used to live here). The pipeline adds its own
+# context hash as an extra and keeps the historical call surface
+# (model_card(ctx) / format_model_card(card)) so stages, experiment scripts
+# and Pipeline.run are unchanged. The card is a REPORT: hard validation lives
+# in the gigalens constructors/simulators, not here.
 # ---------------------------------------------------------------------------
 
 
-def _profile_depth(p) -> int:
-    return int(getattr(p, "depth", getattr(p, "n_layers", 1)))
-
-
 def model_card(ctx: "InferenceContext") -> Dict[str, Any]:
-    """Return a JSON-safe summary of the effective forward model for ``ctx``.
+    """Return the JSON-safe scene model card for ``ctx``.
 
-    Written to ``<out_dir>/model_card.json`` by :meth:`Pipeline.run` and printed
-    via :func:`format_model_card`. Use directly on any context/posterior:
-    ``print(format_model_card(model_card(ctx)))``.
+    Delegates to :func:`gigalens.jax.utils.model_card` on ``ctx.prob_model``
+    (planes/datasets/adaptive-supersampling/point-source aware, structured
+    ``advisories`` instead of free-text ``warnings``), adding the pipeline's
+    stable input hash under ``card["extras"]["context_hash"]``. Written to
+    ``<out_dir>/model_card.json`` by :meth:`Pipeline.run` and printed via
+    :func:`format_model_card`.
     """
-    pm, sc, phys = ctx.prob_model, ctx.sim_config, ctx.phys_model
-    warns: List[str] = []
+    from gigalens.jax.utils import model_card as _scene_model_card
 
-    # --- PSF ---
-    kernel = getattr(sc, "kernel", None)
-    if kernel is None:
-        psf: Dict[str, Any] = {"present": False}
-        warns.append(
-            "NO PSF: sim_config.kernel is None — the forward model applies no PSF "
-            "convolution. If the data are PSF-convolved (they usually are), this "
-            "model is MISSPECIFIED. Check the asset path / loader."
-        )
-    else:
-        k = np.asarray(kernel)
-        psf = {
-            "present": True,
-            "shape": list(k.shape),
-            "sum": float(k.sum()),
-            "sha1": hashlib.sha1(
-                np.ascontiguousarray(k, dtype=np.float64).tobytes()
-            ).hexdigest()[:12],
-        }
-        if not np.isclose(float(k.sum()), 1.0, atol=1e-3):
-            warns.append(
-                f"PSF kernel does not sum to 1 (sum={float(k.sum()):.4f}); check normalization."
-            )
-
-    # --- noise model ---
-    # Detection order: legacy backward (``err_map``), legacy forward
-    # (``background_rms``/``exp_time``), then the SCENE ProbModel's per-pixel ``error_map``
-    # (G1: it builds the error map inside the Dataset, so it exposes neither err_map nor
-    # background_rms/exp_time — but the noise IS present and used in the likelihood).
-    # Report the error_map DIRECTLY; do NOT fabricate background_rms/exp_time from it.
-    noise: Dict[str, Any] = {"prob_model": type(pm).__name__}
-    scene_error_map = None
-    scene_datasets = getattr(pm, "datasets", None)
-    if not hasattr(pm, "err_map"):
-        if scene_datasets:
-            # Scene ProbModel: read band 0 directly (the property raises for multi-band).
-            # Per-band detail is reported in the scene card section below.
-            scene_error_map = scene_datasets[0].error_map
-        else:
-            try:
-                scene_error_map = pm.error_map  # legacy single-image prob_model
-            except Exception:
-                scene_error_map = None
-    if hasattr(pm, "err_map"):
-        em = np.asarray(pm.err_map)
-        noise.update(kind="fixed_err_map (backward)", err_map_shape=list(em.shape),
-                     err_map_min=float(em.min()), err_map_median=float(np.median(em)))
-    elif hasattr(pm, "background_rms") and hasattr(pm, "exp_time"):
-        noise.update(kind="forward (bkg_rms + poisson)",
-                     background_rms=float(np.asarray(pm.background_rms)),
-                     exp_time=float(np.asarray(pm.exp_time)))
-    elif scene_error_map is not None:
-        em = np.asarray(scene_error_map)
-        noise.update(kind="fixed error_map (scene)", err_map_shape=list(em.shape),
-                     err_map_min=float(em.min()), err_map_median=float(np.median(em)))
-        n_bands = len(scene_datasets) if scene_datasets else 1
-        if n_bands > 1:
-            noise["n_bands"] = n_bands
-            noise["note"] = "summary is band 0; per-band detail in scene.datasets"
-    else:
-        noise["kind"] = "unknown"
-        warns.append(
-            "Noise model unrecognized: prob_model exposes neither err_map nor "
-            "(background_rms, exp_time) nor a scene error_map."
-        )
-
-    # --- grid / precision (read directly; these are required fields) ---
-    grid = {"num_pix": sc.num_pix, "delta_pix": sc.delta_pix, "supersample": sc.supersample}
-    prec = getattr(sc, "likelihood_precision", None)  # physics-default-ok: reporting only
-
-    def _prof(p) -> Dict[str, Any]:
-        scalars = {k: v for k, v in vars(p).items()
-                   if not k.startswith("_") and isinstance(v, (int, float, str, bool))}
-        return {"type": type(p).__name__, **scalars}
-
-    profiles = {
-        "lens_mass": [_prof(p) for p in phys.lenses],
-        "lens_light": [_prof(p) for p in phys.lens_light],
-        "source_light": [_prof(p) for p in phys.source_light],
-    }
-
-    # --- linear amplitudes / regularization ---
-    use_lstsq = any(getattr(p, "use_lstsq", False)  # physics-default-ok: reporting only
-                    for p in list(phys.source_light) + list(phys.lens_light))
-    n_basis = (sum(_profile_depth(p) for p in phys.lens_light)
-               + sum(_profile_depth(p) for p in phys.source_light))
-    amps = {
-        "solved_by_lstsq": bool(use_lstsq),
-        "n_basis": int(n_basis),
-        # gigalens' lstsq adds only a tiny numerical jitter to the Gram matrix,
-        # not a physical (e.g. ridge/curvature) prior on the amplitudes.
-        "physical_regularization": None,
-    }
-    if use_lstsq and n_basis >= 50:
-        warns.append(
-            f"{n_basis} linear amplitudes solved by lstsq with NO physical regularization "
-            "(numerical jitter only). High-order bases can fit noise or place flux in the "
-            "lensing null space (unphysical source structure)."
-        )
-
-    card = {
-        "psf": psf,
-        "noise": noise,
-        "grid": grid,
-        "likelihood_precision": prec,
-        "profiles": profiles,
-        "linear_amplitudes": amps,
-        "warnings": warns,
-    }
-
-    # --- scene-specific section (Phase 7b): trace mode, per-plane distances, sees ---
-    # Only for scene-backed contexts; legacy card output is unchanged (no "scene" key).
-    scene = _scene_card_section(ctx)
-    if scene is not None:
-        card["scene"] = scene
-        # The top-level PSF/noise fields describe band 0 only; surface any OTHER band
-        # that is missing a PSF (silent misspecification the single-line card would hide).
-        for b in scene.get("datasets", []):
-            if b["band"] != 0 and not b["psf"].get("present"):
-                card["warnings"].append(
-                    f"band {b['band']}: NO PSF — that dataset applies no PSF convolution "
-                    "(the single-line card shows band 0). Check that band's sim_config.kernel.")
-    return card
-
-
-def _scene_card_section(ctx) -> Optional[Dict[str, Any]]:
-    """Phase-7b scene card: amplitude mode, active trace mode, per-plane redshifts +
-    (multiplane) distances from the model's own cosmology, and the per-dataset ``sees``.
-
-    Returns None for a legacy (non-scene) context so the legacy card is unchanged."""
-    model = getattr(getattr(ctx, "model_seq", None), "scene_model", None)
-    if model is None:
-        return None
-    pm = ctx.prob_model
-    out: Dict[str, Any] = {"amplitude_mode": getattr(pm, "mode", None)}
-
-    # Active trace mode (deflection_ratio vs multiplane) from a built simulator.
-    sims = getattr(pm, "simulators", None)
-    out["trace_mode"] = (getattr(sims[0], "trace_mode", None)
-                         if sims else None)
-
-    # Per-plane geometry: redshift (cosmology) or deflection_ratio (single-plane).
-    planes_info = []
-    has_cosmo = model.cosmo is not None
-    for i, p in enumerate(model.planes):
-        geom = {"plane": i,
-                "n_mass": len(p.mass), "n_light": len(p.light)}
-        if has_cosmo:
-            geom["redshift"] = p.redshift
-        else:
-            geom["deflection_ratio"] = p.deflection_ratio
-        planes_info.append(geom)
-    out["planes"] = planes_info
-
-    # Multiplane: per-plane transverse comoving distances from the model's OWN cosmology
-    # (cosmo.distance_matrix). Reportable when every plane redshift + the cosmology are
-    # CONSTANTS (read from model.constants); if any is sampled there is no single value to
-    # report on the card, which is noted rather than guessed.
-    if has_cosmo and out["trace_mode"] == "multiplane":
-        try:
-            consts = model.constants
-            zs = [consts["planes"][i]["geometry"]["redshift"]
-                  for i in range(len(model.planes))]
-            cosmo_params = consts.get("cosmo", {})
-            D = np.asarray(model.cosmo.profile.distance_matrix(zs, **cosmo_params))
-            # observer(0) -> plane_k transverse comoving distance (D has shape (N+1, N+1)).
-            out["redshifts"] = [float(np.asarray(z).squeeze()) for z in zs]
-            out["distances_obs_to_plane"] = [float(D[k + 1, 0])
-                                             for k in range(len(model.planes))]
-        except (KeyError, TypeError) as exc:
-            out["distances_note"] = (
-                "multiplane distances not reported (a plane redshift or a cosmology "
-                f"param is sampled, not constant): {type(exc).__name__}")
-
-    # Per-dataset sees selection (resolved Component profile types).
-    resolved = getattr(pm, "_resolved_sees", None)
-    if resolved is not None:
-        out["sees"] = [[type(c.profile).__name__ for c in seen] for seen in resolved]
-
-    # Per-band PSF + noise + grid (the single top-level card fields only describe band 0;
-    # each band has its OWN sim_config/PSF/noise, so report them all to stay honest).
-    datasets = getattr(pm, "datasets", None)
-    if datasets is not None:
-        bands = []
-        for k, d in enumerate(datasets):
-            kern = getattr(d.sim_config, "kernel", None)
-            if kern is None:
-                psf_b = {"present": False}
-            else:
-                kk = np.asarray(kern)
-                psf_b = {"present": True, "shape": list(kk.shape), "sum": float(kk.sum()),
-                         "sha1": hashlib.sha1(np.ascontiguousarray(
-                             kk, dtype=np.float64).tobytes()).hexdigest()[:12]}
-            em = np.asarray(d.error_map)
-            bands.append({
-                "band": k,
-                "sees": out["sees"][k] if out.get("sees") and k < len(out["sees"]) else None,
-                "psf": psf_b,
-                "err_map_median": float(np.median(em)),
-                "grid": {"num_pix": d.sim_config.num_pix,
-                         "delta_pix": d.sim_config.delta_pix},
-            })
-        out["datasets"] = bands
-    return out
+    extras: Dict[str, Any] = {}
+    try:
+        extras["context_hash"] = ctx.hash()
+    except Exception as exc:  # reporting must never break the run
+        extras["context_hash"] = f"unavailable: {type(exc).__name__}: {exc}"
+    return _scene_model_card(ctx.prob_model, extras=extras)
 
 
 def format_model_card(card: Dict[str, Any]) -> str:
     """Human-readable one-screen summary of :func:`model_card`."""
-    bar = "=" * 72
-    lines = [bar, "EFFECTIVE FORWARD MODEL (model card)", bar]
-    psf = card["psf"]
-    if psf.get("present"):
-        lines.append(f"  PSF        : present  shape={psf['shape']} "
-                     f"sum={psf['sum']:.4f} sha1={psf['sha1']}")
-    else:
-        lines.append("  PSF        : ** ABSENT — NO PSF CONVOLUTION **")
-    n = card["noise"]
-    lines.append(f"  Noise      : {n.get('kind')}  ({n.get('prob_model')})")
-    g = card["grid"]
-    lines.append(f"  Grid       : num_pix={g['num_pix']} delta_pix={g['delta_pix']} "
-                 f"supersample={g['supersample']}")
-    lines.append(f"  Precision  : {card['likelihood_precision']}")
-    a = card["linear_amplitudes"]
-    lines.append(f"  Amplitudes : lstsq={a['solved_by_lstsq']} n_basis={a['n_basis']} "
-                 f"physical_reg={a['physical_regularization']}")
-    def _fmt(p):
-        extra = f"(n_max={p['n_max']})" if "n_max" in p else ""
-        return p["type"] + extra
-    lines.append("  Source     : " + ", ".join(_fmt(p) for p in card["profiles"]["source_light"]))
-    lines.append("  Lens mass  : " + ", ".join(p["type"] for p in card["profiles"]["lens_mass"]))
-    lines.append("  Lens light : " + ", ".join(p["type"] for p in card["profiles"]["lens_light"]))
-    # Phase 7b: scene section (only present for scene-backed models; legacy unchanged).
-    s = card.get("scene")
-    if s is not None:
-        lines.append(f"  Trace      : {s.get('trace_mode')}  (amplitude mode "
-                     f"{s.get('amplitude_mode')})")
-        if "distances_obs_to_plane" in s:
-            zr = ", ".join(f"z={z:.3g}->{d:.1f}Mpc"
-                           for z, d in zip(s.get("redshifts", []),
-                                           s["distances_obs_to_plane"]))
-            lines.append(f"  Distances  : {zr}")
-        elif "distances_note" in s:
-            lines.append(f"  Distances  : {s['distances_note']}")
-        if s.get("sees") is not None:
-            lines.append("  Sees       : " + " | ".join(
-                "[" + ", ".join(view) + "]" for view in s["sees"]))
-        if s.get("datasets") and len(s["datasets"]) > 1:
-            lines.append(f"  Bands      : {len(s['datasets'])} datasets")
-            for b in s["datasets"]:
-                p = b["psf"]
-                psf_str = (f"PSF {p['shape']} sha1={p['sha1']}" if p.get("present")
-                           else "** NO PSF **")
-                g = b["grid"]
-                lines.append(
-                    f"    band {b['band']}: {psf_str}  err_med={b['err_map_median']:.3g}  "
-                    f"grid={g['num_pix']}@{g['delta_pix']}")
-    if card["warnings"]:
-        lines.append("-" * 72)
-        for w in card["warnings"]:
-            lines.append("  [!] " + w)
-    lines.append(bar)
-    return "\n".join(lines)
+    from gigalens.jax.utils import format_model_card as _fmt
+
+    return _fmt(card)
 
 
 # ---------------------------------------------------------------------------

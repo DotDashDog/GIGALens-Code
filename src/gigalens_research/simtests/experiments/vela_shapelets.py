@@ -149,7 +149,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light on plane 0; a Shapelets
     source — or a Sérsic source when ``use_shapelets=False`` — on plane 1, lstsq amps)
     + ``Dataset`` + ``ProbModel(mode="lstsq")`` wrapped in a scene-backed
-    ``ModellingSequence`` (``from_scene``). Public signature/return unchanged.
+    ``ModellingSequence``. Public signature/return unchanged.
 
     Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
     the source model complexity), ``use_shapelets`` (default True).
@@ -160,7 +160,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     from gigalens.jax.profiles.light import sersic, shapelets
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
-    from gigalens.jax.scene_prob_model import Dataset, ProbModel
+    from gigalens.jax.scene_prob_model import ImageData, ProbModel
     tfd = tfp.distributions
 
     use_shapelets = bool(kwargs.get("use_shapelets", True))
@@ -196,11 +196,11 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         Plane(deflection_ratio=1.0,
               light=[Component(src_profile, source_p)]),
     ])
-    ds = Dataset(jnp.asarray(system.observed_image), system.sim_config,
+    ds = ImageData(jnp.asarray(system.observed_image), system.sim_config,
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence.from_scene(prob_model)
+    return ModellingSequence(prob_model)
 
 
 # ---------------------------------------------------------------------------

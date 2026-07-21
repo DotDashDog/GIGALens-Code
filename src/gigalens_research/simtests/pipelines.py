@@ -273,7 +273,7 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         import optax
 
         from gigalens.jax.inference import ModellingSequence
-        from gigalens.jax.scene_prob_model import Dataset, ProbModel
+        from gigalens.jax.scene_prob_model import ImageData, ProbModel
         from gigalens_research.inference_utils.params import truth_x_to_scene_params
 
         model = ctx.model_seq.scene_model
@@ -289,12 +289,12 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         # MODE as the inference model (lstsq vs forward). Hardcoding "lstsq" would render a
         # forward (sampled-amplitude) model through the lstsq solver and crash; the
         # bootstrap must mirror the inference mode so gl2 (forward) works too.
-        ds = Dataset(observed_img, sim_config,
+        ds = ImageData(observed_img, sim_config,
                      background_rms=self.system.background_rms,
                      exp_time=self.system.exp_time, sees="all")
         mode = getattr(ctx.prob_model, "mode", "lstsq")
         fixed_prob = ProbModel(fixed_model, ds, mode=mode)
-        fixed_seq = ModellingSequence.from_scene(fixed_prob)
+        fixed_seq = ModellingSequence(fixed_prob)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
         map_samples, lps, _ = fixed_seq.MAP(
