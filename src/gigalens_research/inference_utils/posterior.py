@@ -224,6 +224,7 @@ class Posterior(ABC):
         z = jnp.atleast_2d(jnp.asarray(z))
         return self.ctx.prob_model.bij.forward(z)
 
+    @property
     def is_backward(self) -> bool:
         """True iff the model solves linear amplitudes by least squares (lstsq mode).
 
