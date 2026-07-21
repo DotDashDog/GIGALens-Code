@@ -37,7 +37,6 @@ from .labels import LATEX_LABELS, latex_label
 from .reports import PipelineReport, PosteriorReport
 from .source_plane import (
     plot_caustics,
-    plot_caustics_critical,
     plot_critical_curves,
     plot_image_border,
     plot_source_plane,
@@ -54,7 +53,6 @@ __all__ = [
     "normalized_residual",
     "param_sites",
     "plot_caustics",
-    "plot_caustics_critical",
     "plot_chain_traces",
     "plot_corner",
     "plot_critical_curves",
