@@ -7,6 +7,7 @@ import numpy as np
 import jax.numpy as jnp
 import optax
 import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter
 
 import tensorflow_probability.substrates.jax as tfp
 tfd = tfp.distributions
@@ -45,13 +46,13 @@ class UniformBij(tfd.Uniform):
     def _default_event_space_bijector(self):
         return self._esb
 
-def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1.):
+def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_centroids=False):
     z_lens = 0.5
     z_source1 = 1.0
     z_source2 = 1.5
     z_source3 = 4.0
     z_source4 = 7.0
-    z_source5 = 15.0
+    z_source5 = 13.0
 
     s = theta_E/0.9
 
@@ -154,6 +155,16 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1.):
     print("z_param_names   =", model.z_param_names)
 
     Ie = 15.
+    if use_DESI_cosmo_centroids:
+        if not sample_wa:
+            raise ValueError("DESI Centroids have wa, you need to sample wa")
+        #from DESI DR2 paper (https://arxiv.org/pdf/2503.14738) table V: DESI+CMB+DESY5
+        cos_params = dict(H0=66.74, Om0=0.3191, k=0.0, w0=-0.752, wa=-0.86)
+        print(f"USING DESI Centroids for cosmology truth: {cos_params}")
+    else:
+        cos_params = dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0, wa=0.0)
+        print(f"USING Boring cosmology for cosmology truth: {cos_params}")
+    
     truth_scene = {
         "planes": {
             0: {
@@ -199,8 +210,10 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1.):
                 },
             },
         },
-        "cosmo": dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0, wa=0.0),
+        "cosmo": cos_params,
     }
+
+    
 
 
 
@@ -229,13 +242,15 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1.):
     )
 
 
-    from lenstronomy.Util import image_util
+    # from lenstronomy.Util import image_util
 
 
-    def add_noise(img, exp_time, sigma_bkd):
-        poisson = image_util.add_poisson(img, exp_time=exp_time)
-        bkg = image_util.add_background(img, sigma_bkd=sigma_bkd)
-        return img + poisson + bkg
+    # def add_noise(img, exp_time, sigma_bkd):
+    #     poisson = image_util.add_poisson(img, exp_time=exp_time)
+    #     bkg = image_util.add_background(img, sigma_bkd=sigma_bkd)
+    #     return img + poisson + bkg
+
+    from gigalens.jax.utils import add_noise
 
     sim1 = SceneSimulator(model, sim_config_truth, sees=[source1])
     sim2 = SceneSimulator(model, sim_config_truth, sees=[source2])
@@ -251,12 +266,13 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1.):
     img3 = np.asarray(sim3.simulate(truth_scene))
     img4 = np.asarray(sim4.simulate(truth_scene))
     img5 = np.asarray(sim5.simulate(truth_scene))
-    
-    observed_image1 = add_noise(img1, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image2 = add_noise(img2, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image3 = add_noise(img3, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image4 = add_noise(img4, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image5 = add_noise(img5, exp_time=exp_time, sigma_bkd=background_rms)
+
+    k1, k2, k3, k4, k5 = jax.random.split(jax.random.PRNGKey(0), 5)
+    observed_image1 = add_noise(k1, img1, exp_time=exp_time, sigma_bkd=background_rms)
+    observed_image2 = add_noise(k2, img2, exp_time=exp_time, sigma_bkd=background_rms)
+    observed_image3 = add_noise(k3, img3, exp_time=exp_time, sigma_bkd=background_rms)
+    observed_image4 = add_noise(k4, img4, exp_time=exp_time, sigma_bkd=background_rms)
+    observed_image5 = add_noise(k5, img5, exp_time=exp_time, sigma_bkd=background_rms)
     
     plt.figure(figsize=(16, 3))
     ax = plt.subplot(151)
@@ -484,5 +500,145 @@ def make_prob_grid(observation, cosmo, sample_wa=False, plane_indexes=None, n_gr
     prob = np.exp(log_prob)
     if sample_wa:
         return prob, (np.array(Om0_grid), np.array(w0_grid), np.array(wa_grid))
-    else: 
+    else:
         return prob, (np.array(Om0_grid), np.array(w0_grid))
+
+
+#* CONTOUR-AREA UTILITIES
+#
+# Area enclosed by corner.py's 2-D credible contours. corner does not draw
+# contours of the samples themselves -- it draws contours of a *smoothed 2-D
+# histogram*, at density thresholds chosen so each curve encloses a target
+# fraction of the total weight. "Area inside the contour" is therefore only
+# well defined relative to that grid, so we rebuild corner's grid + levels
+# (corner 2.2.3 machinery, verbatim) and then measure.
+#
+# Validated against the analytic 2-D Gaussian, where
+#     area(p) = -2 ln(1 - p) * pi * sx * sy * sqrt(1 - rho^2):
+# at bins=200, smooth=1 both methods below reproduce every default sigma level
+# to < 0.5%. Caveats worth heeding:
+#   * Binning is NOT free. At corner's default bins=20 the innermost (0.5 sigma)
+#     contour was off by tens of percent (the polygon method collapsed it to
+#     zero). Do not reuse the plotting bin count for areas -- use bins >~ 150,
+#     smooth ~ 1, and trust a value only if it is stable across two binnings.
+#   * Smoothing inflates area at fixed enclosed probability (it flattens the
+#     peak); benign when smooth is small vs the feature size.
+#   * Units are x*y, so a raw area is only comparable across pairs that share
+#     units. For "how tight / how degenerate", divide by the product of the
+#     marginal sigmas (that ratio is the -2ln(1-p)*pi*sqrt(1-rho^2) factor).
+#   * A contour running off `range` is closed at the edge by corner's zero pad,
+#     silently giving the clipped area. Make sure `range` covers the samples.
+
+
+def _corner_grid_2d(x, y, bins=20, range=None, weights=None, smooth=None):
+    """Return (H2, X2, Y2) exactly as corner.hist2d builds them.
+
+    H2 is indexed [x, y] (corner transposes it for plotting) and carries
+    corner's 2-cell zero pad on every side so contours always close.
+    """
+    if range is None:
+        range = [[x.min(), x.max()], [y.min(), y.max()]]
+    H, X, Y = np.histogram2d(
+        x.flatten(), y.flatten(), bins=bins,
+        range=list(map(sorted, range)), weights=weights,
+    )
+    if smooth is not None:
+        H = gaussian_filter(H, smooth)
+
+    X1, Y1 = 0.5 * (X[1:] + X[:-1]), 0.5 * (Y[1:] + Y[:-1])
+    X2 = np.concatenate([X1[0] + np.array([-2, -1]) * np.diff(X1[:2]), X1,
+                         X1[-1] + np.array([1, 2]) * np.diff(X1[-2:])])
+    Y2 = np.concatenate([Y1[0] + np.array([-2, -1]) * np.diff(Y1[:2]), Y1,
+                         Y1[-1] + np.array([1, 2]) * np.diff(Y1[-2:])])
+    H2 = H.min() + np.zeros((H.shape[0] + 4, H.shape[1] + 4))
+    H2[2:-2, 2:-2] = H
+    H2[2:-2, 1] = H[:, 0]
+    H2[2:-2, -2] = H[:, -1]
+    H2[1, 2:-2] = H[0]
+    H2[-2, 2:-2] = H[-1]
+    H2[1, 1] = H[0, 0]
+    H2[1, -2] = H[0, -1]
+    H2[-2, 1] = H[-1, 0]
+    H2[-2, -2] = H[-1, -1]
+    return H2, X2, Y2
+
+
+def _corner_levels(H, levels=None):
+    """Density thresholds V for the requested enclosed-probability levels.
+
+    Returns V *aligned with* `levels` (descending in density: a larger enclosed
+    probability means a lower threshold). NOTE the gotcha this guards against --
+    corner internally does `V.sort()` before contour(), which leaves V ascending
+    while `levels` is ascending in enclosed probability, i.e. running the
+    opposite way. Pairing them naively makes the 2-sigma contour come out
+    "smaller" than the 0.5-sigma one.
+    """
+    if levels is None:  # corner's default: 0.5, 1, 1.5, 2 sigma
+        levels = 1.0 - np.exp(-0.5 * np.arange(0.5, 2.1, 0.5) ** 2)
+    levels = np.asarray(levels)
+    Hflat = H.flatten()
+    Hflat = Hflat[np.argsort(Hflat)[::-1]]
+    sm = np.cumsum(Hflat)
+    sm /= sm[-1]
+    V = np.empty(len(levels))
+    for i, v0 in enumerate(levels):
+        try:
+            V[i] = Hflat[sm <= v0][-1]
+        except IndexError:
+            V[i] = Hflat[0]
+    return levels, np.sort(V)[::-1]
+
+
+def _area_by_cells(H2, X2, Y2, V):
+    """Area of {H >= V} by summing cells. Free handling of holes,
+    multimodality, and contours clipped by `range`."""
+    cell = np.abs(np.diff(X2[:2])[0] * np.diff(Y2[:2])[0])
+    return np.array([(H2 >= v).sum() * cell for v in V])
+
+
+def _area_by_polygons(H2, X2, Y2, V):
+    """Area inside the drawn curves via signed shoelace on the polygons
+    matplotlib actually fills. Holes come out negative under contourf's
+    orientation convention, so they subtract correctly."""
+    fig, ax = plt.subplots()
+    out = []
+    for v in V:
+        cs = ax.contourf(X2, Y2, H2.T, levels=[v, H2.max() + 1.0])
+        a = 0.0
+        for path in cs.get_paths():
+            for poly in path.to_polygons(closed_only=True):
+                px, py = poly[:, 0], poly[:, 1]
+                a += 0.5 * np.sum(px * np.roll(py, -1) - np.roll(px, -1) * py)
+        out.append(abs(a))
+    plt.close(fig)
+    return np.array(out)
+
+
+def corner_contour_areas(x, y, bins=200, range=None, weights=None, smooth=1.0,
+                         levels=None, method="cells"):
+    """Area enclosed by each of corner's 2-D credible contours for (x, y).
+
+    Pass the SAME bins/range/weights/smooth you gave corner.corner to measure
+    the areas of the contours it drew -- but see the module note above: for a
+    trustworthy area use bins >~ 150 rather than corner's plotting default.
+
+    Parameters
+    ----------
+    x, y : 1-D arrays of samples.
+    bins, range, weights, smooth : as in corner.hist2d.
+    levels : enclosed-probability levels; default = corner's 0.5/1/1.5/2 sigma.
+    method : "cells" (sum {H >= V}; handles holes/clipping; the number to
+        quote) or "polygons" (shoelace on the drawn curves; a cross-check).
+        The two should agree.
+
+    Returns
+    -------
+    (levels, V, areas) : levels aligned with the density thresholds V and the
+        area enclosed by each contour, all descending in V. Use both methods
+        and confirm they match, and that areas are stable across two `bins`.
+    """
+    H2, X2, Y2 = _corner_grid_2d(x, y, bins=bins, range=range,
+                                 weights=weights, smooth=smooth)
+    lv, V = _corner_levels(H2, levels)
+    f = _area_by_cells if method == "cells" else _area_by_polygons
+    return lv, V, f(H2, X2, Y2, V)
