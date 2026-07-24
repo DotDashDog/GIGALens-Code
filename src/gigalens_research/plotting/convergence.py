@@ -56,6 +56,57 @@ def _z_labels(posterior) -> List[str]:
     return z_column_labels(names)
 
 
+def _worst_indices(values: np.ndarray, idx: np.ndarray, n: int, *,
+                   largest: bool) -> np.ndarray:
+    """The ``n`` entries of ``idx`` with the largest / smallest ``values[idx]``.
+
+    NaN always sorts to the worst end (a non-finite diagnostic is a failure, not
+    a pass), so ``largest=True`` maps NaN→+inf and ``largest=False`` maps
+    NaN→−inf before ranking.
+    """
+    v = np.asarray(values, dtype=float)[idx]
+    key = np.where(np.isnan(v), (np.inf if largest else -np.inf), v)
+    order = np.argsort(-key if largest else key)
+    return idx[order][:max(1, n)]
+
+
+def _annotate_worst(ax, posterior, n: int, params, *, kind: str) -> None:
+    """Title + a small corner table naming the ``n`` worst z-columns.
+
+    ``kind='rhat'`` ranks by largest R-hat; ``kind='ess'`` by smallest bulk-ESS
+    and shows each column's ``bulk/tail`` ESS. Values come from the labeled
+    full-chain report :attr:`SamplerPosterior.convergence`, so every number is
+    tied to the parameter it belongs to (that is the whole point of this panel).
+    ``params`` (if given) restricts the ranking to the shown z-columns.
+    """
+    report = posterior.convergence
+    labels = _z_labels(posterior)
+    idx = (np.arange(len(labels)) if params is None
+           else np.asarray(list(params), dtype=int))
+    if kind == "rhat":
+        rhat = np.asarray(report.rhat, dtype=float)
+        order = _worst_indices(rhat, idx, n, largest=True)
+        ax.set_title(f"Running R-hat — worst: {labels[order[0]]} "
+                     f"({rhat[order[0]]:.3f})")
+        body = "\n".join(f"{labels[i]}: {rhat[i]:.3f}" for i in order)
+        ax.text(0.97, 0.97, body, transform=ax.transAxes, fontsize=7,
+                va="top", ha="right", family="monospace",
+                bbox=dict(boxstyle="round", fc="white", ec="0.7", alpha=0.85))
+    elif kind == "ess":
+        bulk = np.asarray(report.ess_bulk, dtype=float)
+        tail = np.asarray(report.ess_tail, dtype=float)
+        order = _worst_indices(bulk, idx, n, largest=False)
+        ax.set_title(f"Running ESS — worst: {labels[order[0]]} "
+                     f"(bulk {bulk[order[0]]:.0f})")
+        body = "worst ESS (bulk/tail):\n" + "\n".join(
+            f"{labels[i]}: {bulk[i]:.0f}/{tail[i]:.0f}" for i in order)
+        ax.text(0.03, 0.97, body, transform=ax.transAxes, fontsize=7,
+                va="top", ha="left", family="monospace",
+                bbox=dict(boxstyle="round", fc="white", ec="0.7", alpha=0.85))
+    else:  # pragma: no cover - guarded by callers
+        raise ValueError(f"unknown annotate kind {kind!r}")
+
+
 def _samples_x_chains(
     posterior,
 ) -> Tuple[Optional[List[ParamSite]], Optional[np.ndarray]]:
@@ -90,6 +141,7 @@ def plot_running_rhat(
     schedule: Optional[Sequence[int]] = None,
     params: Optional[Sequence[int]] = None,
     aggregate: Optional[str] = None,
+    annotate_worst: Optional[int] = None,
     threshold: float = 1.01,
     log_x: bool = True,
 ) -> None:
@@ -112,6 +164,12 @@ def plot_running_rhat(
       LaTeX labels are used in the legend if known.
     - ``'max'``: only the worst R-hat across parameters at each step.
     - ``'mean'``: the mean across parameters.
+
+    ``annotate_worst`` (an int ``n``): overwrite the title with the single
+    worst-R-hat parameter and draw a small corner table of the ``n`` worst
+    z-columns (name → final R-hat), taken from the labeled full-chain report.
+    This is what lets a ``max`` aggregate curve still say *which* parameter is
+    the offender. ``None`` (default) leaves the plain title.
     """
     schedule_arr, rhat = posterior.running_rhat(schedule=schedule)
     if params is not None:
@@ -149,6 +207,8 @@ def plot_running_rhat(
     ax.set_xlabel("# samples used")
     ax.set_ylabel(r"$\hat{R} - 1$")
     ax.set_title("Running R-hat")
+    if annotate_worst is not None:
+        _annotate_worst(ax, posterior, annotate_worst, params, kind="rhat")
 
 
 def plot_running_ess(
@@ -158,6 +218,7 @@ def plot_running_ess(
     schedule: Optional[Sequence[int]] = None,
     params: Optional[Sequence[int]] = None,
     aggregate: Optional[str] = "min",
+    annotate_worst: Optional[int] = None,
     log_x: bool = True,
     log_y: bool = True,
 ) -> None:
@@ -169,6 +230,10 @@ def plot_running_ess(
 
     As in :func:`plot_running_rhat`, ``params`` selects **sampler (z) columns** by
     index — not x-space / corner-plot columns.
+
+    ``annotate_worst`` (an int ``n``): overwrite the title with the single
+    lowest-ESS parameter and draw a corner table of the ``n`` worst z-columns
+    (name → ``bulk/tail`` ESS), from the labeled full-chain report.
     """
     schedule_arr, ess = posterior.running_ess(schedule=schedule)
     if params is not None:
@@ -196,6 +261,8 @@ def plot_running_ess(
     ax.set_xlabel("# samples used")
     ax.set_ylabel("ESS")
     ax.set_title("Running ESS")
+    if annotate_worst is not None:
+        _annotate_worst(ax, posterior, annotate_worst, params, kind="ess")
 
 
 def plot_chain_traces(
@@ -203,47 +270,61 @@ def plot_chain_traces(
     posterior,
     *,
     param: int = 0,
+    z_param: Optional[int] = None,
     max_chains: int = 16,
     alpha: float = 0.5,
 ) -> None:
     """Plot the per-chain trace for a single parameter (by index).
 
-    Traces are shown in **physical (x) space** (bijector applied), so the y-axis
-    matches the corner plot. ``param`` indexes the free parameters in
-    :func:`~gigalens_research.param_index.param_sites` order, which *is* the corner
-    plot's column order — index ``i`` is the same parameter in both figures. It is
-    not the sampler's z-column order that :func:`plot_running_rhat` and
-    :func:`plot_running_ess` index with ``params=``; the bijector reorders.
+    Default (``z_param=None``): traces are shown in **physical (x) space**
+    (bijector applied), so the y-axis matches the corner plot. ``param`` indexes
+    the free parameters in :func:`~gigalens_research.param_index.param_sites`
+    order, which *is* the corner plot's column order — index ``i`` is the same
+    parameter in both figures. It is not the sampler's z-column order that
+    :func:`plot_running_rhat` and :func:`plot_running_ess` index with
+    ``params=``; the bijector reorders. Falls back to raw ``z``-space (with a
+    note in the title and generic ``z[i]`` labels) if the bijector is unavailable.
 
-    Falls back to raw ``z``-space (with a note in the title and generic ``z[i]``
-    labels) if the bijector is unavailable.
+    ``z_param`` (a z-column index): trace that **sampler (z) column** directly,
+    labelled from ``prob_model.z_param_names``. This is the space R-hat/ESS are
+    computed in, so it is the right view for the parameter those diagnostics
+    flag as worst — and it indexes the same way as ``plot_running_*``'s
+    ``params=``. Overrides ``param``.
 
     Caps at ``max_chains`` lines for readability.
     """
-    sites, samples_x = _samples_x_chains(posterior)
-    if samples_x is not None:
-        samples = samples_x
-        labels = site_labels(sites)
-        space, space_note = "x", ""
-    else:
-        # Raw sampler columns are a different space in a different order; label them
-        # generically and say so rather than pass them off as physical.
+    if z_param is not None:
+        # z-space: index and labels line up with the R-hat/ESS panels.
         samples = posterior.samples_z
-        labels = [f"z[{i}]" for i in range(samples.shape[-1])]
-        space, space_note = "z", " [z-space]"
+        labels = _z_labels(posterior)
+        space, space_note, idx = "z", " [z-space]", z_param
+    else:
+        sites, samples_x = _samples_x_chains(posterior)
+        if samples_x is not None:
+            samples = samples_x
+            labels = site_labels(sites)
+            space, space_note = "x", ""
+        else:
+            # Raw sampler columns are a different space in a different order; label
+            # them generically and say so rather than pass them off as physical.
+            samples = posterior.samples_z
+            labels = [f"z[{i}]" for i in range(samples.shape[-1])]
+            space, space_note = "z", " [z-space]"
+        idx = param
 
-    if not 0 <= param < len(labels):
+    if not 0 <= idx < len(labels):
         raise IndexError(
-            f"param={param} is out of range: this trace's {space} space has "
-            f"{len(labels)} parameters (0..{len(labels) - 1})."
+            f"{'z_param' if z_param is not None else 'param'}={idx} is out of "
+            f"range: this trace's {space} space has {len(labels)} parameters "
+            f"(0..{len(labels) - 1})."
         )
 
     n_chains = samples.shape[0]
     chains_to_show = list(range(min(n_chains, max_chains)))
     for c in chains_to_show:
-        ax.plot(samples[c, :, param], alpha=alpha, linewidth=0.8)
+        ax.plot(samples[c, :, idx], alpha=alpha, linewidth=0.8)
     ax.set_xlabel("step")
-    ax.set_ylabel(labels[param])
+    ax.set_ylabel(labels[idx])
     ax.set_title(f"Chain traces ({len(chains_to_show)}/{n_chains} chains){space_note}")
 
 

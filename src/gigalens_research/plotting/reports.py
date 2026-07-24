@@ -196,18 +196,39 @@ class PosteriorReport:
 
     # -- convergence panel ---------------------------------------------------
 
-    def convergence_panel(self, *, trace_param: int = 0) -> Figure:
-        """1×3 panel: chain traces (for one parameter), running R-hat,
-        running ESS. Only applicable to :class:`SamplerPosterior`."""
+    def convergence_panel(
+        self, *, trace_param: Optional[int] = None, n_worst: int = 3,
+    ) -> Figure:
+        """1×3 panel: chain traces, running R-hat, running ESS. Only applicable
+        to :class:`SamplerPosterior`.
+
+        The R-hat and ESS panels are annotated with the ``n_worst`` worst
+        parameters — by R-hat and by bulk-ESS respectively — using the labeled
+        :attr:`~SamplerPosterior.convergence` report, so each panel names the
+        parameter driving it. The trace panel defaults to the single
+        worst-R-hat **z-column** (the space those diagnostics live in).
+
+        ``trace_param`` overrides the traced parameter with an explicit
+        **x-space** (corner-plot) index instead; ``None`` keeps the
+        worst-R-hat default.
+        """
         if not hasattr(self.posterior, "samples_z"):
             raise TypeError(
                 f"convergence_panel needs a SamplerPosterior; got "
                 f"{type(self.posterior).__name__}."
             )
         fig, axs = plt.subplots(1, 3, figsize=(13, 3.5))
-        plot_chain_traces(axs[0], self.posterior, param=trace_param)
-        plot_running_rhat(axs[1], self.posterior, aggregate="max")
-        plot_running_ess(axs[2], self.posterior, aggregate="min")
+        if trace_param is None:
+            # nanargmax would raise on an all-NaN report; map NaN->-inf first.
+            rhat = np.asarray(self.posterior.convergence.rhat, dtype=float)
+            worst_z = int(np.argmax(np.where(np.isnan(rhat), -np.inf, rhat)))
+            plot_chain_traces(axs[0], self.posterior, z_param=worst_z)
+        else:
+            plot_chain_traces(axs[0], self.posterior, param=trace_param)
+        plot_running_rhat(axs[1], self.posterior, aggregate="max",
+                          annotate_worst=n_worst)
+        plot_running_ess(axs[2], self.posterior, aggregate="min",
+                         annotate_worst=n_worst)
         return self._finalize(fig)
 
     # -- source-plane panel --------------------------------------------------
