@@ -352,10 +352,17 @@ post.flat_z           # chain-flattened + subsampled: (N, n_params)
 post.flat_x           # same in physical space: the scene's flat
                       # {unique_key: (N,) array} dict
 
-# Convergence diagnostics. These are per *sampler (z) column*, so they are
-# arrays, not path-keyed dicts; prob_model.z_param_names is the column→name map.
+# Convergence diagnostics. Computed upstream by
+# gigalens.jax.analysis.diagnose_convergence and returned as a labeled
+# ConvergenceReport keyed by prob_model.z_param_names (the column→name map):
+post.convergence      # ConvergenceReport: .rhat/.ess_bulk/.ess_tail arrays,
+                      # .names, .per_param, .worst(n), .max_rhat,
+                      # .min_ess_bulk/.min_ess_tail, .summary()
+post.convergence.worst(3)          # 3 worst-R-hat ParamDiagnostics (named)
+# Convenience arrays (per sampler z column, z-column order):
 post.rhat             # rank-normalized split-R-hat, shape (n_params,)
 post.ess              # rank-normalized bulk-ESS, shape (n_params,)
+post.ess_tail         # rank-normalized tail-ESS, shape (n_params,)
 post.running_rhat()   # (schedule, rhat) — rhat is (n_windows, n_params)
 post.running_ess()    # (schedule, ess)
 

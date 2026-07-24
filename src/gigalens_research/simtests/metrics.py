@@ -12,6 +12,7 @@ Registered metrics
 ------------------
 - ``max_rhat`` — maximum Gelman–Rubin R-hat across all sampled parameters.
 - ``min_ess`` — minimum ESS across all sampled parameters.
+- ``worst_rhat_param`` — name of the parameter carrying that maximum R-hat.
 - ``nan_rate`` — fraction of non-finite sample entries.
 - ``all_zscores`` — asymmetric z-scores for *all* shared parameters.
 - ``mass_zscores`` — z-scores for mass parameters only.
@@ -48,6 +49,26 @@ def min_ess(posterior: Any, system: Any) -> float:
         return float("nan")
     es = np.asarray(posterior.ess)
     return float(np.nanmin(es)) if np.isfinite(es).any() else float("nan")
+
+
+@register_metric("worst_rhat_param")
+def worst_rhat_param(posterior: Any, system: Any) -> Optional[str]:
+    """Name of the parameter with the largest R-hat — the :func:`max_rhat`
+    offender, so a campaign CSV can point at *which* z-column drove the worst
+    R-hat in each run.
+
+    Uses the labeled convergence report (``posterior.convergence``); returns the
+    z-column name, or ``None`` if diagnostics are unavailable.
+    """
+    report = getattr(posterior, "convergence", None)
+    if report is None:
+        return None
+    try:
+        worst = report.worst(1)
+    except Exception as exc:
+        warnings.warn(f"[metrics.worst_rhat_param] failed: {exc}", stacklevel=2)
+        return None
+    return worst[0].name if worst else None
 
 
 @register_metric("nan_rate")

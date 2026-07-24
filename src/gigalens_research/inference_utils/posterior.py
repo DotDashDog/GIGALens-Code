@@ -22,6 +22,7 @@ loading saved runs without an active pipeline.
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Any, List, Optional, Tuple
@@ -39,46 +40,15 @@ DEFAULT_SUBSAMPLE_N = 5000
 
 
 # ---------------------------------------------------------------------------
-# Rank-normalized split convergence diagnostics (Vehtari et al. 2021,
-# "Rank-Normalization, Folding, and Localization: An Improved R̂").
-#
-# Why this and not plain Gelman-Rubin / tfp.effective_sample_size: the sampler
-# works in unconstrained (z) space, where a prior bound induces a z->inf
-# bijector stretch -> heavy-tailed / non-normal marginals. The classic PSRF
-# badly over-reports R̂ there (we measured z-PSRF ~12 where the *physical*
-# posterior is essentially one mode; rank-R̂ ~1.7). Rank normalization is
-# invariant to any monotone reparameterization, so it neither invents nor
-# hides convergence because of the prior's parameterization.
-#
-# We defer to ArviZ's reference implementation rather than re-derive the
-# rank/fold/Geyer machinery here (a hand-rolled ESS is an easy way to fool
-# yourself). ArviZ is part of the canonical env (docs/env_setup.md); runtime
-# deps are env-managed, not declared in pyproject.
+# Convergence diagnostics live upstream now: gigalens.jax.analysis.
+# diagnose_convergence is the ONE implementation of the Vehtari et al. 2021
+# rank-normalized split-R̂ and bulk/tail ESS, and — crucially — it returns a
+# ConvergenceReport keyed by prob_model.z_param_names (built by zipping names
+# against sample columns, never a dict's key order: the "C-8" mislabel). We no
+# longer re-derive the rank/fold/Geyer machinery here; SamplerPosterior below
+# just delegates to it (see the `convergence` property). ArviZ stays an
+# env-managed runtime dep, imported lazily inside diagnose_convergence.
 # ---------------------------------------------------------------------------
-
-
-def _require_arviz():
-    try:
-        import arviz as az
-    except ImportError as e:  # pragma: no cover
-        raise ImportError(
-            "Rank-normalized R̂/ESS diagnostics require ArviZ. It is part of the "
-            "canonical gigalens env (docs/env_setup.md); install with `pip install arviz`."
-        ) from e
-    return az
-
-
-def _az_diag(sz: np.ndarray, fn) -> np.ndarray:
-    """Apply an ArviZ diagnostic ``fn`` (e.g. ``az.rhat``) per parameter.
-
-    ArviZ's array API only takes a uni-dimensional ``(chain, draw)`` variable,
-    so we wrap our canonical ``(chains, steps, params)`` array as a dataset
-    (chain, draw, param) and read the per-param result back.
-    """
-    az = _require_arviz()
-    ds = az.convert_to_dataset(np.asarray(sz))
-    var = list(ds.data_vars)[0]
-    return np.atleast_1d(np.asarray(fn(ds)[var].values))
 
 
 def _n_basis(light_model) -> int:
@@ -596,58 +566,83 @@ class SamplerPosterior(Posterior):
     # -- convergence diagnostics --------------------------------------------
 
     @cached_property
+    def convergence(self):
+        """Labeled convergence report for the full chains.
+
+        A :class:`gigalens.jax.analysis.ConvergenceReport`: rank-normalized
+        split-R-hat and bulk/tail ESS, per parameter, **keyed by z-column
+        name**. Delegates to :func:`gigalens.jax.analysis.diagnose_convergence`
+        (the one implementation), which zips ``prob_model.z_param_names``
+        against the sample columns so each statistic carries the parameter it
+        belongs to. Useful accessors: ``.rhat`` / ``.ess_bulk`` / ``.ess_tail``
+        (arrays in z-column order), ``.names``, ``.per_param``, ``.worst(n)``,
+        ``.max_rhat``, ``.min_ess_bulk`` / ``.min_ess_tail``, ``.summary()``.
+        """
+        from gigalens.jax.analysis import diagnose_convergence
+        return diagnose_convergence(self._samples_z, self.ctx.prob_model)
+
+    @cached_property
     def rhat(self) -> np.ndarray:
-        """Rank-normalized split-R-hat per parameter (shape ``(n_params,)``)."""
-        return self._rhat(self._samples_z)
+        """Rank-normalized split-R-hat per parameter, z-column order
+        (shape ``(n_params,)``). See :attr:`convergence` for the labeled report
+        and the worst-parameter accessors."""
+        return np.asarray(self.convergence.rhat)
 
     @cached_property
     def ess(self) -> np.ndarray:
-        """Rank-normalized bulk-ESS per parameter (shape ``(n_params,)``)."""
-        return self._ess(self._samples_z)
+        """Rank-normalized bulk-ESS per parameter, z-column order
+        (shape ``(n_params,)``). See :attr:`ess_tail` for tail-ESS and
+        :attr:`convergence` for labels."""
+        return np.asarray(self.convergence.ess_bulk)
+
+    @cached_property
+    def ess_tail(self) -> np.ndarray:
+        """Rank-normalized tail-ESS per parameter, z-column order
+        (shape ``(n_params,)``) — the ESS that catches heavy-tail mixing
+        failures bulk-ESS can miss."""
+        return np.asarray(self.convergence.ess_tail)
 
     def running_rhat(self, *, schedule=None) -> Tuple[np.ndarray, np.ndarray]:
-        """R-hat computed on a prefix of the chains, swept across ``schedule``.
+        """Split-R-hat over a growing prefix of the chains, swept over ``schedule``.
 
-        Returns ``(schedule, rhat)`` where ``rhat[i]`` is the R-hat from
-        ``samples_z[:, :schedule[i], :]``.
+        Returns ``(schedule, rhat)`` where ``rhat[i]`` is the per-parameter
+        R-hat (z-column order) from ``samples_z[:, :schedule[i], :]``.
 
         With ``schedule=None`` (default), uses a log-spaced grid of ~20
         window-ends from ~n_steps/50 up to n_steps.
         """
         schedule = self._default_schedule() if schedule is None else np.asarray(schedule)
-        rh = np.stack([self._rhat(self._samples_z[:, :int(N), :]) for N in schedule])
+        rh = np.stack([self._diagnose_prefix(int(N)).rhat for N in schedule])
         return schedule, rh
 
     def running_ess(self, *, schedule=None) -> Tuple[np.ndarray, np.ndarray]:
-        """ESS computed on a prefix of the chains, swept across ``schedule``."""
+        """Bulk-ESS over a growing prefix of the chains, swept over ``schedule``."""
         schedule = self._default_schedule() if schedule is None else np.asarray(schedule)
-        es = np.stack([self._ess(self._samples_z[:, :int(N), :]) for N in schedule])
+        es = np.stack([self._diagnose_prefix(int(N)).ess_bulk for N in schedule])
         return schedule, es
+
+    def _diagnose_prefix(self, n: int):
+        """``diagnose_convergence`` on the first ``n`` steps of every chain.
+
+        A short prefix can have more chains than steps — exactly the
+        ``(n_steps, n_chains, ...)`` axis-swap signature that both
+        ``diagnose_convergence`` and ArviZ warn about. Here it is a legitimate
+        narrow window (``_samples_z`` is always chains-first), so both of those
+        false-alarm warnings are silenced for the sweep.
+        """
+        from gigalens.jax.analysis import diagnose_convergence
+        names = self.ctx.prob_model.z_param_names
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message=r"diagnose_convergence:.*chains >")
+            warnings.filterwarnings(
+                "ignore", message=r"Found chain dimension to be longer")
+            return diagnose_convergence(
+                self._samples_z[:, :n, :], z_param_names=names)
 
     def _default_schedule(self) -> np.ndarray:
         lo = max(50, self.n_steps // 50)
         return np.unique(np.geomspace(lo, self.n_steps, 20).astype(int))
-
-    @staticmethod
-    def _rhat(sz: np.ndarray) -> np.ndarray:
-        """Rank-normalized split-R-hat (Vehtari et al. 2021), per parameter.
-
-        Reported as ``max(rank, folded)``: the *rank* term catches location
-        non-convergence; the *folded* term (ranks of ``|theta - median|``)
-        catches scale/variance non-convergence. ArviZ expects ``(chain, draw,
-        ...)``, which is our canonical layout, so the trailing param axis maps
-        straight through. Standard (sqrt-form) R̂ -> thresholds 1.01/1.1 apply.
-        """
-        az = _require_arviz()
-        rank = _az_diag(sz, lambda ds: az.rhat(ds, method="rank"))
-        folded = _az_diag(sz, lambda ds: az.rhat(ds, method="folded"))
-        return np.maximum(rank, folded)
-
-    @staticmethod
-    def _ess(sz: np.ndarray) -> np.ndarray:
-        """Rank-normalized bulk-ESS (Vehtari et al. 2021), per parameter."""
-        az = _require_arviz()
-        return _az_diag(sz, lambda ds: az.ess(ds, method="bulk"))
 
     # -- representative point ----------------------------------------------
 
