@@ -1,0 +1,119 @@
+# =============================================================================
+# hundred_point_sources_v2_triple — SBC calibration campaign, v2 (triple arm)
+# =============================================================================
+# v2 of the point-source SBC campaign (see campaign.yaml for the full design
+# rationale and the three SBC validity notes — all unchanged). One of THREE v2
+# arms differing only in image multiplicity (quad / triple / double); shared
+# v2 changes vs v1 (Linus, 2026-07-25):
+#   - corrected loss function: fixed MAP best-step selection (C-6, gigalens
+#     PR #80) + source-plane anchor src_anchor_sigma = sigma_ast = 0.004"
+#     (P-4; certifying its inertness IS one of v2's jobs)
+#   - H0 prior widened to Uniform(20, 100) km/s/Mpc (was 60–80)
+#   - fractional flux uncertainty tightened to 0.5% (was 5%)
+#   - MCLMC at the intensive budget (15000 burn-in / 30000 results, 3x v1) —
+#     the P-5 reruns showed the borderline class needs it
+# Fresh dataset seed (4) — truths deliberately NOT shared with v1.
+
+name: hundred_point_sources_v2_triple
+seed: 4
+output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v2_triple
+
+plugins:
+  - gigalens_research.simtests.experiments.lenstronomy_point_source
+
+# =============================================================================
+# DATASET — physics knobs (consumed by the lenstronomy generator)
+# =============================================================================
+dataset:
+  generator: lenstronomy_point_source
+  n_systems: 100
+
+  # --- truth draw (unchanged from v1) ---------------------------------------
+  truth_prior: inference        # strict SBC: truths from the inference prior
+  source_prior_scale: 0.25      # arcsec
+  amp_median: 2.0
+  amp_sigma_log: 0.5
+
+  # --- cosmology ------------------------------------------------------------
+  # v2: H0 prior widened to match observationally agnostic bounds.
+  H0_min: 20.0                  # km/s/Mpc (v1: 60)
+  H0_max: 100.0                 # km/s/Mpc (v1: 80)
+  Om0: 0.3
+  z_lens: 0.5
+  z_source: 1.5
+
+  # --- image selection ------------------------------------------------------
+  multiplicity: triple
+  max_redraws: 2000             # measured triple (naked-cusp) acceptance ~0.10 (probe) -> ample
+  min_image_sep: 0.05           # arcsec
+
+  # --- observational noise (also the likelihood's assumed noise, verbatim) ---
+  sigma_ast: 0.004              # arcsec per image coordinate
+  frac_flux: 0.005              # v2: 0.5% fractional flux error (v1: 5%)
+  sigma_td: 1.0                 # days, per non-reference image
+
+  # --- lenstronomy solver (truth image finding) ------------------------------
+  lt_min_distance: 0.01
+  lt_search_window: 6.0
+  lt_precision_limit: 1.0e-10
+
+# =============================================================================
+# INFERENCE — model + algorithm knobs
+# =============================================================================
+inference:
+  builder: epl_shear_point_source_obs
+  pipeline: map_svi_mclmc
+  pipeline_kwargs:
+    fit_flux: true
+    fit_td: true
+
+    newton_steps: 10
+    trust_region_frac: 0.4
+    src_parameterization: absolute
+    priors: from_dataset
+    src_anchor_sigma: 0.004     # v2: anchor ON (= sigma_ast; P-4 scale)
+
+    # --- MAP (Adam over prior draws; C-6 fixed selection in gigalens) -------
+    map_n_samples: 1000
+    map_num_steps: 1500
+    map_lr: 3.0e-3
+    map_clip_norm: 1.0
+
+    # --- SVI (full-rank Gaussian in z) --------------------------------------
+    svi_n_vi: 500
+    svi_num_steps: 1500
+    svi_lr: 1.0e-4
+    svi_init_scale: 1.0e-3
+
+    # --- MCLMC (unadjusted; tuned) — v2: intensive budget (3x v1) -----------
+    n_chains: 8
+    num_burnin_steps: 15000
+    num_results: 30000
+    frac_tune1: 0.2
+    frac_tune2: 0.6
+    frac_tune3: 0.2
+    desired_energy_variance: 5.0e-4
+
+    # --- SBC rank computation + convergence gate ----------------------------
+    sbc_rank_draws: 1024
+    sbc_rhat_max: 1.05
+    sbc_min_ess: 100
+    sbc_solver_unconverged_max: 0.05
+
+sweep:
+  - {}
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - percent_error
+  - sbc_ranks
+  - loglik_rank
+  - ps_solver_health
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

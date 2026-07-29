@@ -178,15 +178,20 @@ def _run_one(
     # Load system
     system = System.load(dataset_dir, system_id)
 
-    # Build inference context
+    # Build inference context. The builder receives the MERGED kwargs
+    # (pipeline_kwargs overlaid by the sweep point), same as the pipeline
+    # builder, so model-level knobs (channel flags, solver settings, priors)
+    # can live in ``inference.pipeline_kwargs`` and still be swept. Builders
+    # take ``**kwargs`` and ignore what they don't consume; the run cache is
+    # unaffected because it keys on the built context's content hash.
+    effective_kwargs = campaign_spec.effective_pipeline_kwargs(sweep_point)
     inference_fn = get_inference_builder(campaign_spec.inference.builder)
-    model_seq = inference_fn(system, **sweep_point)
+    model_seq = inference_fn(system, **effective_kwargs)
     ctx = InferenceContext.from_modelling_sequence(model_seq)
     ctx_hash = ctx.hash()
 
     # Build pipeline stages (pipeline_kwargs merged with sweep_point)
     pipeline_fn = get_pipeline_builder(campaign_spec.inference.pipeline)
-    effective_kwargs = campaign_spec.effective_pipeline_kwargs(sweep_point)
     stages = pipeline_fn(system, **effective_kwargs)
 
     # Assemble and run

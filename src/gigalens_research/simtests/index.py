@@ -234,8 +234,19 @@ def _flatten_row(record: Dict[str, Any]) -> Dict[str, Any]:
     metrics = record.get("metrics") or {}
     for metric_name, value in metrics.items():
         if isinstance(value, dict):
-            for param, score in value.items():
-                flat[f"{param}_z"] = _safe_float(score)
+            # Bare ``<param>_z`` columns are reserved for z-score metrics.
+            # Other dict metrics (percent_error, sbc_ranks, solver health, ...)
+            # get namespaced ``<metric>.<key>`` columns — previously they ALL
+            # wrote ``<param>_z``, so whichever dict metric ran last silently
+            # overwrote the z-scores in the index (and in every figure built
+            # from it).
+            if metric_name.endswith("zscores"):
+                for param, score in value.items():
+                    flat[f"{param}_z"] = _safe_float(score)
+            else:
+                for param, score in value.items():
+                    if isinstance(score, (int, float, np.integer, np.floating)):
+                        flat[f"{metric_name}.{param}"] = _safe_float(score)
             flat[f"{metric_name}_json"] = json.dumps(
                 {k: _safe_float(v) for k, v in value.items()}, default=str
             )

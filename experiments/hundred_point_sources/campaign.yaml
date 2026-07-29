@@ -1,0 +1,205 @@
+# =============================================================================
+# hundred_point_sources_v1 — SBC calibration campaign for point-source inference
+# =============================================================================
+# 100 lenstronomy-simulated EPL+Shear lensed point sources (positions + fluxes +
+# time delays, per-system H0), fit with the new PointSourceObsData /
+# PointSourceObsLikelihoodTerm pipeline (MAP -> SVI -> MCLMC), analyzed with
+# simulation-based calibration (SBC) rank statistics on converged posteriors.
+#
+# STATUS: requires the new plugin module listed under `plugins:` below. New
+# registry entries to implement there (nothing else in the framework changes,
+# except one line in run.py to pass effective pipeline_kwargs to the builder):
+#   generator          "lenstronomy_point_source"
+#   inference builder  "epl_shear_point_source_obs"
+#   pipeline           "map_svi_mclmc"
+#   metrics            "sbc_ranks", "loglik_rank", "ps_solver_health"
+#   campaign metric    "sbc_uniformity" (ECDF + envelope plots, gated on R-hat/ESS)
+#
+# SBC VALIDITY NOTES (the three places calibration can silently break):
+#   1. PRIOR MATCHING. SBC ranks are uniform ONLY if truths are drawn from the
+#      inference prior. The GL2 hundred-sersic campaign draws truth from a
+#      TIGHTER simulation prior than it fits with — fine for z-scores, fatal
+#      for strict SBC. Default here is truth_prior: inference (the GL2
+#      inference-prior mass block). Set truth_prior: simulation only for
+#      GL2-style robustness runs scored with z-scores/coverage, not ranks.
+#   2. SOURCE PARAMETERIZATION. Offset-mode (dx/dy about the delensed centroid)
+#      has a data-dependent implied prior on the absolute source position, so
+#      it cannot exactly match any generator draw. The SBC leg therefore
+#      defaults to src_parameterization: absolute with the SAME Normal(0,
+#      source_prior_scale) on center_x/center_y as the generator.
+#   3. SELECTION. Truths are redrawn until the system meets `multiplicity`.
+#      Selection on the OBSERVED image count is (approximately) benign — the
+#      likelihood conditions on the same data — but it does truncate the prior
+#      to the quad region while the fitted prior is untruncated, so a small
+#      residual rank distortion is possible. The generator records the redraw
+#      rate; `multiplicity: any2plus` removes the effect (at the cost of many
+#      prior-dominated doubles, which are still valid SBC trials). NEVER select
+#      on latent truth (e.g. true-magnification cuts): that breaks SBC outright.
+#
+# Every simulated quantity the likelihood needs (observables, sigmas,
+# redshifts, Om0, the exact truth-prior spec) is persisted per-system by the
+# generator and read back by the builder — sim/inference consistency is by
+# construction, not by keeping two yaml blocks in sync.
+
+name: hundred_point_sources_v1
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v1
+
+plugins:
+  - gigalens_research.simtests.experiments.lenstronomy_point_source
+
+# =============================================================================
+# DATASET — physics knobs (all consumed by the lenstronomy generator)
+# =============================================================================
+dataset:
+  generator: lenstronomy_point_source
+  n_systems: 100
+
+  # --- truth draw -----------------------------------------------------------
+  # "inference" = GL2 inference-prior mass block (theta_E LogNormal(ln 1.25, 0.4),
+  #   gamma TruncNormal(2.0, 0.5, [1, 3]), e1/e2 Normal(0, 0.2),
+  #   center Normal(0, 0.06), shear Normal(0, 0.1)) — REQUIRED for strict SBC.
+  # "simulation" = GL2 tight simulation prior (paper Eq. 8 Simulation column) —
+  #   robustness mode; score with z-scores/coverage, not ranks.
+  truth_prior: inference
+  source_prior_scale: 0.25      # absolute source position ~ Normal(0, this) [arcsec]
+                                # (same scale as the GL2 Sersic source center draw)
+  amp_median: 2.0               # intrinsic flux ~ LogNormal(ln amp_median, amp_sigma_log)
+  amp_sigma_log: 0.5
+
+  # --- cosmology ------------------------------------------------------------
+  # H0 is drawn PER SYSTEM ~ Uniform(H0_min, H0_max); the builder fits the same
+  # Uniform. Om0 and the redshifts are FIXED and shared truth<->inference
+  # (varying them per system is a v2 knob; the generator persists whatever it used).
+  H0_min: 60.0                  # km/s/Mpc
+  H0_max: 80.0
+  Om0: 0.3                      # flat LCDM, Ob0=0
+  z_lens: 0.5
+  z_source: 1.5
+
+  # --- image selection ------------------------------------------------------
+  # quad      = keep only 4-image systems (max constraint per system; see
+  #             SBC note 3 on the residual prior-truncation caveat)
+  # double    = keep only 2-image systems
+  # any2plus  = keep any multiply-imaged draw (no quad selection; cleanest SBC)
+  multiplicity: quad
+  max_redraws: 2000             # per-system truth redraw budget before hard error
+  min_image_sep: 0.05           # arcsec; reject unresolved merging pairs BELOW this
+                                # (an observational cut, applied to noiseless images;
+                                # keep << typical image separations so it rarely fires,
+                                # and it is recorded per-system when it does)
+
+  # --- observational noise (also the likelihood's assumed noise, verbatim) ---
+  sigma_ast: 0.004              # astrometric sigma per image coordinate [arcsec]
+                                # (HST-like; 0.04 reproduces the caustic stress tests)
+  frac_flux: 0.05               # fractional flux error; sigma_F = frac_flux * F_TRUE
+                                # (sigma from true flux keeps noise ~ N(0, sigma_F)
+                                # exactly consistent with the stored sigma)
+  sigma_td: 1.0                 # time-delay sigma [days], per non-reference image
+                                # (delays are relative to the FIRST-ARRIVING image,
+                                # which is index 0 with td_obs[0] == 0 by convention)
+
+  # --- lenstronomy solver (truth image finding) ------------------------------
+  lt_min_distance: 0.01
+  lt_search_window: 6.0
+  lt_precision_limit: 1.0e-10
+
+# =============================================================================
+# INFERENCE — model + algorithm knobs
+# =============================================================================
+inference:
+  builder: epl_shear_point_source_obs
+  pipeline: map_svi_mclmc
+  pipeline_kwargs:
+    # --- likelihood channels (sweepable: positions-only vs +flux vs +td) ----
+    fit_flux: true              # adds inverse-flux channel + sampled amp
+    fit_td: true                # adds time-delay channel + sampled H0
+                                # (fit_td: false also FIXES H0 — delays are the
+                                # only H0-sensitive observable in this model)
+
+    # --- point-source likelihood / lens-equation solver ---------------------
+    newton_steps: 10            # Levenberg schedule length (lambda^2 1 -> 1e-5)
+    trust_region_frac: 0.4      # trust-region radius as fraction of min image sep
+    src_parameterization: absolute   # "absolute" (exact SBC; default) | "offset"
+                                     # (better-conditioned MAP; approximate SBC
+                                     # for dx/dy — see header note 2)
+    priors: from_dataset        # builder reads the persisted truth-prior spec ->
+                                # exact prior match. Any other value is a
+                                # deliberate-mismatch experiment; the builder
+                                # refuses unknown values rather than guessing.
+
+    # --- MAP (Adam over prior draws) ----------------------------------------
+    # The caustic validation showed MAP is the weak link on fold-adjacent
+    # 12-param landscapes (initialized ~60 chi2 above truth); budget generously.
+    map_n_samples: 1000
+    map_num_steps: 1500
+    map_lr: 3.0e-3
+    map_clip_norm: 1.0
+
+    # --- SVI (full-rank Gaussian in z) --------------------------------------
+    svi_n_vi: 500
+    svi_num_steps: 1500
+    svi_lr: 1.0e-4
+    svi_init_scale: 1.0e-3
+
+    # --- MCLMC (unadjusted; tuned) ------------------------------------------
+    n_chains: 8
+    num_burnin_steps: 5000
+    num_results: 10000
+    frac_tune1: 0.2
+    frac_tune2: 0.6
+    frac_tune3: 0.2
+    desired_energy_variance: 5.0e-4
+
+    # --- SBC rank computation + convergence gate ----------------------------
+    # (read by the sbc_ranks / loglik_rank metrics and the sbc_uniformity
+    # campaign metric via campaign_spec.inference.pipeline_kwargs)
+    sbc_rank_draws: 1024        # thin the pooled chains to ~this many
+                                # approximately-independent draws (ESS-aware
+                                # thinning); ranks live in {0..L}
+    sbc_rhat_max: 1.05          # gate: runs with max R-hat above this are
+    sbc_min_ess: 100            #   excluded from the rank analysis; ATTRITION
+                                #   IS REPORTED (excluded fraction + where the
+                                #   excluded truths sit in parameter space) —
+                                #   >5% attrition taints the SBC set
+    sbc_solver_unconverged_max: 0.05  # gate on frac of posterior draws whose
+                                      # lens-equation solve missed (src residual
+                                      # > 1e-4"): R-hat can pass while the
+                                      # solver silently fails
+
+# =============================================================================
+# SWEEP — single default point. Uncomment an axis to A/B.
+# =============================================================================
+sweep:
+  - {}
+# Examples:
+#   channel ablation (positions-only vs full):
+# sweep:
+#   - {fit_flux: false, fit_td: false}
+#   - {fit_flux: true,  fit_td: false}
+#   - {fit_flux: true,  fit_td: true}
+#   delay-precision ladder (regenerate dataset per sigma_td instead if the
+#   NOISE should change; this sweeps only the assumed sigma -> misspec test):
+# sweep: {axis: sigma_td_assumed, values: [0.5, 1.0, 2.0]}
+#   solver robustness:
+# sweep: {axis: newton_steps, values: [5, 10, 20]}
+
+# =============================================================================
+# METRICS — per-run (index.csv) + campaign-level aggregation
+# =============================================================================
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores           # per-param z of truth vs posterior (bias/dispersion)
+  - percent_error
+  - sbc_ranks             # NEW: per-param rank of truth among thinned draws
+  - loglik_rank           # NEW: rank of truth's log-likelihood among draws'
+                          #      (joint-calibration check marginals can miss)
+  - ps_solver_health      # NEW: median/p99 reduced chi2 + frac unconverged
+                          #      solves over posterior draws
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

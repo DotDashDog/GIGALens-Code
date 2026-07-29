@@ -1,0 +1,78 @@
+# Debug variant of hundred_point_sources_v1: 3 systems, small budgets.
+# Same physics as campaign.yaml; use this to smoke-test generate/run/aggregate.
+name: hundred_point_sources_debug
+seed: 0
+output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_debug
+
+plugins:
+  - gigalens_research.simtests.experiments.lenstronomy_point_source
+
+dataset:
+  generator: lenstronomy_point_source
+  n_systems: 3
+  truth_prior: inference
+  source_prior_scale: 0.25
+  amp_median: 2.0
+  amp_sigma_log: 0.5
+  H0_min: 60.0
+  H0_max: 80.0
+  Om0: 0.3
+  z_lens: 0.5
+  z_source: 1.5
+  multiplicity: quad
+  max_redraws: 2000
+  min_image_sep: 0.05
+  sigma_ast: 0.004
+  frac_flux: 0.05
+  sigma_td: 1.0
+  lt_min_distance: 0.01
+  lt_search_window: 6.0
+  lt_precision_limit: 1.0e-10
+
+inference:
+  builder: epl_shear_point_source_obs
+  pipeline: map_svi_mclmc
+  pipeline_kwargs:
+    fit_flux: true
+    fit_td: true
+    newton_steps: 10
+    trust_region_frac: 0.4
+    src_parameterization: absolute
+    priors: from_dataset
+    map_n_samples: 200
+    map_num_steps: 400
+    map_lr: 3.0e-3
+    map_clip_norm: 1.0
+    svi_n_vi: 200
+    svi_num_steps: 500
+    svi_lr: 1.0e-4
+    svi_init_scale: 1.0e-3
+    n_chains: 4
+    num_burnin_steps: 1500
+    num_results: 3000
+    frac_tune1: 0.2
+    frac_tune2: 0.6
+    frac_tune3: 0.2
+    desired_energy_variance: 5.0e-4
+    sbc_rank_draws: 1024
+    sbc_rhat_max: 1.1
+    sbc_min_ess: 50
+    sbc_solver_unconverged_max: 0.05
+
+sweep:
+  - {}
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - percent_error
+  - sbc_ranks
+  - loglik_rank
+  - ps_solver_health
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

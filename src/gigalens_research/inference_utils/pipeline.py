@@ -252,13 +252,21 @@ class InferenceContext:
         datasets = getattr(pm, "datasets", None)
         if datasets is not None:
             # Per-band: image + noise + mask, and each band's own sim_config (PSF/grid).
+            # Non-imaging datasets (point-source positions/fluxes/delays, and any
+            # future kinematics/visibility Dataset) carry no image/error_map/mask;
+            # they are fingerprinted by their public numeric content instead.
             noise["datasets"] = [
                 {"image": np.asarray(d.image),
                  "error_map": np.asarray(d.error_map),
                  "mask": np.asarray(d.mask)}
+                if hasattr(d, "image") else _dataset_content(d)
                 for d in datasets
             ]
-            sim_config_hash: Any = [_hash_sim_config(d.sim_config) for d in datasets]
+            sim_config_hash: Any = [
+                _hash_sim_config(sc) if (sc := getattr(d, "sim_config", None))
+                is not None else None
+                for d in datasets
+            ]
         else:
             noise["observed_image"] = np.asarray(pm.observed_image)
             for attr in ("background_rms", "exp_time", "err_map"):
@@ -271,6 +279,25 @@ class InferenceContext:
             "noise": noise,
             "sim_config": sim_config_hash,
         })
+
+
+def _dataset_content(d) -> Dict[str, Any]:
+    """Content fingerprint of a non-imaging scene ``Dataset`` (e.g. point-source
+    observables). Collects every public scalar/array attribute — for a
+    ``PointSourceObsData`` that is the observed positions/fluxes/delays, all
+    sigmas, and the solver constants (newton_steps, trust_region_frac, ...), so
+    any change to the observation or its likelihood configuration invalidates
+    the cache. Object-valued attributes (``source_component``, ``sim_config``)
+    are skipped: the profile structure is already hashed via the phys-model
+    view, and sim_config is hashed separately."""
+    content: Dict[str, Any] = {"class": type(d).__name__}
+    for k, v in vars(d).items():
+        if k.startswith("_"):
+            continue
+        if v is None or isinstance(v, (bool, int, float, str, np.integer,
+                                       np.floating, np.ndarray, jax.Array)):
+            content[k] = np.asarray(v) if isinstance(v, jax.Array) else v
+    return content
 
 
 def _is_profile(obj) -> bool:
