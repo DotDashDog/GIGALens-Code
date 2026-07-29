@@ -312,7 +312,8 @@ def main() -> None:
               "n_chains", "num_burnin_steps", "num_results",
               "desired_energy_variance", "frac_tune1", "frac_tune2",
               "frac_tune3", "mc_anneal_eps", "mc_anneal_steps",
-              "mc_anneal_particles", "mc_anneal_lr") if k in kw}
+              "mc_anneal_particles", "mc_anneal_lr", "mc_anneal_block")
+             if k in kw}
     print(f"[batched_run] knobs: {knobs}")
 
     seed = int(spec.seed)

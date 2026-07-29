@@ -470,7 +470,29 @@ the likelihood as an opt-in annealed term and rerun the double arm.
   throughout (runner passes it to map/svi/mclmc). Code: gigalens linusu-dev-merge +
   multiplicity changes, GIGALens-Code batched pipeline changes — both working-tree,
   to be committed before launch so run.json provenance hashes are reproducible.
-  **Status: awaiting approval (written 2026-07-28, before any campaign launch).**
+  **Status: APPROVED by user 2026-07-28 ("Yes, can you commit and go ahead with
+  the P-10 launch? I'd like it to run in under 12 hours, so feel free to submit
+  2 jobs to make that happen."). Launch plan adjusted for the <12 h wall-time
+  request: 8 offset slices × 12–13 systems on 8× 2080 Ti (2 full es0 nodes,
+  4 GPUs each — 2 Slurm jobs, 4 runner processes per job pinned via
+  CUDA_VISIBLE_DEVICES), ~104-lane MCLMC waves ≈ 0.7 s/step × 45k ≈ 9 h +
+  ~1 h other stages ≈ 10 h expected wall. Same target, seeds, and budgets as
+  registered — only the slicing changed. Code committed before launch:
+  gigalens d321d3c (linusu-dev-merge), GIGALens-Code e82e7e8 (main).**
+
+  **Launch 1 (job array 24307807) FAILED ~15 min in — all 8 slices, GPU OOM in
+  the anneal phase, no posterior draws taken.** The anneal descended all 64
+  particles x 13 systems = 832 lanes through the multiplicity-term gradient at
+  the final 384^2 rung in one op (9.4 GiB working set; the 3-system pilot's 192
+  lanes fit, which is why this wasn't caught). Fix: `batched_map_anneal` now
+  Adam-descends particles in sequential blocks of `mc_anneal_block` (default
+  16) per system via `lax.map`, and scores the refined pool the same way —
+  peak memory / 4 at identical total FLOPs. Semantics note: global-norm
+  clipping now acts per 16-particle block instead of across all 64; this only
+  touches the optimization stage (basin selection), not the measured MCLMC
+  target, so the pre-registered predictions stand unchanged. No run dirs were
+  written (run.json only lands on success), so launch 2 is a clean rerun of
+  the same plan.
 
 ---
 

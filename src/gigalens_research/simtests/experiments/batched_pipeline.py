@@ -123,7 +123,8 @@ def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
 # ------------------------------------------------------------- MAP anneal (mc)
 def batched_map_anneal(bp, z_pool, lp_pool, *, ladder, n_particles: int = 64,
                        num_steps: int = 300, lr: float = 1e-3,
-                       clip_norm: float = 1.0) -> Dict[str, np.ndarray]:
+                       clip_norm: float = 1.0, block: int = 16
+                       ) -> Dict[str, np.ndarray]:
     """Multiplicity-constraint eps-annealing MAP refinement, all systems at once.
 
     Phase 2 of the annealed-MAP design (docs/logs/point-source-sbc.md P-9):
@@ -138,6 +139,15 @@ def batched_map_anneal(bp, z_pool, lp_pool, *, ladder, n_particles: int = 64,
 
     Returns ``z_best (S, P)`` scored at the final rung, plus the refined pool
     ``anneal_z (S, K, P)`` / ``anneal_lp (S, K)`` for diagnostics.
+
+    ``block`` bounds GPU memory: the multiplicity-term gradient's working set
+    scales with (systems x particles), and all 64 particles at once OOMs an
+    11 GB card beyond ~5 systems at the final 384^2 rung (P-10 launch 1,
+    job 24307807: 13 systems x 64 = 832 lanes asked for 9.4 GiB in one op).
+    Particles are therefore Adam-descended in sequential blocks of ``block``
+    per system (lax.map), cutting peak memory by K/block at the same total
+    FLOPs. Note global-norm clipping then acts per block rather than across
+    all K particles; per-particle semantics are otherwise unchanged.
     """
     import jax
     import jax.numpy as jnp
@@ -159,6 +169,11 @@ def batched_map_anneal(bp, z_pool, lp_pool, *, ladder, n_particles: int = 64,
     top = np.argsort(-np.nan_to_num(lp_pool, nan=-np.inf), axis=1)[:, :k]
     z = jnp.asarray(np.take_along_axis(z_pool, top[:, :, None], axis=1))
 
+    blk = max(1, min(int(block), k))
+    while k % blk:
+        blk -= 1
+    nb = k // blk
+
     optimizer = optax.chain(
         optax.zero_nans(),
         optax.clip_by_global_norm(float(clip_norm)),
@@ -178,22 +193,28 @@ def batched_map_anneal(bp, z_pool, lp_pool, *, ladder, n_particles: int = 64,
                 return -jnp.mean(lp) / loss_norm
 
             vg = jax.value_and_grad(loss)
-            opt_state = optimizer.init(z0)
 
-            def one_step(carry, _):
-                zz, st = carry
-                _, grads = vg(zz)
-                updates, st = optimizer.update(grads, st)
-                return (optax.apply_updates(zz, updates), st), None
+            def run_block(zb):
+                opt_state = optimizer.init(zb)
 
-            (zf, _), _ = jax.lax.scan(
-                one_step, (z0, opt_state), None, length=int(num_steps))
-            return zf
+                def one_step(carry, _):
+                    zz, st = carry
+                    _, grads = vg(zz)
+                    updates, st = optimizer.update(grads, st)
+                    return (optax.apply_updates(zz, updates), st), None
+
+                (zf, _), _ = jax.lax.scan(
+                    one_step, (zb, opt_state), None, length=int(num_steps))
+                return zf
+
+            return jax.lax.map(run_block, z0.reshape(nb, blk, P)).reshape(k, P)
 
         z = jax.jit(jax.vmap(one))(bp.data, z)
 
     def score(row, zz):
-        return bp._swapped(row).log_prob(zz)[0]
+        p = bp._swapped(row)
+        return jax.lax.map(lambda zb: p.log_prob(zb)[0],
+                           zz.reshape(nb, blk, P)).reshape(k)
 
     lp = np.asarray(jax.jit(jax.vmap(score))(bp.data, z))
     z = np.asarray(z)
@@ -580,7 +601,7 @@ def batched_map_svi_mclmc(bp, *, map_seeds, svi_seeds, mclmc_seeds,
              "desired_energy_variance", "frac_tune1", "frac_tune2",
              "frac_tune3", "thin_every",
              "mc_anneal_eps", "mc_anneal_steps", "mc_anneal_particles",
-             "mc_anneal_lr"}
+             "mc_anneal_lr", "mc_anneal_block"}
     unknown = set(kwargs) - known
     if unknown:
         raise ValueError(f"batched_map_svi_mclmc: unknown knobs {sorted(unknown)}; "
@@ -597,7 +618,7 @@ def batched_map_svi_mclmc(bp, *, map_seeds, svi_seeds, mclmc_seeds,
         ds = term.dataset
         mc_final = (float(ds.mc_eps), float(ds.mc_lam), int(ds.mc_grid_n))
     for key in ("mc_anneal_eps", "mc_anneal_steps", "mc_anneal_particles",
-                "mc_anneal_lr"):
+                "mc_anneal_lr", "mc_anneal_block"):
         if key in kwargs and not mc_on:
             raise ValueError(
                 f"batched_map_svi_mclmc: {key} was given but the dataset has no "
@@ -633,7 +654,8 @@ def batched_map_svi_mclmc(bp, *, map_seeds, svi_seeds, mclmc_seeds,
                 bp, out["z_final"], out["lp_final"], ladder=ladder,
                 n_particles=int(kwargs.get("mc_anneal_particles", 64)),
                 num_steps=int(kwargs.get("mc_anneal_steps", 300)),
-                lr=float(kwargs.get("mc_anneal_lr", 1e-3)))
+                lr=float(kwargs.get("mc_anneal_lr", 1e-3)),
+                block=int(kwargs.get("mc_anneal_block", 16)))
             out["z_best_premc"] = out["z_best"]
             out["z_best"] = ann["z_best"]
             out["mc_anneal_lp"] = ann["anneal_lp"]
