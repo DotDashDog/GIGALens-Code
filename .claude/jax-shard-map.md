@@ -1,10 +1,10 @@
 # JAX shard_map: Pitfalls and Workarounds
 
-`jax.experimental.shard_map.shard_map` (JAX ≤ 0.9) and `jax.shard_map` (JAX ≥ 0.10) enforce strong axis-type rules. JAX 0.6 surfaced these as **VMA** (Varying Manual Axis) errors; JAX 0.10 reorganized them around `AxisType.{Explicit, Manual, Auto}`. The two regimes share recurring failure patterns; the ones below are all things that have actually broken and been fixed in this workspace (`mclmc_alt.py`, `gigalens.jax.inference`).
+`jax.experimental.shard_map.shard_map` (JAX ≤ 0.9) and `jax.shard_map` (JAX ≥ 0.10) enforce strong axis-type rules. JAX 0.6 surfaced these as **VMA** (Varying Manual Axis) errors; JAX 0.10 reorganized them around `AxisType.{Explicit, Manual, Auto}`. The two regimes share recurring failure patterns; the ones below are all things that have actually broken and been fixed in this workspace (`gigalens.jax.inference.mclmc`, `gigalens.jax.inference`).
 
 ## Forward-compatible imports & primitives
 
-Use these aliases in any module that has to support both kernels (`gigalens.jax.inference` and `alternate_inference.mclmc_alt` already do):
+Use these aliases in any module that has to support both kernels (`gigalens.jax.inference` and `gigalens.jax.inference.mclmc` already do):
 
 ```python
 # shard_map moved from jax.experimental to top-level in JAX 0.10.
@@ -67,8 +67,8 @@ Fixes that have actually worked, in order of preference:
    ```python
    replicated_params = jnp.asarray(np.concatenate([np.asarray(a), np.asarray(b)]))
    ```
-   This is what `ModellingSequence.SVI` does to break the chain from MAP's reshard-to-replicated output.
-3. **Put `scan` *inside* `shard_map`, not the other way around.** A `@jit` → `scan` → `@shard_map` body forces an Explicit→Manual hop on every carry; flipping it to `@jit @shard_map` containing the `scan` keeps every per-step op in Manual mode. This is the structure used by both `mclmc_alt.full_mclmc_with_adapt_sharded` and the JAX-0.10 rewrite of `ModellingSequence.SVI`.
+   This is what `gigalens.jax.inference.SVI` does to break the chain from MAP's reshard-to-replicated output.
+3. **Put `scan` *inside* `shard_map`, not the other way around.** A `@jit` → `scan` → `@shard_map` body forces an Explicit→Manual hop on every carry; flipping it to `@jit @shard_map` containing the `scan` keeps every per-step op in Manual mode. This is the structure used by both `mclmc.full_mclmc_with_adapt_sharded` and the JAX-0.10 rewrite of `gigalens.jax.inference.SVI`.
 4. **Avoid slicing Explicit-tagged operands inside an inner `value_and_grad`/`jit` trace.** Slice in the outer Manual frame and pass the slices in as separate args:
    ```python
    # one_step_sharded is the scan body inside shard_map (Manual mode)
@@ -93,7 +93,7 @@ samples = jax.tree.map(lambda x: _reshard(x, _replicated), samples)
 params_final = jax.tree.map(lambda x: _reshard(x, _replicated), params_final)
 return samples, params_final
 ```
-Both `MCLMC_JIT` (`mclmc_alt.full_mclmc_with_adapt_sharded`) and `ModellingSequence.MAP` do this on every sharded output.
+Both `MCLMC_JIT` (`mclmc.full_mclmc_with_adapt_sharded`) and `gigalens.jax.inference.MAP` do this on every sharded output.
 
 ### D. `pvary` removal & idempotency
 
@@ -155,7 +155,7 @@ cdf_value = jax.scipy.special.ndtr(z)  # ndtr uses erfc, no while_loop
 
 ### 5. BlackJAX functions with VMA / Manual-mode issues
 
-These BlackJAX functions are incompatible with `shard_map` and have custom replacements in `mclmc_alt.py`:
+These BlackJAX functions are incompatible with `shard_map` and have custom replacements in `gigalens/jax/inference/mclmc.py`:
 
 | BlackJAX function | Issue | Replacement |
 |---|---|---|

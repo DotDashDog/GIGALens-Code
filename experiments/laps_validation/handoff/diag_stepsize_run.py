@@ -3,7 +3,7 @@
 r"""Phase-1 step-size controller diagnostic: prior-init vs warm-init LAPS.
 
 PRODUCES NUMBERS + a plot; NO verdict. Builds the gigalens lens demo model ONCE
-(scene API + MAP + SVI -> model_seq, qz, verbatim from laps_overlay_j26.py), then
+(scene API + MAP + SVI -> prob_model, qz, verbatim from laps_overlay_j26.py), then
 runs LAPS_late_adjusted_JIT with phase2_enabled=False, num_unadjusted_steps=6000,
 512 chains, seed=0 for init_mode in {prior, warm}, saving the Phase-1 controller
 trajectories (eps, D-tilde, EEVPD obs/wanted, per-dim ensemble std).
@@ -14,7 +14,7 @@ import json
 import jax
 jax.config.update("jax_enable_x64", True)
 
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
@@ -89,17 +89,16 @@ observed_img = np.load(f"{ASSETS}/demo.npy")
 ds = Dataset(jnp.asarray(observed_img), sim_config,
              background_rms=0.2, exp_time=100, sees="all")
 prob_model = ProbModel(model, ds, mode="forward")
-model_seq = ModellingSequence(prob_model)
 DIM = int(model.num_free_params)
 print("dim (num free params):", DIM)
 
 opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
 MAP_CHISQ = float(np.min(np.asarray(best_chisq)))
 print("MAP best_chisq (min):", MAP_CHISQ)
 
 opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-qz, loss_hist = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500)
+qz, loss_hist = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500)
 print("SVI done.")
 
 # --------------------------------------------------------------------------- #
@@ -112,7 +111,7 @@ trajectories = {}
 for init in ("prior", "warm"):
     print(f"\n=== LAPS Phase-1 diagnostic: init_mode={init} ===", flush=True)
     res = LAPS_late_adjusted_JIT(
-        model_seq, qz, init_mode=init, num_chains=512,
+        prob_model, qz, init_mode=init, num_chains=512,
         num_unadjusted_steps=NSTEP, num_adjusted_steps=1,
         early_stop=False, phase2_enabled=False, seed=0)
 

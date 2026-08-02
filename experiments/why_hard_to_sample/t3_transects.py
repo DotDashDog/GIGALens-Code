@@ -283,7 +283,7 @@ def slice_results(fvals, idx):
 # jax-backed evaluator (imported lazily)
 # ===========================================================================
 
-def make_f_eval(model_seq):
+def make_f_eval(prob_model):
     """Return (f_eval, grad_fn):
       f_eval(Z) -> np.ndarray of logp for stacked z rows (one vmap'd jit call)
       grad_fn(x0) -> np.ndarray gradient of logp at x0 (one jax.grad call)
@@ -292,7 +292,7 @@ def make_f_eval(model_seq):
     import jax.numpy as jnp
 
     def lp(z):
-        return model_seq.prob_model.log_prob(z)[0]
+        return prob_model.log_prob(z)[0]
 
     batched = jax.jit(jax.vmap(lp))
     grad_lp = jax.jit(jax.grad(lp))
@@ -582,7 +582,7 @@ def main(argv=None):
 
     # target (for param names + evaluator)
     from common import load_target
-    model_seq, qz, z_center, dim2, param_names = load_target(args.data_dir)
+    prob_model, qz, z_center, dim2, param_names = load_target(args.data_dir)
     if dim2 != dim:
         raise ValueError(f"data-dir dim {dim2} != samples dim {dim}")
 
@@ -607,7 +607,7 @@ def main(argv=None):
     print(f"[t3] {len(directions)} directions: "
           f"{[d['name'] for d in directions]}")
 
-    f_eval, grad_fn = make_f_eval(model_seq)
+    f_eval, grad_fn = make_f_eval(prob_model)
     grad_vec = grad_fn(x0)   # one jax.grad call for this precision
 
     # record logp at x0 and the ACTUALLY achieved energy dtype

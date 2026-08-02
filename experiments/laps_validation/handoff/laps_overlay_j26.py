@@ -17,7 +17,7 @@ warm/prior runs, and the 3-way overlay corner -- is reused verbatim.
 
 What it does
 ------------
-1. Builds the NEW scene-API model + MAP + SVI ONCE  -> model_seq, prob_model, qz,
+1. Builds the NEW scene-API model + MAP + SVI ONCE  -> prob_model, qz,
    markers (reused verbatim from hmc_reference.py / jax-demo.ipynb).
 2. LOADS the HMC reference: hmc_mass = np.load("hmc_ref/hmc_mass.npy")  (N,8).
 3. LAPS comparison: run_laps warm + prior, num_chains=512, p2_keep_per_chain=1
@@ -36,7 +36,7 @@ import jax
 jax.config.update("jax_enable_x64", True)
 
 # NEW gigalens "scene" API
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
@@ -125,16 +125,15 @@ observed_img = np.load(f"{ASSETS}/demo.npy")
 ds = Dataset(jnp.asarray(observed_img), sim_config,
              background_rms=0.2, exp_time=100, sees="all")
 prob_model = ProbModel(model, ds, mode="forward")
-model_seq = ModellingSequence(prob_model)
 DIM = int(model.num_free_params)
 print("dim (num free params):", DIM)
 
 # MAP then SVI -> qz (verbatim defaults from the demo)
 opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
 
 opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-qz, loss_hist = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500)
+qz, loss_hist = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500)
 
 # truth markers for the 8 mass params (EPL 6 + Shear 2), demo dict order
 markers = []
@@ -178,9 +177,9 @@ print(f"loaded HMC reference {hmc_mass_path}  shape={hmc_mass.shape}")
 # 3. LAPS comparison -- warm + prior init, CLEAN ensemble (1 sample/chain)     #
 # --------------------------------------------------------------------------- #
 print("\n=== LAPS warm-init (num_chains=512, p2_keep_per_chain=1) ===")
-res_warm = run_laps(model_seq, qz, init_mode="warm", num_chains=512, p2_keep_per_chain=1)
+res_warm = run_laps(prob_model, qz, init_mode="warm", num_chains=512, p2_keep_per_chain=1)
 print("\n=== LAPS prior-init (num_chains=512, p2_keep_per_chain=1) ===")
-res_prior = run_laps(model_seq, qz, init_mode="prior", num_chains=512, p2_keep_per_chain=1)
+res_prior = run_laps(prob_model, qz, init_mode="prior", num_chains=512, p2_keep_per_chain=1)
 
 warm_mass = to_mass(res_warm.samples)                # (512, 8)
 prior_mass = to_mass(res_prior.samples)              # (512, 8)

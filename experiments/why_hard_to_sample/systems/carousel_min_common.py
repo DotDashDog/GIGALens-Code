@@ -93,7 +93,7 @@ def _load_dataset(supersample):
 
 
 def _build_prob_model(nfw0, supersample):
-    """Assemble model_seq/prob_model given the (already-constructed) NFW mass
+    """Assemble the prob_model given the (already-constructed) NFW mass
     Component `nfw0`. Everything except `nfw0` is shared across the two arms.
 
     supersample : None reproduces the notebook value (1) EXACTLY. An int
@@ -109,7 +109,6 @@ def _build_prob_model(nfw0, supersample):
     from gigalens.jax.cosmo import wCDM_Cosmo
     from gigalens.simulator import SimulatorConfig
     from gigalens.jax.scene_prob_model import Dataset, ProbModel
-    from gigalens.jax.inference import ModellingSequence
 
     # --- shared mass: shear (notebook) ------------------------------------
     shear = Component(Shear(), dict(
@@ -156,8 +155,7 @@ def _build_prob_model(nfw0, supersample):
     dset = Dataset(observed_image, cfg, error_map=error_map, mask=mask,
                    sees=[src4, src5])
     prob_model = ProbModel(model, [dset], mode="lstsq")
-    model_seq = ModellingSequence(prob_model)
-    return model_seq, prob_model
+    return prob_model
 
 
 # ---------------------------------------------------------------------------
@@ -252,14 +250,14 @@ def _assert_qz_not_stale(ref_dir, pinned_qz_hash):
 # ---------------------------------------------------------------------------
 
 def load_target(nfw0_factory, ref_dir, pinned_qz_hash, supersample=None):
-    """Return (model_seq, qz, z_center, dim, param_names) for a carousel arm.
+    """Return (prob_model, qz, z_center, dim, param_names) for a carousel arm.
 
     nfw0_factory : zero-arg callable returning the arm's NFW mass Component
                    (constructed lazily so tfd/gigalens import inside x64 context).
     ref_dir      : absolute path to the reference run dir (map/, mclmc/, ...).
     pinned_qz_hash : the stable_hash(qz) value pinned from mclmc/manifest.json.
 
-    - model_seq.prob_model.log_prob(z) -> (logp, reduced_chi2); MCLMC uses [0].
+    - prob_model.log_prob(z) -> (logp, reduced_chi2); MCLMC uses [0].
     - qz : the diag_qz v1 Gaussian rebuilt from the stored MAP z_best (loc), NOT
       re-optimized. Verified hash-identical to the reference run's qz.
     - z_center : the MAP optimum z_best (= qz.loc), the natural center.
@@ -279,7 +277,7 @@ def load_target(nfw0_factory, ref_dir, pinned_qz_hash, supersample=None):
         jax.config.update("jax_enable_x64", True)  # notebook cell 0; sampling needs f64
 
     nfw0 = nfw0_factory()
-    model_seq, prob_model = _build_prob_model(nfw0, supersample)
+    prob_model = _build_prob_model(nfw0, supersample)
 
     z_best = _load_z_best(ref_dir)
     dim = int(z_best.shape[0])
@@ -297,7 +295,7 @@ def load_target(nfw0_factory, ref_dir, pinned_qz_hash, supersample=None):
 
     param_names = _recover_param_names(prob_model, dim)
     z_center = np.asarray(z_best)
-    return model_seq, qz, z_center, dim, param_names
+    return prob_model, qz, z_center, dim, param_names
 
 
 def verify(nfw0_factory, ref_dir, pinned_qz_hash, supersample=None):
@@ -315,7 +313,7 @@ def verify(nfw0_factory, ref_dir, pinned_qz_hash, supersample=None):
     print(f"[verify] pinned qz hash = {pinned_qz_hash}")
 
     nfw0 = nfw0_factory()
-    model_seq, prob_model = _build_prob_model(nfw0, supersample)
+    prob_model = _build_prob_model(nfw0, supersample)
     z_best = _load_z_best(ref_dir)
     dim = int(z_best.shape[0])
     print(f"[verify] z_best shape = {z_best.shape} dtype = {z_best.dtype}")

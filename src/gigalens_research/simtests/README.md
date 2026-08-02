@@ -99,7 +99,7 @@ from gigalens_research.simtests import register_inference_builder
 
 @register_inference_builder("my_model")
 def build_my_model(system, **kwargs):
-    # Return a ModellingSequence
+    # Return a scene ProbModel
     ...
 ```
 

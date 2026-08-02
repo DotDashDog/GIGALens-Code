@@ -10,7 +10,7 @@ This module registers:
   canonical simulation tool; this adapter brings existing results into the
   framework without re-simulating.
 - ``"epl_shear_sersic_shapelets"`` inference builder — builds the Vela
-  inference :class:`~gigalens.jax.inference.ModellingSequence` using
+  inference scene :class:`~gigalens.jax.scene_prob_model.ProbModel` using
   ``BackwardProbModel`` (lstsq amplitudes) and ``ShapeletsFast`` source.
 - ``"map_bootstrap_mclmc"`` pipeline builder (registered in ``pipelines.py``).
 
@@ -144,19 +144,18 @@ def _vela_scene_lens_priors():
 
 @register_inference_builder("epl_shear_sersic_shapelets")
 def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
-    """Build the SCENE ModellingSequence for the Vela shapelets fit (G1b).
+    """Build the SCENE ``ProbModel`` for the Vela shapelets fit (G1b).
 
     Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light on plane 0; a Shapelets
     source — or a Sérsic source when ``use_shapelets=False`` — on plane 1, lstsq amps)
-    + ``Dataset`` + ``ProbModel(mode="lstsq")`` wrapped in a scene-backed
-    ``ModellingSequence``. Public signature/return unchanged.
+    + ``Dataset`` + ``ProbModel(mode="lstsq")``, returned directly. Public
+    signature unchanged.
 
     Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
     the source model complexity), ``use_shapelets`` (default True).
     """
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.profiles.light import sersic, shapelets
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
@@ -200,7 +199,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence(prob_model)
+    return prob_model
 
 
 # ---------------------------------------------------------------------------

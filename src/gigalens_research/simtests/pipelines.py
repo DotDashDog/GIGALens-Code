@@ -272,11 +272,11 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         import jax.numpy as jnp
         import optax
 
-        from gigalens.jax.inference import ModellingSequence
+        from gigalens.jax.inference import MAP
         from gigalens.jax.scene_prob_model import ImageData, ProbModel
         from gigalens_research.inference_utils.params import truth_x_to_scene_params
 
-        model = ctx.model_seq.scene_model
+        model = ctx.prob_model.model
         sim_config = self.system.sim_config
 
         # D2 adapter: persisted 3-group truth -> scene structured params.
@@ -294,10 +294,10 @@ class PartialTruthBootstrapQzStage(InferenceStage):
                      exp_time=self.system.exp_time, sees="all")
         mode = getattr(ctx.prob_model, "mode", "lstsq")
         fixed_prob = ProbModel(fixed_model, ds, mode=mode)
-        fixed_seq = ModellingSequence(fixed_prob)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-        map_samples, lps, _ = fixed_seq.MAP(
+        map_samples, lps, _ = MAP(
+            fixed_prob,
             optimizer=optimizer,
             n_samples=self.map_n_samples,
             num_steps=self.map_num_steps,
@@ -377,7 +377,7 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         # legacy 3-group prior-walk path was removed.
         import jax.numpy as jnp
 
-        if getattr(ctx.model_seq, "scene_model", None) is None:
+        if getattr(ctx.prob_model, "model", None) is None:
             raise TypeError(
                 "PartialTruthBootstrapQzStage requires a scene-backed InferenceContext; "
                 "the legacy 3-group prior-walk path was removed with the old gigalens API.")

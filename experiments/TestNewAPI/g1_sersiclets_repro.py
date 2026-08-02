@@ -1,6 +1,6 @@
 """G1 GPU reproduction (thin script form of TestSersiclets.ipynb's active path).
 
-Migrated scene-API sersiclets path: from_vela_dir -> scene-backed ModellingSequence ->
+Migrated scene-API sersiclets path: from_vela_dir -> scene-backed ProbModel ->
 Pipeline -> PartialTruthBootstrapQzStage(free=source) -> MCLMCStage(8 chains). Run on a
 GPU node inside the canonical Shifter container. This is the inference-level grader for
 the G1 migration (does the migrated path reproduce pre-migration posterior behavior).
@@ -36,10 +36,10 @@ system = from_vela_dir(
 system.likelihood_precision = "float64"
 system.conv_precision = "float32"
 
-model_seq = get_inference_builder("epl_shear_sersic_elliptical_sersiclets")(system, n_max=n_max)
-print("scene_backed:", model_seq.is_scene_backed, "n_free:", model_seq.scene_model.num_free_params)
+prob_model = get_inference_builder("epl_shear_sersic_elliptical_sersiclets")(system, n_max=n_max)
+print("scene_backed:", True, "n_free:", prob_model.model.num_free_params)
 
-ctx = InferenceContext.from_modelling_sequence(model_seq)
+ctx = InferenceContext.from_prob_model(prob_model)
 print(format_model_card(model_card(ctx)))
 
 pipeline = Pipeline(ctx)

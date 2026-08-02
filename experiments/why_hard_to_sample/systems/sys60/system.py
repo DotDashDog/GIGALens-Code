@@ -98,9 +98,9 @@ def _recover_param_names(prob_model, dim):
 
 
 def load_target(supersample=None):
-    """Return (model_seq, qz, z_center, dim, param_names) for system 60.
+    """Return (prob_model, qz, z_center, dim, param_names) for system 60.
 
-    - model_seq.prob_model.log_prob(z) -> (scalar_logp, chisq); MCLMC_JIT uses
+    - prob_model.log_prob(z) -> (scalar_logp, chisq); MCLMC_JIT uses
       index [0]. Verified: scene ProbModel.log_prob returns a tuple.
     - qz: SVI Gaussian rebuilt byte-identically from the reference SVI stage.
     - z_center: the SVI mean (qz.loc), the natural typical-set center.
@@ -129,7 +129,6 @@ def load_target(supersample=None):
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
     from gigalens.jax.scene_prob_model import Dataset, ProbModel
-    from gigalens.jax.inference import ModellingSequence
 
     # --- data (notebook cell 3) -------------------------------------------
     _require(_DATA_NPZ, "simulated-systems npz")
@@ -179,7 +178,6 @@ def load_target(supersample=None):
                  sees=[lens_light, source_light],
                  background_rms=0.2, exp_time=100)
     prob_model = ProbModel(model, ds, mode="forward")
-    model_seq = ModellingSequence(prob_model)
 
     # --- qz: byte-identical rebuild of the reference SVI Gaussian ----------
     _assert_qz_not_stale()
@@ -198,4 +196,4 @@ def load_target(supersample=None):
 
     param_names = _recover_param_names(prob_model, dim)
     z_center = np.asarray(qz_loc)
-    return model_seq, qz, z_center, dim, param_names
+    return prob_model, qz, z_center, dim, param_names

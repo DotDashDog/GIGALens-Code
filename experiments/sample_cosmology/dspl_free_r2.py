@@ -65,7 +65,6 @@ from gigalens.jax.profiles.light.sersic import SersicEllipse
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.jax.scene_simulator import SceneSimulator
 from gigalens.simulator import SimulatorConfig
-from gigalens.jax.inference import ModellingSequence
 
 from gigalens_research.inference_utils import (
     InferenceContext, Pipeline, MAPStage, BridgeStage, MCLMCStage,
@@ -346,8 +345,7 @@ def build_pipeline(model: LensModel, sim_config: SimulatorConfig,
                         exp_time=EXP_TIME, sees=[source2])
 
     prob_model = ProbModel(model, [dataset1, dataset2], mode="forward")
-    model_seq = ModellingSequence(prob_model)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
 
     pipeline = Pipeline(ctx, seed=pipeline_seed)
 

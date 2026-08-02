@@ -230,7 +230,7 @@ def _adaptive_image_from_mclmc_shapelets(*, sim_config, observed, system_dir, n_
     if not bool(jnp.all(jnp.isfinite(samples))):
         raise ValueError(f"MCLMC samples contain non-finite values: {samples_path}")
 
-    model_seq, lens_sim = vela_system_model(
+    prob_model, lens_sim = vela_system_model(
         sim_config,
         observed,
         background_rms=background_rms,
@@ -239,8 +239,8 @@ def _adaptive_image_from_mclmc_shapelets(*, sim_config, observed, system_dir, n_
         n_max=n_max,
     )
     median_z = jnp.median(samples, axis=(0, 1))
-    median_params = model_seq.prob_model.bij.forward(list(median_z.T))
-    adaptive_image = _lstsq_source_component_image(lens_sim, model_seq.prob_model, median_params)
+    median_params = prob_model.bij.forward(list(median_z.T))
+    adaptive_image = _lstsq_source_component_image(lens_sim, prob_model, median_params)
     return np.array(jax.device_get(adaptive_image), dtype=np.float32), samples_path
 
 

@@ -13,12 +13,12 @@ Provenance of the defaults and guidance below: the CPU known-answer validation
 ```python
 from laps_handoff import run_laps, diagnose, compare_warm_cold
 
-# model_seq : gigalens scene seq; model_seq.prob_model.log_prob(z)[0] is log p(z)
+# prob_model : gigalens scene ProbModel; prob_model.log_prob(z)[0] is log p(z)
 # qz        : SVI surrogate (.sample((n,), seed) / .mean() / .covariance())
 
-res    = run_laps(model_seq, qz, init_mode="cold")     # primary run
+res    = run_laps(prob_model, qz, init_mode="cold")    # primary run
 health = diagnose(res, out_png="laps_diag.png")        # ground-truth-free health
-cmp    = compare_warm_cold(model_seq, qz, out_png="laps_warm_cold.png")  # cross-check
+cmp    = compare_warm_cold(prob_model, qz, out_png="laps_warm_cold.png")  # cross-check
 ```
 
 `run_laps` bakes in the validated config and you should NOT change it without

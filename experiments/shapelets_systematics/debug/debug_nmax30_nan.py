@@ -88,13 +88,12 @@ def inspect_design_matrix(sim_num, rep, n_max):
     observed_img, true_params, sim_config, _ = load_vela_sim_system(
         sim_num, rep, cam="12",
     )
-    model_seq, lens_sim = free_source_fixed_lens_model(
+    prob_model, lens_sim = free_source_fixed_lens_model(
         sim_config, observed_img, true_params,
         background_rms=DEFAULT_BACKGROUND_RMS,
         exp_time=DEFAULT_EXP_TIME,
         use_shapelets=True, n_max=n_max,
     )
-    prob_model = model_seq.prob_model
 
     # Use the truth as our test point - same as run_vela_modeling does.
     # The fixed-lens model has source priors LogNormal(log(0.7), 0.4) for beta

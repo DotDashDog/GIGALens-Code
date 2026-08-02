@@ -34,7 +34,7 @@ copy under sbatch — paths are hardcoded).
 ## Portability to a new system
 
 The harness talks to its target through `systems/<case>/system.py` exposing a
-`load_target()` 5-tuple `(model_seq, qz, z_center, dim, param_names)` — write that one
+`load_target()` 5-tuple `(prob_model, qz, z_center, dim, param_names)` — write that one
 shim for your system and point it at a reference run. Carousel-specific constants live
 in script headers (output dirs, `T21_ARMS`, REF_DIR paths): copy the script, edit the
 header. The measured artifacts (lambda profiles, transform npz, seeds) are per-system

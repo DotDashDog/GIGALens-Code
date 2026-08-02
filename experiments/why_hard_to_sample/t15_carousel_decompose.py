@@ -11,10 +11,10 @@ Runs on a GPU node inside the Shifter container (JAX_ENABLE_X64=1). All outputs
 go to results_carousel/phaseA/.
 
 Interfaces this script codes against (verified against source):
-  * common.load_target(data_dir) -> (model_seq, qz, z_center, dim, param_names)
+  * common.load_target(data_dir) -> (prob_model, qz, z_center, dim, param_names)
     (common.py:211). data_dir = systems/carousel_min_{old,new} (built by a
     parallel subagent with the sys60 system-module interface).
-  * prob_model = model_seq.prob_model exposes (scene_prob_model.py):
+  * prob_model exposes (scene_prob_model.py):
       - log_like(z)  -> (log_like, red_chi2)   [:274]  (LIKELIHOOD only)
       - log_prior(z) -> log_prior + fwd_log_det_jacobian [:308] (PRIOR only)
       - log_prob(z)  -> (log_like+log_prior, red_chi2)   [:313]
@@ -372,10 +372,8 @@ def main():
     theta_E_to_alpha_Rs, alpha_Rs_to_theta_E = _make_conversion()
 
     # -- 1. load both systems + names + cross-map --------------------------
-    old_ms, _oqz, _oc, old_dim, _ = load_target(args.old_data_dir)
-    new_ms, _nqz, _nc, new_dim, _ = load_target(args.new_data_dir)
-    old_pm = old_ms.prob_model
-    new_pm = new_ms.prob_model
+    old_pm, _oqz, _oc, old_dim, _ = load_target(args.old_data_dir)
+    new_pm, _nqz, _nc, new_dim, _ = load_target(args.new_data_dir)
     old_names = derive_names(old_pm, old_dim)
     new_names = derive_names(new_pm, new_dim)
     if old_dim != new_dim:

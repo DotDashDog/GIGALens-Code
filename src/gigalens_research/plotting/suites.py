@@ -20,7 +20,7 @@ def plot_loss_histories(fig, axs, map_chisq_hist, svi_loss_hist):
     axs[1].set_ylabel("ELBO")
 
 def display_results(r, true_img, lens_sim, true_params=None, save_dir=None, 
-    show=True, make_cornerplot=True, plot_caustics=False, model_seq=None):
+    show=True, make_cornerplot=True, plot_caustics=False, sim_config=None):
     """
     Display all results of the inference pipeline, including:
     - Comparing predicted images to true images (MAP best sample and HMC median)
@@ -32,7 +32,7 @@ def display_results(r, true_img, lens_sim, true_params=None, save_dir=None,
     fig.set_size_inches(12,3)
     plot_image_results(fig, axs, true_img, prefix="MAP",
                        lens_sim=lens_sim, predicted_params=r['MAP'].MAP_best, 
-                       resimulate=True, true_params=true_params, plot_caustics=plot_caustics, model_seq=model_seq)
+                       resimulate=True, true_params=true_params, plot_caustics=plot_caustics, sim_config=sim_config)
     if save_dir is not None:
         plt.savefig(os.path.join(save_dir, 'map_results.png'))
     if show:
@@ -43,7 +43,7 @@ def display_results(r, true_img, lens_sim, true_params=None, save_dir=None,
     fig.set_size_inches(12,3)
     plot_image_results(fig, axs, true_img, prefix="HMC",
                        lens_sim=lens_sim, predicted_params=r['HMC'].HMC_median, 
-                       resimulate=True, true_params=true_params, plot_caustics=plot_caustics, model_seq=model_seq)
+                       resimulate=True, true_params=true_params, plot_caustics=plot_caustics, sim_config=sim_config)
     if save_dir is not None:
         plt.savefig(os.path.join(save_dir, 'hmc_results.png'))
     if show:

@@ -95,13 +95,13 @@ def stage_pipeline(args):
     from common import assert_x64, git_commit
     assert_x64()
 
-    model_seq, dim, param_names = mod.build_modelling_sequence(supersample=ss)
+    prob_model, dim, param_names = mod.build_prob_model(supersample=ss)
     print(f"[T13-arms/pipeline] arm={args.arm} (model ss={ss}); dim={dim}")
 
     from gigalens_research.inference_utils.pipeline import (
         Pipeline, InferenceContext, MAPStage, SVIStage)
     # Pipeline default seed = 0 (== notebook); MAP/SVI settings == TestSersic60.ipynb.
-    pipeline = Pipeline(InferenceContext.from_modelling_sequence(model_seq))
+    pipeline = Pipeline(InferenceContext.from_prob_model(prob_model))
     # --map-samples/--svi-nvi default to the notebook values (200/500). The ss4
     # arm OOMs at the notebook batches (84.57 GiB = the same op as ss2's 21.26
     # GiB x4 pixels), so run_t13.sh passes reduced batches for ss4 ONLY. qz is
@@ -122,7 +122,7 @@ def stage_pipeline(args):
     # --- model-side misfit: max|m_arm(truth) - m16(truth)|/err ----------------
     from t13_resim import load_truth_nested, render_at_truth
     truth = load_truth_nested()
-    m_arm, _, rt = render_at_truth(model_seq, param_names, truth)
+    m_arm, _, rt = render_at_truth(prob_model, param_names, truth)
     f = np.load(mod._RESIM_NPZ)   # the SAME d'/m16/err the module built its Dataset from
     key = "m_hi" if "m_hi" in f.files else "m16"   # ladder amendment: top render
     m16 = np.asarray(f[key], dtype=np.float64).reshape(-1)
@@ -179,7 +179,7 @@ def stage_mclmc(args):
 
     arm_dir = _arm_dir(args.out_dir, ss)
     svi_arrays = os.path.join(arm_dir, "svi", "arrays.npz")
-    model_seq, qz, z_center, dim, param_names = mod.load_target(
+    prob_model, qz, z_center, dim, param_names = mod.load_target(
         supersample=ss, qz_arrays=svi_arrays)
     print(f"[T13-arms/mclmc] arm={args.arm} ss={ss} seed={args.seed}; qz={svi_arrays}")
     print(f"[T13-arms/mclmc] config = {STANDARD.to_dict()}")
@@ -188,7 +188,7 @@ def stage_mclmc(args):
     os.makedirs(t0_dir, exist_ok=True)
     out_npz = os.path.join(t0_dir, f"t0_seed{args.seed}.npz")
     pos = run_standard_mclmc(
-        model_seq, qz, STANDARD, args.seed, out_npz,
+        prob_model, qz, STANDARD, args.seed, out_npz,
         target_desc=f"T13' re-simulated sys60 (data ss16), model ss={ss}",
         provenance={"data_dir": os.path.abspath(args.data_dir),
                     "observed": "resim/sys60_ss16/observed_ss16.npz (d'=m16+noise)",
@@ -319,13 +319,13 @@ def stage_comb(args):
 
     # ss=2 model on d' (needs the ss2 arm's SVI qz, though the scan itself doesn't use qz)
     ss2_svi = os.path.join(_arm_dir(args.out_dir, 2), "svi", "arrays.npz")
-    model_seq, qz, z_center, dim, param_names = mod.load_target(
+    prob_model, qz, z_center, dim, param_names = mod.load_target(
         supersample=2, qz_arrays=ss2_svi)
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     ops["render_batch"] = jax.jit(jax.vmap(ops["render"]))
     gate, worst = chi2_gate(ops, [z_top], tag="T13comb/ss2")
 
-    scan = run_scan(model_seq, ops, z_top, std_z, ops["W"], "top spike (d' ss2)")
+    scan = run_scan(prob_model, ops, z_top, std_z, ops["W"], "top spike (d' ss2)")
     fo = scan["oscillation_full"]["fourier"]
     pt = scan["oscillation_full"]["peak_to_trough"]
     peak_freq = fo["recovered_peak_freq"]

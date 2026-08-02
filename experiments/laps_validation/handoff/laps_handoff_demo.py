@@ -1,15 +1,15 @@
 r"""Runnable demo of the LAPS notebook handoff flow, using a MOCK gigalens model
 (no real lens available here). Shows EXACTLY what the notebook flow produces:
 
-    run_laps(model_seq, qz, init_mode="cold")  ->  diagnose(res)  ->  compare_warm_cold(...)
+    run_laps(prob_model, qz, init_mode="cold")  ->  diagnose(res)  ->  compare_warm_cold(...)
 
 Run (in-container):
     JAX_PLATFORMS=cpu JAX_ENABLE_X64=1 python3 laps_handoff_demo.py
 
 The mock mimics the gigalens interface the wrappers consume:
-  * ``model_seq.prob_model.log_prob(z)`` -> (log_density, aux)  [LAPS takes [0]]
+  * ``prob_model.log_prob(z)`` -> (log_density, aux)  [LAPS takes [0]]
   * ``qz.sample((n,), seed) / .mean() / .covariance()``  (SVI surrogate)
-A real notebook passes the actual gigalens ``model_seq`` + SVI ``qz`` instead.
+A real notebook passes the actual gigalens ``prob_model`` + SVI ``qz`` instead.
 """
 import os
 import numpy as np
@@ -19,7 +19,7 @@ import jax.numpy as jnp
 from laps_handoff import run_laps, diagnose, compare_warm_cold
 
 
-# ---- MOCK gigalens model_seq + qz (matches the gigalens interface) ----------
+# ---- MOCK gigalens prob_model + qz (matches the gigalens interface) ---------
 class _MockProbModel:
     def __init__(self, mean, cov):
         self.prec = jnp.asarray(np.linalg.inv(cov), jnp.float64)
@@ -28,11 +28,6 @@ class _MockProbModel:
     def log_prob(self, z):                       # z: (dim,) single position
         d = z - self.mean
         return -0.5 * d @ self.prec @ d, jnp.asarray(0.0)   # (log_density, aux)
-
-
-class _MockModelSeq:
-    def __init__(self, mean, cov):
-        self.prob_model = _MockProbModel(mean, cov)
 
 
 class _MockQZ:
@@ -63,18 +58,18 @@ def make_mock_gigalens_model(dim=8, seed=0):
     A = rng.standard_normal((dim, dim))
     cov = A @ A.T + dim * np.eye(dim)
     mean = rng.standard_normal(dim)
-    return _MockModelSeq(mean, cov), _MockQZ(mean, cov), mean, cov
+    return _MockProbModel(mean, cov), _MockQZ(mean, cov), mean, cov
 
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     out = os.path.join(here, "demo_out")
     os.makedirs(out, exist_ok=True)
-    model_seq, qz, mean, cov = make_mock_gigalens_model(dim=8, seed=0)
+    prob_model, qz, mean, cov = make_mock_gigalens_model(dim=8, seed=0)
     names = [f"p{j}" for j in range(8)]
 
     print("=== 1) run_laps (cold, validated defaults) ===")
-    res = run_laps(model_seq, qz, init_mode="cold", num_chains=512, seed=0)
+    res = run_laps(prob_model, qz, init_mode="cold", num_chains=512, seed=0)
     s = np.asarray(res.samples)
     s = s.reshape(-1, s.shape[-1])      # (M,K,d)->(M*K,d) for mean/cov; legacy (M,d) noop
     print(f"  samples shape={s.shape} finite={np.all(np.isfinite(s))} "
@@ -85,7 +80,7 @@ def main():
                       out_png=os.path.join(out, "demo_diagnose.png"))
 
     print("\n=== 3) compare_warm_cold (cross-validation) ===")
-    cmp = compare_warm_cold(model_seq, qz, param_names=names, num_chains=512, seed=0,
+    cmp = compare_warm_cold(prob_model, qz, param_names=names, num_chains=512, seed=0,
                             out_png=os.path.join(out, "demo_warm_cold.png"))
 
     # OPTIONAL sanity vs the known mock truth (a real lens has none; demo only)

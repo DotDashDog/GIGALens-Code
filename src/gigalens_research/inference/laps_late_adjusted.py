@@ -12,9 +12,9 @@ Public entries
     ``log_prob(z)`` of an unconstrained ``z`` (shape ``(dim,)``) plus a chain
     initializer (``qz`` exposing ``.sample/.mean/.covariance`` for the warm
     start, or ``dim`` for the cold start) and the LAPS hyperparameters.
-``LAPS_late_adjusted_JIT(model_seq, qz, ...)``
+``LAPS_late_adjusted_JIT(prob_model, qz, ...)``
     Thin gigalens wrapper, mirrors ``MCLMC_JIT``: builds
-    ``log_prob(z) = model_seq.prob_model.log_prob(z)[0]`` and calls the core.
+    ``log_prob(z) = prob_model.log_prob(z)[0]`` and calls the core.
 
 The two phases (spec §A)
 ------------------------
@@ -984,7 +984,7 @@ def LAPS_late_adjusted(
     )
 
 
-def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
+def LAPS_late_adjusted_JIT(prob_model, qz=None, *, init_mode="warm",
                            num_chains=512, seed=0, **kwargs):
     """gigalens wrapper mirroring ``MCLMC_JIT``: builds ``log_prob`` then runs LAPS.
 
@@ -1005,8 +1005,6 @@ def LAPS_late_adjusted_JIT(model_seq, qz=None, *, init_mode="warm",
                     uses to seed its own optimizers; ``bij.forward`` (used inside
                     ``log_prob``) is its inverse.
     """
-    prob_model = model_seq.prob_model
-
     def log_prob(z):
         return prob_model.log_prob(z)[0]
 

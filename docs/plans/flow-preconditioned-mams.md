@@ -41,13 +41,13 @@ in v1).
 
 All in `src/gigalens_research/inference_utils/pipeline.py` unless noted:
 
-- `InferenceContext` (line ~203): carries `prob_model` + `model_seq`. Stages read it.
+- `InferenceContext` (line ~203): carries `phys_model` + `prob_model` + `sim_config`. Stages read it.
 - `SVIStage` (line ~1422): the training-loop skeleton to copy — optax/adabelief loop via
-  `ctx.model_seq.SVI`, produces `qz` (full-rank `MultivariateNormalTriL`) from arrays
+  `gigalens.jax.inference.SVI(ctx.prob_model, ...)`, produces `qz` (full-rank `MultivariateNormalTriL`) from arrays
   `qz_loc`, `qz_scale_tril`. The dpie run's SVI config: `n_vi=128, num_steps=1000,
   init_scales=1e-3, adabelief_1e-4_b1_0.95_b2_0.99`.
 - `MAMSStage` (line ~1777): `requires=("qz",)`; calls
-  `gigalens_research.inference.MAMS_JIT(model_seq=ctx.model_seq, qz=..., ...)`. Per its
+  `gigalens_research.inference.MAMS_JIT(prob_model=ctx.prob_model, qz=..., ...)`. Per its
   docstring, `qz` is used for **chain init, initial mass matrix, and SVI-mean reference** —
   all three need u-space equivalents (§5.3).
 - Flow bijectors: use **tfp-jax** (`tensorflow_probability.substrates.jax.bijectors` —

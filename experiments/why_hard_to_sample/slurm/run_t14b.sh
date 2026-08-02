@@ -24,7 +24,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Fixed inputs (two targets + their own seed-1 runs + the frozen std reference).
 OLD_DATA_DIR="$HERE/systems/sys60"                 # RE-PINNED ss2 data (OLD model)
-NEW_SYS_DIR="$HERE/systems/sys60_ss16data"         # d' (ss128) via build_modelling_sequence
+NEW_SYS_DIR="$HERE/systems/sys60_ss16data"         # d' (ss128) via build_prob_model
 OLD_RUN="$HERE/results_t0t1/sys60/t0/t0_seed1.npz"                 # OLD chains + xi
 NEW_RUN="$HERE/resim/sys60_ss16/arm_2/t0/t0_seed1.npz"            # NEW chains + xi
 STD_REF="/global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc.stale-20260703T111618/arrays.npz"  # COMMON std_z

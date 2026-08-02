@@ -9,7 +9,7 @@ sample median -119472.8; sample max -119466.8). T18 tests whether a BETTER MAP
 Three stages (argparse --stage):
 
   map      -- replicate the reference MAP EXACTLY but with num_steps=5000 (vs
-              500). Reuses gigalens/jax/inference.py:ModellingSequence.MAP (the
+              500). Reuses gigalens/jax/inference.py:MAP (the
               same routine MAPStage wraps) and pipeline._default_map_optimizer
               (the same optimizer construction MAPStage uses by default), so the
               ONLY intentional difference from the reference run is num_steps.
@@ -96,6 +96,7 @@ QZ_SCALE = 1e-3                         # SAME diag recipe as reference runs
 def stage_map():
     assert_x64()
     import jax
+    from gigalens.jax.inference import MAP
     # Reuse the EXACT optimizer construction MAPStage uses by default. Assert its
     # id equals the reference id -- if optax dropped nesterov support the built
     # optimizer would silently differ from the reference, so fail loudly.
@@ -107,8 +108,7 @@ def stage_map():
             f"!= reference {REF_OPTIMIZER_ID!r}. The optax build differs from the "
             "one that produced the reference MAP; the optimizer would not match.")
 
-    model_seq, _qz, _zc, dim, param_names = load_target(OLD_SYS)
-    prob_model = model_seq.prob_model
+    prob_model, _qz, _zc, dim, param_names = load_target(OLD_SYS)
     dev_cnt = len(jax.devices())
     eff_n = (MAP_N_SAMPLES // dev_cnt) * dev_cnt  # MAP's own rounding
     print(f"[T18 map] dim={dim} devices={dev_cnt} n_samples={MAP_N_SAMPLES}->{eff_n} "
@@ -119,7 +119,8 @@ def stage_map():
 
     t0 = time.perf_counter()
     # SAME call MAPStage.run makes (pipeline.py:1370), only num_steps changes.
-    map_samples, map_lps, map_chisqs = model_seq.MAP(
+    map_samples, map_lps, map_chisqs = MAP(
+        prob_model,
         optimizer=_default_map_optimizer(),
         n_samples=MAP_N_SAMPLES,
         num_steps=MAP_NUM_STEPS,
@@ -189,7 +190,7 @@ def stage_map():
         "P_T18a_meets": bool(meets_a),
         "arrays_npz": os.path.abspath(IMPROVED_MAP),
         "git_commit": git_commit(),
-        "reuse": ("gigalens/jax/inference.py:ModellingSequence.MAP (output_type="
+        "reuse": ("gigalens/jax/inference.py:MAP (output_type="
                   "'best_step'); optimizer via pipeline._default_map_optimizer; "
                   "best-selection np.nanargmax(lp_hist) as pipeline.MAPStage.run:1384"),
     }
@@ -209,8 +210,8 @@ def stage_quality(old_map, new_map, improved_map,
     os.makedirs(OUT_DIR, exist_ok=True)
 
     # old system serves BOTH the old reference MAP and the improved MAP.
-    old_ms, _q, _zc, old_dim, _n = load_target(OLD_SYS)
-    new_ms, _q, _zc, new_dim, _n = load_target(NEW_SYS)
+    old_pm, _q, _zc, old_dim, _n = load_target(OLD_SYS)
+    new_pm, _q, _zc, new_dim, _n = load_target(NEW_SYS)
 
     def _load_map(p):
         a = np.load(p)
@@ -218,9 +219,9 @@ def stage_quality(old_map, new_map, improved_map,
                 np.asarray(a["lp_hist"], dtype=np.float64))
 
     specs = [
-        ("ref_old_500", old_ms.prob_model, old_map, old_samples, old_dim),
-        ("ref_new_500", new_ms.prob_model, new_map, new_samples, new_dim),
-        ("improved_5000", old_ms.prob_model, improved_map, improved_samples, old_dim),
+        ("ref_old_500", old_pm, old_map, old_samples, old_dim),
+        ("ref_new_500", new_pm, new_map, new_samples, new_dim),
+        ("improved_5000", old_pm, improved_map, improved_samples, old_dim),
     ]
     results = {}
     for label, pm, mp, sp, dim in specs:
@@ -320,7 +321,7 @@ def stage_seeds():
             f"improved MAP not found: {IMPROVED_MAP}. Run --stage map first.")
     z_best = np.asarray(np.load(IMPROVED_MAP)["z_best"], dtype=np.float64)
 
-    model_seq, ref_qz, ref_center, dim, param_names = load_target(OLD_SYS)
+    prob_model, ref_qz, ref_center, dim, param_names = load_target(OLD_SYS)
     # log the deviation of the improved MAP from the reference qz center
     dev = z_best - np.asarray(ref_center, dtype=np.float64)
     print(f"[T18 seeds] improved z_best deviation from reference qz center: "
@@ -336,7 +337,7 @@ def stage_seeds():
     for seed in SEEDS:
         out_npz = os.path.join(OUT_DIR, f"t0_seed{seed}.npz")
         pos = run_standard_mclmc(
-            model_seq, qz, STANDARD, seed, out_npz,
+            prob_model, qz, STANDARD, seed, out_npz,
             target_desc="carousel_min_old, qz re-centered on improved T18 MAP",
             provenance={"system": OLD_SYS, "improved_map": os.path.abspath(IMPROVED_MAP),
                         "qz": f"MVNDiag(loc=improved z_best, scale_diag={QZ_SCALE})",

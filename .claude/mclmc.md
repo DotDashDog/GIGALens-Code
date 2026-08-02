@@ -1,68 +1,63 @@
-# MCLMC Sampler Reference (mclmc_alt.py)
+# MCLMC Sampler Reference
 
-**Location**: `~/GIGALens-Code/alternate_inference/mclmc_alt.py`  
+**Location**: `~/gigalens/src/gigalens/jax/inference/mclmc.py` (graduated out of
+`gigalens.jax.experimental`; still re-exported as
+`gigalens_research.inference.MCLMC` / `MCLMC_JIT` for compatibility)  
 **Status**: Work in progress — not a final product.
 
 MCLMC (Microcanonical Langevin Monte Carlo) is an alternative to HMC for posterior sampling. It is based on BlackJAX's MCLMC implementation, extended here with multi-chain support and non-diagonal mass matrix adaptation.
 
 ## Top-Level API
 
-### MCLMC (three-phase: burnin then sampling)
-
 ```python
-from alternate_inference.mclmc_alt import MCLMC
-
-samples = MCLMC(
-    model_seq,              # ModellingSequence instance (provides phys_model, sim_config, prob_model)
-    qz,                     # SVI surrogate (MultivariateNormalTriL), used for init positions and mass matrix
-    n_hmc=16,               # number of parallel chains
-    num_burnin_steps=1000,  # total adaptation steps
-    num_results=2000,       # sampling steps after adaptation
-    mass_matrix_adapt=True, # adapt mass matrix from sample covariance during burnin
-    continuous_adaptation=True,  # continuously update mass matrix vs. just track
-    desired_energy_variance=5e-4,# target energy variance for step size tuning
-    init_L=None,            # initial trajectory length (default: sqrt(dim))
-    init_step_size=None,    # initial step size (default: sqrt(dim)*0.25)
-    progress_bar=False,
-    seed=0,
-)
+from gigalens.jax.inference.mclmc import MCLMC, MCLMC_JIT
 ```
 
-**Returns**: `(num_chains, num_results, n_params)` in unconstrained space.
-
-Internally:
-1. Builds `LensSimulator` with `bs=1` from `model_seq`
-2. Defines `log_prob(z) = model_seq.prob_model.log_prob(lens_sim, z)[0]`
-3. Initializes chain positions from `qz.sample((n_chains,))`
-4. Runs `mclmc_find_L_and_step_size_smart` for burn-in adaptation
-5. Runs fixed-parameter sampling via `blackjax.util.run_inference_algorithm`
+Import from the `mclmc` **submodule**: the `gigalens.jax.inference` package
+`__init__` binds `MCLMC` (aliased from `MCLMC_JIT`) but not the name `MCLMC_JIT`.
+There is now a single implementation — `MCLMC = MCLMC_JIT`; the separate
+three-phase `MCLMC` entry point no longer exists.
 
 ### MCLMC_JIT (single-scan adaptation + sampling)
 
 ```python
-from alternate_inference.mclmc_alt import MCLMC_JIT
-
 samples = MCLMC_JIT(
-    model_seq, qz, n_hmc=16,
-    num_burnin_steps=1000, num_results=2000,
-    desired_energy_variance=5e-4,
+    prob_model,             # scene ProbModel (first positional; was `model_seq`)
+    qz,                     # SVI surrogate (MultivariateNormalTriL), used for init positions and mass matrix
+    n_hmc=16,               # number of parallel chains
+    num_burnin_steps=1000,  # total adaptation steps
+    num_results=2000,       # sampling steps after adaptation
+    desired_energy_variance=5e-4,  # target energy variance for step size tuning
+    init_L=None,            # initial trajectory length (default: sqrt(dim))
+    init_step_size=None,    # initial step size (default: sqrt(dim)*0.25)
     frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
     progress_bar=False, seed=0,
-    debug_output=False,       # if True, returns full history namedtuple
-    step_size_adapt_use_psmile=False,  # use pSMILE step size adaptation
-    use_shard_map=False,      # multi-GPU: distribute chains across devices
-    windowed_mass_matrix=False, # STAN-style expanding-window mass matrix adaptation
-    mass_matrix_num_effective_samples=1000, # EMA decay for continuous mass matrix
+    debug_output=False,     # if True, returns full history namedtuple
+    regularize_mass_matrix=False,     # shrinkage floor on each window's covariance
+    n_windows=5,                      # expanding Stan-style mass-matrix adaptation windows
+    mass_matrix_shrinkage='relative', # 'relative' (scaled by mean variance) | 'absolute' (literal 1e-3)
 )
 ```
 
-**Returns**: `(num_chains, num_results, n_params)` (or full `Hist` namedtuple if `debug_output=True`).
+**Returns**: `(num_chains, num_results, n_params)` in unconstrained space (or the full `Hist` namedtuple if `debug_output=True`).
 
-Uses `full_mclmc_with_adapt` (single-device) or `full_mclmc_with_adapt_sharded` (multi-GPU) which runs adaptation and sampling in a single `jax.lax.scan`.
+Internally:
+1. Defines `log_prob(z) = prob_model.log_prob(z)[0]` — the scene `ProbModel` owns
+   batch-flexible per-dataset simulators, so no `LensSimulator` is built here
+2. Initializes chain positions from `qz.sample((n_chains,))`
+3. Runs adaptation and sampling in a single `jax.lax.scan`, via
+   `full_mclmc_with_adapt` (single-device) or `full_mclmc_with_adapt_sharded` (multi-GPU)
 
-### Multi-GPU via shard_map (`use_shard_map=True`)
+With `debug_output=True` the history's `inverse_mass_matrix` is a compact
+`(n_windows + 1, dim, dim)` array — the starting metric followed by the metric
+installed at each window boundary — with `inverse_mass_matrix_steps` giving the
+step each row became active at. `[-1]` is the final sampling metric.
 
-Distributes chains evenly across devices. Architecture:
+### Multi-GPU via shard_map
+
+`MCLMC_JIT` always runs `full_mclmc_with_adapt_sharded` (there is no longer a
+`use_shard_map` switch; on a single device the sharded path degenerates to one
+shard). Distributes chains evenly across devices. Architecture:
 - `shard_map(axis_name='device')` wraps `jax.lax.scan`
 - `jax.vmap` (**without** `axis_name`) for per-chain kernel calls inside the scan body
 - Local cross-chain reductions via `jnp.sum/min` on batch dim
@@ -73,14 +68,14 @@ Uses custom shard_map-compatible replacements for BlackJAX functions that have V
 - `_ess_shardmap`: replaces `blackjax.diagnostics.effective_sample_size` (`associative_scan` instead of `scan`)
 - Wilson-Hilferty approximation for gamma CDF in pSMILE adapter (avoids `igamma`'s internal `while_loop`)
 
-### Windowed mass matrix adaptation (`windowed_mass_matrix=True`)
+### Windowed mass matrix adaptation
 
-STAN-style expanding-window scheme (only with `use_shard_map=True`). Instead of continuously updating the mass matrix with EMA decay:
-1. Mode 2 phase is divided into **3 doubling windows** (size ratio 1:2:4)
+STAN-style expanding-window scheme, now always on. Instead of continuously updating the mass matrix with EMA decay:
+1. Mode 2 phase is divided into `n_windows` doubling windows (default 5; was hard-coded to 3)
 2. Within each window: Welford accumulates samples, mass matrix is NOT updated
 3. At window boundaries: mass matrix is estimated from that window's samples, Welford resets, step size adaptation state resets (preserving `step_size_max`)
 
-When `windowed_mass_matrix=False` (default), mass matrix is updated every step during mode 2 with EMA decay.
+`regularize_mass_matrix=True` adds a shrinkage floor to each window's covariance, in units set by `mass_matrix_shrinkage` (`'relative'` / `'absolute'`).
 
 ## Adaptation Stages
 
@@ -98,7 +93,7 @@ After adaptation, step sizes are synchronized across chains via `pmean`.
 
 **Default** (`step_size_adapt`): Exponential moving average of `xi = E_change^2 / (dim * desired_energy_var)`, weighted by how close `xi` is to 1. Step size derived from `Var[E] = O(eps^6)`.
 
-**pSMILE** (`step_size_adapt_psmile_continuous`, enabled via `step_size_adapt_use_psmile=True`): Fits a Gamma distribution to `|dE|` via moment matching, adjusts step size based on CDF position relative to median.
+**pSMILE** (`step_size_adapt_psmile_continuous`; the adapter is still in the module but `MCLMC_JIT` hard-wires `step_size_adapt_use_psmile=False`): Fits a Gamma distribution to `|dE|` via moment matching, adjusts step size based on CDF position relative to median.
 
 ## Multi-Chain Infrastructure
 
@@ -129,7 +124,7 @@ Wraps the integrator step with energy-error rejection: if `|energy_error| > sqrt
 
 ## Non-Diagonal Mass Matrix Integrators
 
-The stock BlackJAX integrators only support diagonal mass matrices. `mclmc_alt.py` defines "smart" variants that work with full covariance matrices:
+The stock BlackJAX integrators only support diagonal mass matrices. The module defines "smart" variants that work with full covariance matrices:
 
 ```python
 isokinetic_mclachlan_smart  # McLachlan coefficients (default, recommended)
@@ -165,7 +160,7 @@ Used by `MCLMC_JIT`. Runs the entire adaptation + sampling in one `jax.lax.scan`
 | Algorithm | TFP Preconditioned HMC | BlackJAX MCLMC (microcanonical Langevin) |
 | Acceptance | Metropolis-Hastings | Unadjusted (energy-error rejection only) |
 | Mass matrix | Fixed from SVI covariance | Adapted during burn-in (SVI + sample covariance blend) |
-| Parallelism | `pmap` across devices | `vmap` (single device) or `shard_map` (multi-GPU via `use_shard_map=True`) |
+| Parallelism | `pmap` across devices | `shard_map` over devices, `vmap` over chains within a shard |
 | Trajectory length | Adapted by TFP's GBTLA | ESS-based L adaptation |
 | Integration | Leapfrog | Isokinetic McLachlan/Yoshida/Omelyan |
 
@@ -174,7 +169,5 @@ Used by `MCLMC_JIT`. Runs the entire adaptation + sampling in one `jax.lax.scan`
 - Mass matrix adaptation can produce ill-conditioned matrices if there aren't enough effective samples
 - The SVI covariance weighting (`svi_mass_matrix_weight`) acts as a regularizer; default is `10 * n_chains` in `MCLMC_JIT`
 - `num_chains=1` may cause errors in the multi-chain path; use the original BlackJAX API for single chains
-- `continuous_adaptation=True` is described in code as "mostly untested"
-- The pSMILE step size adapter is experimental; uses Wilson-Hilferty approximation for gamma CDF in shard_map mode
-- `windowed_mass_matrix` only affects the sharded version (`use_shard_map=True`)
+- The pSMILE step size adapter is experimental (and currently not reachable from `MCLMC_JIT`); uses Wilson-Hilferty approximation for gamma CDF in shard_map mode
 - When editing the sharded code path, see `jax-shard-map.md` for VMA pitfall patterns

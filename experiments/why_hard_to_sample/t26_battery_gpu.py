@@ -97,8 +97,7 @@ def run_route(route, stage, limit):
           f"config={cfg.num_burnin_steps}/{cfg.num_results}) ==========", flush=True)
 
     # --- baseline new system: recover the EXACT T21 z_init (baseline coords) --
-    ms_b, _qz_b, z_center, dim, param_names = load_target(BASE_SYS)
-    pm_b = ms_b.prob_model
+    pm_b, _qz_b, z_center, dim, param_names = load_target(BASE_SYS)
     ref_path = T21_ARMS["new"]["ref"]
     chains = T21_ARMS["new"]["chains"]
     z_init, ledger, sel_dim = select_typical_init(pm_b, ref_path, chains, Z_INIT_SEED)
@@ -112,7 +111,7 @@ def run_route(route, stage, limit):
     # --- route system + mapped init ------------------------------------------
     rmod = _route_module(route)
     rb = rmod.build_route_target()
-    ms_r = rb["model_seq"]; leaf = rb["leaf"]; col = rb["col"]
+    pm_r = rb["prob_model"]; leaf = rb["leaf"]; col = rb["col"]
     if rb["dim"] != dim or list(rb["param_names"]) != list(param_names):
         raise ValueError("route system dim/param mismatch vs baseline new arm")
     u_init = rmod.map_z_to_u(z_init, leaf, col)
@@ -135,7 +134,7 @@ def run_route(route, stage, limit):
         for seed in SEEDS:
             out_npz = os.path.join(out_dir, f"t0_seed{seed}{suffix}.npz")
             pos = run_standard_mclmc(
-                ms_r, qz_prime, cfg, seed, out_npz,
+                pm_r, qz_prime, cfg, seed, out_npz,
                 target_desc=f"carousel_min_new route {route} (reparam), T26 typical init",
                 provenance={"route": route, "artifact": rb["artifact"],
                             "artifact_sha256": rb["sha256"],

@@ -36,12 +36,15 @@ import tensorflow_probability.substrates.jax as tfp
 # ``LensSimulator`` from ``model_seq.phys_model``, which was removed with the old gigalens
 # API. The module stays IMPORT-SAFE (no module-level old-API import); ``HessianSurrogate``
 # raises if actually CALLED. Restore from git b82397c to re-enable.
+# The first parameter is named ``prob_model`` to match what live callers now pass (a scene
+# ProbModel), but the UNREACHABLE body below is still written against the old
+# ``model_seq`` shape — it must be rewritten, not just renamed, when this is restored.
 
 _tfd = tfp.distributions
 
 
 def HessianSurrogate(
-    model_seq,
+    prob_model,
     z_best,
     *,
     fix_indefinite: bool = True,

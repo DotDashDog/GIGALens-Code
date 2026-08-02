@@ -41,7 +41,6 @@ jax.distributed.initialize(
 
 # jax.distributed.initialize()
 
-from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel
 from gigalens.jax.simulator import LensSimulator
 from gigalens.simulator import SimulatorConfig
@@ -143,13 +142,12 @@ for sysnum in finished_systems:
     #     continue
     observed_img = observed_imgs[sysnum]
     prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
-    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
 
     
     results_dir = results_dirs[sysnum]
-    results["MAP"] = MAPResults.load(os.path.join(save_dir, str(sysnum)), model_seq)
-    results["SVI"] = SVIResults.load(results_dir, model_seq)
-    results["HMC"] = HMCResults.load(results_dir, model_seq)
+    results["MAP"] = MAPResults.load(os.path.join(save_dir, str(sysnum)), prob_model)
+    results["SVI"] = SVIResults.load(results_dir, prob_model)
+    results["HMC"] = HMCResults.load(results_dir, prob_model)
     # print(f"System {sysnum}:")
     # print(f"Loaded from:", results_dir)
     rhat_max = np.max(results["HMC"].HMC_rhat)

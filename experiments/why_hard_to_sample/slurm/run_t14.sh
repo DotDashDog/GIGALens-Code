@@ -23,7 +23,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Fixed inputs (sys60 reference MCLMC run + T10 artifacts + the two targets).
 OLD_DATA_DIR="$HERE/systems/sys60"                 # original ss2 data
-NEW_SYS_DIR="$HERE/systems/sys60_ss16data"         # d' (ss128) via build_modelling_sequence
+NEW_SYS_DIR="$HERE/systems/sys60_ss16data"         # d' (ss128) via build_prob_model
 RUN_DIR="/global/homes/l/linusu/GIGALens-Code/results/testsys60/mclmc.stale-20260703T111618"  # original reference (rotated by user reruns 2026-07-03)
 T10_DIR="$HERE/results_t0t1/sys60/t10"
 

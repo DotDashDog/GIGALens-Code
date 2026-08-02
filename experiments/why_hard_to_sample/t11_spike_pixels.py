@@ -379,10 +379,10 @@ def main(argv=None):
     std_z = np.std(flat, axis=0, ddof=1)                           # SAME as T10
     side = int(round(np.sqrt(6400)))                               # provisional; refined below
 
-    model_seq, qz, z_center, dim2, param_names = load_target(args.data_dir)
+    prob_model, qz, z_center, dim2, param_names = load_target(args.data_dir)
     if dim2 != dim:
         raise ValueError(f"data-dir dim {dim2} != run dim {dim}")
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     W = ops["W"]
     npix = W.size
     side = int(round(np.sqrt(npix)))

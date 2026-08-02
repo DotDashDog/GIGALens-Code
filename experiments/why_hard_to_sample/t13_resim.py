@@ -258,12 +258,12 @@ def truth_flat_from_nested(truth_nested):
     return flat
 
 
-def make_render(model_seq):
+def make_render(prob_model):
     """jitted render(z) -> (N_PIX,) flattened model image, EXACTLY the likelihood's
     render path (scene_prob_model _model_image): sim.simulate(model.to_params(
     bij.forward(z))). Same op E1 verified against log_prob's chi^2 aux."""
     import jax
-    pm = model_seq.prob_model
+    pm = prob_model
     sim = pm.simulators[0]
 
     def render(z):
@@ -272,7 +272,7 @@ def make_render(model_seq):
     return jax.jit(render)
 
 
-def render_at_truth(model_seq, param_names, truth_nested, bij_tol=1e-6):
+def render_at_truth(prob_model, param_names, truth_nested, bij_tol=1e-6):
     """z_truth = bij.inverse(truth_nested) (== the notebook's commented
     'bij.inverse(sys_60_true)'), then render via the verified render(z) path. Validates
     that bij.forward(z_truth) round-trips back to the flat truth (max abs diff < bij_tol)
@@ -281,7 +281,7 @@ def render_at_truth(model_seq, param_names, truth_nested, bij_tol=1e-6):
 
     Returns (img_flat (N_PIX,), z_truth (dim,), roundtrip_err)."""
     import jax.numpy as jnp
-    pm = model_seq.prob_model
+    pm = prob_model
 
     flat_truth = truth_flat_from_nested(truth_nested)
     if set(flat_truth.keys()) != set(param_names):
@@ -308,7 +308,7 @@ def render_at_truth(model_seq, param_names, truth_nested, bij_tol=1e-6):
     if rt_err > bij_tol:
         raise RuntimeError(f"[T13] truth<->z round-trip error {rt_err:.3e} > {bij_tol:.1e}"
                            " -- theta<->z mapping is inconsistent; STOP.")
-    render = make_render(model_seq)
+    render = make_render(prob_model)
     img = np.asarray(render(jnp.asarray(z_truth, dtype=jnp.float64)),
                      dtype=np.float64).reshape(-1)
     return img, z_truth, rt_err
@@ -320,7 +320,7 @@ def render_at_truth(model_seq, param_names, truth_nested, bij_tol=1e-6):
 
 def load_sys60(data_dir, supersample=None):
     """Import systems/sys60/system.py and call load_target(supersample=...). Returns
-    (model_seq, qz, z_center, dim, param_names). supersample overrides ONLY the
+    (prob_model, qz, z_center, dim, param_names). supersample overrides ONLY the
     SimulatorConfig factor (everything else -- observed image, PSF, grid, noise --
     unchanged)."""
     import importlib.util
@@ -546,7 +546,7 @@ def main(argv=None):
     model2, _, _, dim, param_names = load_sys60(args.data_dir, supersample=2)
     if dim != _EXPECTED_DIM:
         raise ValueError(f"[T13] dim {dim} != {_EXPECTED_DIM}")
-    pm2 = model2.prob_model
+    pm2 = model2
     observed = np.asarray(pm2.observed_image, dtype=np.float64).reshape(-1)
     err_map = np.asarray(pm2.error_map, dtype=np.float64).reshape(-1)
     print(f"[T13] observed + err_map from the ORIGINAL Dataset (sha1 npz "

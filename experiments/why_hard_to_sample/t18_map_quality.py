@@ -291,12 +291,12 @@ def run_quality_from_paths(data_dir, map_arrays, samples, label, out_dir):
     with an already-loaded prob_model (avoids re-importing the model)."""
     from common import assert_x64, load_target
     assert_x64()
-    model_seq, _qz, _zc, dim, _names = load_target(data_dir)
+    prob_model, _qz, _zc, dim, _names = load_target(data_dir)
     a = np.load(map_arrays)
     z_best = np.asarray(a["z_best"], dtype=np.float64)
     lp_hist = np.asarray(a["lp_hist"], dtype=np.float64)
     samples_z = _load_samples_z(samples)
-    return run_quality(model_seq.prob_model, z_best, lp_hist, samples_z, dim,
+    return run_quality(prob_model, z_best, lp_hist, samples_z, dim,
                        label, out_dir=out_dir)
 
 

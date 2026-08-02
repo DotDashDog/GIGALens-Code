@@ -49,7 +49,7 @@ def main():
             f"T0 requires N>={args.min_seeds} seeds; got {len(seeds)}: {seeds}")
     os.makedirs(args.out_dir, exist_ok=True)
 
-    model_seq, qz, z_best, dim, param_names = load_target(args.data_dir)
+    prob_model, qz, z_best, dim, param_names = load_target(args.data_dir)
     print(f"[T0] target dim={dim}, seeds={seeds}")
     print(f"[T0] config = {STANDARD.to_dict()}")
 
@@ -57,7 +57,7 @@ def main():
     for seed in seeds:
         out_npz = os.path.join(args.out_dir, f"t0_seed{seed}.npz")
         pos = run_standard_mclmc(
-            model_seq, qz, STANDARD, seed, out_npz,
+            prob_model, qz, STANDARD, seed, out_npz,
             target_desc="carousel _h1h2_diag under-mode (real lensing posterior)",
             provenance={"data_dir": os.path.abspath(args.data_dir),
                         "z_best": os.path.join(os.path.abspath(args.data_dir), "z_best.npy"),

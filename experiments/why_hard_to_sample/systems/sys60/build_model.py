@@ -5,5 +5,4 @@ prob_model`. Delegates to this dir's system.load_target(). Heavy at import
 common.load_target dispatcher checks for system.py FIRST."""
 from system import load_target as _load_target
 
-model_seq, qz, z_center, dim, param_names = _load_target()
-prob_model = model_seq.prob_model
+prob_model, qz, z_center, dim, param_names = _load_target()

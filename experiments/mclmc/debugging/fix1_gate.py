@@ -34,9 +34,9 @@ def cmd_dump(args):
     import jax.numpy as jnp
 
     os.makedirs(OUT, exist_ok=True)
-    model_seq, lens_sim = e1.build_model(25)
+    prob_model, lens_sim = e1.build_model(25)
     lens_sim.high_precision = (args.config == "mixed")
-    pm = model_seq.prob_model
+    pm = prob_model
     print(f"[fix1] config={args.config} x64={jax.config.jax_enable_x64} "
           f"high_precision={lens_sim.high_precision} dev={jax.devices()[0]}", flush=True)
 
