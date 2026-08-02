@@ -226,7 +226,7 @@ corrected numbers + honest scope, re-grade if needed, THEN user check-in. (F4 no
         **(a) Phase-2 correction evidenced** (T_rot cold k3: Phase-1 1.0e-2 → ON 1.1e-3) BUT marginal b² is BLIND
         to the banana's JOINT-SHAPE bias (Phase-1 already at marginal floor → ON≈OFF). ⇒ add a joint-shape
         diagnostic; Phase-2-on-curvature not yet shown via a joint metric (lensing-relevant: degeneracies).
-      - [→] P6b NOTEBOOK HANDOFF: verify `LAPS_late_adjusted_JIT(model_seq,qz)` matches the gigalens prob_model
+      - [→] P6b NOTEBOOK HANDOFF: verify `LAPS_late_adjusted_JIT(prob_model,qz)` matches the gigalens prob_model
         interface (vs mclmc.py MCLMC_JIT); usage example + warm/cold compare harness + diagnostics/plots +
         checklist (switch margin, D̃→floor, EEVPD tracking, accept→target, Phase-2-reduces-bias) + a JOINT-SHAPE
         diagnostic (cross-moments/2D) and a quick banana Phase-2 on/off joint-bias check to close (a).

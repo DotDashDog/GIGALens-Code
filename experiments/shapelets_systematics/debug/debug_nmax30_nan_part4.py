@@ -97,18 +97,17 @@ def main():
     observed_img, true_params, sim_config, _ = load_vela_sim_system(
         "01", 3, cam="12",
     )
-    model_seq, lens_sim = free_source_fixed_lens_model(
+    prob_model, lens_sim = free_source_fixed_lens_model(
         sim_config, observed_img, true_params,
         background_rms=DEFAULT_BACKGROUND_RMS,
         exp_time=DEFAULT_EXP_TIME,
         use_shapelets=True, n_max=args.n_max,
     )
-    prob_model = model_seq.prob_model
 
-    # Mirror inference.ModellingSequence.MAP but on a single device, single
+    # Mirror inference.MAP but on a single device, single
     # chain group (no shard_map), so we can run on the login-node CPU.
     bs = args.n_samples
-    lens_sim = gsim.LensSimulator(model_seq.phys_model, model_seq.sim_config, bs=bs)
+    lens_sim = gsim.LensSimulator(lens_sim.phys_model, sim_config, bs=bs)
 
     start = prob_model.prior.sample(bs, seed=jax.random.PRNGKey(0))
     params = jnp.stack(prob_model.bij.inverse(start)).T  # (n_samples, n_dim)

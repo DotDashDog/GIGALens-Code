@@ -40,7 +40,7 @@ jax.config.update("jax_enable_x64", False)
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 
-from gigalens.jax.experimental.mclmc import MCLMC_JIT
+from gigalens.jax.inference.mclmc import MCLMC_JIT
 
 tfd = tfp.distributions
 
@@ -100,13 +100,12 @@ def build_qz(z0, dim, kind, lens_sim, prob_model):
 
 def build_model(sim, rep, n_max):
     observed_img, true_params, sim_config, _ = D.load_vela_sim_system(sim, rep, cam="12")
-    model_seq, lens_sim = D.vela_system_model(sim_config, observed_img, use_shapelets=True, n_max=n_max)
-    prob_model = model_seq.prob_model
+    prob_model, lens_sim = D.vela_system_model(sim_config, observed_img, use_shapelets=True, n_max=n_max)
     dim = int(jnp.stack(prob_model.bij.inverse(prob_model.prior.sample(seed=jax.random.PRNGKey(0)))).shape[0])
-    return model_seq, lens_sim, prob_model, true_params, dim
+    return lens_sim, prob_model, true_params, dim
 
 
-def run_one(sim, rep, n_max, kind, model_seq, lens_sim, prob_model, z0, dim,
+def run_one(sim, rep, n_max, kind, lens_sim, prob_model, z0, dim,
             num_burnin, num_results, n_hmc, seed=0):
     gnorm = float(jnp.linalg.norm(jax.grad(
         lambda z: D.make_logpost_fn(lens_sim, prob_model, "f32_default")(z.reshape(1, -1))[0]
@@ -116,7 +115,7 @@ def run_one(sim, rep, n_max, kind, model_seq, lens_sim, prob_model, z0, dim,
     qz = build_qz(z0, dim, kind, lens_sim, prob_model)
 
     debug_hist = MCLMC_JIT(
-        model_seq, qz,
+        prob_model, qz,
         n_hmc=n_hmc, num_burnin_steps=num_burnin, num_results=num_results,
         desired_energy_variance=5e-4, frac_tune1=0.2, frac_tune2=0.6, frac_tune3=0.2,
         seed=seed, debug_output=True, progress_bar=False,
@@ -155,16 +154,16 @@ def main():
 
     print(f"JAX {jax.__version__} devices={jax.devices()}", flush=True)
     runs = []
-    cache = {}  # n_max -> (model_seq, lens_sim, prob_model, z0, dim)
+    cache = {}  # n_max -> (lens_sim, prob_model, z0, dim)
     for c in args.configs:
         parts = c.split(":"); nm = int(parts[0]); kind = parts[1]
         hard = (len(parts) > 2 and parts[2] == "hard")
         if nm not in cache:
-            model_seq, lens_sim, prob_model, true_params, dim = build_model(args.sim, args.rep, nm)
+            lens_sim, prob_model, true_params, dim = build_model(args.sim, args.rep, nm)
             z0, chi0, beta0 = build_best_notebook(lens_sim, prob_model, true_params)
             print(f"[nmax{nm}] notebook start: beta={beta0:.3f} chi2/pix={chi0:.3e} dim={dim}", flush=True)
-            cache[nm] = (model_seq, lens_sim, prob_model, z0, dim)
-        model_seq, lens_sim, prob_model, z0, dim = cache[nm]
+            cache[nm] = (lens_sim, prob_model, z0, dim)
+        lens_sim, prob_model, z0, dim = cache[nm]
         z_start = np.asarray(z0).copy()
         tag = kind
         if hard:
@@ -176,7 +175,7 @@ def main():
             z_start = z_start + off
             tag = kind + "_hard"
         runs.append(run_one(args.sim, args.rep, nm, tag,
-                            model_seq, lens_sim, prob_model, jnp.asarray(z_start, jnp.float32), dim,
+                            lens_sim, prob_model, jnp.asarray(z_start, jnp.float32), dim,
                             args.num_burnin, args.num_results, args.n_hmc))
 
     try:

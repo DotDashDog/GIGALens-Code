@@ -162,13 +162,12 @@ def main():
     # We test n_max=20 (known-good in MAP) and n_max=30 (failing).
     results = []
     for n_max in (20, 30):
-        model_seq, lens_sim = free_source_fixed_lens_model(
+        prob_model, lens_sim = free_source_fixed_lens_model(
             sim_config, observed_img, true_params,
             background_rms=DEFAULT_BACKGROUND_RMS,
             exp_time=DEFAULT_EXP_TIME,
             use_shapelets=True, n_max=n_max,
         )
-        prob_model = model_seq.prob_model
         err_map = prob_model.err_map
 
         # Two parameter points: one with beta ~ 0.16 (works) and one with

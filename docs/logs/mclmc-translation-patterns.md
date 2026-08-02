@@ -89,9 +89,9 @@ All sharding lives in `full_mclmc_with_adapt_sharded` (`mclmc.py:107`).
 - **The entire gigalens coupling is two lines** (`mclmc.py:42-45`):
   ```
   def log_prob(z):
-      return model_seq.prob_model.log_prob(z)[0]
+      return prob_model.log_prob(z)[0]
   ```
-  `model_seq.prob_model` is a gigalens `ProbModel` (scene-only: it owns
+  `prob_model` is a gigalens `ProbModel` (scene-only: it owns
   batch-flexible per-dataset `SceneSimulator`s, so `log_prob(z)` renders through
   them directly — no separately-built `LensSimulator` is passed). The `[0]`
   selects the scalar log-density from gigalens' `(log_prob, aux)` return.
@@ -266,10 +266,10 @@ From `mclmc.py`:
   ..., num_chains, svi_mass_matrix_weight, step_size_adapt_use_psmile,
   windowed_mass_matrix, regularize_mass_matrix, progress_bar)` →
   `(samples Hist, params_final)` — the full sharded adapt+sample driver. (`:107`)
-- `MCLMC_JIT(model_seq, qz, n_hmc, num_burnin_steps, num_results,
+- `MCLMC_JIT(prob_model, qz, n_hmc, num_burnin_steps, num_results,
   desired_energy_variance, init_L, init_step_size, frac_tune1/2/3, progress_bar,
   seed, debug_output, regularize_mass_matrix)` (alias `MCLMC`) — the
-  GIGALens-facing entry point: builds `log_prob` from `model_seq.prob_model`,
+  GIGALens-facing entry point: builds `log_prob` from `prob_model`,
   seeds from `qz`, runs the driver. (`:39`, `:551`)
 
 From blackjax, reused as-is (imported via `blackjax_updated_utils`):

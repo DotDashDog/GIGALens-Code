@@ -73,13 +73,13 @@ def _now():
 # HVP with a FIXED direction v = e_Rs (lambda_Rs = -(H e_Rs)[rs])
 # ---------------------------------------------------------------------------
 
-def build_lambda_op(model_seq, rs_index, dim, hvp_chunk=8):
+def build_lambda_op(prob_model, rs_index, dim, hvp_chunk=8):
     """Return lambda_batch(Z) -> lambda_Rs at each row of Z (N,dim), chunked."""
     import jax
     import jax.numpy as jnp
 
     def f(z):
-        return model_seq.prob_model.log_prob(z[None])[0][0]
+        return prob_model.log_prob(z[None])[0][0]
 
     gradf = jax.grad(f)
     e_rs = jnp.asarray(np.eye(dim, dtype=np.float64)[rs_index])
@@ -107,7 +107,7 @@ def build_lambda_op(model_seq, rs_index, dim, hvp_chunk=8):
     return lambda_batch
 
 
-def build_rs_map(model_seq, rs_index, dim):
+def build_rs_map(prob_model, rs_index, dim):
     """Return Rs(z_rs) and its inverse via the REAL Uniform(20,100) leaf (probe
     the baseline bijector on a z-grid varying only the rs column). Exact through
     the actual sigmoid leaf -- no closed-form assumption."""
@@ -115,7 +115,7 @@ def build_rs_map(model_seq, rs_index, dim):
     grid = np.linspace(-12.0, 12.0, 4001)
     cols = [np.zeros_like(grid) for _ in range(dim)]
     cols[rs_index] = grid
-    out = model_seq.prob_model.bij.forward([jnp.asarray(c) for c in cols])
+    out = prob_model.bij.forward([jnp.asarray(c) for c in cols])
     # find the Rs key (token 'Rs', not 'alpha_Rs')
     rs_key = _find_key(out, "Rs")
     Rs_grid = np.asarray(out[rs_key], np.float64)
@@ -159,15 +159,15 @@ def main(argv=None):
 
     t_start = time.perf_counter()
     sys_dir = ARMS[ARM]["system_dir"]
-    model_seq, qz, z_center, dim, param_names = load_target(sys_dir)
+    prob_model, qz, z_center, dim, param_names = load_target(sys_dir)
     bnd = C.derive_bounded(param_names, ARM)
     rs_index = bnd["rs_index"]
     if rs_index is None:
         raise RuntimeError("could not locate Rs column in the new arm")
     print(f"[t25] rs_index = {rs_index} (param {param_names[rs_index]})", flush=True)
 
-    lambda_batch = build_lambda_op(model_seq, rs_index, dim, args.hvp_chunk)
-    Rs_of_z, z_of_Rs, rs_key, rsmap_z, rsmap_Rs = build_rs_map(model_seq, rs_index, dim)
+    lambda_batch = build_lambda_op(prob_model, rs_index, dim, args.hvp_chunk)
+    Rs_of_z, z_of_Rs, rs_key, rsmap_z, rsmap_Rs = build_rs_map(prob_model, rs_index, dim)
 
     # --- pool T21 new results-phase draws (seeds 1,2,3) ----------------------
     pool = []
@@ -252,8 +252,8 @@ def main(argv=None):
     import jax.numpy as jnp
     n_sub = min(N_THETAE_SUB, pool.shape[0])
     sub = np.sort(rng.choice(pool.shape[0], size=n_sub, replace=False))
-    theta_out = model_seq.prob_model.bij.forward([jnp.asarray(pool[sub][:, j])
-                                                  for j in range(dim)])
+    theta_out = prob_model.bij.forward([jnp.asarray(pool[sub][:, j])
+                                        for j in range(dim)])
     te_key = _find_key(theta_out, "theta_E")
     theta_E_samples = np.asarray(theta_out[te_key], np.float64)
     theta_E_star = float(np.median(theta_E_samples))
@@ -269,7 +269,7 @@ def main(argv=None):
         out = np.empty(Z.shape[0])
         for s in range(0, Z.shape[0], 16):
             e = min(s + 16, Z.shape[0])
-            lp, _ = model_seq.prob_model.log_prob(jnp.asarray(Z[s:e]))
+            lp, _ = prob_model.log_prob(jnp.asarray(Z[s:e]))
             out[s:e] = np.asarray(lp).reshape(-1)
         return out
 

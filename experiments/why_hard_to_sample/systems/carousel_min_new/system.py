@@ -12,7 +12,7 @@ radius: Rs ~ Uniform(20,100), theta_E ~ Normal(13,1). The rest of the model
 with the OLD arm and lives in ../carousel_min_common.py.
 
 Interface: `load_target()` returns the harness 5-tuple
-  (model_seq, qz, z_center, dim, param_names)
+  (prob_model, qz, z_center, dim, param_names)
 exactly like systems/sys60/system.py (common.load_target dispatches here).
 
 Provenance / staleness (see carousel_min_common docstring): qz is the diag_qz v1

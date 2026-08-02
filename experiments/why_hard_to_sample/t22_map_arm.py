@@ -26,15 +26,17 @@ REF_BEST_LP = -119514.83136782396    # reference 500-step MAP (conv f32)
 def main():
     assert_x64()
     import jax
+    from gigalens.jax.inference import MAP
     from gigalens_research.inference_utils.pipeline import _default_map_optimizer
 
     conv = os.environ.get("WHTS_CONV_PRECISION", "float32")
-    model_seq, _qz, _zc, dim, _names = load_target(
+    prob_model, _qz, _zc, dim, _names = load_target(
         os.path.join(HARNESS, "systems", "carousel_min_old"))
     print(f"[t22 map] conv_precision={conv} devices={len(jax.devices())}")
 
     t0 = time.perf_counter()
-    samples, lps, chisqs = model_seq.MAP(
+    samples, lps, chisqs = MAP(
+        prob_model,
         optimizer=_default_map_optimizer(), n_samples=64, num_steps=500,
         seed=42, output_type="best_step")
     wall = time.perf_counter() - t0
@@ -46,7 +48,7 @@ def main():
     best_lp = float(lp_hist[best])
 
     import jax.numpy as jnp
-    pm = model_seq.prob_model
+    pm = prob_model
     ll = float(np.asarray(pm.log_like(jnp.asarray(z_best)[None])[0]).reshape(-1)[0])
     print(f"[t22 map] best_lp={best_lp:.4f} (step {best}) loglike={ll:.4f} "
           f"wall={wall:.0f}s")

@@ -30,7 +30,7 @@ class StandardMCLMCConfig:
     progress_bar: bool = False
 
     def mclmc_kwargs(self, *, seed: int, debug_output: bool = True) -> dict:
-        """Exact kwargs to splat into MCLMC_JIT (minus model_seq / qz)."""
+        """Exact kwargs to splat into MCLMC_JIT (minus prob_model / qz)."""
         return dict(
             n_hmc=self.n_hmc,
             num_burnin_steps=self.num_burnin_steps,

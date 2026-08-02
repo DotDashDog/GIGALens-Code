@@ -457,7 +457,7 @@ def load_sys60(data_dir, supersample=None):
 # theta-space dial (source-center shift, mapped back to z through the bijector)
 # ===========================================================================
 
-def build_dial(model_seq, z0):
+def build_dial(prob_model, z0):
     """Return (theta0, theta_to_z) for a base point z0. theta0 is the constrained
     source-center theta dict at z0 (jax scalars); theta_to_z(dcx, dcy) perturbs the
     two source-center thetas by (dcx, dcy), maps the FULL constrained dict back to z
@@ -465,7 +465,7 @@ def build_dial(model_seq, z0):
     (0,0) theta_to_z reproduces z0."""
     import jax
     import jax.numpy as jnp
-    pm = model_seq.prob_model
+    pm = prob_model
     theta0 = pm.bij.forward(list(jnp.asarray(z0, dtype=jnp.float64)))
     if SRC_CX_KEY not in theta0 or SRC_CY_KEY not in theta0:
         raise KeyError(f"[T12] source-center keys {SRC_CX_KEY!r}/{SRC_CY_KEY!r} not "
@@ -512,13 +512,13 @@ def calibrate_dial(theta_to_z, ops, delta=DELTA_THETA):
 # One dial scan (measured x_c, flux A, full + windowed lambda1 per point)
 # ===========================================================================
 
-def run_scan(model_seq, ops, z0, std_z, W, tag):
+def run_scan(prob_model, ops, z0, std_z, W, tag):
     """Calibrate the dial at z0 then scan +/-DIAL_RANGE_PX expected-px in N_DIAL
     steps. Returns a rich dict with the calibration, the per-point table (measured
     x_c/y_c, displacement, A, lambda1 full, lambda1 windowed), and the oscillation
     metrics (detrended peak-to-trough + FFT) computed vs MEASURED displacement."""
     import jax
-    theta0, theta_to_z, rt_err = build_dial(model_seq, z0)
+    theta0, theta_to_z, rt_err = build_dial(prob_model, z0)
     R, d_dir, c0 = calibrate_dial(theta_to_z, ops)
     print(f"[T12] {tag}: calibration R=\n{R}\n  d_dir(px->theta)={d_dir}  "
           f"x_c0={c0[0]:.4f} y_c0={c0[1]:.4f}  round-trip err={rt_err:.2e}")
@@ -805,10 +805,10 @@ def main(argv=None):
     # =====================================================================
     # Part 1 -- dial scans at ss2 (reference build)
     # =====================================================================
-    model_seq, qz, z_center, dim2, param_names = load_sys60(args.data_dir, supersample=None)
+    prob_model, qz, z_center, dim2, param_names = load_sys60(args.data_dir, supersample=None)
     if dim2 != dim:
         raise ValueError(f"data-dir dim {dim2} != run dim {dim}")
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     import jax
     ops["render_batch"] = jax.jit(jax.vmap(ops["render"]))
     W = ops["W"]
@@ -818,9 +818,9 @@ def main(argv=None):
     gate_ss2, worst_ss2 = chi2_gate(ops, [z_top, z_mid, z_base], tag="T12/ss2")
 
     scans = {}
-    scans["top spike"] = run_scan(model_seq, ops, z_top, std_z, W, "top spike (ss2)")
-    scans["mid spike"] = run_scan(model_seq, ops, z_mid, std_z, W, "mid spike (ss2)")
-    scans["baseline"] = run_scan(model_seq, ops, z_base, std_z, W, "baseline (ss2)")
+    scans["top spike"] = run_scan(prob_model, ops, z_top, std_z, W, "top spike (ss2)")
+    scans["mid spike"] = run_scan(prob_model, ops, z_mid, std_z, W, "mid spike (ss2)")
+    scans["baseline"] = run_scan(prob_model, ops, z_base, std_z, W, "baseline (ss2)")
 
     # =====================================================================
     # Part 2 -- supersample=4 control (TOP-spike scan, own chi^2 gate)
@@ -829,11 +829,11 @@ def main(argv=None):
     ss4_block = None
     if not args.skip_ss4:
         print("[T12] === Part 2: rebuilding model at supersample=4 ===")
-        model_seq4, _, _, dim4, names4 = load_sys60(args.data_dir, supersample=4)
-        ops4 = build_jax_ops(model_seq4, names4)
+        prob_model4, _, _, dim4, names4 = load_sys60(args.data_dir, supersample=4)
+        ops4 = build_jax_ops(prob_model4, names4)
         ops4["render_batch"] = jax.jit(jax.vmap(ops4["render"]))
         gate_ss4, worst_ss4 = chi2_gate(ops4, [z_top], tag="T12/ss4")
-        ss4_scan = run_scan(model_seq4, ops4, z_top, std_z, ops4["W"], "top spike (ss4)")
+        ss4_scan = run_scan(prob_model4, ops4, z_top, std_z, ops4["W"], "top spike (ss4)")
 
         f2 = scans["top spike"]["oscillation_full"]["fourier"]["amp_at_pixel_freq"]
         f4 = ss4_scan["oscillation_full"]["fourier"]["amp_at_pixel_freq"]

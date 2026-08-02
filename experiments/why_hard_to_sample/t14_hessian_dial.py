@@ -236,13 +236,13 @@ def run_smoke():
 
 
 # ===========================================================================
-# NEW target loader (d' via build_modelling_sequence -- NO qz needed; T14 never samples)
+# NEW target loader (d' via build_prob_model -- NO qz needed; T14 never samples)
 # ===========================================================================
 
 def load_new_target(sys_dir, supersample=2):
     """Build the ss2 model on the re-simulated d' data via the qz-free
-    build_modelling_sequence(supersample) helper in systems/sys60_ss16data/system.py.
-    Returns (model_seq, dim, param_names). No qz: T14 computes curvature, never samples."""
+    build_prob_model(supersample) helper in systems/sys60_ss16data/system.py.
+    Returns (prob_model, dim, param_names). No qz: T14 computes curvature, never samples."""
     import importlib.util
     import sys as _sys
     sys_dir = os.path.abspath(sys_dir)
@@ -254,14 +254,14 @@ def load_new_target(sys_dir, supersample=2):
     spec = importlib.util.spec_from_file_location("_t14_sys60_ss16data", sys_py)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.build_modelling_sequence(supersample=supersample)
+    return mod.build_prob_model(supersample=supersample)
 
 
 # ===========================================================================
 # One target: g_M, g_H, f, x_c along the SHARED dial z-path Z (97 points)
 # ===========================================================================
 
-def compute_target(model_seq, param_names, Z, dial, std_z, gate_idx, tag):
+def compute_target(prob_model, param_names, Z, dial, std_z, gate_idx, tag):
     """Evaluate (g_M, g_H, f, x_c) at every dial point for one target.
 
     Z    : (N, dim) SHARED dial z-path (identical for both targets -- render is
@@ -273,10 +273,10 @@ def compute_target(model_seq, param_names, Z, dial, std_z, gate_idx, tag):
     batched logp; Hessians one-by-one (jit once per target via ops['hess_logp'])."""
     import jax
 
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     ops["render_batch"] = jax.jit(jax.vmap(ops["render"]))
     W = np.asarray(ops["W"], dtype=np.float64)
-    pm = model_seq.prob_model
+    pm = prob_model
     logp_batch = jax.jit(jax.vmap(lambda z: pm.log_prob(z)[0]))
     hess_logp = ops["hess_logp"]                   # jax.jit(jax.hessian(logp0)) -- jit once
     batched_jac = jax.jit(jax.vmap(ops["jac_render"]))
@@ -535,7 +535,7 @@ def plot_f_nats(old, new, ana, out_path):
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description="T14 exact-Hessian vs GN-comb dial")
     p.add_argument("--old-data-dir", help="systems/sys60 (original ss2 data)")
-    p.add_argument("--new-sys-dir", help="systems/sys60_ss16data (d' via build_modelling_sequence)")
+    p.add_argument("--new-sys-dir", help="systems/sys60_ss16data (d' via build_prob_model)")
     p.add_argument("--run-dir", default=DEFAULT_RUN_DIR,
                    help="original MCLMC run dir (arrays.npz -> z0 + std_z)")
     p.add_argument("--t10-dir", help="T10 output dir (spike_list.json: top spike z0)")
@@ -601,7 +601,7 @@ def main(argv=None):
                   for i in range(N_DIAL)])
     gate_idx = [0, N_DIAL // 2, N_DIAL - 1]     # 3 points along the dial for the gate
 
-    # --- NEW target (d' via build_modelling_sequence; no qz) ----------------
+    # --- NEW target (d' via build_prob_model; no qz) ----------------
     print("[T14] === building NEW target (systems/sys60_ss16data, d' ss128 data) ===")
     new_seq, dim_n, names_n = load_new_target(args.new_sys_dir, supersample=2)
     if dim_n != dim:

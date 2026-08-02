@@ -1,6 +1,6 @@
 import numpy as np, sys, os, time
 sys.path.insert(0, "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/_h1h2_diag")
-from build_model import prob_model, model_seq
+from build_model import prob_model
 import jax, jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 tfd = tfp.distributions
@@ -32,7 +32,7 @@ else:
     raise SystemExit("mode must be under|over")
 
 t0=time.perf_counter()
-hist = MCLMC_JIT(model_seq=model_seq, qz=qz, n_hmc=8,
+hist = MCLMC_JIT(prob_model=prob_model, qz=qz, n_hmc=8,
                  num_burnin_steps=nb, num_results=nr,
                  desired_energy_variance=5e-4, regularize_mass_matrix=True,
                  progress_bar=False, seed=seed, debug_output=True)

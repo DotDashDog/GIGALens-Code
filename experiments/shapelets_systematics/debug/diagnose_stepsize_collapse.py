@@ -48,7 +48,6 @@ from jax import lax
 import tensorflow_probability.substrates.jax as tfp
 
 import gigalens.jax.simulator as gsim
-from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.prob_model import BackwardProbModel
 from gigalens.jax.profiles.light import sersic, shapelets
 from gigalens.jax.profiles.mass import epl, shear
@@ -141,8 +140,7 @@ def vela_system_model(sim_config, observed_img, background_rms=DEFAULT_BACKGROUN
                                [sersic.SersicEllipse(use_lstsq=True)], [src_model])
     lens_sim = LensSimulator(phys_model, sim_config, bs=1)
     prob_model = BackwardProbModel(prior, observed_img, background_rms=background_rms, exp_time=exp_time)
-    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-    return model_seq, lens_sim
+    return prob_model, lens_sim
 
 
 def free_source_fixed_lens_model(sim_config, observed_img, fixed_params,
@@ -165,8 +163,7 @@ def free_source_fixed_lens_model(sim_config, observed_img, fixed_params,
                                [sersic.SersicEllipse(use_lstsq=True)], [src_model])
     lens_sim = LensSimulator(phys_model, sim_config, bs=1)
     prob_model = BackwardProbModel(prior, observed_img, background_rms=background_rms, exp_time=exp_time)
-    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-    return model_seq, lens_sim
+    return prob_model, lens_sim
 
 
 # ---------------------------------------------------------------------------
@@ -892,12 +889,11 @@ def main():
 
     for n_max in args.n_max_list:
         print(f"\n{'='*78}\n n_max = {n_max}  (FREE-lens model -- what MCLMC samples)\n{'='*78}")
-        model_seq, lens_sim = vela_system_model(
+        prob_model, lens_sim = vela_system_model(
             sim_config, observed_img,
             background_rms=DEFAULT_BACKGROUND_RMS, exp_time=DEFAULT_EXP_TIME,
             use_shapelets=True, n_max=n_max,
         )
-        prob_model = model_seq.prob_model
         dim = int(jnp.stack(prob_model.bij.inverse(prob_model.prior.sample(seed=jax.random.PRNGKey(0)))).shape[0])
 
         z0, chi0, beta0 = pick_z0(lens_sim, prob_model, true_params)

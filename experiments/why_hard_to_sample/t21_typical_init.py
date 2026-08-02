@@ -221,8 +221,7 @@ def run_arm(arm, stage, out_root):
     import tensorflow_probability.substrates.jax as tfp
     tfd = tfp.distributions
 
-    model_seq, _ref_qz, z_center, dim, param_names = load_target(cfg["sys"])
-    prob_model = model_seq.prob_model
+    prob_model, _ref_qz, z_center, dim, param_names = load_target(cfg["sys"])
 
     # --- z_init: maximally typical draw (closest-to-median logp) ---
     z_init, ledger, sel_dim = select_typical_init(
@@ -258,7 +257,7 @@ def run_arm(arm, stage, out_root):
         for seed in SEEDS:
             out_npz = os.path.join(out_dir, f"t0_seed{seed}.npz")
             pos = run_standard_mclmc(
-                model_seq, qz_prime, STANDARD, seed, out_npz,
+                prob_model, qz_prime, STANDARD, seed, out_npz,
                 target_desc=f"carousel_min_{arm}, typical-set init (T21)",
                 provenance={"system": cfg["sys"], "arm": arm,
                             "qz": f"MVNDiag(loc=z_init, scale_diag={QZ_SCALE})",

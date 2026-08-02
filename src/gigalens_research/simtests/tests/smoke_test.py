@@ -231,11 +231,12 @@ def test_scene_model_card_reports_noise():
         noise_kind="gaussian_poisson", background_rms=0.01, exp_time=1000.0,
         likelihood_precision="float64",
     )
-    model_seq = get_inference_builder(
+    prob_model = get_inference_builder(
         "epl_shear_sersic_elliptical_sersiclets")(system, n_max=3)
-    assert model_seq.is_scene_backed, "builder must produce a scene-backed ModellingSequence"
+    assert getattr(prob_model, "model", None) is not None, \
+        "builder must produce a scene ProbModel"
 
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
     card = model_card(ctx)
     # gigalens.jax.utils schema: per-dataset noise, never silent. Every section
     # must actually have built (a guarded failure shows up as "unavailable").
@@ -276,7 +277,6 @@ def test_scene_model_card_multiplane_distances():
     from gigalens.jax.profiles.light.sersic import SersicEllipse
     from gigalens.jax.scene import Component, Plane, LensModel
     from gigalens.jax.scene_prob_model import ImageData, ProbModel
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.simulator import SimulatorConfig
     from gigalens_research.inference_utils.pipeline import (
         InferenceContext, model_card, format_model_card,
@@ -302,8 +302,7 @@ def test_scene_model_card_multiplane_distances():
                           likelihood_precision="float64")
     ds = ImageData(obs, cfg, background_rms=0.01, exp_time=1000.0, sees="all")
     pm = ProbModel(model, ds, mode="lstsq")
-    ctx = InferenceContext.from_modelling_sequence(
-        ModellingSequence(pm))
+    ctx = InferenceContext.from_prob_model(pm)
 
     card = model_card(ctx)
     trace = card["trace"]

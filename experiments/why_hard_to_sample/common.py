@@ -8,7 +8,7 @@ Three responsibilities:
      debug history npz + a JSON provenance manifest, exactly like driver_h1h2.py.
   2. compute_diagnostics -- per-parameter rank-R-hat / bulk-ESS (arviz), matching
      the conventions in src/gigalens_research/inference_utils/posterior.py.
-  3. load_carousel_target -- rebuild the carousel prob_model/model_seq and the
+  3. load_carousel_target -- rebuild the carousel prob_model and the
      MAP-centered "under"-mode qz exactly as driver_h1h2.py does.
 """
 from __future__ import annotations
@@ -68,7 +68,7 @@ def _now() -> str:
 # 1. run the sampler
 # ---------------------------------------------------------------------------
 
-def run_standard_mclmc(model_seq, qz, config, seed, out_path,
+def run_standard_mclmc(prob_model, qz, config, seed, out_path,
                        *, target_desc=None, provenance=None):
     """Run MCLMC_JIT(debug_output=True) with the standard `config` and `seed`,
     save the debug history to `out_path` (.npz) plus a sidecar `.json` manifest.
@@ -83,7 +83,7 @@ def run_standard_mclmc(model_seq, qz, config, seed, out_path,
 
     kwargs = config.mclmc_kwargs(seed=seed, debug_output=True)
     t0 = time.perf_counter()
-    hist = MCLMC_JIT(model_seq=model_seq, qz=qz, **kwargs)
+    hist = MCLMC_JIT(prob_model=prob_model, qz=qz, **kwargs)
     wall = time.perf_counter() - t0
     print(f"[run_standard_mclmc] seed={seed} sampling wall {wall:.1f}s")
 
@@ -219,7 +219,7 @@ def load_target(data_dir):
       * otherwise the legacy carousel shape (build_model.py + z_best.npy) ->
         load_carousel_target (unchanged fallback).
 
-    Both return the SAME 5-tuple (model_seq, qz, z_center, dim, param_names).
+    Both return the SAME 5-tuple (prob_model, qz, z_center, dim, param_names).
     """
     if not data_dir:
         raise ValueError("data_dir is required (no default).")
@@ -238,17 +238,17 @@ def load_target(data_dir):
 
 
 def load_carousel_target(data_dir):
-    """Rebuild the system's prob_model/model_seq and the MAP-centered "under"
+    """Rebuild the system's prob_model and the MAP-centered "under"
     qz, exactly as driver_h1h2.py.
 
     data_dir fully defines the system: it must hold build_model.py (exposing
-    `model_seq`) AND z_best.npy (and optionally names.npy) for the SAME system,
+    `prob_model`) AND z_best.npy (and optionally names.npy) for the SAME system,
     so MAP and model cannot be silently mixed across systems. Required; no
     hidden default. For the full carousel, point it at the MAIN checkout
     _h1h2_diag dir (its build_model.py loads data via absolute paths, so
     importing it from anywhere is safe).
 
-    Returns (model_seq, qz, z_best, dim, param_names_or_None).
+    Returns (prob_model, qz, z_best, dim, param_names_or_None).
     """
     if not data_dir:
         raise ValueError("data_dir is required (no default).")
@@ -264,7 +264,7 @@ def load_carousel_target(data_dir):
     # build_model imports gigalens and enables x64 on import.
     if data_dir not in sys.path:
         sys.path.insert(0, data_dir)
-    from build_model import model_seq  # noqa: E402
+    from build_model import prob_model  # noqa: E402
 
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
@@ -277,7 +277,7 @@ def load_carousel_target(data_dir):
 
     param_names = load_param_names(data_dir, dim)
 
-    return model_seq, qz, z_best, dim, param_names
+    return prob_model, qz, z_best, dim, param_names
 
 
 def load_param_names(data_dir, dim):

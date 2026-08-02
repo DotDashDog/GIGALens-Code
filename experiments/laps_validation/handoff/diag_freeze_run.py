@@ -6,7 +6,7 @@ healthy-but-slow dynamics?
 
 PRODUCES NUMBERS + a plot. No verdict. Does NOT edit the sampler / model / env.
 
-Model-build block (scene-API model + MAP + SVI -> model_seq, prob_model, qz) is
+Model-build block (scene-API model + MAP + SVI -> prob_model, qz) is
 copied VERBATIM from laps_overlay_j26.py. The LAPS calls from that file are NOT
 run; instead we run the pre-registered freeze diagnostic.
 """
@@ -17,7 +17,7 @@ import traceback
 import jax
 jax.config.update("jax_enable_x64", True)
 
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
@@ -92,18 +92,17 @@ def main():
     ds = Dataset(jnp.asarray(observed_img), sim_config,
                  background_rms=0.2, exp_time=100, sees="all")
     prob_model = ProbModel(model, ds, mode="forward")
-    model_seq = ModellingSequence(prob_model)
     DIM = int(model.num_free_params)
     print("dim (num free params):", DIM)
 
     opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-    best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+    best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
     map_lp = float(np.asarray(best_lp).reshape(-1)[0])
     map_chisq = float(np.asarray(best_chisq).reshape(-1)[0])
     print("MAP best_lp:", map_lp, "  MAP reduced chi^2:", map_chisq)
 
     opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-    qz, loss_hist = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500)
+    qz, loss_hist = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500)
 
     # ----------------------------------------------------------------- #
     # Diagnostic machinery                                              #
@@ -172,7 +171,7 @@ def main():
     for steps in (300, 1500):
         print(f"\n--- Phase-1 ladder: num_unadjusted_steps={steps} (prior init) ---")
         res = LAPS_late_adjusted_JIT(
-            model_seq, qz, init_mode="prior", num_chains=NUM_CHAINS,
+            prob_model, qz, init_mode="prior", num_chains=NUM_CHAINS,
             num_unadjusted_steps=steps, num_adjusted_steps=1,
             early_stop=False, phase2_enabled=False, seed=SEED)
         ens = np.asarray(res.samples).reshape((NUM_CHAINS, DIM))

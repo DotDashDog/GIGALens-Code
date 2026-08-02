@@ -16,7 +16,7 @@ PRODUCES NUMBERS, no verdict. Model build verbatim from diag_p2accept.py.
 import os, json, time
 import jax
 jax.config.update("jax_enable_x64", True)
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
@@ -57,13 +57,12 @@ model = LensModel([
 observed_img = np.load(f"{ASSETS}/demo.npy")
 ds = Dataset(jnp.asarray(observed_img), sim_config, background_rms=0.2, exp_time=100, sees="all")
 prob_model = ProbModel(model, ds, mode="forward")
-model_seq = ModellingSequence(prob_model)
 DIM = int(model.num_free_params); print("dim:", DIM, flush=True)
 opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
 print("MAP best_chisq (min):", float(np.min(np.asarray(best_chisq))), flush=True)
 opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-qz, _ = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500); print("SVI done.", flush=True)
+qz, _ = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500); print("SVI done.", flush=True)
 
 # ---------------------------------------------------------------------------
 # Batched true-posterior log_prob helper (returns (M,))
@@ -128,7 +127,7 @@ print(f"[ANNEALED] per-dim std: median={np.median(annealed_std):.4e}  "
 # ---------------------------------------------------------------------------
 print("\n=== warm-init full LAPS (default budgets) [reference] ===", flush=True)
 tw = time.time()
-warm = LAPS_late_adjusted_JIT(model_seq, qz, init_mode="warm", num_chains=M, seed=0)
+warm = LAPS_late_adjusted_JIT(prob_model, qz, init_mode="warm", num_chains=M, seed=0)
 warm_smp = np.asarray(warm.samples).reshape((-1, DIM))
 warm_std = np.std(warm_smp, axis=0)
 warm_logp = true_logp(warm_smp)

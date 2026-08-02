@@ -940,7 +940,7 @@ def full_laps_sharded(
 
 
 def LAPS_JIT(
-    model_seq,
+    prob_model,
     qz,
     n_hmc=128,
     num_unadjusted_steps=1000,

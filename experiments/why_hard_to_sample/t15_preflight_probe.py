@@ -29,10 +29,9 @@ jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp  # noqa: E402
 
 for arm, sysdir in SYSDIRS.items():
-    model_seq, qz, z_center, dim, names = load_target(
+    pm, qz, z_center, dim, names = load_target(
         "/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/why-hard-t0t1/"
         "experiments/why_hard_to_sample/" + sysdir)
-    pm = model_seq.prob_model
     man = json.load(open(REFS[arm] + "/map/manifest.json"))
     best_lp = float(man["metadata"]["best_chisq"]), float(man["metadata"]["best_lp"])
     z = jnp.asarray(z_center)[None, :]

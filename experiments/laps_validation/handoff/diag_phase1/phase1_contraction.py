@@ -25,7 +25,7 @@ import time
 import jax
 jax.config.update("jax_enable_x64", True)
 
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
@@ -110,15 +110,14 @@ observed_img = np.load(f"{ASSETS}/demo.npy")
 ds = Dataset(jnp.asarray(observed_img), sim_config,
              background_rms=0.2, exp_time=100, sees="all")
 prob_model = ProbModel(model, ds, mode="forward")
-model_seq = ModellingSequence(prob_model)
 DIM = int(model.num_free_params)
 print("dim (num free params):", DIM)
 
 opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
 
 opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-qz, loss_hist = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500)
+qz, loss_hist = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500)
 
 markers = []
 for i in truth[0][0].keys():
@@ -164,7 +163,7 @@ SMOKE = os.environ.get("SMOKE", "0") == "1"
 if SMOKE:
     t0 = time.time()
     res = LAPS_late_adjusted_JIT(
-        model_seq, qz, init_mode="prior",
+        prob_model, qz, init_mode="prior",
         num_chains=16, num_unadjusted_steps=50, num_adjusted_steps=1,
         early_stop=False, phase2_enabled=False, seed=0)
     dt = time.time() - t0
@@ -187,12 +186,12 @@ else:
     # step count. per_step = (t_big - t_small) / (P_big - P_small).
     P_small, P_big = 25, 200
     t0 = time.time()
-    LAPS_late_adjusted_JIT(model_seq, qz, init_mode="prior", num_chains=512,
+    LAPS_late_adjusted_JIT(prob_model, qz, init_mode="prior", num_chains=512,
                            num_unadjusted_steps=P_small, num_adjusted_steps=1,
                            early_stop=False, phase2_enabled=False, seed=0)
     t_small = time.time() - t0
     t0 = time.time()
-    LAPS_late_adjusted_JIT(model_seq, qz, init_mode="prior", num_chains=512,
+    LAPS_late_adjusted_JIT(prob_model, qz, init_mode="prior", num_chains=512,
                            num_unadjusted_steps=P_big, num_adjusted_steps=1,
                            early_stop=False, phase2_enabled=False, seed=0)
     t_big = time.time() - t0
@@ -212,12 +211,12 @@ common = dict(num_chains=512, num_unadjusted_steps=STEPS, num_adjusted_steps=1,
 # 3. The two long Phase-1-only runs                                            #
 # --------------------------------------------------------------------------- #
 t0 = time.time()
-res_warm = LAPS_late_adjusted_JIT(model_seq, qz, init_mode="warm", **common)
+res_warm = LAPS_late_adjusted_JIT(prob_model, qz, init_mode="warm", **common)
 t_warm = time.time() - t0
 print(f"[warm] done wall={t_warm:.1f}s ({t_warm/60:.1f} min)  T1={res_warm.phase1_len}")
 
 t0 = time.time()
-res_prior = LAPS_late_adjusted_JIT(model_seq, qz, init_mode="prior", **common)
+res_prior = LAPS_late_adjusted_JIT(prob_model, qz, init_mode="prior", **common)
 t_prior = time.time() - t0
 print(f"[prior] done wall={t_prior:.1f}s ({t_prior/60:.1f} min)  T1={res_prior.phase1_len}")
 

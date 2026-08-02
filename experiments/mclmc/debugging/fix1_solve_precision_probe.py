@@ -161,20 +161,20 @@ def main():
         delta_pix=0.03, num_pix=200, supersample=1,
         background_rms=0.002, exp_time=2000.0,
     )
-    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
+    prob_model = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
     print(f"[probe] model built n_max={args.n_max} system={system.system_id}", flush=True)
 
     bootstrap = VelaBootstrapQzStage(system=system, n_max=args.n_max,
                                      map_num_steps=200, map_n_samples=args.map_samples,
                                      diag_scale=1e-8)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
     res = bootstrap.run(ctx, {}, seed=args.seed)
     qz = bootstrap.derive_artifacts(res.arrays)["qz"]
     z0 = jnp.asarray(qz.mean()).astype(jnp.float64)
     print(f"[probe] anchor z0[:4]={np.asarray(z0)[:4]} dim={z0.shape[-1]}", flush=True)
 
-    lens_sim = sim.LensSimulator(model_seq.phys_model, model_seq.sim_config, bs=1)
-    pm = model_seq.prob_model
+    lens_sim = sim.LensSimulator(prob_model.model, prob_model.datasets[0].sim_config, bs=1)
+    pm = prob_model
     obs = jnp.asarray(pm.observed_image)
     err = jnp.asarray(pm.err_map)
     bij = pm.bij

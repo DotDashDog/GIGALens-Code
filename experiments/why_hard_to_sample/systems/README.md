@@ -2,7 +2,7 @@
 
 Two pre-registered systems (`docs/logs/why-hard-to-sample.md`, T0 seed-variance
 and T1 Gaussian-clone). Each subdir has a `system.py` exposing `load_target()`
-returning `(model_seq, qz, z_center, dim, param_names)`, consumed via
+returning `(prob_model, qz, z_center, dim, param_names)`, consumed via
 `common.load_target(data_dir)` (dispatches to `system.py` if present, else the
 legacy carousel `build_model.py`+`z_best.npy` path).
 

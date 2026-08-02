@@ -64,7 +64,6 @@ class ProfileContext:
     true_z: jax.Array
     true_params_shp: Any
     qz: Any
-    model_seq: Any
     prob_model: Any
     lens_sim: Any
     map_optimizer: Any
@@ -81,7 +80,6 @@ def build_sim_system_complex_context(seed: int, initialize_distributed: bool):
     if not hasattr(jax.experimental, "shard_map"):
         jax.experimental.shard_map = types.SimpleNamespace(shard_map=jax.shard_map)
 
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.prob_model import BackwardProbModel
     from gigalens.jax.profiles.light import sersic, shapelets
     from gigalens.jax.profiles.mass import epl, shear
@@ -163,7 +161,6 @@ def build_sim_system_complex_context(seed: int, initialize_distributed: bool):
         )
         sim_config = SimulatorConfig(delta_pix=delta_pix, num_pix=num_pix, supersample=1, kernel=psf)
         prob_model = BackwardProbModel(prior, observed_img, background_rms=background_rms, exp_time=exp_time)
-        model_seq = ModellingSequence(phys_model, prob_model, sim_config)
         lens_sim = LensSimulator(phys_model, sim_config, bs=1)
 
         lens_light_no_Ie = true_params[1][0].copy()
@@ -184,7 +181,6 @@ def build_sim_system_complex_context(seed: int, initialize_distributed: bool):
         true_z=true_z,
         true_params_shp=true_params_shp,
         qz=qz,
-        model_seq=model_seq,
         prob_model=prob_model,
         lens_sim=lens_sim,
         map_optimizer=map_optimizer,
@@ -193,6 +189,7 @@ def build_sim_system_complex_context(seed: int, initialize_distributed: bool):
 
 def make_targets(ctx: ProfileContext, args):
     from alternate_inference.mclmc_alt import MCLMC_JIT
+    from gigalens.jax.inference import MAP
 
     log_prob = jax.jit(lambda z: ctx.prob_model.log_prob(ctx.lens_sim, z)[0])
     value_and_grad = jax.jit(
@@ -200,7 +197,8 @@ def make_targets(ctx: ProfileContext, args):
     )
 
     def run_map():
-        return ctx.model_seq.MAP(
+        return MAP(
+            ctx.prob_model,
             ctx.map_optimizer,
             n_samples=args.map_samples,
             num_steps=args.map_steps,
@@ -210,7 +208,7 @@ def make_targets(ctx: ProfileContext, args):
 
     def run_mclmc():
         return MCLMC_JIT(
-            ctx.model_seq,
+            ctx.prob_model,
             ctx.qz,
             n_hmc=args.mclmc_chains,
             num_burnin_steps=args.mclmc_burnin,

@@ -451,7 +451,6 @@ def run_profile_map(w0_arm, img1, img2, sim_config, seed=1, out_dir=ARM_PROFILE_
     Returns (profile_map_model, z_best (19,)).
     """
     import optax
-    from gigalens.jax.inference import ModellingSequence
     from gigalens_research.inference_utils import InferenceContext, Pipeline, MAPStage
 
     full_model, lens, source1, source2 = build_full_model()
@@ -487,8 +486,7 @@ def run_profile_map(w0_arm, img1, img2, sim_config, seed=1, out_dir=ARM_PROFILE_
     comp1 = profile_map_model.planes[1].light[0]
     comp2 = profile_map_model.planes[2].light[0]
     prob_model = make_prob_model(profile_map_model, comp1, comp2, img1, img2, sim_config)
-    model_seq = ModellingSequence(prob_model)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
     pipeline = Pipeline(ctx, seed=seed)
 
     def _old_map_optimizer():

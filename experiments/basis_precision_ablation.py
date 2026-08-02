@@ -124,7 +124,7 @@ def main():
     from gigalens.jax.inference import ModellingSequence
     sys64 = build_system(None, args.num_pix, args.supersample)
     ms64 = get_inference_builder(BUILDER)(sys64, n_max=args.n_max)
-    cfg32 = dataclasses.replace(ms64.sim_config, basis_precision="float32")
+    cfg32 = dataclasses.replace(ms64.datasets[0].sim_config, basis_precision="float32")
     ms32 = ModellingSequence.from_scene(ms64.scene_model, ms64.prob_model, cfg32)
     _s64, _s32 = ms64.make_lens_sim(1), ms32.make_lens_sim(1)
     assert _s64.basis_precision is None and _s32.basis_precision == "float32", (
@@ -132,10 +132,10 @@ def main():
     print("trace_mode:", _s64.trace_mode,
           "| basis_precision (sim):", _s64.basis_precision, "/", _s32.basis_precision,
           "| depth:", _s64.depth,
-          "| num_free:", ms64.scene_model.num_free_params)
+          "| num_free:", ms64.model.num_free_params)
 
     print("\n[1/4] bootstrapping qz (PartialTruthBootstrapQzStage, free=source) ...")
-    ctx = InferenceContext.from_modelling_sequence(ms64)
+    ctx = InferenceContext.from_prob_model(ms64)
     stage = PartialTruthBootstrapQzStage(
         system=sys64, free=("source",), map_num_steps=200, map_n_samples=50)
     qz = stage.derive_artifacts(stage.run(ctx, {}, seed=args.seed).arrays)["qz"]

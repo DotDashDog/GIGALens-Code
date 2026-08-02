@@ -130,19 +130,18 @@ def vela_sersicshapelets_inference_prior():
 
 @register_inference_builder("epl_shear_sersic_sersicshapelets")
 def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
-    """Build the SCENE ModellingSequence with a ``SersicShapelets(n_max, use_lstsq=True)``
+    """Build the SCENE ``ProbModel`` with a ``SersicShapelets(n_max, use_lstsq=True)``
     source (G1b).
 
     Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light; SersicShapelets composite
-    source, lstsq amps) + ``Dataset`` + ``ProbModel(mode="lstsq")`` in a scene-backed
-    ``ModellingSequence``. Source shape priors come from ``_source_priors`` (the single
-    source-of-truth, shared with the bootstrap). Public signature/return unchanged.
+    source, lstsq amps) + ``Dataset`` + ``ProbModel(mode="lstsq")``, returned directly.
+    Source shape priors come from ``_source_priors`` (the single source-of-truth,
+    shared with the bootstrap). Public signature unchanged.
 
     Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
     """
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.light.sersic_shapelets import SersicShapelets
     from gigalens.jax.profiles.mass import epl, shear
@@ -192,5 +191,5 @@ def build_epl_shear_sersic_sersicshapelets(system: Any, **kwargs) -> Any:
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence(prob_model)
+    return prob_model
 

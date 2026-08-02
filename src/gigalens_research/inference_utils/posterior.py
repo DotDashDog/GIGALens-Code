@@ -108,7 +108,7 @@ class Posterior(ABC):
         :func:`gigalens_research.param_index.param_sites` rather than
         reconstructing it from parameter names.
         """
-        model = getattr(getattr(self.ctx, "model_seq", None), "scene_model", None)
+        model = getattr(getattr(self.ctx, "prob_model", None), "model", None)
         if model is None:
             raise TypeError(
                 "Posterior requires a scene-backed InferenceContext; the legacy "

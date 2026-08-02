@@ -153,7 +153,6 @@ def make_prob_model(model, comp1, comp2, img1, img2, sim_config):
 def build_pipeline(prob_model, *, pipeline_seed: int = 42):
     """MAP -> diag-qz bridge -> MCLMC, stage-for-stage and seed-for-seed the
     same as Run A (`dspl_free_r2.build_pipeline`) so results are comparable."""
-    from gigalens.jax.inference import ModellingSequence
     from gigalens_research.inference_utils import (
         InferenceContext, Pipeline, MAPStage, BridgeStage, MCLMCStage,
     )
@@ -162,8 +161,7 @@ def build_pipeline(prob_model, *, pipeline_seed: int = 42):
         import optax
         return optax.adabelief(1e-2, b1=0.95, b2=0.99)
 
-    model_seq = ModellingSequence(prob_model)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
     pipeline = Pipeline(ctx, seed=pipeline_seed)
 
     pipeline.add(MAPStage(

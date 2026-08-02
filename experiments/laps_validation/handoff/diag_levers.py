@@ -20,7 +20,7 @@ laps_overlay_j26.py / diag_p2accept.py.
 import os, json
 import jax
 jax.config.update("jax_enable_x64", True)
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
@@ -62,13 +62,12 @@ model = LensModel([
 observed_img = np.load(f"{ASSETS}/demo.npy")
 ds = Dataset(jnp.asarray(observed_img), sim_config, background_rms=0.2, exp_time=100, sees="all")
 prob_model = ProbModel(model, ds, mode="forward")
-model_seq = ModellingSequence(prob_model)
 DIM = int(model.num_free_params); print("dim:", DIM)
 opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
 print("MAP best_chisq (min):", float(np.min(np.asarray(best_chisq))))
 opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-qz, _ = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500); print("SVI done.", flush=True)
+qz, _ = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500); print("SVI done.", flush=True)
 
 # ---- HMC reference + truth markers (from the already-computed artifacts) ----
 MASS_ORDER = [
@@ -106,7 +105,7 @@ results, summary = {}, {}
 for name, kw in ARMS.items():
     print(f"\n=== {name}: prior-init 512 chains, 300/200, early_stop=False, {kw} ===",
           flush=True)
-    res = LAPS_late_adjusted_JIT(model_seq, qz, init_mode="prior", num_chains=512,
+    res = LAPS_late_adjusted_JIT(prob_model, qz, init_mode="prior", num_chains=512,
                                  early_stop=False, **kw)
     smp = np.asarray(res.samples).reshape((-1, DIM))
     mass = to_mass(smp)

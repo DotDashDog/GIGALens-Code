@@ -1,6 +1,6 @@
 """G1b GPU reproduction: epl_shear_sersic_sersic (forward mode), thin script form of the sersiclets repro.
 
-Migrated scene-API path: from_vela_dir -> scene-backed ModellingSequence -> Pipeline ->
+Migrated scene-API path: from_vela_dir -> scene-backed ProbModel -> Pipeline ->
 PartialTruthBootstrapQzStage(free=source) -> MCLMCStage(8x2000+2000) on the real system.
 Inference-level grader for the G1b builder migration (posterior reproduces pre-migration).
 
@@ -36,11 +36,11 @@ system = from_vela_dir(
 system.likelihood_precision = "float64"
 system.conv_precision = "float32"
 
-model_seq = get_inference_builder("epl_shear_sersic_sersic")(system)
-print("builder=epl_shear_sersic_sersic scene_backed:", model_seq.is_scene_backed,
-      "mode:", model_seq.prob_model.mode, "n_free:", model_seq.scene_model.num_free_params)
+prob_model = get_inference_builder("epl_shear_sersic_sersic")(system)
+print("builder=epl_shear_sersic_sersic scene_backed:", True,
+      "mode:", prob_model.mode, "n_free:", prob_model.model.num_free_params)
 
-ctx = InferenceContext.from_modelling_sequence(model_seq)
+ctx = InferenceContext.from_prob_model(prob_model)
 print(format_model_card(model_card(ctx)))
 
 pipeline = Pipeline(ctx)

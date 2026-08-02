@@ -294,7 +294,7 @@ def run_seeds(sprior, u_init, ledger, limit):
     seeds = [1] if limit else SEEDS      # smoke: seed 1 only (end-to-end wiring)
     dim = sprior["dim"]
     names = sprior["param_names"]
-    ms = sprior["model_seq"]
+    pm = sprior["prob_model"]
 
     qz_prime = tfd.MultivariateNormalDiag(
         loc=jnp.asarray(u_init), scale_diag=jnp.full(dim, QZ_SCALE))
@@ -303,7 +303,7 @@ def run_seeds(sprior, u_init, ledger, limit):
     for seed in seeds:
         out_npz = os.path.join(T28_OUT, f"t28_seed{seed}{suffix}.npz")
         pos = run_standard_mclmc(
-            ms, qz_prime, cfg, seed, out_npz,
+            pm, qz_prime, cfg, seed, out_npz,
             target_desc="carousel_min NEW arm, T28 observable-slope prior "
                         f"(s~Uniform({S_LO},{S_HI})), typical init mapped to s-chart",
             provenance={"experiment": "T28", "artifact": sprior["artifact"],
@@ -353,8 +353,7 @@ def main(argv=None):
     smod = _sprior_module()
     sprior = smod.build_sprior_target()
     leaf = sprior["leaf"]
-    ms_b, _qz_b, z_center_b, dim_b, names_b = load_target(BASE_SYS)
-    baseline_pm = ms_b.prob_model
+    baseline_pm, _qz_b, z_center_b, dim_b, names_b = load_target(BASE_SYS)
     if sprior["dim"] != dim_b or list(sprior["param_names"]) != list(names_b):
         raise ValueError("sprior dim/param_names mismatch vs baseline new arm")
 

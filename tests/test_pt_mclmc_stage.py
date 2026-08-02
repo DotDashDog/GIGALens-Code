@@ -113,7 +113,7 @@ def _bimodal_log_density(z):
 def _toy_log_prob(z):
     # (log_prob, reduced_chi2)-shaped return, mirroring the real
     # ProbModel.log_prob seam that MCLMC_JIT/PTMCLMCStage.run rely on
-    # (`ctx.model_seq.prob_model.log_prob(z)[0]`). The chi2-like companion
+    # (`ctx.prob_model.log_prob(z)[0]`). The chi2-like companion
     # value is a placeholder never used by the sampler.
     lp = _bimodal_log_density(z)
     return lp, -2.0 * lp / _D
@@ -121,9 +121,7 @@ def _toy_log_prob(z):
 
 def _make_ctx():
     return types.SimpleNamespace(
-        model_seq=types.SimpleNamespace(
-            prob_model=types.SimpleNamespace(log_prob=_toy_log_prob)
-        )
+        prob_model=types.SimpleNamespace(log_prob=_toy_log_prob)
     )
 
 

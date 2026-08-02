@@ -71,16 +71,9 @@ class _FakeProbModel:
         return (-0.5 * jnp.sum((z / self._sigma) ** 2), None)
 
 
-class _FakeModelSeq:
-    def __init__(self, dim):
-        self.prob_model = _FakeProbModel(dim)
-
-
 def _fake_ctx(dim=DIM):
-    model_seq = _FakeModelSeq(dim)
     return InferenceContext(
-        phys_model=None, prob_model=model_seq.prob_model,
-        sim_config=None, model_seq=model_seq,
+        phys_model=None, prob_model=_FakeProbModel(dim), sim_config=None,
     )
 
 

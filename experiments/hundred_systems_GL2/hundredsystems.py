@@ -31,7 +31,6 @@ if jax.process_index() == 0:
     print(f"Visible JAX devices: {jax.devices()}")
     print(f"Local device count: {jax.local_device_count()}")
 
-from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel
 from gigalens.jax.simulator import LensSimulator
 from gigalens.simulator import SimulatorConfig
@@ -89,8 +88,7 @@ for i in idxes:
     observed_img = observed_imgs[i]
 
     prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
-    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
 
     pipeline = Pipeline(ctx, seed=0)
     pipeline.add(MAPStage(num_steps=1000, n_samples=2000))

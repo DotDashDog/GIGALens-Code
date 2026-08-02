@@ -43,7 +43,7 @@ import tensorflow_probability.substrates.jax as tfp
 import blackjax
 from matplotlib import pyplot as plt
 
-from gigalens.jax.experimental.mclmc import MCLMC_JIT
+from gigalens.jax.inference.mclmc import MCLMC_JIT
 from gigalens_research.inference_utils import PipelineConfig, run_pipeline
 from gigalens_research.plotting import plot_image_results
 from vela_utilities import (
@@ -205,7 +205,7 @@ def run_one_system(args, sim_num, rep):
     )
 
     # 1. Free-source fixed-lens MAP -> shapelet "truth"
-    model_seq_fixed_lens, _ = free_source_fixed_lens_model(
+    prob_model_fixed_lens, _ = free_source_fixed_lens_model(
         sim_config, observed_img, true_params,
         background_rms=args.background_rms, exp_time=args.exp_time,
         use_shapelets=use_shapelets, n_max=args.n_max,
@@ -215,16 +215,15 @@ def run_one_system(args, sim_num, rep):
         map_kwargs={"num_steps": args.map_num_steps,
                     "n_samples": args.map_n_samples},
     )
-    results_fixed_lens = run_pipeline(model_seq_fixed_lens, pipelinecfg)
+    results_fixed_lens = run_pipeline(prob_model_fixed_lens, pipelinecfg)
     shp_true = results_fixed_lens["MAP"].MAP_best[2][0]
 
     # 2. Free Vela model + truth-as-reference
-    model_seq, lens_sim = vela_system_model(
+    prob_model, lens_sim = vela_system_model(
         sim_config, observed_img,
         background_rms=args.background_rms, exp_time=args.exp_time,
         use_shapelets=use_shapelets, n_max=args.n_max,
     )
-    prob_model = model_seq.prob_model
     true_params_shp = build_true_params_shp(true_params, shp_true)
     true_z = jnp.stack(prob_model.bij.inverse(true_params_shp)).T
 
@@ -251,7 +250,7 @@ def run_one_system(args, sim_num, rep):
 
     mclmc_start = time.perf_counter()
     debug_hist = MCLMC_JIT(
-        model_seq, qz,
+        prob_model, qz,
         n_hmc=args.n_hmc,
         num_burnin_steps=args.num_burnin_steps,
         num_results=args.num_results,
