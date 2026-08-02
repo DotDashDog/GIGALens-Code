@@ -112,16 +112,16 @@ def build_model(n_max, home=home):
         delta_pix=0.03, num_pix=200, supersample=1,
         background_rms=0.002, exp_time=2000.0,
     )
-    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=n_max)
-    lens_sim = sim.LensSimulator(model_seq.phys_model, model_seq.sim_config, bs=1)
-    return model_seq, lens_sim, system
+    prob_model = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=n_max)
+    lens_sim = sim.LensSimulator(prob_model.model, prob_model.datasets[0].sim_config, bs=1)
+    return prob_model, lens_sim, system
 
 
 # ---------------------------------------------------------------------------
 # Extract design matrix A and gram = A^T A (weighted)
 # ---------------------------------------------------------------------------
 
-def get_design_matrix(model_seq, lens_sim, anchor_z, jnp, jax):
+def get_design_matrix(prob_model, lens_sim, anchor_z, jnp, jax):
     """
     Form the weighted design matrix A  (shape [n_pixels, n_components]).
 
@@ -144,8 +144,6 @@ def get_design_matrix(model_seq, lens_sim, anchor_z, jnp, jax):
         nan_pre_clamp : bool, True if any non-finite values found before nan_to_num
     """
     from gigalens.jax.simulator import _shared_kernel_component_conv
-
-    prob_model = model_seq.prob_model
 
     # Decode z → physical params.
     # log_prob does: z = list(z.T); x = bij.forward(z)
@@ -343,7 +341,7 @@ def run_one_n_max(n_max, args, base_out, jnp, jax):
 
     log(f"[E2] n_max={n_max}: loading model...")
     t0 = time.perf_counter()
-    model_seq, lens_sim, system = build_model(n_max)
+    prob_model, lens_sim, system = build_model(n_max)
     log(f"[E2] model loaded in {time.perf_counter()-t0:.1f}s")
 
     all_results = {}   # anchor_set_name -> list of per-anchor dicts
@@ -365,7 +363,7 @@ def run_one_n_max(n_max, args, base_out, jnp, jax):
             try:
                 (A_f64, A_f32, gram_f64, gram_f32,
                  obs, err_map, coeffs, sv_A, nan_pre_clamp) = get_design_matrix(
-                    model_seq, lens_sim, anchor_z, jnp, jax)
+                    prob_model, lens_sim, anchor_z, jnp, jax)
             except Exception as e:
                 log(f"[E2]   ERROR building design matrix: {e}")
                 set_results.append({"error": str(e)})

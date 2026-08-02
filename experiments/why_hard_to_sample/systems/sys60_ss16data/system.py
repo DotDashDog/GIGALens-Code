@@ -58,10 +58,10 @@ def _recover_param_names(prob_model, dim):
     return names
 
 
-def build_modelling_sequence(supersample=None):
-    """Build the scene-API ModellingSequence on the re-simulated data d' WITHOUT a qz
+def build_prob_model(supersample=None):
+    """Build the scene-API ProbModel on the re-simulated data d' WITHOUT a qz
     (used by the arm's MAP->SVI pipeline stage, which PRODUCES the qz). Returns
-    (model_seq, dim, param_names). supersample=None -> notebook value 2; an int overrides
+    (prob_model, dim, param_names). supersample=None -> notebook value 2; an int overrides
     ONLY SimulatorConfig.supersample."""
     import jax
     jax.config.update("jax_enable_x64", True)   # sampling / likelihood need float64
@@ -74,7 +74,6 @@ def build_modelling_sequence(supersample=None):
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
     from gigalens.jax.scene_prob_model import Dataset, ProbModel
-    from gigalens.jax.inference import ModellingSequence
 
     # --- re-simulated observed image d' (RAISE if t13_resim not run) ---------
     _require(_RESIM_NPZ, "re-simulated d' (run t13_resim.py first)")
@@ -125,14 +124,13 @@ def build_modelling_sequence(supersample=None):
                  sees=[lens_light, source_light],
                  background_rms=0.2, exp_time=100)
     prob_model = ProbModel(model, ds, mode="forward")
-    model_seq = ModellingSequence(prob_model)
 
     param_names = _recover_param_names(prob_model, _EXPECTED_DIM)  # validates dim==22
-    return model_seq, _EXPECTED_DIM, param_names
+    return prob_model, _EXPECTED_DIM, param_names
 
 
 def load_target(supersample=None, qz_arrays=None):
-    """Return (model_seq, qz, z_center, dim, param_names) for the re-simulated sys60.
+    """Return (prob_model, qz, z_center, dim, param_names) for the re-simulated sys60.
 
     supersample : None -> 2 (notebook value); int overrides SimulatorConfig.supersample.
     qz_arrays   : REQUIRED path to THIS arm's SVI stage arrays.npz (keys qz_loc,
@@ -143,13 +141,13 @@ def load_target(supersample=None, qz_arrays=None):
         raise ValueError(
             "[sys60_ss16] load_target requires qz_arrays=<arm svi/arrays.npz>: the "
             "re-simulated data d' has a DIFFERENT posterior per model arm, so each arm "
-            "must pass its OWN SVI qz. (Pipeline/MAP->SVI uses build_modelling_sequence, "
+            "must pass its OWN SVI qz. (Pipeline/MAP->SVI uses build_prob_model, "
             "which needs no qz.)")
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
     tfd = tfp.distributions
 
-    model_seq, dim, param_names = build_modelling_sequence(supersample=supersample)
+    prob_model, dim, param_names = build_prob_model(supersample=supersample)
 
     a = np.load(_require(qz_arrays, "arm SVI arrays.npz"))
     for k in ("qz_loc", "qz_scale_tril"):
@@ -165,4 +163,4 @@ def load_target(supersample=None, qz_arrays=None):
     qz = tfd.MultivariateNormalTriL(
         loc=jnp.asarray(qz_loc), scale_tril=jnp.asarray(qz_scale_tril))
     z_center = np.asarray(qz_loc)
-    return model_seq, qz, z_center, dim, param_names
+    return prob_model, qz, z_center, dim, param_names

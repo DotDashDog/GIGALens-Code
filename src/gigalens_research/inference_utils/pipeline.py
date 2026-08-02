@@ -24,7 +24,7 @@ Design summary
 
 Typical use::
 
-    pipeline = Pipeline(InferenceContext.from_modelling_sequence(model_seq))
+    pipeline = Pipeline(InferenceContext.from_prob_model(prob_model))
     pipeline.add(MAPStage(num_steps=1000, n_samples=2000))
     pipeline.add(SVIStage(num_steps=5000, n_vi=1000))
     pipeline.add(HMCStage(n_hmc=64, num_results=1500))
@@ -205,37 +205,42 @@ class _ScenePhysModelView:
 class InferenceContext:
     """Everything stages need to read about the system being modeled.
 
-    Stages should treat all fields as read-only. ``model_seq`` carries the
-    JAX-side ``MAP``/``SVI``/``HMC`` implementations; the other fields are
-    surfaced separately so they're easy to hash without touching closures
-    inside ``ModellingSequence``.
+    Stages should treat all fields as read-only. The scene ``prob_model`` is the
+    one authoritative input — the JAX-side ``MAP``/``SVI``/``HMC`` free functions
+    take it directly. ``phys_model`` and ``sim_config`` are derived views,
+    surfaced separately so they're easy to hash.
     """
 
     phys_model: Any
     prob_model: Any
     sim_config: Any
-    model_seq: Any
 
     @classmethod
-    def from_modelling_sequence(cls, model_seq) -> "InferenceContext":
+    def from_prob_model(cls, prob_model) -> "InferenceContext":
         # Scene-only (old gigalens API dropped): expose a phys_model-shaped VIEW derived
         # from the scene LensModel so the read-only consumers (model_card / hash /
         # posterior) read a stable profile listing without the old PhysicalModel.
-        if getattr(model_seq, "scene_model", None) is None:
+        scene_model = getattr(prob_model, "model", None)
+        if scene_model is None:
             raise TypeError(
-                "InferenceContext.from_modelling_sequence requires a scene-backed "
-                "ModellingSequence (build it with ModellingSequence(prob_model)). The "
-                "legacy PhysicalModel path was removed with the old gigalens API.")
-        phys_view = _ScenePhysModelView(model_seq.scene_model)
+                "InferenceContext.from_prob_model requires a scene ProbModel "
+                "(gigalens.jax.scene_prob_model.ProbModel), which exposes the scene "
+                "LensModel as `.model`. The legacy PhysicalModel path was removed with "
+                "the old gigalens API.")
+        # sim_config is used only for plotting extent / source-plane FOV defaults. Take
+        # the first dataset that actually has one; a point-source-only ProbModel has no
+        # imaging grid, so this is None there (nothing on the fit path reads it).
+        sim_config = next(
+            (getattr(d, "sim_config", None) for d in prob_model.datasets
+             if getattr(d, "sim_config", None) is not None), None)
         return cls(
-            phys_model=phys_view,
-            prob_model=model_seq.prob_model,
-            sim_config=model_seq.sim_config,
-            model_seq=model_seq,
+            phys_model=_ScenePhysModelView(scene_model),
+            prob_model=prob_model,
+            sim_config=sim_config,
         )
 
     def hash(self) -> str:
-        """Stable hash of the *modeling inputs* (not the ``model_seq`` impl).
+        """Stable hash of the *modeling inputs*.
 
         Multi-dataset-aware: a scene ``ProbModel`` carries a ``datasets`` list, so the
         fingerprint folds in every band's image, noise map, mask AND that band's own
@@ -709,13 +714,13 @@ class Pipeline:
     ----------
     ctx : InferenceContext
         Shared modeling context. Build one with
-        ``InferenceContext.from_modelling_sequence(model_seq)``.
+        ``InferenceContext.from_prob_model(prob_model)``.
     seed : int
         Default seed for stages that don't set their own.
 
     Examples
     --------
-    >>> p = Pipeline(InferenceContext.from_modelling_sequence(model_seq))
+    >>> p = Pipeline(InferenceContext.from_prob_model(prob_model))
     >>> p.add(MAPStage(num_steps=1000, n_samples=2000))
     >>> p.add(SVIStage(num_steps=5000, n_vi=1000))
     >>> p.add(HMCStage(n_hmc=64, num_results=1500, num_burnin_steps=500))
@@ -1079,7 +1084,7 @@ class Pipeline:
 # Concrete stages
 # ---------------------------------------------------------------------------
 #
-# These are thin adapters over ``ModellingSequence.{MAP,SVI,HMC}`` and the
+# These are thin adapters over ``gigalens.jax.inference.{MAP,SVI,HMC}`` and the
 # alternate inference functions. Each stage exposes its tunable knobs as
 # plain kwargs (no nested dicts) and a single ``optimizer_id`` string for
 # optimizers (which optax doesn't let us hash robustly).
@@ -1118,7 +1123,7 @@ _DEFAULT_MAP_OPTIMIZER_ID = (
 
 
 class MAPStage(InferenceStage):
-    """Multi-start MAP optimization. Wraps ``ModellingSequence.MAP``.
+    """Multi-start MAP optimization. Wraps ``gigalens.jax.inference.MAP``.
 
     Produces ``z_best`` (best parameter vector in unconstrained space),
     plus per-step ``lp_hist`` and ``chisq_hist`` for diagnostics/plotting.
@@ -1157,7 +1162,9 @@ class MAPStage(InferenceStage):
 
     def run(self, ctx, artifacts, seed):
         t0 = time.perf_counter()
-        samples, lps, chisqs = ctx.model_seq.MAP(
+        from gigalens.jax.inference import MAP as _MAP
+        samples, lps, chisqs = _MAP(
+            ctx.prob_model,
             optimizer=self._optimizer_factory(),
             start=None,
             n_samples=self.n_samples,
@@ -1200,7 +1207,7 @@ class MAPStage(InferenceStage):
 
 
 class SVIStage(InferenceStage):
-    """Gaussian variational inference. Wraps ``ModellingSequence.SVI``.
+    """Gaussian variational inference. Wraps ``gigalens.jax.inference.SVI``.
 
     Requires ``z_best`` (a starting point in unconstrained space).
     Produces ``qz`` (``tfd.MultivariateNormalTriL``) and ``svi_loss_hist``.
@@ -1242,7 +1249,9 @@ class SVIStage(InferenceStage):
 
     def run(self, ctx, artifacts, seed):
         t0 = time.perf_counter()
-        qz, loss_hist = ctx.model_seq.SVI(
+        from gigalens.jax.inference import SVI as _SVI
+        qz, loss_hist = _SVI(
+            ctx.prob_model,
             start=artifacts["z_best"],
             optimizer=self._optimizer_factory(),
             n_vi=self.n_vi,
@@ -1283,7 +1292,7 @@ class SVIStage(InferenceStage):
 
 
 class HMCStage(InferenceStage):
-    """Preconditioned HMC. Wraps ``ModellingSequence.HMC``.
+    """Preconditioned HMC. Wraps ``gigalens.jax.inference.HMC``.
 
     Requires ``qz`` (typically from SVI). Produces ``samples_z`` of canonical
     shape ``(num_chains, num_steps, n_params)``.
@@ -1318,7 +1327,9 @@ class HMCStage(InferenceStage):
 
     def run(self, ctx, artifacts, seed):
         t0 = time.perf_counter()
-        samples = ctx.model_seq.HMC(
+        from gigalens.jax.inference import HMC as _HMC
+        samples = _HMC(
+            ctx.prob_model,
             q_z=artifacts["qz"],
             init_eps=self.init_eps,
             init_l=self.init_l,
@@ -1391,7 +1402,7 @@ class HessianSurrogateStage(InferenceStage):
         import time as _time
         t0 = _time.perf_counter()
         qz = HessianSurrogate(
-            ctx.model_seq,
+            ctx.prob_model,
             artifacts["z_best"],
             fix_indefinite=self.fix_indefinite,
             eigenvalue_floor=self.eigenvalue_floor,
@@ -1489,7 +1500,7 @@ class MCLMCStage(InferenceStage):
         from gigalens_research.inference import MCLMC_JIT
         t0 = time.perf_counter()
         out = MCLMC_JIT(
-            model_seq=ctx.model_seq,
+            prob_model=ctx.prob_model,
             qz=artifacts["qz"],
             n_hmc=self.n_chains,
             num_burnin_steps=self.num_burnin_steps,
@@ -1697,7 +1708,7 @@ class PTMCLMCStage(InferenceStage):
         # Same seam as MCLMC_JIT (inference/mclmc.py): log_prob(z) ->
         # log_prob only (drop the reduced-chi2 companion value).
         def log_prob(z):
-            return ctx.model_seq.prob_model.log_prob(z)[0]
+            return ctx.prob_model.log_prob(z)[0]
 
         z_init = np.asarray(artifacts["z_best"], dtype=np.float64).reshape(-1)
 
@@ -1875,7 +1886,7 @@ class MAMSStage(InferenceStage):
         from gigalens_research.inference import MAMS_JIT
         t0 = time.perf_counter()
         out = MAMS_JIT(
-            model_seq=ctx.model_seq,
+            prob_model=ctx.prob_model,
             qz=artifacts["qz"],
             n_hmc=self.n_chains,
             num_burnin_steps=self.num_burnin_steps,
@@ -2093,7 +2104,7 @@ class LAPSStage(InferenceStage):
         kwargs.update(self.extra_kwargs)
 
         res = LAPS_late_adjusted_JIT(
-            ctx.model_seq,
+            ctx.prob_model,
             artifacts.get("qz"),
             init_mode=init_mode,
             num_chains=num_chains,

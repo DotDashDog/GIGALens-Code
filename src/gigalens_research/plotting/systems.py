@@ -88,7 +88,7 @@ def histogram_residuals(fig, ax, flat_residual, title, bins=50):
 
 def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None, 
                        predicted_img=None, resimulate=True, display_true_chisq=False, true_params=None, prefix="",
-                       plot_caustics=False, model_seq=None, background_rms=0.2, exp_time=100.0, use_backward=False, log_vmin=1e-3):
+                       plot_caustics=False, sim_config=None, background_rms=0.2, exp_time=100.0, use_backward=False, log_vmin=1e-3):
     """
     Plot the results of a lensing fit. Given a set of predicted parameters, compare the predicted image to the true image.
     Displays normalized residuals, and a histogram of the residuals to check that they are gaussian noise
@@ -121,18 +121,18 @@ def plot_image_results(fig, axs, true_img, lens_sim=None, predicted_params=None,
     dof = true_img.shape[0]*true_img.shape[1] - 22 #! Change if number of params changes
     #! Do I want to do sqrt curve cmap for the images?
     if plot_caustics:
-        numPix = model_seq.sim_config.num_pix
-        deltaPix = model_seq.sim_config.delta_pix
+        numPix = sim_config.num_pix
+        deltaPix = sim_config.delta_pix
         extent = (-numPix/2*deltaPix, numPix/2*deltaPix, -numPix/2*deltaPix, numPix/2*deltaPix)
     else:
         extent =None
     plot_image(fig, axs[0], true_img, extent=extent,
                title=f"True Image" + (f"(Red Chisq:{true_chisq/dof:.3f})" if display_true_chisq else ""), log_vmin=log_vmin)
     if plot_caustics and (true_params is not None):
-        add_caustics(axs[0], true_params, model_seq)
+        add_caustics(axs[0], true_params, sim_config)
     plot_image(fig, axs[1], predicted_img, extent=extent, title=f"{prefix} Model Fit (Red Chisq:{chisq/dof:.5f})", log_vmin=log_vmin)
     if plot_caustics and (predicted_params is not None):
-        add_caustics(axs[1], predicted_params, model_seq)
+        add_caustics(axs[1], predicted_params, sim_config)
     plot_image(fig, axs[2], residual, extent=extent, title=f"{prefix} Normalized Residual", residual=True)
 
     if display_true_chisq:

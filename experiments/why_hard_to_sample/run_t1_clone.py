@@ -26,10 +26,10 @@ from exp_config import STANDARD
 
 
 def build_clone_target(clone_npz):
-    """Return (GaussianCloneTarget wrapped as a model_seq-like stub, dim).
+    """Return (GaussianCloneTarget as a prob_model-like stub, dim).
 
-    The stub exposes `.prob_model.log_prob(z)` returning a (logpdf, ()) tuple,
-    because MCLMC_JIT does `model_seq.prob_model.log_prob(z)[0]`. logpdf is the
+    The stub exposes `.log_prob(z)` returning a (logpdf, ()) tuple,
+    because MCLMC_JIT does `prob_model.log_prob(z)[0]`. logpdf is the
     multivariate-normal log-density evaluated via the precomputed Cholesky
     (solve_triangular; no per-call covariance inversion), float64, jit/vmap-safe
     for a single z-vector of shape (dim,).
@@ -54,10 +54,8 @@ def build_clone_target(clone_npz):
             logpdf = log_norm - 0.5 * quad
             return logpdf, ()   # MCLMC_JIT indexes [0] for the scalar log-density
 
-    # Wrap so MCLMC_JIT's `model_seq.prob_model.log_prob(z)[0]` accepts it unchanged.
-    stub = type("_ModelSeqStub", (), {})()
-    stub.prob_model = GaussianCloneTarget()
-    return stub, dim
+    # MCLMC_JIT's `prob_model.log_prob(z)[0]` accepts this unchanged.
+    return GaussianCloneTarget(), dim
 
 
 def main():
@@ -87,7 +85,7 @@ def main():
     # experiment: the clone must face the SAME initialization and the SAME
     # mass-matrix-adaptation starting point as the real run.
     # ------------------------------------------------------------------
-    _model_seq, qz, z_best, qz_dim, param_names = load_target(args.data_dir)
+    _prob_model, qz, z_best, qz_dim, param_names = load_target(args.data_dir)
     if clone_dim != qz_dim:
         raise ValueError(
             f"clone dim ({clone_dim}) != qz event dim ({qz_dim}); "

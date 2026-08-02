@@ -160,14 +160,14 @@ def seg_length_pooled_sigma(z0, z1, pooled_sigma):
 # jax-backed logp evaluator (lazy)
 # ===========================================================================
 
-def make_logp_eval(model_seq):
+def make_logp_eval(prob_model):
     """Return f(Z (N,dim)) -> np.ndarray logp, one batched jit call per shape."""
     import jax
     import jax.numpy as jnp
 
     @jax.jit
     def _lp(Z):
-        return model_seq.prob_model.log_prob(Z)[0]
+        return prob_model.log_prob(Z)[0]
 
     def f(Z, _chunk=16):
         # chunked: the carousel lstsq render is ~52MB/point of intermediates;
@@ -526,10 +526,10 @@ def main(argv=None):
     all_arrays = {}
     all_micro = {}
     for arm in arms:
-        model_seq, qz, z_center, dim, param_names = load_target(SYSTEM_DIR[arm])
+        prob_model, qz, z_center, dim, param_names = load_target(SYSTEM_DIR[arm])
         do_micro = (arm == "old")
         summ, garr, micro = run_arm(
-            arm, lambda ms=model_seq: make_logp_eval(ms), args.out_dir, rng,
+            arm, lambda pm=prob_model: make_logp_eval(pm), args.out_dir, rng,
             do_micro=do_micro, z_center=z_center)
         summ["dim"] = int(dim)
         summ["param_names"] = param_names

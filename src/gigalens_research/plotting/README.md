@@ -133,12 +133,19 @@ A 1×3 row: **chain traces | running R̂−1 (log scale) | running ESS**.
 Only valid for `SamplerPosterior`.
 
 ```python
-fig = report.convergence_panel(trace_param=0)  # 0-indexed parameter to trace
+fig = report.convergence_panel()                 # trace the worst-R̂ z-column
+fig = report.convergence_panel(n_worst=5)         # list the 5 worst per panel
+fig = report.convergence_panel(trace_param=0)     # trace an explicit x-space param
 ```
 
 R̂ is plotted as R̂ − 1 on a log-y axis so near-convergence (values close
-to 0) is visible. The aggregates shown are `max(R̂)` and `min(ESS)` across
-all parameters — the conservative worst-case statistics.
+to 0) is visible. The aggregate curves shown are `max(R̂)` and `min(ESS)`
+across all parameters — the conservative worst-case statistics — and each
+panel is now annotated, from the labeled `posterior.convergence` report, with
+the `n_worst` (default 3) worst parameters **by name**: the R̂ panel by largest
+R̂, the ESS panel by lowest bulk-ESS (shown as `bulk/tail`). The chain-trace
+panel defaults to the single worst-R̂ **z-column** (the space R̂/ESS live in);
+pass `trace_param=` to trace an explicit x-space / corner-plot parameter instead.
 
 ---
 

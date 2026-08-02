@@ -153,7 +153,7 @@ New, paper-faithful pieces to add; everything else is reuse.
 ## 4. GIGALens-specific concerns
 
 - **`prob_model` / `qz` interface.** Identical coupling to MCLMC:
-  `log_prob(z)=model_seq.prob_model.log_prob(z)[0]`, with `z` the **unconstrained**
+  `log_prob(z)=prob_model.log_prob(z)[0]`, with `z` the **unconstrained**
   vector (bijectors + log-det handled inside `BackwardProbModel.log_prob`). The
   sampler never touches bijectors. Chains seed from `qz.sample((M,), seed=...)`,
   `dim=positions.shape[-1]`. (The paper inits from the **prior**; gigalens default

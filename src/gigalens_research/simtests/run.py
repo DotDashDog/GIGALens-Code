@@ -4,7 +4,7 @@
 campaign, takes the shard assigned to the current process, and for each run:
 
 1. Loads the :class:`~system.System` from disk.
-2. Calls the registered inference builder → :class:`ModellingSequence`.
+2. Calls the registered inference builder → scene :class:`ProbModel`.
 3. Calls the registered pipeline builder → list of :class:`InferenceStage`.
 4. Wraps them in a :class:`~gigalens_research.inference_utils.Pipeline` with
    ``resume=True`` (content-addressed per-stage caching).
@@ -186,8 +186,8 @@ def _run_one(
     # unaffected because it keys on the built context's content hash.
     effective_kwargs = campaign_spec.effective_pipeline_kwargs(sweep_point)
     inference_fn = get_inference_builder(campaign_spec.inference.builder)
-    model_seq = inference_fn(system, **effective_kwargs)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    prob_model = inference_fn(system, **effective_kwargs)
+    ctx = InferenceContext.from_prob_model(prob_model)
     ctx_hash = ctx.hash()
 
     # Build pipeline stages (pipeline_kwargs merged with sweep_point)

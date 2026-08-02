@@ -25,6 +25,9 @@ from blackjax.adaptation.laps import laps as _blackjax_laps
 # NOTE: experimental; NOT migrated to the scene API (it built a legacy LensSimulator from
 # model_seq.phys_model, removed with the old gigalens API). Module stays IMPORT-SAFE;
 # LAPS_blackjax raises if CALLED. Restore from git b82397c to re-enable.
+# The first parameter is named ``prob_model`` to match what live callers now pass (a scene
+# ProbModel), but the UNREACHABLE body below is still written against the old
+# ``model_seq`` shape — it must be rewritten, not just renamed, when this is restored.
 
 
 @contextlib.contextmanager
@@ -61,7 +64,7 @@ def _shard_map_check_vma_false():
 
 
 def LAPS_blackjax(
-    model_seq,
+    prob_model,
     qz,
     n_hmc: int = 128,
     num_unadjusted_steps: int = 1000,

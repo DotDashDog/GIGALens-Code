@@ -163,15 +163,15 @@ def main():
     # Import vela_shapelets to trigger registration of "epl_shear_sersic_shapelets"
     from gigalens_research.simtests.experiments import vela_shapelets  # noqa: F401
     from gigalens_research.simtests.registry import get_inference_builder
-    # Set the precision flag on the SYSTEM before building model_seq, so it propagates through
+    # Set the precision flag on the SYSTEM before building prob_model, so it propagates through
     # system.sim_config to BOTH the bootstrap (VelaBootstrapQzStage reads system.sim_config) and
-    # the sampler (MCLMC_JIT reads model_seq.sim_config). Mirrors the notebook
+    # the sampler (MCLMC_JIT reads the prob_model's sim_config). Mirrors the notebook
     # (`system.likelihood_precision = "float64"`).
     if args.likelihood_precision is not None:
         system.likelihood_precision = args.likelihood_precision
-    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
+    prob_model = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
     print(f"[repro] model built: n_max={args.n_max}  "
-          f"likelihood_precision={model_seq.sim_config.likelihood_precision}", flush=True)
+          f"likelihood_precision={prob_model.datasets[0].sim_config.likelihood_precision}", flush=True)
 
     # ---------------------------------------------------------------------------
     # VelaBootstrapQzStage — inline (no Pipeline)
@@ -192,7 +192,7 @@ def main():
         true_params_normed = jtu.tree_map(
             lambda x: jnp.squeeze(jnp.asarray(x)), true_params_shp
         )
-        true_z = jnp.stack(model_seq.prob_model.bij.inverse(true_params_normed))
+        true_z = jnp.stack(prob_model.bij.inverse(true_params_normed))
         d = true_z.shape[-1]
         # Keep loc/scale_tril dtype-consistent (under x64 jnp.ones is float64 while the
         # bij.inverse of float32 truth is float32 -> tfd dtype mismatch). Mirror the
@@ -213,7 +213,7 @@ def main():
 
         # Build inference context (what pipeline.run would do)
         from gigalens_research.inference_utils.pipeline import InferenceContext
-        ctx = InferenceContext.from_modelling_sequence(model_seq)
+        ctx = InferenceContext.from_prob_model(prob_model)
 
         # Run the stage directly
         stage_result = bootstrap_stage.run(ctx, {}, seed=args.seed)
@@ -235,7 +235,7 @@ def main():
 
     t1 = time.perf_counter()
     hist = MCLMC_JIT(
-        model_seq=model_seq,
+        prob_model=prob_model,
         qz=qz,
         n_hmc=args.n_chains,
         num_burnin_steps=args.num_burnin_steps,

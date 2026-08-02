@@ -1,5 +1,5 @@
 """Rebuild the carousel model EXACTLY as prelim_sim_carousel.ipynb (cells 0-8),
-expose prob_model / model_seq / ctx / param names. Imported by probe scripts."""
+expose prob_model / ctx / param names. Imported by probe scripts."""
 import os, numpy as np, jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
@@ -16,7 +16,6 @@ from gigalens.jax.profiles.light.shapelets import Shapelets
 from gigalens.jax.cosmo import wCDM_Cosmo
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.simulator import SimulatorConfig
-from gigalens.jax.inference import ModellingSequence
 
 EXPDIR = "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel"
 
@@ -69,7 +68,6 @@ def ds(ext, sees):
 d4_5 = ds("4-5", sees=[src4, src5])
 d9 = ds("9", sees=[src9])
 prob_model = ProbModel(model, [d4_5, d9], mode="lstsq")
-model_seq = ModellingSequence(prob_model)
 
 def make_prob_model(conv_precision="float32"):
     """Rebuild the prob_model with a chosen conv_precision (default = notebook's

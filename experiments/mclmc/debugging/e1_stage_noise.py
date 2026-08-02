@@ -81,23 +81,23 @@ def build_model(n_max):
         delta_pix=0.03, num_pix=200, supersample=1,
         background_rms=0.002, exp_time=2000.0,
     )
-    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=n_max)
-    lens_sim = sim.LensSimulator(model_seq.phys_model, model_seq.sim_config, bs=1)
-    return model_seq, lens_sim
+    prob_model = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=n_max)
+    lens_sim = sim.LensSimulator(prob_model.model, prob_model.datasets[0].sim_config, bs=1)
+    return prob_model, lens_sim
 
 
 # ---------------------------------------------------------------------------
 # Stage-wise replication of BackwardProbModel.log_prob.
 # Returns a dict of intermediates (jax arrays) plus the library logp for cross-check.
 # ---------------------------------------------------------------------------
-def make_stage_fn(model_seq, lens_sim):
+def make_stage_fn(prob_model, lens_sim):
     import jax
     import jax.numpy as jnp
     from gigalens.jax.simulator import (
         _shared_kernel_component_conv, _regularize_gram,
     )
 
-    pm = model_seq.prob_model           # BackwardProbModel
+    pm = prob_model                     # BackwardProbModel
     s = lens_sim
 
     def stages(z):
@@ -218,8 +218,8 @@ def cmd_dump(args):
     jax.config.update("jax_platform_name", "cpu")
     print(f"[E1] JAX {jax.__version__} devices={jax.devices()} precision={args.precision}", flush=True)
 
-    model_seq, lens_sim = build_model(args.n_max)
-    stages_fn, lib_logp = make_stage_fn(model_seq, lens_sim)
+    prob_model, lens_sim = build_model(args.n_max)
+    stages_fn, lib_logp = make_stage_fn(prob_model, lens_sim)
     print(f"[E1] model built n_max={args.n_max}", flush=True)
 
     anchors = load_anchors(args.anchor_class, args.n_max, seed=args.seed)
@@ -454,8 +454,8 @@ def cmd_ray(args):
     import jax.numpy as jnp
     jax.config.update("jax_platform_name", "cpu")
 
-    model_seq, lens_sim = build_model(args.n_max)
-    _, lib_logp = make_stage_fn(model_seq, lens_sim)
+    prob_model, lens_sim = build_model(args.n_max)
+    _, lib_logp = make_stage_fn(prob_model, lens_sim)
     lib_jit = jax.jit(lib_logp)
 
     anchors = load_anchors(args.anchor_class, args.n_max, seed=args.seed)

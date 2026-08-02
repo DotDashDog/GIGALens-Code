@@ -493,7 +493,7 @@ def make_seg_defs(C, nr, n_seg, seg_len, min_start, seed):
 # Per-target census: lambda1 + e, g_H, x_c along each segment (its own chains)
 # ===========================================================================
 
-def compute_target(model_seq, param_names, position, nb, seg_defs, seg_len,
+def compute_target(prob_model, param_names, position, nb, seg_defs, seg_len,
                    std_z, gate_pts_z, tag, chunk=CHUNK):
     """Walk the seeded segments of THIS target's own results-phase chains, computing at
     every step: lambda1(M_zhat) + top eigenvector e; g_H = e^T H_zhat e (T14's exact
@@ -501,7 +501,7 @@ def compute_target(model_seq, param_names, position, nb, seg_defs, seg_len,
     Jacobians + renders per chunk; Hessians one-by-one (jitted once via ops)."""
     import jax
 
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     W = np.asarray(ops["W"], dtype=np.float64)
     batched_jac = jax.jit(jax.vmap(ops["jac_render"]))
     render_batch = jax.jit(jax.vmap(ops["render"]))
@@ -669,7 +669,7 @@ def parse_args(argv=None):
     p = argparse.ArgumentParser(description="T14b chain-locus curvature census")
     p.add_argument("--old-data-dir", help="systems/sys60 (RE-PINNED ss2 data; OLD model)")
     p.add_argument("--new-sys-dir", help="systems/sys60_ss16data (d'; NEW model via "
-                                         "build_modelling_sequence)")
+                                         "build_prob_model)")
     p.add_argument("--old-run", default=DEFAULT_OLD_RUN,
                    help="OUR-harness npz for OLD chains+xi")
     p.add_argument("--new-run", default=DEFAULT_NEW_RUN,

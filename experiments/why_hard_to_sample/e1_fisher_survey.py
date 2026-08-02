@@ -313,7 +313,7 @@ def run_smoke():
 # jax-backed builders (imported lazily; container-only)
 # ===========================================================================
 
-def build_jax_ops(model_seq, param_names):
+def build_jax_ops(prob_model, param_names):
     """Return a dict of jitted operators over the sys60 forward model:
 
       render(z)      -> (6400,) flattened model image  == the likelihood's image
@@ -329,7 +329,7 @@ def build_jax_ops(model_seq, param_names):
     import jax
     import jax.numpy as jnp
 
-    pm = model_seq.prob_model
+    pm = prob_model
     sim = pm.simulators[0]
 
     def render(z):
@@ -582,10 +582,10 @@ def main(argv=None):
           f"eps_move/sigma_bar={EPS_MOVE/sigma_bar:.3e} "
           f"h*/sigma_bar={H_STAR/sigma_bar:.3e}")
 
-    model_seq, qz, z_center, dim2, param_names = load_target(args.data_dir)
+    prob_model, qz, z_center, dim2, param_names = load_target(args.data_dir)
     if dim2 != dim:
         raise ValueError(f"data-dir dim {dim2} != samples dim {dim}")
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     W = ops["W"]
     obs = ops["obs"]
     event_size = ops["event_size"]

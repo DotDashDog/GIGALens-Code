@@ -92,13 +92,13 @@ def main():
 
     sys64 = build_system(None, args.num_pix, args.supersample)
     ms64 = get_inference_builder(BUILDER)(sys64, n_max=args.n_max)
-    cfg32 = dataclasses.replace(ms64.sim_config, basis_precision="float32")
+    cfg32 = dataclasses.replace(ms64.datasets[0].sim_config, basis_precision="float32")
     ms32 = ModellingSequence.from_scene(ms64.scene_model, ms64.prob_model, cfg32)
-    print(f"depth={ms64.make_lens_sim(1).depth}, num_free={ms64.scene_model.num_free_params}",
+    print(f"depth={ms64.make_lens_sim(1).depth}, num_free={ms64.model.num_free_params}",
           flush=True)
 
     # One shared bootstrap qz (float64), as in the ablation.
-    ctx = InferenceContext.from_modelling_sequence(ms64)
+    ctx = InferenceContext.from_prob_model(ms64)
     stage = PartialTruthBootstrapQzStage(
         system=sys64, free=("source",), map_num_steps=200, map_n_samples=50)
     qz = stage.derive_artifacts(stage.run(ctx, {}, seed=args.qz_seed).arrays)["qz"]

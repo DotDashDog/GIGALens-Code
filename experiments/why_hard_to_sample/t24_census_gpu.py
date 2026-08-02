@@ -43,12 +43,12 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
-def build_jax_ops(model_seq, hvp_chunk):
+def build_jax_ops(prob_model, hvp_chunk):
     import jax
     import jax.numpy as jnp
 
     def f(z):
-        return model_seq.prob_model.log_prob(z[None])[0][0]
+        return prob_model.log_prob(z[None])[0][0]
 
     gradf = jax.grad(f)
 
@@ -109,9 +109,9 @@ def run_arm(arm, hvp_chunk, limit):
     from common import load_target
 
     print(f"\n========== T24 arm={arm} ==========", flush=True)
-    model_seq, qz, z_center, dim, param_names = load_target(ARMS[arm]["system_dir"])
+    prob_model, qz, z_center, dim, param_names = load_target(ARMS[arm]["system_dir"])
     bnd = C.derive_bounded(param_names, arm)
-    f_np, hvp_chunked, dense_hessian = build_jax_ops(model_seq, hvp_chunk)
+    f_np, hvp_chunked, dense_hessian = build_jax_ops(prob_model, hvp_chunk)
 
     # reference eigenbasis of -H(z_ref) (for power-iteration init = eigvec 1)
     chain0, tstep0 = ARMS[arm]["z_init_ct"]

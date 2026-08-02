@@ -46,16 +46,15 @@ def main():
     observed_img, true_params, sim_config, _ = load_vela_sim_system(
         args.sim, args.rep, cam="12",
     )
-    model_seq, lens_sim = free_source_fixed_lens_model(
+    prob_model, lens_sim = free_source_fixed_lens_model(
         sim_config, observed_img, true_params,
         background_rms=DEFAULT_BACKGROUND_RMS,
         exp_time=DEFAULT_EXP_TIME,
         use_shapelets=True, n_max=args.n_max,
     )
-    prob_model = model_seq.prob_model
 
     lens_sim_batched = sim.LensSimulator(
-        model_seq.phys_model, model_seq.sim_config, bs=args.n_samples,
+        lens_sim.phys_model, sim_config, bs=args.n_samples,
     )
 
     def neg_log_prob(z_batched):
@@ -129,7 +128,7 @@ def main():
     log_betas = np.linspace(np.log(0.05), np.log(5.0), 25)
     rows = []
     lens_sim_one = sim.LensSimulator(
-        model_seq.phys_model, model_seq.sim_config, bs=1,
+        lens_sim.phys_model, sim_config, bs=1,
     )
     def neg_log_prob_one(z_one):
         lp, chisq = prob_model.log_prob(lens_sim_one, z_one)

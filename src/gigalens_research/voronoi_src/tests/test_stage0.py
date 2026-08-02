@@ -180,9 +180,9 @@ def sanity_forward_consistency(
     return float(jnp.squeeze(chi2))
 
 
-def sanity_lambda_scan(model_seq, simulator, z0, n=12):
+def sanity_lambda_scan(prob_model, simulator, z0, n=12):
     # Scan lambda over decades around 1.0 in unconstrained space by editing physical space.
-    prob = model_seq.prob_model
+    prob = prob_model
     x0 = prob.bij.forward(list(z0.T))
     lam_vals = jnp.logspace(-4, 4, n)
     lzs = []
@@ -207,7 +207,7 @@ def run_simple_map(
     """
     Lightweight MAP optimizer for the experimental pixelised model.
 
-    This avoids `gigalens.jax.inference.ModellingSequence.MAP`, which always
+    This avoids `gigalens.jax.inference.MAP`, which always
     constructs a `LensSimulator` internally. Here we must use
     `PixelizedSourceSimulator`.
     """
@@ -386,7 +386,7 @@ def main():
     )
 
     if not args.skip_checks:
-        lam_vals, lzs = sanity_lambda_scan(type("W", (), {"prob_model": prob_model})(), simulator, z0)
+        lam_vals, lzs = sanity_lambda_scan(prob_model, simulator, z0)
         print("Lambda scan (log10 lambda, log posterior target):")
         for lv, lz in zip(lam_vals, lzs):
             print(f"  {np.log10(lv): .2f}: {float(lz): .3e}")
@@ -453,7 +453,7 @@ def main():
     out_dir = os.path.join(args.results_dir, f"system{args.system_index:02d}")
     os.makedirs(out_dir, exist_ok=True)
 
-    # MAP loss history is in best_chi (shape depends on ModellingSequence); keep a simple best-step series if available
+    # MAP loss history is in best_chi (shape depends on the MAP implementation); keep a simple best-step series if available
     # If not available, plot a constant.
     map_loss = jax.device_get(jnp.atleast_1d(best_chi_hist).reshape(-1))
     image_half_extent = 0.5 * sim_config.num_pix * sim_config.delta_pix

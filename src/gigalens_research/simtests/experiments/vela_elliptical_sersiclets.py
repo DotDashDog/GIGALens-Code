@@ -10,7 +10,7 @@ This module registers:
   canonical simulation tool; this adapter brings existing results into the
   framework without re-simulating.
 - ``"epl_shear_sersic_shapelets"`` inference builder — builds the Vela
-  inference :class:`~gigalens.jax.inference.ModellingSequence` using
+  inference scene :class:`~gigalens.jax.scene_prob_model.ProbModel` using
   ``BackwardProbModel`` (lstsq amplitudes) and ``ShapeletsFast`` source.
 - ``"map_bootstrap_mclmc"`` pipeline builder (registered in ``pipelines.py``).
 
@@ -147,18 +147,17 @@ def _vela_scene_priors():
 
 @register_inference_builder("epl_shear_sersic_elliptical_sersiclets")
 def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
-    """Build the SCENE ModellingSequence for the Vela elliptical-sersiclets fit (G1).
+    """Build the SCENE ``ProbModel`` for the Vela elliptical-sersiclets fit (G1).
 
     Migrated to the scene API: a :class:`gigalens.jax.scene.LensModel` (EPL+Shear mass +
     Sérsic lens light on plane 0; ``EllipticalSersiclets`` source on plane 1, lstsq amps)
     + a :class:`gigalens.jax.scene_prob_model.Dataset` + ``ProbModel(mode="lstsq")``,
-    wrapped in a scene-backed ``ModellingSequence``. The public return
-    type and role are unchanged; only the internals are scene objects.
+    which is returned directly. The public role is unchanged; only the internals
+    are scene objects.
 
     Kwargs: ``n_max`` (REQUIRED; no default — it sets the source model complexity).
     """
     import jax.numpy as jnp
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.profiles.light import sersic
     from gigalens_research.simulations.sersiclets import EllipticalSersiclets
     from gigalens.jax.profiles.mass import epl, shear
@@ -189,4 +188,4 @@ def build_epl_shear_sersic_elliptical_sersiclets(system: Any, **kwargs) -> Any:
         sees="all",
     )
     prob_model = ProbModel(model, ds, mode="lstsq")
-    return ModellingSequence(prob_model)
+    return prob_model

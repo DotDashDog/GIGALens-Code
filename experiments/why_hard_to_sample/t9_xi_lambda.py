@@ -424,10 +424,10 @@ def main(argv=None):
     std_z = np.std(flat, axis=0, ddof=1)
 
     # --- target + render ops + chi^2 gate -----------------------------------
-    model_seq, qz, z_center, dim2, param_names = load_target(args.data_dir)
+    prob_model, qz, z_center, dim2, param_names = load_target(args.data_dir)
     if dim2 != dim:
         raise ValueError(f"data-dir dim {dim2} != run dim {dim}")
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
     W = ops["W"]
     gate_pts = [samples_z[chosen[i]["chain"], chosen[i]["step"]]
                 for i in range(min(3, len(chosen)))]

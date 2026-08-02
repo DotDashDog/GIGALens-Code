@@ -60,15 +60,15 @@ def main():
         delta_pix=0.03, num_pix=200, supersample=1,
         background_rms=0.002, exp_time=2000.0,
     )
-    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
-    lens_sim = sim.LensSimulator(model_seq.phys_model, model_seq.sim_config, bs=1)
+    prob_model = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
+    lens_sim = sim.LensSimulator(prob_model.model, prob_model.datasets[0].sim_config, bs=1)
 
     print("[fix0] simulator grid dtypes under x64:")
     for name in ["img_X", "img_Y", "flat_kernel"]:
         v = getattr(lens_sim, name, None)
         print(f"    {name:12s} dtype={getattr(v, 'dtype', None)}  shape={getattr(v, 'shape', None)}")
 
-    pm = model_seq.prob_model
+    pm = prob_model
     # logp dtype end-to-end (no library change yet => everything float32 unless a grid promoted)
     z = jnp.zeros((1, 17), dtype=jnp.float32)
     lp = pm.log_prob(lens_sim, z)[0]

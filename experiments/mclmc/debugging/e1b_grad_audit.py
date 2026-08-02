@@ -50,8 +50,8 @@ def cmd_dump(args):
     import jax.numpy as jnp
 
     os.makedirs(E1B_DIR, exist_ok=True)
-    model_seq, lens_sim = e1.build_model(args.n_max)
-    pm = model_seq.prob_model
+    prob_model, lens_sim = e1.build_model(args.n_max)
+    pm = prob_model
 
     def logp(z):
         # pm.log_prob returns (log_prob, ...) with a leading chain axis of 1

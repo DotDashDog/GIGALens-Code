@@ -55,7 +55,7 @@ def _newmod():
 
 def build_route_target(artifact=ARTIFACT):
     """Build the wrapped target WITHOUT the qz-hash guard. Returns a dict with:
-      model_seq, prob_model, dim, param_names, leaf, col, sha256, z_best, ref_dir."""
+      prob_model, dim, param_names, leaf, col, sha256, z_best, ref_dir."""
     import jax
     jax.config.update("jax_enable_x64", True)
 
@@ -69,7 +69,7 @@ def build_route_target(artifact=ARTIFACT):
             "t25_transforms.py first (it writes transform_B.npz).")
 
     nfw0 = newmod._nfw0()
-    model_seq, prob_model = common._build_prob_model(nfw0, None)
+    prob_model = common._build_prob_model(nfw0, None)
     z_best = common._load_z_best(newmod.REF_DIR)
     dim = int(z_best.shape[0])
     param_names = common._recover_param_names(prob_model, dim)
@@ -79,7 +79,7 @@ def build_route_target(artifact=ARTIFACT):
     leaf, col, sha = attach_reparam_leaf(prob_model, param_names, artifact)
 
     return {
-        "model_seq": model_seq, "prob_model": prob_model, "dim": dim,
+        "prob_model": prob_model, "dim": dim,
         "param_names": param_names, "leaf": leaf, "col": col, "sha256": sha,
         "z_best": np.asarray(z_best, np.float64), "ref_dir": newmod.REF_DIR,
         "route": ROUTE, "artifact": os.path.abspath(artifact),
@@ -111,7 +111,7 @@ def load_target(supersample=None):
     qz = tfd.MultivariateNormalDiag(
         loc=jnp.asarray(u_center), scale_diag=jnp.full(b["dim"], 1e-3))
     print(f"[route {ROUTE}] default qz = MVNDiag(u_center, 1e-3) (BYPASS-pinned)")
-    return b["model_seq"], qz, u_center, b["dim"], b["param_names"]
+    return b["prob_model"], qz, u_center, b["dim"], b["param_names"]
 
 
 if __name__ == "__main__":

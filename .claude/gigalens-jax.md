@@ -3,7 +3,7 @@
 ## Package Location
 
 Source: `~/gigalens/src/gigalens/`  
-Helpers: `~/GIGALens-Code/helpers.py`
+Helpers: `~/GIGALens-Code/src/gigalens_research/`
 
 Most scripts add `~/gigalens/src` and `~/GIGALens-Code` to `sys.path`.
 
@@ -15,7 +15,7 @@ Most scripts add `~/gigalens/src` and `~/GIGALens-Code` to `sys.path`.
 | `ProbabilisticModel` | `model.py` | Abstract. Holds `prior`, `bij` (bijector). Defines `log_prob(simulator, z)` |
 | `SimulatorConfig` | `simulator.py` | Dataclass: `delta_pix`, `num_pix`, `supersample`, `kernel` (PSF), `transform_pix2angle` |
 | `LensSimulatorInterface` | `simulator.py` | Abstract. `simulate(params)` and `lstsq_simulate(params, observed_image, err_map)` |
-| `ModellingSequenceInterface` | `inference.py` | Abstract. `MAP(...)`, `SVI(...)`, `HMC(...)` |
+| `ModellingSequenceInterface` | `inference.py` | Legacy ABC. The JAX side no longer implements it — `MAP`/`SVI`/`HMC` are free functions in `jax/inference/` |
 | `Parameterized` | `profile.py` | Base for profiles. Has `name: str`, `params: list[str]` |
 | `LightProfile` | `profile.py` | Has `light(x, y, **kwargs)`. Optional `use_lstsq` for linear amplitude solving |
 | `MassProfile` | `profile.py` | Has `deriv(x, y, **kwargs)` returning `(alpha_x, alpha_y)` deflection angles |
@@ -61,15 +61,29 @@ LensSimulator(phys_model, sim_config, bs)
 - `lstsq_simulate(params, observed_image, err_map)` returns `(images, coefficients)`
 - Uses lenstronomy's `subgrid_kernel` for PSF, objax's `average_pool_2d` for downsampling
 
-### ModellingSequence (`jax/inference.py`)
+### Inference Functions (`jax/inference/`)
+
+The inference stages are **free functions**, one per module under
+`gigalens/jax/inference/`, all re-exported from the package:
 
 ```python
-ModellingSequence(phys_model, prob_model, sim_config)
+from gigalens.jax.inference import MAP, SVI, HMC, HMC_alt_multi
+from gigalens.jax.inference.mclmc import MCLMC, MCLMC_JIT   # see .claude/mclmc.md
 ```
+
+Each takes the `prob_model` as its **first positional argument**; there is no
+wrapper object to build first. Everything the old `ModellingSequence` class
+exposed is reachable from the prob model directly: `prob_model.model` is the
+scene `LensModel` (the old `phys_model` / `scene_model`), and the
+`sim_config` lives on `prob_model.datasets[i].sim_config`.
+
+Note: the package `__init__` binds `MCLMC` (aliased from `MCLMC_JIT`) but not
+the name `MCLMC_JIT` — import that one from the `mclmc` submodule.
 
 **MAP** — multi-start gradient descent via `shard_map` across devices:
 ```python
-map_samples, map_lps, map_chisqs = model_seq.MAP(
+map_samples, map_lps, map_chisqs = MAP(
+    prob_model,
     optimizer,          # optax optimizer (default: adabelief 1e-2)
     start=None,         # (n_samples, n_params) or None to sample from prior
     n_samples=500,      # total across all devices (rounded to multiple of device count)
@@ -85,7 +99,8 @@ map_samples, map_lps, map_chisqs = model_seq.MAP(
 
 **SVI** — fits multivariate Gaussian surrogate by minimizing ELBO:
 ```python
-qz, loss_hist = model_seq.SVI(
+qz, loss_hist = SVI(
+    prob_model,
     start,              # (1, n_params) unconstrained, typically MAP best
     optimizer,          # optax optimizer (default: adabelief 1e-4)
     n_vi=250,           # samples per ELBO estimate (across all devices)
@@ -99,7 +114,8 @@ qz, loss_hist = model_seq.SVI(
 
 **HMC** — Preconditioned HMC with trajectory-length and step-size adaptation:
 ```python
-samples = model_seq.HMC(
+samples = HMC(
+    prob_model,
     q_z,                    # SVI surrogate (MultivariateNormalTriL)
     init_eps=0.3,           # initial step size
     init_l=3,               # initial leapfrog steps
@@ -116,7 +132,8 @@ samples = model_seq.HMC(
 
 **HMC_alt_multi** — Two-phase HMC: separate burn-in adapts mass matrix from samples, then fixed-kernel sampling:
 ```python
-samples = model_seq.HMC_alt_multi(
+samples = HMC_alt_multi(
+    prob_model,
     q_z, init_eps=0.3, init_l=3, n_hmc=50, n_vi=1000,
     num_burnin_steps=250, proportion_burnin_to_use=0.9,
     num_results=750, max_leapfrog_steps=30, seed=0,
@@ -168,48 +185,44 @@ All inference methods operate in **unconstrained space** (z). Bijectors handle t
 
 `z` is flat `(batch, n_params)`. Physical params `x` are nested: `([{lens0_dict}, {lens1_dict}], [{lens_light0_dict}], [{source_light0_dict}])`.
 
-## helpers.py Pipeline Utilities
+## Pipeline Utilities (`gigalens_research.inference_utils`)
 
-### Quick Pipeline
+The research-side orchestration layer wraps the free functions above in
+cache-aware stages. Full reference:
+`src/gigalens_research/inference_utils/README.md`.
 
-```python
-from helpers import simulate_system, PipelineConfig, run_pipeline, display_results
-
-results = simulate_system(
-    observed_img, prior, ModellingSequence, sim_config, phys_model,
-    map_kwargs={'optimizer': optax.adabelief(1e-2)},
-    svi_kwargs={'optimizer': optax.adabelief(1e-4)},
-    hmc_kwargs={},
-)
-```
-
-### Granular Pipeline
+### Standard MAP -> SVI -> HMC run
 
 ```python
-prob_model = ForwardProbModel(prior, observed_img, background_rms=0.2, exp_time=100)
-model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-cfg = PipelineConfig(
-    steps=["MAP", "SVI", "HMC"],
-    map_kwargs={'optimizer': optax.adabelief(1e-2), 'n_samples': 500, 'num_steps': 350},
-    svi_kwargs={'optimizer': optax.adabelief(1e-4), 'n_vi': 1000, 'num_steps': 1500},
-    hmc_kwargs={'n_hmc': 50, 'num_burnin_steps': 250, 'num_results': 750},
+from gigalens_research.inference_utils import (
+    InferenceContext, Pipeline, MAPStage, SVIStage, HMCStage,
 )
-results = run_pipeline(model_seq, cfg)
+
+ctx = InferenceContext.from_prob_model(prob_model)
+pipeline = Pipeline(ctx, seed=42)
+pipeline.add(MAPStage(num_steps=350, n_samples=500))
+pipeline.add(SVIStage(num_steps=1500, n_vi=1000))
+pipeline.add(HMCStage(n_hmc=50, num_burnin_steps=250, num_results=750))
+
+artifacts = pipeline.run(out_dir="results/system_07", resume=True)
 ```
 
-### Result Objects
+- `InferenceContext` carries `phys_model`, `prob_model`, `sim_config` — all
+  derived from the prob model by `from_prob_model`
+- Each stage hashes its inputs and reloads from `<out_dir>/<stage>/arrays.npz`
+  when nothing upstream changed
+- `pipeline.posterior()` returns a uniform Posterior view (`.rhat`,
+  `.samples`, …) over whichever terminal stage ran
 
-- `results["MAP"]`: `MAPResults` — `.best_z`, `.MAP_best` (physical), `.MAP_chisq_hist`
-- `results["SVI"]`: `SVIResults` — `.qz`, `.SVI_mean`, `.SVI_samples`, `.SVI_loss_hist`
-- `results["HMC"]`: `HMCResults` — `.HMC_samples` (physical), `.HMC_samples_z` (unconstrained), `.HMC_median`, `.HMC_rhat`
+### Plotting
 
-All have `.save(dir)` and `.load(dir, model_seq)` classmethods. Visualization via `display_results(r, true_img, lens_sim, true_params)`.
+```python
+from gigalens_research.plotting import plot_image_results, cornerplot_results, display_results
+```
 
-### Parameter Conversion Utilities
-
-- `flatten_params_to_labeled_dict(params)`: nested dicts -> flat `{prefix_key: value}` (e.g. `mass_0theta_E`)
-- `params_jax_to_lists(params)` / `params_lists_to_jax(params)`: JAX arrays <-> Python lists for serialization
-- `index_params(params, i)`: extract the i-th system from a batched parameter structure
+`display_results(r, true_img, lens_sim, true_params)` renders the image /
+residual / loss / corner suite; pass `sim_config=` alongside
+`plot_caustics=True` to overlay caustics.
 
 ## Typical Setup (EPL + Shear + SersicEllipse)
 
@@ -217,7 +230,7 @@ All have `.save(dir)` and `.load(dir, model_seq)` classmethods. Visualization vi
 import sys; sys.path.insert(0, '/global/homes/l/linusu/gigalens/src')
 sys.path.insert(0, '/global/homes/l/linusu/GIGALens-Code')
 
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI, HMC
 from gigalens.jax.model import ForwardProbModel
 from gigalens.model import PhysicalModel
 from gigalens.jax.simulator import LensSimulator
@@ -234,8 +247,18 @@ phys_model = PhysicalModel(
 sim_config = SimulatorConfig(delta_pix=0.08, num_pix=80, supersample=2, kernel=psf_kernel)
 prior = make_default_prior()
 prob_model = ForwardProbModel(prior, observed_image, background_rms=0.2, exp_time=100)
-model_seq = ModellingSequence(phys_model, prob_model, sim_config)
+
+best, lps, chisqs = MAP(prob_model, optax.adabelief(1e-2))
+qz, loss_hist     = SVI(prob_model, best, optax.adabelief(1e-4))
+samples           = HMC(prob_model, qz)
 ```
+
+> **Stale:** the `ForwardProbModel` / `PhysicalModel` imports above predate the
+> scene API; `gigalens.jax.model` and `gigalens.model` now live under
+> `gigalens/old_api/`. The current path builds a scene `LensModel` and wraps it
+> in `gigalens.jax.scene_prob_model.ProbModel(model, datasets, mode="lstsq")` —
+> see the builders in `gigalens_research/simtests/`. Everything below the
+> `prob_model =` line is already correct for both.
 
 ## Multi-Device / Multi-Node
 

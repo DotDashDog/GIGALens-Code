@@ -430,10 +430,10 @@ def main(argv=None):
     verified = reconstruct_directions(t3, clone_cov)
     print(f"[T8] {len(verified)} directions verified against stored g_dot_e/sigma_dir")
 
-    model_seq, qz, z_center, dim2, param_names = load_target(args.data_dir)
+    prob_model, qz, z_center, dim2, param_names = load_target(args.data_dir)
     if dim2 != dim:
         raise ValueError(f"data-dir dim {dim2} != T3 dim {dim}")
-    ops = build_jax_ops(model_seq, param_names)
+    ops = build_jax_ops(prob_model, param_names)
 
     # --- HARD chi^2 gate (E1 Task A) on x0 + a couple of transect endpoints ---
     rng = np.random.default_rng(args.seed)

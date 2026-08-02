@@ -59,7 +59,7 @@ import jax
 jax.config.update("jax_enable_x64", True)
 
 # NEW gigalens "scene" API
-from gigalens.jax.inference import ModellingSequence
+from gigalens.jax.inference import MAP, SVI
 from gigalens.jax.scene import Component, Plane, LensModel
 from gigalens.jax.scene_prob_model import Dataset, ProbModel
 from gigalens.jax.scene_simulator import SceneSimulator
@@ -142,15 +142,14 @@ def build_model_and_fit():
     ds = Dataset(jnp.asarray(observed_img), sim_config,
                  background_rms=0.2, exp_time=100, sees="all")
     prob_model = ProbModel(model, ds, mode="forward")
-    model_seq = ModellingSequence(prob_model)
     print("dim (num free params):", model.num_free_params)
 
     # MAP then SVI -> qz (single time, reused across all configs).
     opt = optax.adabelief(1e-2, b1=0.95, b2=0.99)
-    best, best_lp, best_chisq = model_seq.MAP(opt, seed=0)
+    best, best_lp, best_chisq = MAP(prob_model, opt, seed=0)
 
     opt = optax.adabelief(1e-4, b1=0.95, b2=0.99)
-    qz, loss_hist = model_seq.SVI(best, opt, n_vi=1000, num_steps=1500)
+    qz, loss_hist = SVI(prob_model, best, opt, n_vi=1000, num_steps=1500)
 
     # truth markers for the 8 lens-mass params (EPL 6 + Shear 2), notebook order.
     markers = []
@@ -159,7 +158,7 @@ def build_model_and_fit():
     for k in truth[0][1].keys():
         markers.append(truth[0][1][k])
 
-    return model_seq, prob_model, qz, markers
+    return prob_model, qz, markers
 
 
 # 8 lens-mass params, column order matched to `markers` + `labels` below.
@@ -210,7 +209,7 @@ def recovery_metric(mass_samps, markers):
 # 2/3. RUN THE GRID                                                            #
 # =========================================================================== #
 def main():
-    model_seq, prob_model, qz, markers = build_model_and_fit()
+    prob_model, qz, markers = build_model_and_fit()
 
     rows = []
     for init, M in CONFIGS:
@@ -224,7 +223,7 @@ def main():
         print(f"\n========== CONFIG init={init} M={M} ==========")
         try:
             t0 = time.perf_counter()
-            res = run_laps(model_seq, qz, init_mode=init, num_chains=M, seed=SEED, p2_keep_per_chain=16)
+            res = run_laps(prob_model, qz, init_mode=init, num_chains=M, seed=SEED, p2_keep_per_chain=16)
             wall = time.perf_counter() - t0
             row["wall_s"] = round(wall, 2)
 

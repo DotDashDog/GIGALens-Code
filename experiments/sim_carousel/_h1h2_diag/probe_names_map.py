@@ -1,6 +1,6 @@
 import numpy as np, sys
 sys.path.insert(0, "/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/_h1h2_diag")
-from build_model import prob_model, model_seq, param_names
+from build_model import prob_model, param_names
 import jax, jax.numpy as jnp
 # cached MAP
 z_best = np.load("/global/u1/l/linusu/GIGALens-Code/experiments/sim_carousel/messy_tests/just_map/map/arrays.npz")['z_best']

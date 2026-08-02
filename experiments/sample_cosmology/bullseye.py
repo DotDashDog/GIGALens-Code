@@ -22,7 +22,6 @@ from gigalens.jax.cosmo import w0waCDM_Cosmo
 from gigalens.jax.scene_prob_model import ImageData, ProbModel
 from gigalens.jax.scene_simulator import SceneSimulator
 from gigalens.simulator import SimulatorConfig
-from gigalens.jax.inference import ModellingSequence
 
 # --- research-side pipeline / diagnostics (gigalens_research) ----------------
 from gigalens_research.inference_utils import (
@@ -304,8 +303,7 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
                         exp_time=exp_time, sees=[source5])
     
     prob_model = ProbModel(model, [dataset1, dataset2, dataset3, dataset4, dataset5], mode="forward")
-    model_seq = ModellingSequence(prob_model)
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
 
 
     import copy
@@ -327,8 +325,7 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
     truth_def_ratio = tc
     
     prob_model_dr = ProbModel(model_def_ratio, [dataset1, dataset2, dataset3, dataset4,dataset5], mode="forward")
-    model_seq_dr = ModellingSequence(prob_model_dr)
-    ctx_dr = InferenceContext.from_modelling_sequence(model_seq_dr)
+    ctx_dr = InferenceContext.from_prob_model(prob_model_dr)
 
 
     return prob_model, prob_model_dr, truth_scene, truth_def_ratio

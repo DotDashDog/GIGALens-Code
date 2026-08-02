@@ -10,7 +10,6 @@ import json
 from datetime import datetime
 from copy import deepcopy
 
-from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel, ForwardMultiModel, BackwardMultiModel
 from gigalens.model import PhysicalModelBase
 from gigalens.jax.physical_model import PhysicalModel

@@ -8,7 +8,7 @@ This module registers:
   ``100SystemsStandard80px.npz`` + ``100SystemsStandardParams.yaml`` on disk
   into the framework's :class:`~system.System` format without re-simulating.
 - ``"epl_shear_sersic_sersic"`` inference builder — builds the standard GL2
-  :class:`~gigalens.jax.inference.ModellingSequence` with the GIGALens paper
+  scene :class:`~gigalens.jax.scene_prob_model.ProbModel` with the GIGALens paper
   inference prior (:func:`gl2_inference_prior`).
 - ``"map_svi_hmc"`` pipeline builder (already registered in ``pipelines.py``).
 
@@ -221,15 +221,14 @@ def _gl2_scene_priors():
 
 @register_inference_builder("epl_shear_sersic_sersic")
 def build_epl_shear_sersic_sersic(system: Any, **kwargs) -> Any:
-    """Build the SCENE GL2 forward ModellingSequence (G1b).
+    """Build the SCENE GL2 forward ``ProbModel`` (G1b).
 
     Scene ``LensModel`` (EPL+Shear mass + Sérsic lens light + Sérsic source, ALL
     ``use_lstsq=False`` so the ``Ie`` amplitudes are SAMPLED) + ``Dataset`` +
-    ``ProbModel(mode="forward")`` in a scene-backed ``ModellingSequence``. This is the
-    forward-mode analogue of the lstsq builders; the public signature/return is unchanged.
+    ``ProbModel(mode="forward")``, returned directly. This is the forward-mode
+    analogue of the lstsq builders; the public signature is unchanged.
     """
     import jax.numpy as jnp
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
@@ -246,7 +245,7 @@ def build_epl_shear_sersic_sersic(system: Any, **kwargs) -> Any:
                  background_rms=system.background_rms, exp_time=system.exp_time,
                  sees="all")
     prob_model = ProbModel(model, ds, mode="forward")
-    return ModellingSequence(prob_model)
+    return prob_model
 
 
 # ---------------------------------------------------------------------------

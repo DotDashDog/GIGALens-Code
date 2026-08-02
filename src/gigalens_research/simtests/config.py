@@ -38,7 +38,7 @@ YAML format example::
         hmc_num_results: 1500
         hmc_num_burnin: 500
     sweep: [{}]
-    metrics: [max_rhat, min_ess, all_zscores, wall_time, peak_gpu_bytes]
+    metrics: [max_rhat, min_ess, worst_rhat_param, all_zscores, wall_time, peak_gpu_bytes]
     execution:
       systems_per_task: 1
 """
@@ -138,7 +138,8 @@ class CampaignSpec:
         )
         dataset = DatasetSpec.from_dict(d["dataset"])
         inference = InferenceSpec.from_dict(d["inference"])
-        metrics = list(d.get("metrics", ["max_rhat", "min_ess", "all_zscores",
+        metrics = list(d.get("metrics", ["max_rhat", "min_ess",
+                                          "worst_rhat_param", "all_zscores",
                                           "wall_time", "peak_gpu_bytes"]))
         execution = ExecutionSpec.from_dict(d.get("execution", {}))
         plugins = list(d.get("plugins", []))

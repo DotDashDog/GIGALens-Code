@@ -1,14 +1,14 @@
 r"""LAPS notebook handoff — clean, importable helpers for a REAL lens posterior.
 
-Call these three from a notebook once you have a gigalens ``model_seq`` (the
-ProbModel-bearing scene sequence) and a ``qz`` SVI surrogate (exposing
+Call these three from a notebook once you have a gigalens ``prob_model`` (the
+scene ProbModel) and a ``qz`` SVI surrogate (exposing
 ``.sample((n,), seed)`` / ``.mean()`` / ``.covariance()``):
 
     from laps_handoff import run_laps, diagnose, compare_warm_cold
 
-    res = run_laps(model_seq, qz, init_mode="cold")     # validated defaults baked
+    res = run_laps(prob_model, qz, init_mode="cold")    # validated defaults baked
     health = diagnose(res, out_png="laps_diag.png")     # GROUND-TRUTH-FREE health
-    cmp = compare_warm_cold(model_seq, qz, out_png="laps_warm_cold.png")
+    cmp = compare_warm_cold(prob_model, qz, out_png="laps_warm_cold.png")
 
 Everything here is ground-truth-FREE: a real lens posterior has no known moments,
 so the only convergence evidence is internal health (the Phase-1 controller and
@@ -46,12 +46,12 @@ VALIDATED_DEFAULTS = dict(
 # --------------------------------------------------------------------------- #
 # 1. run_laps                                                                  #
 # --------------------------------------------------------------------------- #
-def run_laps(model_seq, qz, init_mode="cold", **overrides):
+def run_laps(prob_model, qz, init_mode="cold", **overrides):
     r"""Run LAPS on a gigalens posterior with the validated defaults baked in.
 
     Parameters
     ----------
-    model_seq : gigalens scene sequence; ``model_seq.prob_model.log_prob(z)[0]``
+    prob_model : gigalens scene ProbModel; ``prob_model.log_prob(z)[0]``
                 is the unconstrained-``z`` log density (same entry MCLMC uses).
     qz        : SVI surrogate (``.sample/.mean/.covariance``). Used to seed chains
                 in warm mode and to infer ``dim`` in BOTH modes.
@@ -66,7 +66,7 @@ def run_laps(model_seq, qz, init_mode="cold", **overrides):
     kw = dict(VALIDATED_DEFAULTS)
     kw.update(overrides)
     kw["init_mode"] = init_mode
-    return LAPS_late_adjusted_JIT(model_seq, qz, **kw)
+    return LAPS_late_adjusted_JIT(prob_model, qz, **kw)
 
 
 # --------------------------------------------------------------------------- #
@@ -388,7 +388,7 @@ def _grad_cost(res):
 # --------------------------------------------------------------------------- #
 # 3. compare_warm_cold                                                         #
 # --------------------------------------------------------------------------- #
-def compare_warm_cold(model_seq, qz, param_names=None, out_png="laps_warm_cold.png",
+def compare_warm_cold(prob_model, qz, param_names=None, out_png="laps_warm_cold.png",
                       n_pair_params=4, verbose=True, **kw):
     r"""Run BOTH init modes and CROSS-VALIDATE: two independent inits AGREEING is
     the key ground-truth-free convergence evidence on a real posterior.
@@ -400,8 +400,8 @@ def compare_warm_cold(model_seq, qz, param_names=None, out_png="laps_warm_cold.p
     Returns a dict with per-mode results, the per-param mean/std table, the
     cross-moment agreement, and the path to ``out_png``.
     """
-    res_cold = run_laps(model_seq, qz, init_mode="cold", **kw)
-    res_warm = run_laps(model_seq, qz, init_mode="warm", **kw)
+    res_cold = run_laps(prob_model, qz, init_mode="cold", **kw)
+    res_warm = run_laps(prob_model, qz, init_mode="warm", **kw)
     # CHANGE B: samples are (M, K, d); flatten the (chain, sample) axes to (M*K, d)
     # for the marginal/cross-moment comparisons (legacy (M, d) passes through).
     s_cold = np.asarray(res_cold.samples, np.float64)

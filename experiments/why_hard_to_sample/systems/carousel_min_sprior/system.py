@@ -87,7 +87,7 @@ def _sprior_nfw0(leaf):
 
 def build_sprior_target(artifact=ARTIFACT):
     """Build the s-prior target (qz-hash guard bypassed). Returns a dict:
-      model_seq, prob_model, dim, param_names, leaf, rs_col, z_best, ref_dir, artifact."""
+      prob_model, dim, param_names, leaf, rs_col, z_best, ref_dir, artifact."""
     import jax
     jax.config.update("jax_enable_x64", True)   # sampling needs f64
 
@@ -96,7 +96,7 @@ def build_sprior_target(artifact=ARTIFACT):
     leaf = load_leaf(artifact)                  # eager-materialized inside make_RsOfS
 
     nfw0 = _sprior_nfw0(leaf)
-    model_seq, prob_model = common._build_prob_model(nfw0, None)
+    prob_model = common._build_prob_model(nfw0, None)
     z_best = common._load_z_best(newmod.REF_DIR)   # baseline MAP (for init mapping)
     dim = int(z_best.shape[0])
     param_names = common._recover_param_names(prob_model, dim)
@@ -112,7 +112,7 @@ def build_sprior_target(artifact=ARTIFACT):
     print(f"[sprior] Rs column = {rs_col} (param {param_names[rs_col]})")
 
     return {
-        "model_seq": model_seq, "prob_model": prob_model, "dim": dim,
+        "prob_model": prob_model, "dim": dim,
         "param_names": param_names, "leaf": leaf, "rs_col": rs_col,
         "sha256": sha, "z_best": np.asarray(z_best, np.float64),
         "ref_dir": newmod.REF_DIR, "artifact": os.path.abspath(artifact),
@@ -191,7 +191,7 @@ def s_to_Rs(s, leaf):
 # common-compatible loader
 # ---------------------------------------------------------------------------
 def load_target(supersample=None):
-    """common-compatible 5-tuple (model_seq, qz, z_center, dim, param_names).
+    """common-compatible 5-tuple (prob_model, qz, z_center, dim, param_names).
 
     z_center = baseline MAP z_best MAPPED into the sprior chart; qz is a fresh
     MVNDiag there (the T28 runner supplies its own typical-set qz')."""
@@ -205,14 +205,14 @@ def load_target(supersample=None):
     # map the baseline MAP center into the sprior chart (needs the baseline pm)
     common = _common()
     newmod = _newmod()
-    base_ms, _qz, _zc, _dim, _names = common.load_target(
+    base_pm, _qz, _zc, _dim, _names = common.load_target(
         newmod._nfw0, newmod.REF_DIR, newmod.PINNED_QZ_HASH)
     u_center, _info = map_baseline_z_to_u(
-        b["z_best"], base_ms.prob_model, b["prob_model"], b["dim"])
+        b["z_best"], base_pm, b["prob_model"], b["dim"])
     qz = tfd.MultivariateNormalDiag(
         loc=jnp.asarray(u_center), scale_diag=jnp.full(b["dim"], 1e-3))
     print(f"[sprior] default qz = MVNDiag(u_center, 1e-3) (BYPASS-pinned)")
-    return b["model_seq"], qz, u_center, b["dim"], b["param_names"]
+    return b["prob_model"], qz, u_center, b["dim"], b["param_names"]
 
 
 if __name__ == "__main__":

@@ -6,9 +6,9 @@ Four registries correspond to the four extension points in a campaign:
   Signature: ``fn(spec: DatasetSpec, base_dir: str, seed: int) -> None``
   (writes systems to disk under ``base_dir/dataset/``).
 
-- **inference_builder**: constructs the inference :class:`ModellingSequence`
+- **inference_builder**: constructs the inference scene :class:`ProbModel`
   for one system, including the inference prior and probabilistic model.
-  Signature: ``fn(system: System, **sweep_kwargs) -> ModellingSequence``.
+  Signature: ``fn(system: System, **sweep_kwargs) -> ProbModel``.
 
 - **pipeline_builder**: returns the ordered list of
   :class:`~gigalens_research.inference_utils.InferenceStage` objects for one run.

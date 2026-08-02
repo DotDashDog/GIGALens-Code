@@ -238,8 +238,8 @@ def plot_campaign(
 
         try:
             system = System.load(dataset_dir, system_id)
-            model_seq = builder(system, **sweep_point)
-            ctx = InferenceContext.from_modelling_sequence(model_seq)
+            prob_model = builder(system, **sweep_point)
+            ctx = InferenceContext.from_prob_model(prob_model)
             _plot_one_run(
                 ctx=ctx, system=system, out_dir=out_dir, panels=panels,
                 stage=stage, z_score_kind=z_score_kind,

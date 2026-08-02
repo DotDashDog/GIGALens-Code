@@ -20,7 +20,6 @@ import numpy as np
 import tensorflow_probability.substrates.jax as tfp
 from matplotlib import pyplot as plt
 
-from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.prob_model import BackwardProbModel
 from gigalens.jax.profiles.light import sersic, shapelets
 from gigalens.jax.profiles.mass import epl, shear
@@ -270,8 +269,7 @@ def vela_system_model(
     prob_model = BackwardProbModel(
         prior, observed_img, background_rms=background_rms, exp_time=exp_time
     )
-    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-    return model_seq, lens_sim
+    return prob_model, lens_sim
 
 
 def free_source_fixed_lens_model(
@@ -320,8 +318,7 @@ def free_source_fixed_lens_model(
     prob_model = BackwardProbModel(
         prior, observed_img, background_rms=background_rms, exp_time=exp_time
     )
-    model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-    return model_seq, lens_sim
+    return prob_model, lens_sim
 
 
 # ---------------------------------------------------------------------------

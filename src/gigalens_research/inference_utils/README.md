@@ -39,15 +39,13 @@ diagnostics and plotting across all inference algorithms.
 ## Quick start
 
 ```python
-from gigalens.jax.inference import ModellingSequence
 from gigalens_research.inference_utils import (
     InferenceContext, Pipeline, MAPStage, SVIStage, HMCStage,
 )
 
-# phys_model, prob_model, sim_config come from your usual setup;
+# prob_model comes from your usual setup;
 # see e.g. experiments/hundred_systems_GL2/setup.py
-model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-ctx = InferenceContext.from_modelling_sequence(model_seq)
+ctx = InferenceContext.from_prob_model(prob_model)
 
 pipeline = Pipeline(ctx, seed=42)
 pipeline.add(MAPStage(num_steps=500, n_samples=1000))
@@ -108,16 +106,16 @@ results/system_07/
 ## InferenceContext
 
 ```python
-# Standard — wraps a ModellingSequence:
-ctx = InferenceContext.from_modelling_sequence(model_seq)
+# Standard — everything is derived from the scene ProbModel:
+ctx = InferenceContext.from_prob_model(prob_model)
 
-# Manual — useful when you want to avoid importing ModellingSequence
-# on the login node, or when model_seq is not yet available:
+# Manual — useful when the pieces are already in hand and you want to
+# pin them explicitly (e.g. a sim_config the prob_model's datasets
+# don't carry):
 ctx = InferenceContext(
     phys_model=phys_model,
     prob_model=prob_model,
     sim_config=sim_config,
-    model_seq=model_seq,   # can be None for Posterior-only use
 )
 ```
 
@@ -352,10 +350,17 @@ post.flat_z           # chain-flattened + subsampled: (N, n_params)
 post.flat_x           # same in physical space: the scene's flat
                       # {unique_key: (N,) array} dict
 
-# Convergence diagnostics. These are per *sampler (z) column*, so they are
-# arrays, not path-keyed dicts; prob_model.z_param_names is the column→name map.
+# Convergence diagnostics. Computed upstream by
+# gigalens.jax.analysis.diagnose_convergence and returned as a labeled
+# ConvergenceReport keyed by prob_model.z_param_names (the column→name map):
+post.convergence      # ConvergenceReport: .rhat/.ess_bulk/.ess_tail arrays,
+                      # .names, .per_param, .worst(n), .max_rhat,
+                      # .min_ess_bulk/.min_ess_tail, .summary()
+post.convergence.worst(3)          # 3 worst-R-hat ParamDiagnostics (named)
+# Convenience arrays (per sampler z column, z-column order):
 post.rhat             # rank-normalized split-R-hat, shape (n_params,)
 post.ess              # rank-normalized bulk-ESS, shape (n_params,)
+post.ess_tail         # rank-normalized tail-ESS, shape (n_params,)
 post.running_rhat()   # (schedule, rhat) — rhat is (n_windows, n_params)
 post.running_ess()    # (schedule, ess)
 
@@ -378,7 +383,7 @@ import numpy as np
 
 # truth_x is the scene-nested truth point ({"planes": {...}, "cosmo": {...}}),
 # complete over the model's free parameters. The scene maps it to flat z:
-z_truth = np.asarray(ctx.model_seq.scene_model.unconstrained(truth_x))
+z_truth = np.asarray(ctx.prob_model.model.unconstrained(truth_x))
 
 pipeline = Pipeline(ctx, seed=0)
 pipeline.add(SVIStage(num_steps=3000, n_vi=500))
@@ -489,10 +494,8 @@ artifacts = pipeline.run(
 
 ```python
 from gigalens_research.inference_utils import posterior_from_disk, InferenceContext
-from gigalens.jax.inference import ModellingSequence
 
-model_seq = ModellingSequence(phys_model, prob_model, sim_config)
-ctx = InferenceContext.from_modelling_sequence(model_seq)
+ctx = InferenceContext.from_prob_model(prob_model)
 
 post = posterior_from_disk("results/system_07", "hmc", ctx)
 print(post.rhat)
@@ -531,9 +534,9 @@ class MyNUTSStage(InferenceStage):
 
     def run(self, ctx, artifacts, seed):
         t0 = time.perf_counter()
-        # ... your sampler code here, using ctx.model_seq and artifacts["qz"] ...
-        samples_np = np.zeros((self.n_chains, self.num_steps,
-                               ctx.model_seq.n_params))
+        # ... your sampler code here, using ctx.prob_model and artifacts["qz"] ...
+        n_params = artifacts["qz"].event_shape[0]
+        samples_np = np.zeros((self.n_chains, self.num_steps, n_params))
         return StageResult(
             arrays={"samples_z": samples_np},
             metadata={"wall_time_s": time.perf_counter() - t0},

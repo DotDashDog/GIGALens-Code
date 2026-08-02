@@ -14,11 +14,10 @@ class FakeProb:
     def log_prob(self,z):
         d=z-mu; sol=jax.scipy.linalg.cho_solve((cho,True),d)
         return (-0.5*jnp.dot(d,sol),)
-class FakeSeq: prob_model=FakeProb()
 # same init style as real run (tight ball at mu), same sampler settings
 qz=tfd.MultivariateNormalDiag(loc=mu, scale_diag=jnp.full(P,1e-2))
 t0=time.perf_counter()
-hist=MCLMC_JIT(model_seq=FakeSeq(), qz=qz, n_hmc=8, num_burnin_steps=10000, num_results=2000,
+hist=MCLMC_JIT(prob_model=FakeProb(), qz=qz, n_hmc=8, num_burnin_steps=10000, num_results=2000,
     desired_energy_variance=5e-4, regularize_mass_matrix=True, progress_bar=False, seed=42, debug_output=True)
 print(f"Gaussian run wall {time.perf_counter()-t0:.1f}s")
 gz=np.asarray(hist.position[:,-2000:,:]); gxi=np.asarray(hist.xi[:,-2000:])

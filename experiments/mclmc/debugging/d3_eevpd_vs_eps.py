@@ -158,18 +158,18 @@ def main():
     )
     print(f"[D3] system loaded", flush=True)
 
-    model_seq = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
+    prob_model = get_inference_builder("epl_shear_sersic_shapelets")(system, n_max=args.n_max)
 
     # Mirror MCLMC_JIT exactly: build lens_sim and wrap log_prob to return scalar
     lens_sim = sim.LensSimulator(
-        model_seq.phys_model,
-        model_seq.sim_config,
+        prob_model.model,
+        prob_model.datasets[0].sim_config,
         bs=1,
     )
 
     def logdensity_fn(z):
-        """Exactly mirrors MCLMC_JIT's log_prob: model_seq.prob_model.log_prob(lens_sim, z)[0]"""
-        return model_seq.prob_model.log_prob(lens_sim, z)[0]
+        """Exactly mirrors MCLMC_JIT's log_prob: prob_model.log_prob(lens_sim, z)[0]"""
+        return prob_model.log_prob(lens_sim, z)[0]
 
     print(f"[D3] model built n_max={args.n_max}", flush=True)
 
@@ -181,7 +181,7 @@ def main():
             map_num_steps=200, map_n_samples=100,
             diag_scale=1e-8,
         )
-        ctx = InferenceContext.from_modelling_sequence(model_seq)
+        ctx = InferenceContext.from_prob_model(prob_model)
         stage_result = bootstrap_stage.run(ctx, {}, seed=0)
         artifacts = bootstrap_stage.derive_artifacts(stage_result.arrays)
         qz = artifacts["qz"]

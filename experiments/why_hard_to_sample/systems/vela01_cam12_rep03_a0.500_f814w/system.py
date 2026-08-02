@@ -107,9 +107,9 @@ def _recover_param_names(prob_model, dim):
 
 
 def load_target():
-    """Return (model_seq, qz, z_center, dim, param_names) for the Vela system.
+    """Return (prob_model, qz, z_center, dim, param_names) for the Vela system.
 
-    - model_seq.prob_model.log_prob(z) -> (scalar_logp, chisq); MCLMC_JIT uses
+    - prob_model.log_prob(z) -> (scalar_logp, chisq); MCLMC_JIT uses
       index [0].
     - qz: truth-bootstrap MAP ball rebuilt byte-identically from the reference
       bootstrap_map stage.
@@ -143,7 +143,7 @@ def load_target():
     system.likelihood_precision = "float64"
     system.conv_precision = "float32"
 
-    model_seq = get_inference_builder(
+    prob_model = get_inference_builder(
         "epl_shear_sersic_elliptical_sersiclets")(system, n_max=_N_MAX)
 
     # --- qz: byte-identical rebuild of the reference bootstrap Gaussian ----
@@ -160,6 +160,6 @@ def load_target():
     qz = tfd.MultivariateNormalTriL(
         loc=jnp.asarray(qz_loc), scale_tril=jnp.asarray(qz_scale_tril))
 
-    param_names = _recover_param_names(prob_model=model_seq.prob_model, dim=dim)
+    param_names = _recover_param_names(prob_model=prob_model, dim=dim)
     z_center = np.asarray(qz_loc)
-    return model_seq, qz, z_center, dim, param_names
+    return prob_model, qz, z_center, dim, param_names
