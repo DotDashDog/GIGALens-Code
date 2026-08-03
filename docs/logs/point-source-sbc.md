@@ -494,9 +494,220 @@ the likelihood as an opt-in annealed term and rerun the double arm.
   written (run.json only lands on success), so launch 2 is a clean rerun of
   the same plan.
 
+  **RESOLVED 2026-07-31 — see the log entry of that date. Summary: predictions
+  2 and 3 PASS; prediction 1 passes for 11/12 systems; falsifier (a) fired for
+  sys_57 with a diagnosed operator-accuracy cause (coarse N_eff undercounts a
+  genuine 3rd image), for which the pre-declared eps 0.05 / grid 768 remedy
+  applies. Plus a new dataset defect: 5 systems mislabeled as doubles by the
+  window-6 generator count.**
+
+- **P-11 — fine-operator remedy rerun (eps 0.05" / grid 768) on the 7 affected
+  systems + unpenalized loglik re-rank + window-12 truth recount**
+  (config `experiments/hundred_point_sources/campaign_v2_double_mc_fine.yaml`,
+  sweep `{mc: 2}` → runs land in `runs/<sid>/mc2`; job
+  `experiments/hundred_point_sources/p11_remedy.sbatch`; analysis
+  `experiments/hundred_point_sources/p11_analysis.py`). **Claim type:**
+  per-system stochastic-estimator behaviour (basin occupancy of the penalized
+  MCLMC posterior under the corrected operator) plus one distributional claim
+  (unpenalized loglik PIT uniformity over the existing 100 mc1 runs) and two
+  deterministic side-measurements (operator-convergence rung; lenstronomy truth
+  recount at window 12). This tests the REMEDY link of P-10's falsifier-(a)
+  chain; untested links left open: population-level SBC calibration under the
+  fine config (needs a full 100-system arm) and transfer to triples.
+
+  **Pre-run truth-level measurement (2026-08-03, login CPU, pinned code) that
+  SPLITS the hypothesis.** N_eff at each system's truth under three operator
+  rungs (coarse 384/eps 0.1 = in-likelihood mc1; fine 768/eps 0.05 = remedy;
+  2x 1536/eps 0.025), lenstronomy truth count = 2 for all seven:
+
+  | sid | coarse(t) | fine(t) | 2x(t) | pen_fine(t) | class |
+  |---|---|---|---|---|---|
+  | sys_35 | 2.292 | 2.203 | 2.013 | −0.41 | A: resolution artifact |
+  | sys_67 | 2.040 | 2.037 | 2.000 | −0.01 | A |
+  | sys_69 | 2.526 | 2.174 | 2.006 | −0.30 | A |
+  | sys_57 | 2.176 | 2.338 | 2.334 | −1.14 | B: intrinsic excess (converged) |
+  | sys_86 | 2.398 | 2.661 | 2.799 | −4.38 | B (rising with resolution) |
+  | sys_99 | 2.720 | 2.876 | 2.929 | −7.68 | B |
+  | sys_38 | 2.965 | 2.993 | 2.923 | −9.32 | B |
+
+  **Refined cause hypothesis (two mechanisms):** (H-a) coarse-quadrature
+  undercount — a pure resolution artifact, fully removed at 768/eps 0.05
+  (Class A: truth-level operator converges to 2.0); (H-b) intrinsic
+  near-caustic smoothed-count excess — the Gaussian×|det A|×w quadrature
+  assigns fractional image weight to near-critical source-plane area even when
+  only 2 discrete images exist, at ANY resolution (Class B: truth-level
+  N_eff 2.33–2.99 across rungs). For sys_57 the mc1 failure is still H-a at
+  the POSTERIOR level: its phantom-basin draws read fine N_eff ≈ 2.86
+  (pen ≈ −7.4) vs ≈ −1.1 in the truth basin, a ≈ +6 log-like differential
+  favouring truth that the coarse operator erased (coarse read ≈ 2.04
+  everywhere, penalty engaged nowhere). For sys_38/86/99 the truth itself pays
+  pen_fine −4.4 to −9.3: the constraint disfavours these truths BY DESIGN at
+  any resolution, so "recovery" is not predicted — they measure the
+  displacement cost of the constraint on near-caustic doubles, the number that
+  decides whether this constraint can carry to triples.
+
+  **Predictions (direction + magnitude):**
+  (1) Class A (sys_35/67/69): lenstronomy frac(count==2) ≥ 0.9 AND fine-audit
+      frac(|N_eff−2| < 0.35) ≥ 0.9 (mc1 fine-audit values 0.21/0.83/0.67 →
+      the recovered band 0.94–1.00). Note sys_67 starts at 0.83, so its
+      confirmatory weight is low; sys_35/69 carry the test.
+  (2) sys_57: lenstronomy frac(count==2) ≥ 0.9 (mc1: 0.000, hist {3: 500});
+      fine-audit MEDIAN N_eff in [2.0, 2.45] (mc1: 2.86). frac(|N_eff−2|<0.35)
+      > 0.9 is deliberately NOT predicted — truth reads 2.34, at the tolerance
+      edge (declared now, not reinterpreted later).
+  (3) sys_38/86/99: displacement, not recovery — per-system UNPENALIZED
+      loglik PIT ≤ 0.1 persists in mc2 (truth in the disfavoured tail), and
+      the population scan over all 100 predicts N(pen_fine(truth) < −0.5) ≈
+      7–12: the 4 Class-B systems + the 5 known mislabeled multi-image systems
+      + at most ~3 undiscovered.
+  (4) Unpenalized loglik re-rank of all 100 mc1 posteriors: PIT uniform
+      (KS p > 0.05) and Spearman(pen_coarse(truth), PIT) collapses from the
+      measured +0.512 (p = 5e−8) to |ρ| ≤ 0.2.
+  (5) Truth recount (all 100, window 12, ladder {0.05, 0.025}): confirms the
+      5 known mislabels (sys_02/26/64/81 = 3 images, sys_19 = 4); ≤ 5
+      additional among the 86 not yet recounted.
+  (6) Operator convergence: fine vs 2x on 500 mc2 sys_57 draws agree to
+      frac(|Δ| < 0.05) ≥ 0.9.
+
+  **Falsifiers:** (a) any Class-A system with lenstronomy frac(count==2) < 0.9
+  → resolution was not the mechanism even where the operator converges at
+  truth; anneal/staging or lam inadequacy — remedy path invalid. (b) sys_57
+  lenstronomy frac(count==2) < 0.5 → the +6 differential fails to move
+  occupancy; the constraint cannot handle near-caustic doubles at any
+  resolution — method redesign (discrete-count constraint or excess-aware
+  target) required before any triple arm. (c) re-rank KS p < 0.05 or |ρ| >
+  0.3 → the loglik Holm rejection was NOT (only) the penalty-at-truth
+  artifact; the P-10 "prediction 2 PASS" interpretation is compromised —
+  investigate before new arms. (d) convergence-rung agreement < 0.9 → the
+  audit operator is unconverged and every N_eff-based number here is suspect.
+  (e) > 5 additional mislabels in the recount → generator defect broader than
+  the window; regenerate the dataset wholesale before ANY further arm.
+
+  **Threshold derivation:** 0.9 = below P-10's recovered band (fine-audit
+  0.939–1.000; lenstronomy 0.844–1.000 with sys_63's 0.844 the one straddler)
+  and above the affected band (≤ 0.83). sys_57 median band [2.0, 2.45] =
+  truth-level converged value 2.334 + 0.11 (the q50→q90 half-spread of fine
+  N_eff observed on P-10 recovered systems, e.g. sys_98). KS α = 0.05: single
+  pre-registered test (not a 13-way family), n = 100 gives power against
+  |ΔF| ≳ 0.135 — the mc1 penalized PIT deficit is ~3x that. |ρ| ≤ 0.2 =
+  2× the null sd of Spearman at n = 100 (1/√99 ≈ 0.10). Rung tolerance 0.05 =
+  7× below the 0.35 decision tolerance, so residual quadrature error at that
+  level cannot flip any classification; the 0.9 fraction allows a tail of
+  near-fold draws where quadrature convergence is intrinsically slow.
+  Threshold for prediction (3)'s upper count (12) is NOT derivable beyond the
+  9 known members — the +3 allowance is a guess, flagged as such; only the
+  falsifier-(e) bound (> 5 new mislabels) is decision-relevant.
+
+  **Blind spots:** the fine-audit N_eff now shares BOTH kernel and resolution
+  with the in-likelihood operator (P-10's audit at least differed in
+  resolution) — a common operator artifact would fully self-confirm;
+  mitigation: the lenstronomy discrete-count cross-check is PRIMARY for every
+  basin claim, and the 2x rung bounds quadrature error. A 7-system rerun has
+  no SBC power: calibration under the fine config is NOT tested here (next
+  full arm). The lenstronomy count itself can miss unconverged roots — the
+  min_distance ladder stability check guards it.
+
+  **Expected appearance:** paired mc1→mc2 bars of lenstronomy frac(count==2):
+  Class A and sys_57 jump to ≈ 1.0; sys_38/86/99 land wherever displacement
+  puts them (recorded, not gated). sys_57 fine-N_eff histogram: mode 2.86 →
+  2.0–2.4. Re-rank PIT deciles: flat (the penalized version piles up in the
+  lowest deciles). If (b) fires: sys_57 lenstronomy hist stays {3: 500} and
+  the N_eff mode stays ≥ 2.6.
+
+  **Cost (measured basis):** P-10 production = 12 systems/GPU in 13.9 h at
+  chunk 7 (56 lanes, coarse). P-11 runs chunk 1 (8 lanes) × 4× tiles →
+  per-step ≈ 0.57× the 56-lane coarse step → ≈ 4 h/system; worst GPU carries
+  2 systems ≈ 8 h, + ≈ 1 h audit → 16 h wall requested (2× margin on the
+  tail). One es0 node, 4× GRTX2080TI, ≤ 64 GPU-h. **Memory (the P-10 OOM
+  lesson, pre-verified):** peak_gpu_bytes = 1.35 GB on ALL 100 mc1 systems at
+  chunk 7; the fine config keeps per-tile quadrature size identical
+  (768²/64 = 384²/16 = 9216 points) and runs 1/7 the lanes → strictly below
+  1.35 GB on 11 GB cards. Anneal uses the same mc_anneal_block=16 path that
+  fixed the P-10 OOM. Host: MaxRSS 12.4 GB at 4 concurrent slices < 90 GB.
+  **Seeds/config/code:** campaign seed 3 all stages (matches mc1); yaml
+  differs from mc1's ONLY in the constraint knobs (eps 0.1→0.05, grid
+  384→768, tiles 16→64, anneal rungs [0.3, 0.15] → [0.3, 0.15, 0.1]); code
+  PINNED at the P-10 commits via worktrees — gigalens d321d3c
+  (`~/gigalens-worktree-p10`), GIGALens-Code 4358ebb
+  (`~/GIGALens-Code-worktree-p10`) — because both live checkouts have since
+  taken the ModellingSequence migration, and the remedy comparison is only
+  controlled if nothing but the operator resolution differs from mc1.
+  Smoke-tested on the login node: imports, truth→z mapping, unpenalized
+  log_like, all three operator rungs, recount worker.
+  **Status: APPROVED by user 2026-08-03 ("Okay - go ahead!") after review of
+  the checkpoint. Files committed as GIGALens-Code 0535116 before launch;
+  submitted as job 24529614 (es0, es_normal, 4x GRTX2080TI, 16 h).**
+
 ---
 
 ## Log (newest first)
+
+- **2026-07-31 (P-10 RESOLVED: double-arm rerun with the in-likelihood
+  multiplicity constraint — core claim substantiated; one operator-accuracy
+  failure; dataset mislabeling discovered).** Campaign completed 100/100 in
+  `runs/<sid>/mc1` after a walltime loss and two gap-fills (24307807 OOM →
+  24308191 16h-TIMEOUT with 4 systems persisted → 24350103_0 systems 0–51 →
+  24382995 systems 52–99, chunk 7, 24h). Mid-campaign the live gigalens
+  checkout advanced past d321d3c (PR #94 removed `ModellingSequence`), so the
+  second gap-fill ran against a pinned worktree `~/gigalens-worktree-p10` at
+  d321d3c — all 100 systems used byte-identical code. Analysis: job 24390199
+  + `experiments/hundred_point_sources/p10_analysis.py`; artifacts in
+  `diagnostics/p10_analysis/` (JSON + per-system N_eff/count arrays) and
+  `aggregate/` (rank ECDFs, sbc_report.json). Observed vs predicted:
+  - **Prediction 2 PASS.** Unfiltered SBC over 100 systems: **1/13 Holm
+    rejections** (predicted ≤ 2/13); gamma is clean unfiltered — P-7's
+    unfiltered gamma rejection is gone (the `default` sweep still shows it
+    under identical gates). Falsifier (b) does not fire (no gamma/theta_E
+    rejection). The one rejection is `loglik` (KS p = 1e-4, mean PIT 0.386,
+    skewed low, uniform across systems, absent in P-7). Mechanism quantified:
+    the rank scores truth under the PENALIZED likelihood; draws equilibrate
+    where the coarse-operator penalty ≈ 0, while truth pays the coarse
+    operator's error at its (genuinely count-2) parameters. Spearman(pen_coarse
+    (truth), PIT) = 0.51 (p = 5e-8); the 26 systems with PIT < 0.1 have median
+    pen(truth) = −4.1 vs −0.05 for the rest. An operator-accuracy artifact at
+    truth, not parameter miscalibration (parameter ranks uniform).
+  - **Prediction 1: 11/12 PASS, falsifier (a) fired for sys_57.** The 11:
+    frac(N_eff≈2) = 0.939–1.000 (predicted > 0.9; P-7 kept ≈ 0), confirmed by
+    the pre-registered lenstronomy cross-check (500 thinned draws each, window
+    12, min_distance ladder): frac(count==2) ≥ 0.844 (9 systems at ≥ 0.998).
+    **sys_57 = 0.000**: its constrained posterior sits ENTIRELY in a genuine
+    3-image region — lenstronomy finds 3 real images on all 500 draws (radii
+    0.79–1.40", inside the 2·theta_E = 2.63" window half-width), fine-config
+    N_eff reads 2.86, yet the in-likelihood coarse operator reads 2.04 on the
+    same draws (direct measurement, 32 draws), so the lam = 10 penalty never
+    engaged. Diagnosis: NOT an anneal/capture failure — the coarse quadrature
+    (eps 0.1, grid 384, fp32) undercounts the third image by ≈ 0.8 of an
+    image. This is exactly the registered blind spot ("the frac metric shares
+    its operator with the constraint"), caught by its registered mitigation.
+    Partially affected genuine doubles (fine frac < 0.9 from the same cause):
+    sys_86 (0.12), sys_35 (0.21), sys_99 (0.40), sys_38 (0.65), sys_69
+    (0.67), sys_67 (0.83). The pre-declared remedy — eps 0.05, grid 768 —
+    targets precisely this failure; a P-11 checkpoint is required before any
+    rerun (window 4·theta_E at grid 768 gives step 0.0069 ≤ 0.05·√0.1 ✓,
+    ~4× quadrature cost).
+  - **Prediction 3 PASS.** Healthy systems (P-7 kept ≥ 0.5, n = 70) vs P-7
+    count==2-filtered draws: per-parameter median |Δmean|/sd = 0.06–0.17
+    (predicted < 0.3 for all 13; worst is light center_y at 0.172). The term
+    is inert where it must be.
+  - **NEW dataset defect (double arm):** window-12 truth recount of every
+    system with a P-7 filter matrix shows 5 systems mislabeled as doubles —
+    truth has 3 images (sys_02, sys_26, sys_64, sys_81) or 4 (sys_19); the
+    generator counted inside search_window 6 and missed wide images. Their
+    mc1 posteriors legitimately track the extra-image structure (fine frac
+    0.00–0.83); P-7 kept_frac for them ranged 0.02–0.99 (the window-6 filter
+    was equally blind). Confirms the standing rule: generators and filters
+    must use lenstronomy search_window ≥ 12. `truth_counts_w12.json` in
+    diagnostics/p10_analysis.
+  - **Verdict:** the core claim — the soft in-likelihood tilt reproduces
+    P-7's filtered calibration while eliminating the zero-kept class —
+    holds at the registered thresholds for calibration (1/13) and inertness
+    (< 0.3 sd), and for 11/12 recovery targets. The registered failure mode
+    that fired is operator accuracy at eps 0.1/grid 384, not the hypothesis
+    (the position likelihood lacking image-count information) and not the
+    annealing design. Follow-ups requiring their own checkpoints: (P-11)
+    fine-config (eps 0.05 / grid 768) rerun of the 7 affected genuine
+    doubles + loglik re-rank under the unpenalized likelihood; dataset
+    regeneration with window ≥ 12 before any new arm.
 
 - **2026-07-28 (P-9: capture-radius + sampling-cost micro-check on the
   zero-kept systems — annealed eps_init=0.3" reaches 100% of phantom-mode

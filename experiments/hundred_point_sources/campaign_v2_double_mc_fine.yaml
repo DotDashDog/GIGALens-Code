@@ -1,0 +1,130 @@
+# =============================================================================
+# hundred_point_sources_v2_double — P-11 fine-operator remedy rerun
+# =============================================================================
+# P-10 (docs/logs/point-source-sbc.md, resolved 2026-07-31) fired falsifier (a)
+# on sys_57: the in-likelihood coarse operator (eps 0.1", grid 384) undercounts
+# a genuine 3rd image by ~0.8 (coarse N_eff ~ 2.04 where the fine audit reads
+# 2.86 and lenstronomy finds 3 real images inside the window), so the lam=10
+# penalty never engaged. Six more genuine doubles partially affected.
+#
+# This config is the pre-declared remedy: the SAME campaign with the
+# multiplicity constraint at eps 0.05" / grid 768 / 64 tiles. Per-tile
+# quadrature size is unchanged (768^2/64 = 384^2/16 = 9216 points), so GPU
+# memory matches the measured P-10 peak (1.35 GB); cost is ~4x tiles.
+# Step bound: 4*theta_E/768 <= eps*sqrt(mu_min) = 0.0158" for theta_E <= 3.03"
+# (same margin as the coarse config). Anneal gains a rung: 0.3 -> 0.15 -> 0.1
+# -> final 0.05.
+#
+# Sweep point {mc: 2} -> runs land in runs/<sid>/mc2 next to mc1 (P-10) and
+# default (P-7). Dataset unchanged and NOT regenerated. Run only on the 7
+# affected systems (offsets 35, 38, 57, 67, 69, 86, 99) via
+# batched_campaign_run --offset/--n-systems.
+
+name: hundred_point_sources_v2_double
+seed: 3
+output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v2_double
+
+plugins:
+  - gigalens_research.simtests.experiments.lenstronomy_point_source
+
+# =============================================================================
+# DATASET — identical to campaign_v2_double.yaml; the dataset already exists
+# at output_dir and is reused verbatim (the generator is not rerun).
+# =============================================================================
+dataset:
+  generator: lenstronomy_point_source
+  n_systems: 100
+  truth_prior: inference
+  source_prior_scale: 0.25
+  amp_median: 2.0
+  amp_sigma_log: 0.5
+  H0_min: 20.0
+  H0_max: 100.0
+  Om0: 0.3
+  z_lens: 0.5
+  z_source: 1.5
+  multiplicity: double
+  max_redraws: 2000
+  min_image_sep: 0.05
+  sigma_ast: 0.004
+  frac_flux: 0.005
+  sigma_td: 1.0
+  lt_min_distance: 0.01
+  lt_search_window: 6.0
+  lt_precision_limit: 1.0e-10
+
+# =============================================================================
+# INFERENCE — v2 knobs; only the multiplicity-constraint resolution changes
+# vs campaign_v2_double_mc.yaml (eps 0.1->0.05, grid 384->768, tiles 16->64,
+# one extra anneal rung).
+# =============================================================================
+inference:
+  builder: epl_shear_point_source_obs
+  pipeline: map_svi_mclmc
+  pipeline_kwargs:
+    fit_flux: true
+    fit_td: true
+
+    newton_steps: 10
+    trust_region_frac: 0.4
+    src_parameterization: absolute
+    priors: from_dataset
+    src_anchor_sigma: 0.004
+
+    # --- multiplicity constraint (P-11 fine config; n_obs defaults to 2) ----
+    multiplicity_constraint:
+      mu_min: 0.1
+      eps: 0.05             # final (sampled) kernel width, arcsec
+      lam: 10.0
+      grid_n: 768           # step = 4*theta_E/768 <= eps*sqrt(mu_min) to theta_E ~ 3"
+      n_tiles: 64           # per-tile points unchanged vs coarse (9216)
+      window_scale: 4.0     # window = 4 * theta_E, centered on the EPL
+    mc_anneal_eps: [0.3, 0.15, 0.1]
+    mc_anneal_steps: 300
+    mc_anneal_particles: 64
+    mc_anneal_lr: 1.0e-3
+
+    # --- MAP (term off; anneal phase handles basin selection) ---------------
+    map_n_samples: 1000
+    map_num_steps: 1500
+    map_lr: 3.0e-3
+    map_clip_norm: 1.0
+
+    # --- SVI (term off: preconditioner only) --------------------------------
+    svi_n_vi: 500
+    svi_num_steps: 1500
+    svi_lr: 1.0e-4
+    svi_init_scale: 1.0e-3
+
+    # --- MCLMC (term ON, fixed eps/lam) — v2 intensive budget ---------------
+    n_chains: 8
+    num_burnin_steps: 15000
+    num_results: 30000
+    frac_tune1: 0.2
+    frac_tune2: 0.6
+    frac_tune3: 0.2
+    desired_energy_variance: 5.0e-4
+
+    # --- SBC rank computation + convergence gate ----------------------------
+    sbc_rank_draws: 1024
+    sbc_rhat_max: 1.05
+    sbc_min_ess: 100
+    sbc_solver_unconverged_max: 0.05
+
+sweep:
+  - {mc: 2}
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - percent_error
+  - sbc_ranks
+  - loglik_rank
+  - ps_solver_health
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1
