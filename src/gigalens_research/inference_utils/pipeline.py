@@ -1848,6 +1848,8 @@ class MAMSStage(InferenceStage):
         frac_tune2: float = 0.6,
         frac_tune3: float = 0.2,
         regularize_mass_matrix: bool = True,
+        L_max_ratio: float = 4.0,
+        max_integration_steps: int = 60,
         progress_bar: bool = False,
         debug: bool = False,
         name: Optional[str] = None,
@@ -1866,6 +1868,8 @@ class MAMSStage(InferenceStage):
         self.progress_bar = bool(progress_bar)
         self.debug = bool(debug)
         self.regularize_mass_matrix = bool(regularize_mass_matrix)
+        self.L_max_ratio = float(L_max_ratio)
+        self.max_integration_steps = int(max_integration_steps)
 
     def diagnostics_config(self):
         # What the MAMS diagnostic plotter needs to draw the tuning-stage
@@ -1898,6 +1902,8 @@ class MAMSStage(InferenceStage):
             frac_tune2=self.frac_tune2,
             frac_tune3=self.frac_tune3,
             regularize_mass_matrix=self.regularize_mass_matrix,
+            L_max_ratio=self.L_max_ratio,
+            max_integration_steps=self.max_integration_steps,
             progress_bar=self.progress_bar,
             seed=seed,
             debug_output=self.debug,
