@@ -36,6 +36,24 @@ from .truth import plot_source_comparison, plot_z_scores
 # ---------------------------------------------------------------------------
 
 
+def _per_view(spec, plane: int, dataset: int):
+    """Resolve a per-view framing argument for one ``(dataset, plane)`` row.
+
+    ``spec`` is either a plain value applied to every row, or a dict keyed by plane
+    index or by ``(dataset, plane)``; a row the dict does not mention resolves to
+    ``None``, which means "let the plotter auto-frame this one". The ``(dataset,
+    plane)`` key wins over the bare plane key when both are present.
+
+    A tuple ``spec`` is treated as a plain value, not a mapping, so ``center=(x, y)``
+    keeps working as the apply-to-all form.
+    """
+    if not isinstance(spec, dict):
+        return spec
+    if (dataset, plane) in spec:
+        return spec[(dataset, plane)]
+    return spec.get(plane)
+
+
 class PosteriorReport:
     """A bundle of plotting methods for a single :class:`Posterior`.
 
@@ -149,12 +167,10 @@ class PosteriorReport:
                  if with_critical_curves else [])
         obs_override = None if observed is None else np.asarray(observed)
 
-        sc = self.posterior.ctx.sim_config
-        extent = (-sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix,
-                  -sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix)
-
         fig, axs = plt.subplots(n_ds, 4, figsize=(13, 3.2 * n_ds), squeeze=False)
         for k, row_ax in enumerate(axs):
+            # Per band: rows may come from grids of different size/scale.
+            extent = self._band_extent(k)
             observed_k = (obs_override if obs_override is not None
                           else np.asarray(self.posterior.observed_for(k)))
             predicted = np.asarray(self.posterior.simulate(point=point, dataset=k))
@@ -233,12 +249,31 @@ class PosteriorReport:
 
     # -- source-plane panel --------------------------------------------------
 
+    def _band_extent(self, dataset: int) -> Tuple[float, float, float, float]:
+        """``imshow`` extent in arcsec for one band's grid.
+
+        Read from that band's OWN simulator config where available, falling back to
+        the context-wide one. Bands can differ in ``num_pix``/``delta_pix`` (different
+        instruments, or IFU cutouts trimmed per wavelength), and a figure-wide extent
+        would place the image on the wrong axes scale — silently, and with a critical
+        curve drawn over it in true sky coordinates, so the mismatch reads as a
+        physical offset rather than a plotting bug.
+        """
+        sc = getattr(self.posterior._sim_for(dataset), "sim_config", None)
+        if sc is None:
+            sc = self.posterior.ctx.sim_config
+        nx = sc.num_pix if isinstance(sc.num_pix, int) else sc.num_pix[1]
+        ny = sc.num_pix if isinstance(sc.num_pix, int) else sc.num_pix[0]
+        return (-nx / 2 * sc.delta_pix, nx / 2 * sc.delta_pix,
+                -ny / 2 * sc.delta_pix, ny / 2 * sc.delta_pix)
+
     def source_panel(
         self,
         *,
         point: str = "median",
         grid_pix: int = 400,
-        fov_arcsec: Optional[float] = None,
+        fov_arcsec: Optional[Any] = None,
+        center: Optional[Any] = None,
         observed: Optional[np.ndarray] = None,
         with_observed: bool = True,
     ) -> Figure:
@@ -257,8 +292,20 @@ class PosteriorReport:
 
         ``observed`` overrides the observed image for every row (e.g. a noise-free
         truth); leave it ``None`` to use each band's own image. ``with_observed=False``
-        drops the right column. Masked pixels (band fit mask False) are shown blank
-        so hot/bad pixels do not hijack the color scale.
+        drops the right column — and needs no observed data at all, which is the
+        forward-mode path (see
+        :class:`~gigalens_research.inference_utils.posterior.FixedParams`). Masked
+        pixels (band fit mask False) are shown blank so hot/bad pixels do not hijack
+        the color scale.
+
+        Framing (``fov_arcsec``, ``center``) is **per view**: source planes sit at
+        different places and have wildly different angular sizes, so one global window
+        either crops the compact ones or buries the extended ones. Pass a scalar to
+        apply it everywhere, or a dict keyed by plane index (``{2: 4.0, 7: 12.0}``) or
+        by ``(dataset, plane)`` to set individual rows; unlisted rows fall back to the
+        auto-framing. A plane whose Components are far apart (a multi-clump source)
+        usually wants an explicit ``center`` — the default centers on the *first*
+        Component the band sees.
         """
         views = self.posterior.source_plane_views(point=point)
         if not views:
@@ -266,9 +313,6 @@ class PosteriorReport:
                 "no source planes to plot: this posterior's model carries no lensed "
                 "source light.")
         obs_override = None if observed is None else np.asarray(observed)
-        sc = self.posterior.ctx.sim_config
-        extent = (-sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix,
-                  -sc.num_pix / 2 * sc.delta_pix, sc.num_pix / 2 * sc.delta_pix)
 
         ncols = 2 if with_observed else 1
         n = len(views)
@@ -277,7 +321,8 @@ class PosteriorReport:
             band = f", band {d}" if self.posterior.n_datasets() > 1 else ""
             plot_source_plane(
                 axs[row][0], self.posterior, point=point,
-                grid_pix=grid_pix, fov_arcsec=fov_arcsec,
+                grid_pix=grid_pix, fov_arcsec=_per_view(fov_arcsec, plane_i, d),
+                center=_per_view(center, plane_i, d),
                 dataset=d, plane_index=plane_i, deflection_ratio=dr,
                 title=f"Source plane {plane_i} (dr={dr:.3f}{band})",
             )
@@ -289,7 +334,10 @@ class PosteriorReport:
             mbool = None if m is None else np.asarray(m).astype(bool)
             obs_disp = (observed_k if mbool is None
                         else np.where(mbool, observed_k, np.nan))
-            plot_image(axs[row][1], obs_disp, extent=extent,
+            # Extent per BAND, not once per figure: bands may differ in num_pix /
+            # delta_pix (different instruments, different IFU cutouts), and a shared
+            # extent would silently mis-place the critical curve overlaid below it.
+            plot_image(axs[row][1], obs_disp, extent=self._band_extent(d),
                        title=f"Observed{band}", scale="asinh")
             plot_critical_curves(axs[row][1], self.posterior, point=point,
                                  plane=plane_i, deflection_ratio=dr)
