@@ -38,8 +38,11 @@ def _kernel(n=5):
     return k / k.sum()
 
 
-def _cfg(num_pix=NUM_PIX, delta_pix=DELTA_PIX):
-    return SimulatorConfig(delta_pix=delta_pix, num_pix=num_pix, kernel=_kernel(),
+def _cfg(num_pix=NUM_PIX, delta_pix=DELTA_PIX, *, with_psf=True):
+    """``with_psf=False`` is not an edge case — it is the natural first thing to try
+    when building a mock, before you have a real PSF to hand."""
+    return SimulatorConfig(delta_pix=delta_pix, num_pix=num_pix,
+                           kernel=_kernel() if with_psf else None,
                            supersample=1, likelihood_precision="float32")
 
 
@@ -106,14 +109,21 @@ def scene():
 # ---------------------------------------------------------------------------
 
 
-def test_fixed_params_render_matches_point_estimate(scene):
+@pytest.mark.parametrize("with_psf", [True, False])
+def test_fixed_params_render_matches_point_estimate(with_psf):
     """The two entry points must render the same pixels at the same parameters.
 
     FixedParams overrides ``params_at`` directly; PointEstimate goes z -> bijector ->
     to_params. Same scene, same values, so the images must agree exactly — any
     divergence means forward-mode figures describe a different model than the fit.
+
+    Run with and without a PSF: the two paths pick their cast dtype differently when
+    there is no kernel (fitted has an observed image to read it from, forward does
+    not), so a PSF-less scene is where they would most plausibly drift apart.
     """
-    model, sims, params = scene
+    model = _two_source_model()
+    sims = _sims(model, cfgs=[_cfg(with_psf=with_psf) for _ in range(2)])
+    params = model.to_params({n: np.asarray(1.4) for n in model.z_param_names})
     fitted, prob = _fitted_counterpart(model, sims, params)
     forward = FixedParams(model, prob.simulators, fitted.params_at("best"))
 
@@ -136,6 +146,27 @@ def test_source_plane_views_match_point_estimate(scene):
 # ---------------------------------------------------------------------------
 # Forward mode stands alone
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("with_psf", [True, False])
+def test_renders_without_psf_kernel(with_psf):
+    """A forward scene must render with OR without a PSF.
+
+    Regression: ``simulate`` picked its cast dtype from the PSF kernel and fell back
+    to the *observed image* when there was none — so a PSF-less forward scene raised
+    "needs observed data" from a path that needs no data at all. Every other test
+    here supplies a kernel, which is precisely why the gap survived; a mock is
+    usually built PSF-first-missing, so this is the common case, not the exotic one.
+    """
+    model = _two_source_model()
+    sims = _sims(model, cfgs=[_cfg(with_psf=with_psf) for _ in range(2)])
+    assert (sims[0].flat_kernel is not None) is with_psf
+    fp = FixedParams(model, sims, model.to_params({n: np.asarray(1.4)
+                                                   for n in model.z_param_names}))
+    img = np.asarray(fp.simulate())
+    assert np.isfinite(img).all()
+    figs = plot_scene(model, sims, fp.params_at(), grid_pix=24)
+    assert set(figs) == {"model", "source"}
 
 
 def test_renders_without_any_prob_model(scene):
