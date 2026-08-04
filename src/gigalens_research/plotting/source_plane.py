@@ -96,6 +96,7 @@ def plot_source_plane(
     dataset: int = 0,
     plane_index: Optional[int] = None,
     deflection_ratio: Optional[float] = None,
+    frame_frac: float = 0.99,
 ) -> None:
     """Render the intrinsic source brightness on a fine source-plane grid.
 
@@ -111,14 +112,21 @@ def plot_source_plane(
     ``None`` (both defaults) means "all sources, and let the solver derive ``r`` from the
     geometry".
 
-    Framing note: unless ``center`` is given, :meth:`Posterior.source_plane` centers this
-    panel's field of view on the first rendered source Component's ``(center_x,
-    center_y)``, whereas the ``Observed`` panel is centered on the data frame (0, 0). Pass
-    ``center=(0.0, 0.0)`` to align the windows.
+    Framing note: by default :meth:`Posterior.source_plane` **auto-frames on the
+    source**, so this panel's window is generally much smaller than — and off-center
+    from — the image-plane panels beside it, which span the whole cutout. That is the
+    point: a source plane is a small patch of a cluster field, and sharing the image
+    frame renders it as a handful of pixels. ``fov_arcsec="full"`` restores the cutout
+    window, and ``center=(0.0, 0.0)`` with an explicit ``fov_arcsec`` aligns the two
+    exactly. ``frame_frac`` sets how much of the source's absolute flux the auto-frame
+    encloses (lower = tighter).
+
+    Because the window is source-sized, the ray-traced cutout border usually lies
+    outside it and does not appear; that is the zoom, not a missing overlay.
     """
     img, extent = posterior.source_plane(
         point=point, grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center,
-        dataset=dataset, plane_index=plane_index,
+        dataset=dataset, plane_index=plane_index, frame_frac=frame_frac,
     )
     plot_image(
         ax, img,

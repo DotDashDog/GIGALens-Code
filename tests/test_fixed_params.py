@@ -68,6 +68,40 @@ def _two_source_model():
     ])
 
 
+def _clump_model(centers=((0.0, 0.0),), *, r_sersic=0.2, ie=10.0, lens_light=False):
+    """One deflector and one source plane carrying a clump per entry in ``centers``.
+
+    Fully fixed (``num_free_params == 0``) — these are framing tests, and a compact
+    source in a wide cutout is exactly the case auto-framing exists for.
+    """
+    lens = Component(EPL(50), dict(theta_E=1.4, gamma=2.0, e1=0.0, e2=0.0,
+                                   center_x=0.0, center_y=0.0))
+    light = [Component(SersicEllipse(use_lstsq=False),
+                       dict(R_sersic=r_sersic, n_sersic=1.0, e1=0.0, e2=0.0,
+                            center_x=cx, center_y=cy, Ie=ie))
+             for cx, cy in centers]
+    halo_light = [Component(SersicEllipse(use_lstsq=False),
+                            dict(R_sersic=2.0, n_sersic=4.0, e1=0.0, e2=0.0,
+                                 center_x=0.0, center_y=0.0, Ie=3.0))] if lens_light else []
+    return LensModel([
+        Plane(deflection_ratio=None, mass=[lens], light=halo_light, name="lens"),
+        Plane(deflection_ratio=1.0, light=light, name="src"),
+    ])
+
+
+#: A wide cutout — 40 x 0.5" = 20" across, the cluster-field regime where a
+#: cutout-framed source plane degenerates into a few pixels.
+def _wide_cfg():
+    return SimulatorConfig(delta_pix=0.5, num_pix=40, kernel=None, supersample=1,
+                           likelihood_precision="float32")
+
+
+def _wide_scene(model):
+    sims = [SceneSimulator(model, _wide_cfg(), sees=p.light)
+            for p in model.planes if p.has_light]
+    return FixedParams(model, sims, model.to_params({}))
+
+
 def _sims(model, cfgs=None):
     """One simulator per source plane, each seeing only that plane's light."""
     planes = [i for i, p in enumerate(model.planes) if p.has_light]
@@ -166,7 +200,7 @@ def test_renders_without_psf_kernel(with_psf):
     img = np.asarray(fp.simulate())
     assert np.isfinite(img).all()
     figs = plot_scene(model, sims, fp.params_at(), grid_pix=24)
-    assert set(figs) == {"model", "source"}
+    assert set(figs) == {"scene"}
 
 
 def test_renders_without_any_prob_model(scene):
@@ -245,13 +279,178 @@ def test_per_view_resolution(spec, plane, dataset, expected):
 
 
 # ---------------------------------------------------------------------------
+# Auto-framing the source plane
+# ---------------------------------------------------------------------------
+
+
+def _half(extent):
+    return (extent[1] - extent[0]) / 2.0
+
+
+def test_autoframe_zooms_onto_a_compact_source():
+    """The default window must be sized by the source, not by the cutout.
+
+    A 0.2" source in a 20" cutout is 1% of the frame — the case that made source
+    panels unreadable. The lower bound matters as much as the upper: a frame that
+    collapsed onto the peak pixel would also 'zoom in' while showing nothing.
+    """
+    fp = _wide_scene(_clump_model())
+    half = _half(fp.source_plane()[1])
+    assert 0.3 < half < 2.0, half        # cutout half is 10.0
+
+
+def test_autoframe_contains_every_clump_on_the_plane():
+    """All of a plane's sources must land inside its window.
+
+    Framing on the FIRST component (the old behaviour) puts a second clump 4" away
+    outside a source-sized window — visibly cropping half the source and looking
+    like the model, not the frame, is wrong.
+    """
+    centers = ((-2.0, 0.0), (2.0, 0.6))
+    x0, x1, y0, y1 = _wide_scene(_clump_model(centers)).source_plane()[1]
+    for cx, cy in centers:
+        assert x0 < cx < x1 and y0 < cy < y1, (cx, cy, (x0, x1, y0, y1))
+    assert (x1 - x0) < 12.0               # and still tighter than the cutout
+
+
+def test_autoframe_searches_wide_enough_for_clumps_near_the_cutout_edge():
+    """The search window must cover every clump, not one cutout centered on the first.
+
+    Separate from the test above, which the search window is NOT load-bearing for:
+    two clumps 4" apart both fall inside a 20" window wherever it is centered, so
+    only widely-separated clumps can tell a mis-centered scan from a correct one.
+    Here the flux at +8" lies outside a cutout-sized window centered on the clump at
+    -8", and gets framed out of the figure entirely.
+    """
+    centers = ((-8.0, 0.0), (8.0, 1.0))
+    x0, x1, y0, y1 = _wide_scene(_clump_model(centers)).source_plane()[1]
+    for cx, cy in centers:
+        assert x0 < cx < x1 and y0 < cy < y1, (cx, cy, (x0, x1, y0, y1))
+
+
+def test_autoframe_weighs_absolute_flux_not_signed():
+    """A negative source frames exactly like its positive twin.
+
+    Some sources here are genuinely negative (a slightly-negative Sersic under
+    brighter shapelets, and one plane negative outright). Summing signed flux would
+    give a cumulative that decreases, making every quantile edge meaningless.
+    """
+    pos = _wide_scene(_clump_model(((1.0, -0.5),), ie=5.0)).source_plane()[1]
+    neg = _wide_scene(_clump_model(((1.0, -0.5),), ie=-5.0)).source_plane()[1]
+    np.testing.assert_allclose(pos, neg)
+
+
+def test_flat_plane_falls_back_to_the_cutout():
+    """No flux to frame on -> the full window, not a degenerate box."""
+    ext = _wide_scene(_clump_model(ie=0.0)).source_plane()[1]
+    assert _half(ext) == pytest.approx(10.0)
+
+
+def test_fov_full_restores_the_cutout_window():
+    ext = _wide_scene(_clump_model()).source_plane(fov_arcsec="full")[1]
+    assert ext == pytest.approx((-10.0, 10.0, -10.0, 10.0))
+
+
+def test_explicit_fov_and_center_are_honoured():
+    ext = _wide_scene(_clump_model()).source_plane(fov_arcsec=3.0, center=(1.0, -1.0))[1]
+    assert ext == pytest.approx((-0.5, 2.5, -2.5, 0.5))
+
+
+def test_locked_center_still_gets_an_auto_width():
+    """An explicit center must not disable auto-sizing: the width still adapts, and
+    must reach far enough from the given center to include the (offset) source."""
+    ext = _wide_scene(_clump_model(((0.8, 0.0),))).source_plane(center=(0.0, 0.0))[1]
+    assert ext[0] + ext[1] == pytest.approx(0.0)   # center kept exactly
+    assert 0.8 < ext[1] < 10.0                     # source inside, still zoomed
+
+
+def test_unknown_fov_keyword_is_rejected():
+    with pytest.raises(ValueError, match="'full'"):
+        _wide_scene(_clump_model()).source_plane(fov_arcsec="tight")
+
+
+# ---------------------------------------------------------------------------
+# The combined scene panel
+# ---------------------------------------------------------------------------
+
+
+def _titles(fig):
+    return [ax.get_title() for ax in fig.axes if ax.get_title()]
+
+
+def test_scene_panel_pairs_each_plane_with_its_band(scene):
+    """One row per source plane, image plane and source plane side by side."""
+    model, sims, params = scene
+    fig = PosteriorReport(FixedParams(model, sims, params)).scene_panel(grid_pix=32)
+    titles = _titles(fig)
+    assert sum(t.startswith("Model") for t in titles) == 2
+    assert sum(t.startswith("Source plane") for t in titles) == 2
+
+
+def test_fixed_scene_titles_do_not_claim_a_median(scene):
+    """``point`` defaults to "median" everywhere, and a fixed scene has no median.
+
+    Rendering it into the title labels explicit construction parameters as a summary
+    statistic of a posterior that was never sampled — the kind of caption that
+    survives into a paper figure.
+    """
+    model, sims, params = scene
+    rep = PosteriorReport(FixedParams(model, sims, params))
+    for fig in (rep.scene_panel(grid_pix=24), rep.model_panel()):
+        titles = _titles(fig)
+        assert any("(fixed)" in t for t in titles), titles
+        assert not any("median" in t for t in titles), titles
+
+
+def test_scene_panel_renders_a_shared_band_once(scene):
+    """A band seeing two planes contributes two rows but is simulated once.
+
+    Rows are per plane, not per band, so the naive loop would re-render (and, on a
+    fitted model, re-solve) the same image for every plane it carries.
+    """
+    model, _, params = scene
+    fp = FixedParams(model, [SceneSimulator(model, _cfg())], params)  # sees everything
+    calls = []
+    inner = fp.simulate
+    fp.simulate = lambda **kw: (calls.append(kw.get("dataset", 0)), inner(**kw))[1]
+    fig = PosteriorReport(fp).scene_panel(grid_pix=24)
+    assert sum(t.startswith("Model") for t in _titles(fig)) == 2
+    assert calls == [0]
+
+
+def test_scene_panel_keeps_a_band_with_no_lensed_source():
+    """A lens-light-only band has no source plane, and must still get a row.
+
+    Iterating source planes alone would drop that observation from the figure with
+    no trace — the failure mode is silence, so the blank cell is the point.
+    """
+    model = _clump_model(lens_light=True)
+    src = model.planes[1].light
+    halo = model.planes[0].light
+    sims = [SceneSimulator(model, _wide_cfg(), sees=src),
+            SceneSimulator(model, _wide_cfg(), sees=halo)]
+    fp = FixedParams(model, sims, model.to_params({}))
+    titles = _titles(PosteriorReport(fp).scene_panel(grid_pix=24))
+    assert sum(t.startswith("Model") for t in titles) == 2
+    assert any("no lensed source light in band 1" in t for t in titles)
+
+
+# ---------------------------------------------------------------------------
 # The convenience wrapper
 # ---------------------------------------------------------------------------
 
 
-def test_plot_scene_returns_both_panels(scene):
+def test_plot_scene_returns_one_combined_figure(scene):
     model, sims, params = scene
     figs = plot_scene(model, sims, params, grid_pix=32)
+    assert set(figs) == {"scene"}
+    titles = _titles(figs["scene"])
+    assert sum(t.startswith("Source plane") for t in titles) == 2
+
+
+def test_plot_scene_can_still_split_the_panels(scene):
+    model, sims, params = scene
+    figs = plot_scene(model, sims, params, grid_pix=32, combined=False)
     assert set(figs) == {"model", "source"}
     # source_panel puts one row per source plane
     assert len(figs["source"].axes) >= 2
@@ -261,4 +460,4 @@ def test_plot_scene_accepts_per_view_framing(scene):
     model, sims, params = scene
     figs = plot_scene(model, sims, params, grid_pix=32,
                       fov_arcsec={1: 2.0}, center={2: (0.0, 0.0)})
-    assert set(figs) == {"model", "source"}
+    assert set(figs) == {"scene"}

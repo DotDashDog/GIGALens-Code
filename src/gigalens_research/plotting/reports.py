@@ -282,7 +282,8 @@ class PosteriorReport:
             predicted = np.asarray(self.posterior.simulate(point=point, dataset=k))
             band = f" band {k}" if n_ds > 1 else ""
             plot_image(ax, predicted, extent=self._band_extent(k),
-                       title=f"Model{band} ({point})", scale=scale,
+                       title=f"Model{band} ({self.posterior.point_label(point)})",
+                       scale=scale,
                        linear_width=linear_width, log_vmin=log_vmin)
             for plane_i, dr in by_band.get(k, []):
                 plot_critical_curves(ax, self.posterior, point=point,
@@ -299,9 +300,7 @@ class PosteriorReport:
         curve drawn over it in true sky coordinates, so the mismatch reads as a
         physical offset rather than a plotting bug.
         """
-        sc = getattr(self.posterior._sim_for(dataset), "sim_config", None)
-        if sc is None:
-            sc = self.posterior.ctx.sim_config
+        sc = self.posterior._sim_config_for(dataset)
         nx = sc.num_pix if isinstance(sc.num_pix, int) else sc.num_pix[1]
         ny = sc.num_pix if isinstance(sc.num_pix, int) else sc.num_pix[0]
         return (-nx / 2 * sc.delta_pix, nx / 2 * sc.delta_pix,
@@ -316,6 +315,7 @@ class PosteriorReport:
         center: Optional[Any] = None,
         observed: Optional[np.ndarray] = None,
         with_observed: bool = True,
+        frame_frac: float = 0.99,
     ) -> Figure:
         """One row **per source plane**: the intrinsic source-plane image (with that
         plane's *caustic*) and, optionally, the observed image of the band that
@@ -343,9 +343,10 @@ class PosteriorReport:
         either crops the compact ones or buries the extended ones. Pass a scalar to
         apply it everywhere, or a dict keyed by plane index (``{2: 4.0, 7: 12.0}``) or
         by ``(dataset, plane)`` to set individual rows; unlisted rows fall back to the
-        auto-framing. A plane whose Components are far apart (a multi-clump source)
-        usually wants an explicit ``center`` — the default centers on the *first*
-        Component the band sees.
+        auto-framing, which sizes each window to the plane's own light (see
+        :meth:`Posterior.source_plane`). ``frame_frac`` tunes how much absolute flux
+        that window encloses; ``fov_arcsec="full"`` opts a row back out to the whole
+        cutout.
         """
         views = self.posterior.source_plane_views(point=point)
         if not views:
@@ -364,6 +365,7 @@ class PosteriorReport:
                 grid_pix=grid_pix, fov_arcsec=_per_view(fov_arcsec, plane_i, d),
                 center=_per_view(center, plane_i, d),
                 dataset=d, plane_index=plane_i, deflection_ratio=dr,
+                frame_frac=frame_frac,
                 title=f"Source plane {plane_i} (dr={dr:.3f}{band})",
             )
             if not with_observed:
@@ -381,6 +383,90 @@ class PosteriorReport:
                        title=f"Observed{band}", scale="asinh")
             plot_critical_curves(axs[row][1], self.posterior, point=point,
                                  plane=plane_i, deflection_ratio=dr)
+        return self._finalize(fig)
+
+    def scene_panel(
+        self,
+        *,
+        point: str = "median",
+        grid_pix: int = 400,
+        fov_arcsec: Optional[Any] = None,
+        center: Optional[Any] = None,
+        with_curves: bool = True,
+        with_image_border: bool = False,
+        scale: str = "asinh",
+        linear_width: Optional[float] = None,
+        log_vmin: float = 1e-2,
+        frame_frac: float = 0.99,
+    ) -> Figure:
+        """One row per source plane, image plane and source plane side by side.
+
+        The single-figure view of a scene: each row pairs the **lensed model image**
+        of the band that sees a plane (with that plane's critical curve) against the
+        **intrinsic source** on that plane (with its caustic). It answers the question
+        you actually ask while iterating on a mock — "what did this source turn
+        into?" — without leaving you to match up two separate figures by index.
+
+        Rows come from :meth:`Posterior.source_plane_views`, so this is exactly one
+        row per source plane. When bands and planes are 1:1 (the IFU case: one cutout
+        per source redshift) that is also one row per observation. When they are not,
+        a band seeing several planes repeats down the rows it contributes to — its
+        image is rendered once and reused — and a band with no lensed source light at
+        all still gets a row, with the source cell blanked, so no observation silently
+        vanishes from the figure.
+
+        **The two columns are not on the same scale**, and neither axis pretends
+        otherwise: the image column spans that band's whole cutout, while the source
+        column is auto-framed to its own light (typically far smaller). Both carry
+        arcsec ticks so the difference is visible rather than assumed. ``fov_arcsec``
+        / ``center`` / ``frame_frac`` control only the source column and are per view
+        (see :meth:`source_panel`); pass ``fov_arcsec="full"`` to put a row's source
+        panel back on the cutout window.
+
+        Needs no observed data — for the data-bearing counterparts see
+        :meth:`image_panel` (observed/model/residual) and
+        :meth:`source_panel` (source/observed).
+        """
+        views = self.posterior.source_plane_views(point=point)
+        n_ds = self.posterior.n_datasets()
+        label = self.posterior.point_label(point)
+        covered = {d for d, _, _ in views}
+        rows: List[Tuple[int, Optional[int], Optional[float]]] = list(views)
+        rows += [(d, None, None) for d in range(n_ds) if d not in covered]
+        if not rows:
+            raise ValueError("nothing to plot: no observations and no source planes.")
+
+        # A band seen by several planes renders once, not once per row.
+        images: Dict[int, np.ndarray] = {}
+        fig, axs = plt.subplots(len(rows), 2, figsize=(11, 4.4 * len(rows)),
+                                squeeze=False)
+        for r, (d, plane_i, dr) in enumerate(rows):
+            if d not in images:
+                images[d] = np.asarray(self.posterior.simulate(point=point, dataset=d))
+            band = f" band {d}" if n_ds > 1 else ""
+            plane_lbl = "" if plane_i is None else f", plane {plane_i}"
+            plot_image(axs[r][0], images[d], extent=self._band_extent(d),
+                       title=f"Model{band}{plane_lbl} ({label})", scale=scale,
+                       linear_width=linear_width, log_vmin=log_vmin,
+                       remove_axis=False)
+            axs[r][0].set_xlabel("x [arcsec]")
+            axs[r][0].set_ylabel("y [arcsec]")
+            if plane_i is None:
+                axs[r][1].set_axis_off()
+                axs[r][1].set_title(f"(no lensed source light in band {d})")
+                continue
+            if with_curves:
+                plot_critical_curves(axs[r][0], self.posterior, point=point,
+                                     plane=plane_i, deflection_ratio=dr)
+            plot_source_plane(
+                axs[r][1], self.posterior, point=point, grid_pix=grid_pix,
+                fov_arcsec=_per_view(fov_arcsec, plane_i, d),
+                center=_per_view(center, plane_i, d),
+                dataset=d, plane_index=plane_i, deflection_ratio=dr,
+                with_caustics=with_curves, with_image_border=with_image_border,
+                frame_frac=frame_frac,
+                title=f"Source plane {plane_i} (dr={dr:.3f})",
+            )
         return self._finalize(fig)
 
     # -- corner --------------------------------------------------------------
@@ -791,6 +877,7 @@ def plot_scene(
     grid_pix: int = 400,
     fov_arcsec: Optional[Any] = None,
     center: Optional[Any] = None,
+    combined: bool = True,
     **kw,
 ) -> Dict[str, Figure]:
     """Render a scene at explicit parameters: model images and source planes.
@@ -805,13 +892,20 @@ def plot_scene(
                 for i in src_planes]
         figs = plot_scene(model, sims, model.to_params(truth))
 
-    Returns ``{"model": fig, "source": fig}``: the rendered image per observation
-    with its critical curves, and one row per source plane with its caustic. Neither
-    needs observed data; for residuals, add noise to the render, wrap it in
-    ``ImageData``/``ProbModel`` and use :class:`PosteriorReport` on the result.
+    Returns ``{"scene": fig}``: one figure, one row per source plane, the lensed
+    model image beside the intrinsic source it came from (see
+    :meth:`PosteriorReport.scene_panel`). ``combined=False`` instead returns the two
+    panels separately as ``{"model": fig, "source": fig}`` — the image per
+    observation, and the source planes — which is the better shape when many bands
+    see the same plane, or when you want to save them at different sizes.
 
-    ``fov_arcsec`` / ``center`` accept a scalar or a per-view dict — see
-    :meth:`PosteriorReport.source_panel`. Extra keywords reach ``source_panel``.
+    Neither form needs observed data; for residuals, add noise to the render, wrap it
+    in ``ImageData``/``ProbModel`` and use :class:`PosteriorReport` on the result.
+
+    The source panels are auto-framed on their own light, so they are generally much
+    tighter than the image panels beside them. ``fov_arcsec`` / ``center`` override
+    that and accept a scalar or a per-view dict — see
+    :meth:`PosteriorReport.source_panel`. Extra keywords reach the panel builder.
 
     This is deliberately thin: the work is in
     :class:`~gigalens_research.inference_utils.posterior.FixedParams`, which makes
@@ -824,12 +918,18 @@ def plot_scene(
 
     scene = FixedParams(model, simulators, params)
     report = PosteriorReport(scene)
-    figs: Dict[str, Figure] = {
-        "model": report.model_panel(),
-        "source": report.source_panel(
-            with_observed=False, grid_pix=grid_pix,
-            fov_arcsec=fov_arcsec, center=center, **kw),
-    }
+    if combined:
+        figs: Dict[str, Figure] = {
+            "scene": report.scene_panel(
+                grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center, **kw),
+        }
+    else:
+        figs = {
+            "model": report.model_panel(),
+            "source": report.source_panel(
+                with_observed=False, grid_pix=grid_pix,
+                fov_arcsec=fov_arcsec, center=center, **kw),
+        }
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
         for name, fig in figs.items():
