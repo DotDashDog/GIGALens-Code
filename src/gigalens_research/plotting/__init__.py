@@ -34,7 +34,7 @@ from .diagnostics import (
 )
 from .image import normalized_residual, plot_image, plot_residual_histogram
 from .labels import LATEX_LABELS, latex_label
-from .reports import PipelineReport, PosteriorReport
+from .reports import PipelineReport, PosteriorReport, plot_scene
 from .source_plane import (
     plot_caustics,
     plot_critical_curves,
@@ -63,6 +63,7 @@ __all__ = [
     "plot_mclmc_diagnostics",
     "plot_mclmc_surrogate_corner",
     "plot_residual_histogram",
+    "plot_scene",
     "plot_running_ess",
     "plot_running_rhat",
     "plot_source_comparison",

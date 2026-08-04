@@ -249,6 +249,46 @@ class PosteriorReport:
 
     # -- source-plane panel --------------------------------------------------
 
+    def model_panel(
+        self,
+        *,
+        point: str = "median",
+        with_critical_curves: bool = True,
+        scale: str = "asinh",
+        linear_width: Optional[float] = None,
+        log_vmin: float = 1e-2,
+    ) -> Figure:
+        """One row per observation: the rendered model image, with critical curves.
+
+        The forward counterpart of :meth:`image_panel`, which pairs model against
+        observed and residual. This one needs **no observed data**, so it is what a
+        scene being built (rather than fit) can show — though it is equally useful on a
+        fitted posterior when you want the model alone.
+
+        Critical curves are drawn for the source plane(s) that band sees, each at its
+        own deflection ratio, since the Jacobian ``I - r * dalpha/dtheta`` depends on
+        ``r`` and every source redshift therefore has its own curve.
+        """
+        n_ds = self.posterior.n_datasets()
+        views = (self.posterior.source_plane_views(point=point)
+                 if with_critical_curves else [])
+        by_band: Dict[int, List[Tuple[int, float]]] = {}
+        for d, plane_i, dr in views:
+            by_band.setdefault(d, []).append((plane_i, dr))
+
+        fig, axs = plt.subplots(n_ds, 1, figsize=(5.5, 4.6 * n_ds), squeeze=False)
+        for k in range(n_ds):
+            ax = axs[k][0]
+            predicted = np.asarray(self.posterior.simulate(point=point, dataset=k))
+            band = f" band {k}" if n_ds > 1 else ""
+            plot_image(ax, predicted, extent=self._band_extent(k),
+                       title=f"Model{band} ({point})", scale=scale,
+                       linear_width=linear_width, log_vmin=log_vmin)
+            for plane_i, dr in by_band.get(k, []):
+                plot_critical_curves(ax, self.posterior, point=point,
+                                     plane=plane_i, deflection_ratio=dr)
+        return self._finalize(fig)
+
     def _band_extent(self, dataset: int) -> Tuple[float, float, float, float]:
         """``imshow`` extent in arcsec for one band's grid.
 
@@ -735,3 +775,64 @@ class PipelineReport:
             plot_residual_histogram(row_ax[3], resid_fit.ravel(), title=f"{name}{band} hist")
         fig.tight_layout()
         return fig
+
+
+# ---------------------------------------------------------------------------
+# Forward-mode convenience
+# ---------------------------------------------------------------------------
+
+
+def plot_scene(
+    model,
+    simulators,
+    params,
+    *,
+    save_dir: Optional[str] = None,
+    grid_pix: int = 400,
+    fov_arcsec: Optional[Any] = None,
+    center: Optional[Any] = None,
+    **kw,
+) -> Dict[str, Figure]:
+    """Render a scene at explicit parameters: model images and source planes.
+
+    The forward-mode entry point — give it the scene, one
+    :class:`~gigalens.jax.scene_simulator.SceneSimulator` per observation, and a
+    structured params dict, and get back the figures without an inference run behind
+    them::
+
+        src_planes = [i for i, p in enumerate(model.planes) if p.has_light]
+        sims = [SceneSimulator(model, cfg, sees=model.planes[i].light)
+                for i in src_planes]
+        figs = plot_scene(model, sims, model.to_params(truth))
+
+    Returns ``{"model": fig, "source": fig}``: the rendered image per observation
+    with its critical curves, and one row per source plane with its caustic. Neither
+    needs observed data; for residuals, add noise to the render, wrap it in
+    ``ImageData``/``ProbModel`` and use :class:`PosteriorReport` on the result.
+
+    ``fov_arcsec`` / ``center`` accept a scalar or a per-view dict — see
+    :meth:`PosteriorReport.source_panel`. Extra keywords reach ``source_panel``.
+
+    This is deliberately thin: the work is in
+    :class:`~gigalens_research.inference_utils.posterior.FixedParams`, which makes
+    every existing plotter work on a forward scene. Reach for the class directly when
+    you want individual panels or to drive the overlays yourself.
+    """
+    import os
+
+    from ..inference_utils.posterior import FixedParams
+
+    scene = FixedParams(model, simulators, params)
+    report = PosteriorReport(scene)
+    figs: Dict[str, Figure] = {
+        "model": report.model_panel(),
+        "source": report.source_panel(
+            with_observed=False, grid_pix=grid_pix,
+            fov_arcsec=fov_arcsec, center=center, **kw),
+    }
+    if save_dir is not None:
+        os.makedirs(save_dir, exist_ok=True)
+        for name, fig in figs.items():
+            fig.savefig(os.path.join(save_dir, f"{name}.png"),
+                        dpi=140, bbox_inches="tight")
+    return figs
