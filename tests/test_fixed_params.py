@@ -203,6 +203,39 @@ def test_renders_without_psf_kernel(with_psf):
     assert set(figs) == {"scene"}
 
 
+@pytest.mark.parametrize("with_psf", [True, False])
+def test_plain_float_params_render_like_array_params(with_psf):
+    """A params dict may hold Python floats, and must render identically to arrays.
+
+    Regression: with a PSF, ``simulate`` casts every floating leaf to the kernel's
+    dtype via ``.astype`` — which a Python ``float`` does not have. ``to_params``
+    returns arrays, so the tests never saw it, but a hand-written or partly-literal
+    dict is a perfectly reasonable thing to hand ``FixedParams``, and that is what
+    crashed.
+
+    Asserting equality, not merely that it runs, is the real claim: a weakly-typed
+    Python float adopts whatever dtype it meets, while the same number as an array
+    gets cast here, so the two spellings could otherwise render different pixels.
+    """
+    model = _clump_model()
+    cfg = SimulatorConfig(delta_pix=0.5, num_pix=40,
+                          kernel=_kernel() if with_psf else None,
+                          supersample=1, likelihood_precision="float64")
+    sims = [SceneSimulator(model, cfg, sees=p.light)
+            for p in model.planes if p.has_light]
+    arrays = model.to_params({})
+    floats = jax.tree_util.tree_map(
+        lambda a: float(a) if np.ndim(a) == 0 else a, arrays)
+    assert any(isinstance(v, float) for v in jax.tree_util.tree_leaves(floats))
+
+    np.testing.assert_array_equal(
+        np.asarray(FixedParams(model, sims, arrays).simulate()),
+        np.asarray(FixedParams(model, sims, floats).simulate()),
+        err_msg="literal and array params rendered differently")
+    # The path the failure actually came through.
+    assert set(plot_scene(model, sims, floats, grid_pix=24)) == {"scene"}
+
+
 def test_renders_without_any_prob_model(scene):
     """The whole point: no ProbModel, no data, still renders."""
     model, sims, params = scene
