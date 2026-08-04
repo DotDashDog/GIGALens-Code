@@ -9,15 +9,22 @@ A :class:`Posterior` wraps the outputs of one inference stage and exposes:
   source-plane rendering, etc.,
 - (samplers only) chain diagnostics: ``rhat``, ``ess``, and running variants.
 
-Three concrete subclasses share the abstract base:
+Four concrete subclasses share the abstract base:
 
 - :class:`SamplerPosterior` — chains from HMC, MCLMC, NUTS, ...
 - :class:`SurrogatePosterior` — parametric (e.g. SVI Gaussian),
-- :class:`PointEstimate` — MAP / single best fit.
+- :class:`PointEstimate` — MAP / single best fit,
+- :class:`FixedParams` — explicit parameters, no inference behind them.
 
 Construction goes through :meth:`Pipeline.posterior` for in-memory results and
 :func:`gigalens_research.inference_utils.pipeline.posterior_from_disk` for
-loading saved runs without an active pipeline.
+loading saved runs without an active pipeline. :class:`FixedParams` is built
+directly, from a model + simulators + params (see :class:`SceneContext`).
+
+Despite the name, the base class is not statistical: it is "a scene, plus a way
+to pick one representative set of parameters". :meth:`Posterior.params_at` is the
+seam every renderer goes through, and :class:`FixedParams` exists because that
+seam does not care whether a fit produced the values.
 """
 
 from __future__ import annotations
@@ -110,13 +117,31 @@ class Posterior(ABC):
         """
         model = getattr(getattr(self.ctx, "prob_model", None), "model", None)
         if model is None:
+            # A forward-mode context carries the model directly and has no ProbModel
+            # (there is no data to be probabilistic about). See
+            # :class:`SceneContext` / :class:`FixedParams`.
+            model = getattr(self.ctx, "model", None)
+        if model is None:
             raise TypeError(
-                "Posterior requires a scene-backed InferenceContext; the legacy "
-                "PhysicalModel path was removed with the old gigalens API.")
+                "Posterior needs a scene LensModel: the context exposes neither "
+                "prob_model.model nor model. (The legacy PhysicalModel path was "
+                "removed with the old gigalens API.)")
         return model
 
     #: Back-compat alias for :attr:`scene`.
     _scene_model = scene
+
+    def params_at(self, point: str = "median") -> dict:
+        """Structured (planes/cosmo) params at a representative point.
+
+        **The seam.** Everything that renders — images, source planes, critical
+        curves, caustics — needs exactly this and nothing else about where the
+        values came from. Subclasses that already hold structured params (a forward
+        model; see :class:`FixedParams`) override this directly rather than
+        round-tripping through ``z``, which is degenerate for a fully-fixed model
+        where ``num_free_params == 0``.
+        """
+        return self._scene_model.to_params(dict(self.z_to_x(self._point_z(point))))
 
     def _lens_sim(self):
         """Legacy fallback simulator over the whole scene (all light, single PSF).
@@ -136,13 +161,32 @@ class Posterior(ABC):
 
     @property
     def _prob_datasets(self):
-        """The prob_model's Dataset list if it is dataset-aware, else ``None``."""
-        return getattr(self.ctx.prob_model, "datasets", None)
+        """The prob_model's Dataset list if it is dataset-aware, else ``None``.
+
+        ``None`` also for a forward-mode context with no ProbModel at all — there are
+        no observed datasets, which is exactly what ``None`` already means here."""
+        return getattr(getattr(self.ctx, "prob_model", None), "datasets", None)
+
+    def _require_data(self, what: str):
+        """Raise a targeted error for a panel that needs observed data we don't have."""
+        if getattr(self.ctx, "prob_model", None) is None:
+            raise TypeError(
+                f"{what} needs observed data, but this is a forward-mode scene with no "
+                "ProbModel attached. Render the model image, add noise, wrap it in "
+                "ImageData/ProbModel, and plot that — or drop the data-dependent panels "
+                "(e.g. PosteriorReport.source_panel(with_observed=False)).")
 
     def n_datasets(self) -> int:
-        """Number of observed datasets/bands this posterior was fit against."""
+        """Number of observed datasets/bands this posterior was fit against.
+
+        For a forward-mode context the count comes from the supplied simulators (one
+        per observation) — there are no Datasets, but there is still more than one
+        view of the scene, and ``source_plane_views`` iterates this."""
         ds = self._prob_datasets
-        return len(ds) if ds is not None else 1
+        if ds is not None:
+            return len(ds)
+        sims = getattr(self.ctx, "simulators", None)
+        return len(sims) if sims else 1
 
     def observed_for(self, dataset: int = 0) -> np.ndarray:
         """The observed image for band ``dataset`` (avoids the single-dataset-only
@@ -150,6 +194,7 @@ class Posterior(ABC):
         ds = self._prob_datasets
         if ds is not None:
             return np.asarray(ds[dataset].image)
+        self._require_data("observed_for()")
         return np.asarray(self.ctx.prob_model.observed_image)
 
     def _error_for(self, dataset: int = 0) -> Optional[np.ndarray]:
@@ -182,7 +227,11 @@ class Posterior(ABC):
         """The simulator for band ``dataset``: the prob_model's per-dataset
         simulator when available (correct ``sees`` + PSF), else the legacy
         whole-scene fallback."""
-        sims = getattr(self.ctx.prob_model, "simulators", None)
+        sims = getattr(getattr(self.ctx, "prob_model", None), "simulators", None)
+        if sims is None:
+            # Forward-mode context: simulators are supplied directly (one per
+            # observation, each with its own ``sees`` view and PSF).
+            sims = getattr(self.ctx, "simulators", None)
         if sims is not None:
             return sims[dataset]
         return self._lens_sim()
@@ -200,8 +249,13 @@ class Posterior(ABC):
 
         Scene-only (Q4): the scene ProbModel carries the amplitude mode explicitly
         (``mode`` in {"lstsq", "forward"}); ``"lstsq"`` is the backward (linear-amplitude)
-        path that recovers amplitudes via ``lstsq_simulate``."""
-        return self.ctx.prob_model.mode == "lstsq"
+        path that recovers amplitudes via ``lstsq_simulate``.
+
+        False for a forward-mode context with no ProbModel: lstsq solves amplitudes
+        *against an observed image*, so with no data there is nothing to solve against
+        and the amplitudes must already be explicit in the params."""
+        pm = getattr(self.ctx, "prob_model", None)
+        return False if pm is None else pm.mode == "lstsq"
 
     # -- model-aware rendering ----------------------------------------------
 
@@ -219,11 +273,10 @@ class Posterior(ABC):
         :attr:`is_backward`. With ``return_coeffs=True``, also returns the solved linear
         amplitudes (or ``None`` for forward models).
         """
-        x = self.z_to_x(self._point_z(point))
         sim = self._sim_for(dataset)
         # Scene-only: the bijector returns the scene unique-key dict; the SceneSimulator
         # consumes the structured (planes/cosmo) params, so scatter via to_params.
-        x = self._scene_model.to_params(dict(x))
+        x = self.params_at(point)
         # Cast params to the simulator's working dtype. Under jax_enable_x64 a
         # float64 ``z`` (e.g. an MCLMC/bootstrap qz built at x64) yields float64
         # model arrays, which clash with the float32 PSF kernel inside
@@ -277,6 +330,7 @@ class Posterior(ABC):
         branches on :attr:`is_backward` (the lstsq behaviour) rather than on
         attribute presence.
         """
+        self._require_data("err_map_at()")
         pm = self.ctx.prob_model
         # Scene ProbModel (forward OR lstsq) and any dataset-aware model: σ is the
         # frozen per-dataset error_map that the likelihood itself scores against
@@ -358,7 +412,7 @@ class Posterior(ABC):
         sim = self._sim_for(dataset)
         # Structured (planes/cosmo) params at the point -- the same layout the simulator
         # consumes; each leaf carries a singleton batch axis.
-        params = self._scene_model.to_params(dict(self.z_to_x(self._point_z(point))))
+        params = self.params_at(point)
         # Lensed source Components, by identity (lens-plane light is excluded).
         source_ids = {id(c) for c in self._scene_model.source_plane_light()}
         # The band's seen light in the simulator's basis/coefficient order -- this is the
@@ -451,7 +505,7 @@ class Posterior(ABC):
         Deduplicated by plane index: a plane seen by more than one band is rendered
         once, from the first band that sees it.
         """
-        params = self._scene_model.to_params(dict(self.z_to_x(self._point_z(point))))
+        params = self.params_at(point)
         source_ids = {id(c) for c in self._scene_model.source_plane_light()}
         views = []
         seen_planes = set()
@@ -766,3 +820,129 @@ class PointEstimate(Posterior):
         if name in ("best", "median", "mean"):
             return self.z_best
         raise ValueError(f"PointEstimate: unknown point name {name!r}.")
+
+
+# ---------------------------------------------------------------------------
+# Forward mode: a scene at explicit parameters, with no inference behind it
+# ---------------------------------------------------------------------------
+
+
+class SceneContext:
+    """The context a :class:`Posterior` actually needs, without an inference run.
+
+    :class:`Posterior` reads only two things off its ``ctx``: ``prob_model`` and
+    ``sim_config``. That implicit two-attribute contract is the sole reason plotting
+    used to require having fit something. This is the forward-mode counterpart: it
+    carries the scene ``LensModel`` and one :class:`SceneSimulator` per observation,
+    and deliberately exposes **no** ``prob_model`` — so the data-dependent paths take
+    their documented ``None`` branch instead of pretending there are observations.
+
+    One simulator per observation is the point. ``SceneSimulator(model, cfg, sees=...)``
+    matches light Components by object identity while the trace still runs through the
+    FULL shared mass, which is exactly IFU semantics: one cluster, one cutout per
+    source redshift. Each simulator carries its own ``sim_config``, so a per-observation
+    PSF (as in IFU, where the PSF varies with wavelength) needs nothing extra.
+    """
+
+    def __init__(self, model, simulators, *, sim_config=None):
+        sims = list(simulators)
+        if not sims:
+            raise ValueError(
+                "SceneContext needs at least one SceneSimulator (one per observation).")
+        self.model = model
+        self.simulators = sims
+        # Panels that want a single grid (e.g. a figure-wide extent) use this; per-band
+        # code should prefer sim.sim_config, since bands may differ.
+        self.sim_config = sim_config if sim_config is not None else sims[0].sim_config
+
+    def solver_source(self):
+        """A stand-in satisfying what ``LensSolver`` reads.
+
+        ``LensSolver`` touches its argument at exactly two points -- ``.model`` and
+        ``.high_precision`` -- with ``.simulators`` an optional ``getattr``. It is
+        documented to construct on "lightweight stand-ins that only carry planes", so
+        rather than fabricate a ProbModel we hand it precisely those attributes.
+        """
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            model=self.model,
+            simulators=self.simulators,
+            high_precision=bool(getattr(self.simulators[0], "high_precision", False)),
+        )
+
+    def __repr__(self):
+        return (f"SceneContext({len(self.simulators)} simulator(s), "
+                f"{len(self.model.planes)} planes)")
+
+
+class FixedParams(Posterior):
+    """A scene rendered at explicit parameter values — a forward model, not a fit.
+
+    This is the entry point for inspecting a simulation you are *building* rather than
+    one you have fit: give it the model, one simulator per observation, and a structured
+    params dict, and every plotter in this package works unchanged, because they all go
+    through :meth:`Posterior.params_at`.
+
+    ::
+
+        src_planes = [i for i, p in enumerate(model.planes) if p.has_light]
+        sims = [SceneSimulator(model, cfg, sees=model.planes[i].light)
+                for i in src_planes]
+        fp = FixedParams(model, sims, model.to_params(truth))
+        PosteriorReport(fp).source_panel(with_observed=False)   # one row per plane
+
+    ``point`` is accepted and ignored throughout: there is one set of parameters, so
+    every representative point is the same one. Keeping the argument (rather than
+    dropping it) is what lets :class:`~gigalens_research.plotting.reports.PosteriorReport`
+    and every ``plot_*`` helper drive this class without modification — do not "clean
+    it up".
+
+    Data-dependent panels (residuals, observed columns, anything lstsq) raise a
+    targeted error naming the alternative; see :meth:`Posterior._require_data`.
+    """
+
+    def __init__(self, model, simulators, params, *, sim_config=None):
+        super().__init__(SceneContext(model, simulators, sim_config=sim_config))
+        self._params = params
+
+    @classmethod
+    def from_prob_model(cls, prob_model, params) -> "FixedParams":
+        """Build from an existing ProbModel, reusing its per-dataset simulators.
+
+        Use when you already have a ProbModel (so the ``sees`` views and PSFs are set
+        up) but want to render at parameters of your choosing rather than at a fitted
+        point. Note the result still has no observed data attached — it renders the
+        model, not a comparison; plot residuals through the ProbModel's own posterior.
+        """
+        sims = list(getattr(prob_model, "simulators", None) or [])
+        if not sims:
+            raise TypeError(
+                f"{type(prob_model).__name__} exposes no per-dataset `simulators`, so "
+                "there is nothing to render through. Construct FixedParams(model, "
+                "simulators, params) directly.")
+        return cls(prob_model.model, sims, params)
+
+    @property
+    def n_params(self) -> int:
+        """Free parameters in the underlying model.
+
+        Often 0 here — a fully-specified forward model has nothing free — which is
+        exactly why :meth:`params_at` is overridden rather than ``_point_z``.
+        """
+        return int(getattr(self._scene_model, "num_free_params", 0))
+
+    def params_at(self, point: str = "median") -> dict:
+        """The fixed params, for any ``point``."""
+        return self._params
+
+    def _point_z(self, name: str) -> np.ndarray:
+        raise TypeError(
+            "FixedParams holds structured parameters directly and has no z vector "
+            "(the model may have no free parameters at all). Anything needing "
+            "parameters should call params_at(); anything needing z belongs on a "
+            "fitted Posterior.")
+
+    def __repr__(self):
+        return (f"FixedParams({len(self.ctx.simulators)} observation(s), "
+                f"{self.n_params} free params in model)")

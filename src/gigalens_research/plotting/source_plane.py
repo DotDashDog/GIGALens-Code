@@ -62,10 +62,14 @@ def _solver_and_params(posterior, point: str = "median") -> Tuple[LensSolver, di
     image->source map is not ``theta - r*alpha`` with a single deflection field and
     single-plane critical curves are not valid. The message comes from ``LensSolver``.
     """
-    prob = posterior.ctx.prob_model
-    params = posterior._scene_model.to_params(
-        dict(posterior.z_to_x(posterior._point_z(point))))
-    return LensSolver(prob), params
+    # LensSolver reads exactly two attributes off what it is given -- ``.model`` and
+    # ``.high_precision`` (``.simulators`` is an optional getattr) -- so a forward-mode
+    # context with no ProbModel supplies a stand-in carrying those. See
+    # :meth:`SceneContext.solver_source`.
+    prob = getattr(posterior.ctx, "prob_model", None)
+    if prob is None:
+        prob = posterior.ctx.solver_source()
+    return LensSolver(prob), posterior.params_at(point)
 
 
 # ---------------------------------------------------------------------------

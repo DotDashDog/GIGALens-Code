@@ -28,9 +28,11 @@ from .pipeline import (
     stable_hash,
 )
 from .posterior import (
+    FixedParams,
     PointEstimate,
     Posterior,
     SamplerPosterior,
+    SceneContext,
     SurrogatePosterior,
 )
 from .truth_diagnostics import (
@@ -59,9 +61,11 @@ __all__ = [
     "MCLMCStage",
     "Pipeline",
     "PipelineMismatchError",
+    "FixedParams",
     "PointEstimate",
     "Posterior",
     "SamplerPosterior",
+    "SceneContext",
     "StageDiagnostics",
     "StageResult",
     "SurrogatePosterior",
