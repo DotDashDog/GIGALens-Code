@@ -280,18 +280,36 @@ class Posterior(ABC):
         # Cast params to the simulator's working dtype. Under jax_enable_x64 a
         # float64 ``z`` (e.g. an MCLMC/bootstrap qz built at x64) yields float64
         # model arrays, which clash with the float32 PSF kernel inside
-        # ``lax.conv`` ("requires arguments to have the same dtypes"). The PSF
-        # kernel defines the convolution dtype; fall back to the observed image.
+        # ``lax.conv`` ("requires arguments to have the same dtypes").
+        #
+        # Preference order, and why the last rung exists: the PSF kernel defines the
+        # convolution dtype, so it wins when there is one. With no kernel the
+        # simulator does no convolution at all (SceneSimulator._psf_convolve returns
+        # the image untouched when flat_kernel is None), so there is no clash to
+        # avoid and any consistent dtype will do -- but we must not reach for the
+        # observed image to find one, because a PSF-less FORWARD scene has no
+        # observed image and asking for it raised _require_data's
+        # "needs observed data" error from a path that needed no data whatsoever.
+        # The simulator's own likelihood_precision is the honest answer there: it is
+        # the dtype it was configured to work in, and it exists whether or not there
+        # is data. The observed image stays ahead of it so the fitted path is
+        # byte-for-byte unchanged.
+        # No kernel -> no convolution at all (SceneSimulator._psf_convolve returns the
+        # image untouched when flat_kernel is None), so there is no clash to avoid and
+        # the cast is skipped entirely. It previously fell back to the OBSERVED image's
+        # dtype here, which had two problems: a PSF-less forward scene has no observed
+        # image, so it raised "needs observed data" from a path needing none; and where
+        # data did exist the fitted and forward paths then chose DIFFERENT dtypes and
+        # rendered different pixels (visible only under jax_enable_x64, where params are
+        # float64 and the stored image is not). Skipping the cast makes the two entry
+        # points agree by construction rather than by coincidence.
         kernel = getattr(sim, "flat_kernel", None)
-        target_dtype = (
-            kernel.dtype if kernel is not None
-            else jnp.asarray(self.observed_for(dataset)).dtype
-        )
-        x = jax.tree_util.tree_map(
-            lambda a: a.astype(target_dtype)
-            if jnp.issubdtype(jnp.asarray(a).dtype, jnp.floating) else a,
-            x,
-        )
+        if kernel is not None:
+            x = jax.tree_util.tree_map(
+                lambda a: a.astype(kernel.dtype)
+                if jnp.issubdtype(jnp.asarray(a).dtype, jnp.floating) else a,
+                x,
+            )
         if self.is_backward:
             obs = self.observed_for(dataset)
             err_map = self._error_for(dataset)
