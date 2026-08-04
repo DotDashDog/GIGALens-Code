@@ -350,18 +350,6 @@ class Posterior(ABC):
         # model arrays, which clash with the float32 PSF kernel inside
         # ``lax.conv`` ("requires arguments to have the same dtypes").
         #
-        # Preference order, and why the last rung exists: the PSF kernel defines the
-        # convolution dtype, so it wins when there is one. With no kernel the
-        # simulator does no convolution at all (SceneSimulator._psf_convolve returns
-        # the image untouched when flat_kernel is None), so there is no clash to
-        # avoid and any consistent dtype will do -- but we must not reach for the
-        # observed image to find one, because a PSF-less FORWARD scene has no
-        # observed image and asking for it raised _require_data's
-        # "needs observed data" error from a path that needed no data whatsoever.
-        # The simulator's own likelihood_precision is the honest answer there: it is
-        # the dtype it was configured to work in, and it exists whether or not there
-        # is data. The observed image stays ahead of it so the fitted path is
-        # byte-for-byte unchanged.
         # No kernel -> no convolution at all (SceneSimulator._psf_convolve returns the
         # image untouched when flat_kernel is None), so there is no clash to avoid and
         # the cast is skipped entirely. It previously fell back to the OBSERVED image's
@@ -371,13 +359,23 @@ class Posterior(ABC):
         # rendered different pixels (visible only under jax_enable_x64, where params are
         # float64 and the stored image is not). Skipping the cast makes the two entry
         # points agree by construction rather than by coincidence.
+        #
+        # Every floating leaf is normalized through jnp.asarray first. A params dict is
+        # not guaranteed to hold arrays -- ``to_params`` produces them, but a
+        # hand-written or partly-literal dict (perfectly reasonable input to
+        # FixedParams) carries plain Python floats, which have no ``.astype``. Casting
+        # them rather than passing them through also keeps the dtype path-independent:
+        # a weakly-typed Python float would otherwise adopt whatever dtype it met,
+        # while the same value as a float64 array would be downcast here, so the two
+        # spellings of one number could render different pixels.
         kernel = getattr(sim, "flat_kernel", None)
         if kernel is not None:
-            x = jax.tree_util.tree_map(
-                lambda a: a.astype(kernel.dtype)
-                if jnp.issubdtype(jnp.asarray(a).dtype, jnp.floating) else a,
-                x,
-            )
+            def _to_kernel_dtype(a):
+                arr = jnp.asarray(a)
+                return (arr.astype(kernel.dtype)
+                        if jnp.issubdtype(arr.dtype, jnp.floating) else a)
+
+            x = jax.tree_util.tree_map(_to_kernel_dtype, x)
         if self.is_backward:
             obs = self.observed_for(dataset)
             err_map = self._error_for(dataset)
