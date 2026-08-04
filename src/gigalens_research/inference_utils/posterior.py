@@ -45,6 +45,15 @@ _tfd = tfp.distributions
 #: :attr:`SamplerPosterior.flat_z`. Set via ``subsample_n=`` on construction.
 DEFAULT_SUBSAMPLE_N = 5000
 
+#: Resolution of the coarse pass that :meth:`Posterior.source_plane` uses to find
+#: the source before rendering it. Only ever used to locate a bounding box, never
+#: shown, so it trades detail for speed: 128² profile evaluations.
+_FRAME_SCAN_PIX = 128
+
+#: Margin left around the auto-framed box, as a multiple of its half-width. Enough
+#: to keep the outermost isophote off the axis spine without wasting the frame.
+_FRAME_PAD = 1.15
+
 
 # ---------------------------------------------------------------------------
 # Convergence diagnostics live upstream now: gigalens.jax.analysis.
@@ -56,6 +65,57 @@ DEFAULT_SUBSAMPLE_N = 5000
 # just delegates to it (see the `convergence` property). ArviZ stays an
 # env-managed runtime dep, imported lazily inside diagnose_convergence.
 # ---------------------------------------------------------------------------
+
+
+def _flux_interval(weight, coords, frac: float) -> Tuple[float, float]:
+    """Smallest coordinate interval enclosing ``frac`` of a 1-D weight profile.
+
+    Discrete quantiles read off the cumulative sum — deliberately not interpolated.
+    Most of a scan window is empty, so the cumulative has long flat runs, and
+    interpolating across one would put an edge at an arbitrary point inside a region
+    with no light in it.
+    """
+    c = np.cumsum(np.asarray(weight, dtype=float))
+    c = c / c[-1]
+    lo_q = (1.0 - frac) / 2.0
+    last = len(coords) - 1
+    i_lo = min(int(np.searchsorted(c, lo_q, side="left")), last)
+    i_hi = min(int(np.searchsorted(c, 1.0 - lo_q, side="left")), last)
+    return float(coords[i_lo]), float(coords[i_hi])
+
+
+def _autoframe(render, cx: float, cy: float, scan_half: float, frac: float,
+               locked: bool) -> Tuple[float, float, float]:
+    """Narrow a scan window onto the light that is actually inside it.
+
+    Renders once at :data:`_FRAME_SCAN_PIX` and keeps the box holding ``frac`` of the
+    image's **absolute** flux along each axis, squared up and padded. Absolute,
+    because a source can carry negative components — a slightly-negative Sersic under
+    brighter positive shapelets is a normal lstsq outcome, and a plane can be
+    negative outright — and signed marginals would cancel and frame on nothing.
+
+    ``locked`` keeps the caller's center and sizes the box to reach the furthest
+    edge from it, so an explicit ``center`` still gets an auto width.
+
+    Falls back to the full scan window whenever narrowing would be meaningless: no
+    finite flux at all, or a box that collapses below what the scan can resolve.
+    """
+    w = np.abs(np.asarray(render(cx, cy, scan_half, _FRAME_SCAN_PIX), dtype=float))
+    w = np.where(np.isfinite(w), w, 0.0)
+    if not w.sum() > 0:
+        return cx, cy, scan_half
+    offsets = np.linspace(-scan_half, scan_half, _FRAME_SCAN_PIX)
+    # X varies along the columns (axis 1), Y along the rows (axis 0).
+    x_lo, x_hi = _flux_interval(w.sum(axis=0), offsets + cx, frac)
+    y_lo, y_hi = _flux_interval(w.sum(axis=1), offsets + cy, frac)
+    if locked:
+        half = max(abs(x_lo - cx), abs(x_hi - cx), abs(y_lo - cy), abs(y_hi - cy))
+    else:
+        cx, cy = 0.5 * (x_lo + x_hi), 0.5 * (y_lo + y_hi)
+        half = 0.5 * max(x_hi - x_lo, y_hi - y_lo)
+    # Never zoom in past what the scan could resolve, nor out past what it covered.
+    floor = 2.0 * scan_half / (_FRAME_SCAN_PIX - 1)
+    return cx, cy, float(min(max(half * _FRAME_PAD, floor), scan_half))
 
 
 def _n_basis(light_model) -> int:
@@ -142,6 +202,14 @@ class Posterior(ABC):
         where ``num_free_params == 0``.
         """
         return self._scene_model.to_params(dict(self.z_to_x(self._point_z(point))))
+
+    def point_label(self, point: str = "median") -> str:
+        """How to name ``point`` in a figure title.
+
+        A distribution really does have a median and a mean; a fixed scene has
+        neither, and labelling its panels "(median)" claims a summary statistic that
+        was never computed. Subclasses that ignore ``point`` say so instead."""
+        return point
 
     def _lens_sim(self):
         """Legacy fallback simulator over the whole scene (all light, single PSF).
@@ -388,10 +456,11 @@ class Posterior(ABC):
         point: str = "median",
         *,
         grid_pix: int = 400,
-        fov_arcsec: Optional[float] = None,
+        fov_arcsec: Optional[Any] = None,
         center: Optional[Tuple[float, float]] = None,
         dataset: int = 0,
         plane_index: Optional[int] = None,
+        frame_frac: float = 0.99,
     ) -> Tuple[np.ndarray, Tuple[float, float, float, float]]:
         """Render the intrinsic source brightness on a fine source-plane grid,
         reconstructed from band ``dataset``.
@@ -412,9 +481,29 @@ class Posterior(ABC):
         *all* seen light so the per-band amplitude slices stay aligned; only the
         accumulation into the image is filtered.
 
-        The grid is centered on the first seen source Component's
-        ``(center_x, center_y)`` (or ``center`` if supplied) and spans
-        ``fov_arcsec`` on a side. No lensing, no PSF.
+        **Framing is automatic by default.** A source plane is typically a tiny
+        patch of the image cutout it was reconstructed from — a cluster field is
+        tens of arcsec across, its sources under one — so framing the panel on the
+        cutout renders the source as a few indistinguishable pixels. With
+        ``fov_arcsec=None`` (the default) the grid is instead placed on the light
+        itself: a coarse pass locates the box holding ``frame_frac`` of the plane's
+        absolute flux, and the final render fills that box (plus a small margin).
+        The three explicit forms:
+
+        - ``fov_arcsec=None`` — auto-frame on the source (default).
+        - ``fov_arcsec=<float>`` — that many arcsec on a side, centered on
+          ``center`` or on the sources' own bounding-box midpoint.
+        - ``fov_arcsec="full"`` — the whole cutout field of view, the widest view
+          that band's data constrains. Use it to see where the source sits in the
+          field rather than what it looks like.
+
+        ``center`` overrides the window's center in every case; auto-framing then
+        keeps that center and only chooses the width. Note that a ray-traced cutout
+        border (:func:`~gigalens_research.plotting.source_plane.plot_image_border`)
+        usually falls outside an auto-framed window — that is the zoom working, not
+        a missing overlay; pass ``fov_arcsec="full"`` to see it.
+
+        No lensing, no PSF.
 
         For backward (lstsq) models, each Component's basis stack is contracted
         against the matching slice of band ``dataset``'s solved coefficients
@@ -438,56 +527,103 @@ class Posterior(ABC):
         # authoritative layout for slicing the per-band coefficient vector.
         seen_light = sim._light  # list of (plane_idx, light_idx, Component, depth)
 
-        if center is None:
-            cx = cy = 0.0
-            for i, j, comp, _ in seen_light:
-                if id(comp) in source_ids and (plane_index is None or i == plane_index):
-                    lp = params["planes"][i]["light"][j]
-                    cx = float(np.squeeze(np.asarray(lp.get("center_x", 0.0))))
-                    cy = float(np.squeeze(np.asarray(lp.get("center_y", 0.0))))
-                    break
-        else:
-            cx, cy = float(center[0]), float(center[1])
-        if fov_arcsec is None:
-            fov_arcsec = self.ctx.sim_config.num_pix * self.ctx.sim_config.delta_pix
-        half = fov_arcsec / 2.0
-        gx = jnp.linspace(-half, half, grid_pix) + cx
-        gy = jnp.linspace(-half, half, grid_pix) + cy
-        # Light models expect arrays with a trailing "depth" axis for batching.
-        X = jnp.broadcast_to(gx[None, :, None], (grid_pix, grid_pix, 1))
-        Y = jnp.broadcast_to(gy[:, None, None], (grid_pix, grid_pix, 1))
+        def selected(i, comp) -> bool:
+            return id(comp) in source_ids and (plane_index is None or i == plane_index)
 
-        img = jnp.zeros((grid_pix, grid_pix))
+        # lstsq path: the band's solved coefficients, hoisted out of ``render`` so the
+        # auto-frame's coarse pass does not re-solve them.
+        coeffs = None
         if self.is_backward:
-            # lstsq path: walk the band's seen light in coefficient order, contracting
-            # each source Component's basis stack with its slice of THIS band's coeffs.
-            # ``offset`` advances over every seen Component (lens light included) to stay
-            # aligned with the coefficient vector; only source Components are summed.
             _, coeffs = self.simulate(point=point, dataset=dataset, return_coeffs=True)
             coeffs = np.atleast_1d(np.asarray(coeffs))
+
+        def render(cx: float, cy: float, half: float, npix: int) -> np.ndarray:
+            gx = jnp.linspace(-half, half, npix) + cx
+            gy = jnp.linspace(-half, half, npix) + cy
+            # Light models expect arrays with a trailing "depth" axis for batching.
+            X = jnp.broadcast_to(gx[None, :, None], (npix, npix, 1))
+            Y = jnp.broadcast_to(gy[:, None, None], (npix, npix, 1))
+            img = jnp.zeros((npix, npix))
+            # ``offset`` advances over every seen Component (lens light included) to
+            # stay aligned with the coefficient vector; only source Components are
+            # summed. Forward models carry their amplitude inside ``light()`` and
+            # ignore the offset entirely.
             offset = 0
             for i, j, comp, depth in seen_light:
-                if id(comp) in source_ids and (plane_index is None or i == plane_index):
+                if selected(i, comp):
                     lp = params["planes"][i]["light"][j]
-                    stack = comp.profile.light(X, Y, **lp)  # (depth, h, w, 1)
-                    c = jnp.asarray(coeffs[offset:offset + depth])
-                    img = img + jnp.squeeze(jnp.tensordot(c, stack, axes=([0], [0])))
+                    stack = comp.profile.light(X, Y, **lp)
+                    if coeffs is None:
+                        img = img + jnp.squeeze(stack)
+                    else:
+                        c = jnp.asarray(coeffs[offset:offset + depth])
+                        img = img + jnp.squeeze(
+                            jnp.tensordot(c, stack, axes=([0], [0])))
                 offset += depth
-            # The lstsq design matrix omits the simulator's pixel-area
-            # conversion_factor (= det(transform_pix2angle) = delta_pix^2); the solved
-            # coefficients absorb it, so divide it back out to express the source as a
-            # surface brightness (matching the forward path and intrinsic-SB truths).
-            img = img / sim.conversion_factor
-        else:
-            # Forward path: each Component's light() returns (h, w, 1) with its modeled
-            # amplitude baked in; sum the band's seen sources directly.
-            for i, j, comp, depth in seen_light:
-                if id(comp) in source_ids and (plane_index is None or i == plane_index):
-                    lp = params["planes"][i]["light"][j]
-                    img = img + jnp.squeeze(comp.profile.light(X, Y, **lp))
+            if coeffs is not None:
+                # The lstsq design matrix omits the simulator's pixel-area
+                # conversion_factor (= det(transform_pix2angle) = delta_pix^2); the
+                # solved coefficients absorb it, so divide it back out to express the
+                # source as a surface brightness (matching the forward path and
+                # intrinsic-SB truths).
+                img = img / sim.conversion_factor
+            return np.asarray(img)
 
+        cx, cy, scan_half = self._source_scan_window(
+            params, seen_light, selected, dataset)
+        locked = center is not None
+        if locked:
+            cx, cy = float(center[0]), float(center[1])
+
+        if isinstance(fov_arcsec, str):
+            if fov_arcsec != "full":
+                raise ValueError(
+                    "fov_arcsec must be a number, None (auto-frame on the source), "
+                    f"or 'full' (the whole cutout); got {fov_arcsec!r}.")
+            half = scan_half
+        elif fov_arcsec is not None:
+            half = float(fov_arcsec) / 2.0
+        else:
+            cx, cy, half = _autoframe(render, cx, cy, scan_half, frame_frac, locked)
+
+        img = render(cx, cy, half, grid_pix)
         extent = (cx - half, cx + half, cy - half, cy + half)
-        return np.asarray(img), extent
+        return img, extent
+
+    def _sim_config_for(self, dataset: int = 0):
+        """Band ``dataset``'s own simulator config, falling back to the context-wide
+        one. Bands can differ in ``num_pix``/``delta_pix`` (different instruments, or
+        IFU cutouts trimmed per wavelength), so anything converting pixels to arcsec
+        must read the band's own grid rather than one shared config."""
+        sc = getattr(self._sim_for(dataset), "sim_config", None)
+        return self.ctx.sim_config if sc is None else sc
+
+    def _cutout_half(self, dataset: int = 0) -> float:
+        """Half the band's field of view, in arcsec."""
+        sc = self._sim_config_for(dataset)
+        nx = sc.num_pix if isinstance(sc.num_pix, int) else max(sc.num_pix)
+        return 0.5 * float(nx) * float(sc.delta_pix)
+
+    def _source_scan_window(self, params, seen_light, selected, dataset):
+        """``(cx, cy, half)`` of the window the auto-frame searches for light.
+
+        Centered on the bounding-box midpoint of the selected sources' own
+        ``center_x``/``center_y`` and widened by the cutout's half-size, so that every
+        selected Component's center lies inside the window even when one plane carries
+        clumps far apart. This is deliberately a superset — it is where to *look*, not
+        the answer; the scan then narrows it to where the flux actually is.
+        """
+        xs, ys = [], []
+        for i, j, comp, _ in seen_light:
+            if selected(i, comp):
+                lp = params["planes"][i]["light"][j]
+                xs.append(float(np.squeeze(np.asarray(lp.get("center_x", 0.0)))))
+                ys.append(float(np.squeeze(np.asarray(lp.get("center_y", 0.0)))))
+        half = self._cutout_half(dataset)
+        if not xs:
+            return 0.0, 0.0, half
+        spread = 0.5 * max(max(xs) - min(xs), max(ys) - min(ys))
+        return 0.5 * (min(xs) + max(xs)), 0.5 * (min(ys) + max(ys)), half + spread
 
     def _deflection_ratio_at(self, plane_index: int, params) -> float:
         """The deflection ratio of (lensed) plane ``plane_index`` at a structured
@@ -953,6 +1089,9 @@ class FixedParams(Posterior):
     def params_at(self, point: str = "median") -> dict:
         """The fixed params, for any ``point``."""
         return self._params
+
+    def point_label(self, point: str = "median") -> str:
+        return "fixed"
 
     def _point_z(self, name: str) -> np.ndarray:
         raise TypeError(
