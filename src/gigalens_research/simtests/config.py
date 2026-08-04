@@ -8,6 +8,34 @@ A *campaign* fully specifies a simulated-system inference test:
 - :class:`ExecutionSpec` — sharding and memory budget hints.
 - :class:`CampaignSpec` — top-level container.
 
+Reserved sweep key ``pipeline``
+-------------------------------
+A sweep point may carry a ``pipeline`` key naming a registered pipeline
+builder; that run then uses it instead of ``inference.pipeline``. This is how
+a sampler-comparison campaign sweeps over pipeline variants while sharing one
+dataset (and, via the runner's trunk sharing, one MAP/SVI per system)::
+
+    sweep:
+      - {pipeline: map_svi_hmc}
+      - {pipeline: map_svi_mclmc}
+      - {pipeline: map_mclmc}
+
+The key is stripped from the kwargs handed to builders and names the run
+directory directly (``runs/sys_000/map_svi_mclmc/``).
+
+Seed policy ``seed_mode``
+-------------------------
+Top-level ``seed_mode`` selects how per-run pipeline seeds derive from the
+campaign ``seed``:
+
+- ``campaign`` (default, legacy): every system uses the campaign seed
+  verbatim. NOTE: this makes e.g. MAP's multi-start draws identical across
+  systems.
+- ``per_system``: each system gets a stable seed derived from
+  ``(seed, system_id)`` (see :func:`derive_system_seed`) — independent
+  randomness across systems, while all pipeline variants of one system still
+  share the same seed (and thus the same trunk MAP/SVI).
+
 YAML format example::
 
     name: hundred_sersic_v1
@@ -124,6 +152,7 @@ class CampaignSpec:
     metrics: List[str]
     execution: ExecutionSpec
     plugins: List[str] = dataclasses.field(default_factory=list)
+    seed_mode: str = "campaign"
 
     @classmethod
     def from_dict(cls, d: dict) -> "CampaignSpec":
@@ -145,6 +174,11 @@ class CampaignSpec:
         plugins = list(d.get("plugins", []))
         sweep_raw = d.get("sweep", None)
         sweep_points = _normalize_sweep(sweep_raw)
+        seed_mode = str(d.get("seed_mode", "campaign"))
+        if seed_mode not in ("campaign", "per_system"):
+            raise ValueError(
+                f"seed_mode must be 'campaign' or 'per_system'; got {seed_mode!r}"
+            )
         return cls(
             name=name,
             seed=seed,
@@ -155,6 +189,7 @@ class CampaignSpec:
             metrics=metrics,
             execution=execution,
             plugins=plugins,
+            seed_mode=seed_mode,
         )
 
     @classmethod
@@ -166,19 +201,56 @@ class CampaignSpec:
         return cls.from_dict(d)
 
     def sweep_dir_name(self, sweep_point: Dict[str, Any]) -> str:
-        """Return a filesystem-safe directory name for one sweep point."""
+        """Return a filesystem-safe directory name for one sweep point.
+
+        The reserved ``pipeline`` key names the directory directly (it is a
+        registered builder name, already filesystem-safe); any remaining keys
+        append as ``<key><value>`` parts as before.
+        """
         if not sweep_point:
             return "default"
-        parts = [f"{k}{v}" for k, v in sorted(sweep_point.items())]
+        rest = {k: v for k, v in sweep_point.items() if k != "pipeline"}
+        parts = [f"{k}{v}" for k, v in sorted(rest.items())]
+        if "pipeline" in sweep_point:
+            parts = [str(sweep_point["pipeline"])] + parts
         return "_".join(parts)
+
+    def pipeline_for(self, sweep_point: Dict[str, Any]) -> str:
+        """Return the pipeline-builder name for one run (reserved sweep key
+        ``pipeline`` overrides ``inference.pipeline``)."""
+        return str(sweep_point.get("pipeline", self.inference.pipeline))
 
     @property
     def pipeline_kwargs_base(self) -> Dict[str, Any]:
         return dict(self.inference.pipeline_kwargs)
 
     def effective_pipeline_kwargs(self, sweep_point: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge base pipeline_kwargs with a sweep point (sweep wins on conflict)."""
-        return {**self.pipeline_kwargs_base, **sweep_point}
+        """Merge base pipeline_kwargs with a sweep point (sweep wins on conflict).
+
+        The reserved ``pipeline`` key is stripped: it selects the builder (see
+        :meth:`pipeline_for`) and must not leak into stage/builder kwargs.
+        """
+        merged = {**self.pipeline_kwargs_base, **sweep_point}
+        merged.pop("pipeline", None)
+        return merged
+
+    def run_seed(self, system_id: str) -> int:
+        """Return the pipeline seed for one system under this campaign's
+        ``seed_mode`` (identical for every pipeline variant of that system)."""
+        if self.seed_mode == "per_system":
+            return derive_system_seed(self.seed, system_id)
+        return self.seed
+
+
+def derive_system_seed(base_seed: int, system_id: str) -> int:
+    """Stable per-system seed: first 4 bytes of sha256(f"{base_seed}:{system_id}").
+
+    Deterministic across processes and Python versions (unlike ``hash()``),
+    and decorrelated across systems (unlike reusing the campaign seed).
+    """
+    import hashlib
+    digest = hashlib.sha256(f"{base_seed}:{system_id}".encode()).digest()
+    return int.from_bytes(digest[:4], "big")
 
 
 def _normalize_sweep(raw: Any) -> List[Dict[str, Any]]:

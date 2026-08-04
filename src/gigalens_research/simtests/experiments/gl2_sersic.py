@@ -149,16 +149,21 @@ def gl2_inference_prior():
 def _gl2_scene_model():
     """Scene truth model for GL2 data generation (forward render; sampled Ie).
 
-    All params are placeholders (0.0) — the render is driven by the per-system truth
-    scattered in via ``truth_x_to_scene_params`` inside ``generate_parametric``, so the
-    LensModel only fixes the STRUCTURE (EPL+Shear mass, Sérsic lens light, Sérsic source,
-    all use_lstsq=False so the amplitudes are part of the rendered params)."""
+    All params are structural placeholders — the render is driven by the per-system
+    truth scattered in via ``truth_x_to_scene_params`` inside ``generate_parametric``,
+    so the LensModel only fixes the STRUCTURE (EPL+Shear mass, Sérsic lens light,
+    Sérsic source, all use_lstsq=False so the amplitudes are part of the rendered
+    params). Placeholder VALUES are never rendered, but they must sit inside each
+    profile's hard physicality domain: since gigalens's misuse_register hard-fails
+    out-of-domain fixed values at LensModel construction (July 2026), the former
+    all-zero placeholders (theta_E=0, gamma=0, R_sersic=0, n_sersic=0) raise
+    ``ValueError`` before any truth is scattered in."""
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
-    _m = dict(theta_E=0.0, gamma=0.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0)
+    _m = dict(theta_E=1.5, gamma=2.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0)
     _sh = dict(gamma1=0.0, gamma2=0.0)
-    _s = dict(R_sersic=0.0, n_sersic=0.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0, Ie=0.0)
+    _s = dict(R_sersic=1.0, n_sersic=2.0, e1=0.0, e2=0.0, center_x=0.0, center_y=0.0, Ie=1.0)
     return LensModel([
         Plane(mass=[Component(epl.EPL(50), dict(_m)), Component(shear.Shear(), dict(_sh))],
               light=[Component(sersic.SersicEllipse(use_lstsq=False), dict(_s))]),

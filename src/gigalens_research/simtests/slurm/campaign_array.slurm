@@ -13,11 +13,13 @@
 
 # Simtests campaign array job
 # ===========================
-# Each array task runs ONE run (one system × one sweep point) sequentially.
+# Sharding is over SYSTEMS: each array task owns a slice of the systems and
+# runs ALL sweep points of each owned system sequentially (this lets pipeline
+# variants share the per-system trunk MAP/SVI race-free).
 # The --array index maps to --shard $SLURM_ARRAY_TASK_ID/$SLURM_ARRAY_TASK_COUNT.
 #
 # Typical submission:
-#   N=100   # total number of runs (systems × sweep points)
+#   N=100   # total number of SYSTEMS (not systems × sweep points)
 #   sbatch --array=0-$((N-1))%32 campaign_array.slurm
 #
 # Override knobs at submit time:

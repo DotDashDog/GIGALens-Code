@@ -1,0 +1,92 @@
+# Sampler-benchmark campaign: 100 EPL+Shear+Sersic systems x 7 pipeline
+# variants, every variant of a system starting from the IDENTICAL MAP (and,
+# for the map_svi_* variants, the identical SVI) via per-system trunk sharing.
+#
+#   MAP -> SVI -> {HMC, NUTS, MCLMC, MAMS}
+#   MAP -> diag-qz bridge -> {NUTS, MCLMC, MAMS}
+#
+# LAPS variants (map_svi_laps / map_laps / cold-start laps) join once the
+# LAPS implementation is finished and validated.
+#
+# Submission (sharding is over systems — 100 tasks, each runs its system's
+# 7 variants sequentially):
+#   sbatch --array=0-99%32 --export=ALL,CAMPAIGN_YAML=$PWD/campaign.yaml \
+#       src/gigalens_research/simtests/slurm/campaign_array.slurm
+
+name: sampler_benchmark_v1
+seed: 0
+# Per-system seeds derived from (seed, system_id): independent randomness
+# across systems; all variants of one system share the same seed (and trunk).
+seed_mode: per_system
+output_dir: ~/GIGALens-Code/simtests_results/sampler_benchmark_v1
+
+plugins: []
+
+dataset:
+  # Same 100-system Sersic population as hundred_sersic_v1 (adapted in place).
+  generator: gl2_existing
+  npz_path: ~/GIGALens-Code/data/simulated_systems/100SystemsStandard80px.npz
+  yaml_path: ~/GIGALens-Code/data/simulated_systems/100SystemsStandardParams.yaml
+  delta_pix: 0.065
+  num_pix: 80
+  supersample: 2
+  noise_kind: forward
+  background_rms: 0.2
+  exp_time: 100
+
+inference:
+  builder: epl_shear_sersic_sersic
+  # Default builder; every sweep point overrides it via the reserved
+  # `pipeline` key below.
+  pipeline: map_svi_hmc
+  pipeline_kwargs:
+    # ---- trunk (shared by ALL variants; do NOT sweep these keys, or the
+    # variants stop sharing a MAP and the benchmark's premise breaks) ----
+    map_num_steps: 1000
+    map_n_samples: 2000
+    svi_num_steps: 5000
+    svi_n_vi: 1000
+    # ---- no-SVI bridge ----
+    bridge_qz_scale: 1.0e-2
+    # ---- fixed benchmark budget: 16 chains everywhere ----
+    hmc_n_hmc: 16
+    nuts_n_chains: 16
+    mclmc_n_chains: 16
+    mams_n_chains: 16
+    # ---- retained draws (uniform across samplers) ----
+    hmc_num_results: 2000
+    nuts_num_results: 2000
+    mclmc_num_results: 2000
+    mams_num_results: 2000
+    # ---- burn-in budgets: REQUIRED (no defaults exist anywhere).
+    # PROVISIONAL placeholders — the burn-in decision is explicitly open;
+    # revisit before the production run. ----
+    hmc_num_burnin: 500
+    nuts_num_burnin: 500
+    mclmc_num_burnin: 2000
+    mams_num_burnin: 2000
+
+sweep:
+  - {pipeline: map_svi_hmc}
+  - {pipeline: map_svi_nuts}
+  - {pipeline: map_svi_mclmc}
+  - {pipeline: map_svi_mams}
+  - {pipeline: map_nuts}
+  - {pipeline: map_mclmc}
+  - {pipeline: map_mams}
+
+# Efficiency metrics (grads-to-rhat, ESS/grad) and SBC land with the metrics
+# extension; until then this records convergence, bias, and timing.
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - mass_zscores
+  - percent_error
+  - median_reduced_chisq
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

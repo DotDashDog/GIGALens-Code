@@ -2,7 +2,12 @@
 
 Registered pipeline builders
 ----------------------------
-- ``map_svi_hmc``: standard MAP → SVI → HMC pipeline (used for GL2 Sérsic test).
+- Benchmark builder family (see ``BENCHMARK_SAMPLERS``): ``map_svi_<sampler>``
+  (MAP → SVI → sampler) and ``map_<sampler>`` (MAP → diagonal-qz bridge →
+  sampler, no SVI) for each of ``hmc``, ``nuts``, ``mclmc``, ``mams``.
+  All samplers default to 16 chains; ``<sampler>_num_burnin`` is always
+  required (never defaulted). ``map_svi_hmc`` (the GL2 Sérsic test pipeline)
+  is a member of this family.
 - ``map_bootstrap_mclmc``: fixed-lens MAP bootstrap → MCLMC (used for Vela
   shapelets systematics test).
 
@@ -31,9 +36,12 @@ import tensorflow_probability.substrates.jax as tfp
 tfd = tfp.distributions
 
 from gigalens_research.inference_utils.pipeline import (
+    BridgeStage,
     InferenceStage,
+    MAMSStage,
     MAPStage,
     MCLMCStage,
+    NUTSStage,
     StageResult,
     SVIStage,
     HMCStage,
@@ -49,34 +57,178 @@ from gigalens_research.inference_utils.params import to_dict_params
 # ---------------------------------------------------------------------------
 
 
-@register_pipeline_builder("map_svi_hmc")
-def build_map_svi_hmc(system: Any, **kwargs) -> List[InferenceStage]:
-    """MAP → SVI → HMC pipeline.  Kwargs consumed:
+# The sampler-benchmark builder family (below) registers ``map_svi_<sampler>``
+# and ``map_<sampler>`` for every sampler in ``BENCHMARK_SAMPLERS``; the
+# historical ``map_svi_hmc`` name is one of them (with the SAME MAP/SVI
+# defaults as before, so existing campaign caches stay valid — the one
+# behavioral change is that ``hmc_num_burnin`` is now required rather than
+# defaulting to 500).
 
-    ``map_num_steps`` (1000), ``map_n_samples`` (2000),
-    ``svi_num_steps`` (5000), ``svi_n_vi`` (1000),
-    ``hmc_n_hmc`` (64), ``hmc_num_results`` (1500), ``hmc_num_burnin`` (500),
-    ``hmc_init_eps`` (0.3), ``hmc_init_l`` (3),
-    ``hmc_max_leapfrog_steps`` (30).
+#: Samplers covered by the benchmark builder family. LAPS is deliberately
+#: absent until its implementation is finished/validated; it will join as
+#: ``map_svi_laps`` / ``map_laps`` (warm) and a cold-start ``laps`` builder.
+BENCHMARK_SAMPLERS: tuple = ("hmc", "nuts", "mclmc", "mams")
+
+
+def _require_kwarg(kwargs: Dict[str, Any], key: str, pipeline_name: str) -> Any:
+    """Fetch a pipeline kwarg that must be set explicitly in the campaign YAML.
+
+    Benchmark-campaign policy: burn-in budgets are an open experimental
+    decision and are therefore never defaulted — a campaign that omits one
+    fails loudly here instead of silently running a hidden default.
     """
-    return [
-        MAPStage(
-            num_steps=int(kwargs.get("map_num_steps", 1000)),
-            n_samples=int(kwargs.get("map_n_samples", 2000)),
-        ),
-        SVIStage(
-            num_steps=int(kwargs.get("svi_num_steps", 5000)),
-            n_vi=int(kwargs.get("svi_n_vi", 1000)),
-        ),
-        HMCStage(
-            n_hmc=int(kwargs.get("hmc_n_hmc", 64)),
+    if key not in kwargs:
+        raise KeyError(
+            f"Pipeline {pipeline_name!r} requires an explicit {key!r} in "
+            f"pipeline_kwargs (or the sweep point); burn-in budgets are never "
+            f"defaulted in the benchmark builder family."
+        )
+    return kwargs[key]
+
+
+def _map_stage(kwargs: Dict[str, Any]) -> MAPStage:
+    return MAPStage(
+        num_steps=int(kwargs.get("map_num_steps", 1000)),
+        n_samples=int(kwargs.get("map_n_samples", 2000)),
+    )
+
+
+def _svi_stage(kwargs: Dict[str, Any]) -> SVIStage:
+    return SVIStage(
+        num_steps=int(kwargs.get("svi_num_steps", 5000)),
+        n_vi=int(kwargs.get("svi_n_vi", 1000)),
+    )
+
+
+def _diag_qz_bridge(kwargs: Dict[str, Any]) -> BridgeStage:
+    """Diagonal ``qz`` centred on the MAP optimum (the no-SVI preconditioner).
+
+    ``bridge_qz_scale`` (default 1e-2) is the per-dimension standard deviation
+    in unconstrained z-space (where the prior is roughly unit-scale), so the
+    default is a tight-but-not-degenerate init spread. It is baked into the
+    bridge ``version`` string, so changing it invalidates downstream sampler
+    caches (BridgeStage hashes only its version, not its closure).
+    """
+    scale = float(kwargs.get("bridge_qz_scale", 1e-2))
+
+    def _diag_qz(z_best):
+        import jax.numpy as jnp
+        loc = jnp.asarray(z_best)
+        # scale_diag must match loc's dtype: under jax_enable_x64 the MAP loc
+        # is float64 and a float32 scale trips tfd's common-dtype check.
+        return tfd.MultivariateNormalDiag(
+            loc=loc,
+            scale_diag=jnp.full(loc.shape[-1], scale, dtype=loc.dtype),
+        )
+
+    return BridgeStage(
+        name="qz_from_map",
+        version=f"diag_v1_scale={scale!r}",
+        requires=("z_best",),
+        produces=("qz",),
+        fn=_diag_qz,
+    )
+
+
+def _sampler_stage(sampler: str, kwargs: Dict[str, Any], pipeline_name: str) -> InferenceStage:
+    """Build the terminal sampler stage for the benchmark builder family.
+
+    Every sampler's knobs are namespaced with its own prefix (``hmc_*``,
+    ``nuts_*``, ``mclmc_*``, ``mams_*``) so that per-variant sweep points
+    cannot leak into another stage's config hash (which would silently break
+    trunk sharing). Chain counts default to 16 across the board (the fixed
+    benchmark budget); burn-in is always required (see :func:`_require_kwarg`).
+    """
+    if sampler == "hmc":
+        return HMCStage(
+            n_hmc=int(kwargs.get("hmc_n_hmc", 16)),
+            num_burnin_steps=int(_require_kwarg(kwargs, "hmc_num_burnin", pipeline_name)),
             num_results=int(kwargs.get("hmc_num_results", 1500)),
-            num_burnin_steps=int(kwargs.get("hmc_num_burnin", 500)),
             init_eps=float(kwargs.get("hmc_init_eps", 0.3)),
             init_l=int(kwargs.get("hmc_init_l", 3)),
             max_leapfrog_steps=int(kwargs.get("hmc_max_leapfrog_steps", 30)),
-        ),
-    ]
+        )
+    if sampler == "nuts":
+        return NUTSStage(
+            n_chains=int(kwargs.get("nuts_n_chains", 16)),
+            num_burnin_steps=int(_require_kwarg(kwargs, "nuts_num_burnin", pipeline_name)),
+            num_results=int(kwargs.get("nuts_num_results", 1500)),
+            init_step_size=float(kwargs.get("nuts_init_step_size", 1.0)),
+            target_acceptance_rate=float(kwargs.get("nuts_target_acceptance", 0.8)),
+            max_tree_depth=int(kwargs.get("nuts_max_tree_depth", 8)),
+            count_grad_evals=bool(kwargs.get("nuts_count_grad_evals", True)),
+        )
+    if sampler == "mclmc":
+        return MCLMCStage(
+            n_chains=int(kwargs.get("mclmc_n_chains", 16)),
+            num_burnin_steps=int(_require_kwarg(kwargs, "mclmc_num_burnin", pipeline_name)),
+            num_results=int(kwargs.get("mclmc_num_results", 2000)),
+            desired_energy_variance=float(kwargs.get("mclmc_desired_energy_variance", 5e-4)),
+            frac_tune1=float(kwargs.get("mclmc_frac_tune1", 0.2)),
+            frac_tune2=float(kwargs.get("mclmc_frac_tune2", 0.6)),
+            frac_tune3=float(kwargs.get("mclmc_frac_tune3", 0.2)),
+            debug=bool(kwargs.get("mclmc_debug", False)),
+        )
+    if sampler == "mams":
+        return MAMSStage(
+            n_chains=int(kwargs.get("mams_n_chains", 16)),
+            num_burnin_steps=int(_require_kwarg(kwargs, "mams_num_burnin", pipeline_name)),
+            num_results=int(kwargs.get("mams_num_results", 2000)),
+            target_acceptance=float(kwargs.get("mams_target_acceptance", 0.9)),
+            frac_tune1=float(kwargs.get("mams_frac_tune1", 0.2)),
+            frac_tune2=float(kwargs.get("mams_frac_tune2", 0.6)),
+            frac_tune3=float(kwargs.get("mams_frac_tune3", 0.2)),
+            L_max_ratio=float(kwargs.get("mams_L_max_ratio", 4.0)),
+            max_integration_steps=int(kwargs.get("mams_max_integration_steps", 60)),
+            debug=bool(kwargs.get("mams_debug", False)),
+        )
+    raise KeyError(
+        f"Unknown benchmark sampler {sampler!r}; available: {BENCHMARK_SAMPLERS}"
+    )
+
+
+def _make_map_svi_builder(sampler: str, pipeline_name: str):
+    def build(system: Any, **kwargs) -> List[InferenceStage]:
+        return [
+            _map_stage(kwargs),
+            _svi_stage(kwargs),
+            _sampler_stage(sampler, kwargs, pipeline_name),
+        ]
+    build.__name__ = f"build_{pipeline_name}"
+    build.__doc__ = (
+        f"MAP → SVI → {sampler.upper()} pipeline (benchmark builder family).\n\n"
+        f"Kwargs consumed: ``map_num_steps`` (1000), ``map_n_samples`` (2000),\n"
+        f"``svi_num_steps`` (5000), ``svi_n_vi`` (1000), and the ``{sampler}_*``\n"
+        f"sampler knobs (see ``_sampler_stage``; ``{sampler}_num_burnin`` is\n"
+        f"REQUIRED, chains default to 16)."
+    )
+    return build
+
+
+def _make_map_bridge_builder(sampler: str, pipeline_name: str):
+    def build(system: Any, **kwargs) -> List[InferenceStage]:
+        return [
+            _map_stage(kwargs),
+            _diag_qz_bridge(kwargs),
+            _sampler_stage(sampler, kwargs, pipeline_name),
+        ]
+    build.__name__ = f"build_{pipeline_name}"
+    build.__doc__ = (
+        f"MAP → diagonal-qz bridge → {sampler.upper()} pipeline (no SVI;\n"
+        f"benchmark builder family).\n\n"
+        f"Kwargs consumed: ``map_num_steps`` (1000), ``map_n_samples`` (2000),\n"
+        f"``bridge_qz_scale`` (1e-2), and the ``{sampler}_*`` sampler knobs\n"
+        f"(``{sampler}_num_burnin`` is REQUIRED, chains default to 16)."
+    )
+    return build
+
+
+for _sampler in BENCHMARK_SAMPLERS:
+    register_pipeline_builder(f"map_svi_{_sampler}")(
+        _make_map_svi_builder(_sampler, f"map_svi_{_sampler}"))
+    register_pipeline_builder(f"map_{_sampler}")(
+        _make_map_bridge_builder(_sampler, f"map_{_sampler}"))
+del _sampler
 
 
 @register_pipeline_builder("map_bootstrap_mclmc")
