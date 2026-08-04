@@ -57,7 +57,7 @@ def _persist_system(
     system: Any,
     system_id: str,
     sweep_name: str,
-    model_seq: Any,
+    prob_model: Any,
     stages: List[Any],
     out: Dict[str, np.ndarray],
     i: int,
@@ -73,7 +73,7 @@ def _persist_system(
     from gigalens_research.simtests.registry import get_metric
     from gigalens_research.simtests.index import write_run_json, make_run_record
 
-    ctx = InferenceContext.from_modelling_sequence(model_seq)
+    ctx = InferenceContext.from_prob_model(prob_model)
     ctx_hash = ctx.hash()
     os.makedirs(out_dir, exist_ok=True)
     _write_manifest(os.path.join(out_dir, "model_card.json"),
@@ -336,7 +336,7 @@ def main() -> None:
             sid = sids[i]
             rec = _persist_system(
                 spec=spec, system=systems[i], system_id=sid,
-                sweep_name=sweep_name, model_seq=seqs[i],
+                sweep_name=sweep_name, prob_model=probs[i],
                 stages=pipeline_fn(systems[i], **kw), out=out, i=j,
                 wall_time_s=wave_wall / len(idxs), peak_gpu_bytes=peak,
                 out_dir=os.path.join(runs_dir, sid, sweep_name))

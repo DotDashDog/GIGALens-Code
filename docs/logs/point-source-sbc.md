@@ -635,12 +635,102 @@ the likelihood as an opt-in annealed term and rerun the double arm.
   Smoke-tested on the login node: imports, truth→z mapping, unpenalized
   log_like, all three operator rungs, recount worker.
   **Status: APPROVED by user 2026-08-03 ("Okay - go ahead!") after review of
-  the checkpoint. Files committed as GIGALens-Code 0535116 before launch;
+  the checkpoint. Files committed as GIGALens-Code f65528b before launch;
   submitted as job 24529614 (es0, es_normal, 4x GRTX2080TI, 16 h).**
+
+  **RESOLVED 2026-08-04 — see the log entry of that date. Summary: predictions
+  4 (unpenalized re-rank: KS p = 0.68, rho = 0.027) and 5 (recount: 3 new
+  mislabels, 8 total) PASS; falsifiers (a), (b), and (d) FIRED — sys_69
+  lenstronomy frac 0.308, sys_57 frac 0.000 (posterior stayed in the 3-image
+  basin), fine-vs-2x rung agreement 0.016 — and the population scan found 26
+  systems with pen_fine(truth) < −0.5 vs the predicted 7–12. The
+  fine-resolution remedy is REFUTED: the smoothed-count operator diverges
+  from the discrete count near caustics at any affordable resolution, and at
+  eps 0.05" it penalizes a quarter of all truths. Constraint redesign (P-12)
+  required before any triple arm.**
 
 ---
 
 ## Log (newest first)
+
+- **2026-08-04 (P-11 RESOLVED: fine-operator remedy REFUTED; loglik artifact
+  and dataset recount cleanly settled).** Job 24529614 (es0, 4x 2080 Ti,
+  11:47 h, COMPLETED; all slices + rerank + recount + audit green; results in
+  `diagnostics/p11_analysis/`, runs in `runs/<sid>/mc2`). Observed vs
+  predicted, per the P-11 checkpoint:
+  - **Prediction 4 PASS (the clean win).** Unpenalized loglik re-rank of all
+    100 mc1 posteriors: PIT uniform (KS p = 0.68, mean 0.480, flat deciles);
+    Spearman(pen_coarse(truth), PIT) collapsed from +0.512 (p = 5e−8) to
+    +0.027 (p = 0.79). The P-10 loglik Holm rejection is now fully and
+    quantitatively resolved as the penalty-at-truth artifact; P-10's
+    parameter-calibration conclusion (coarse-constraint arm SBC-uniform)
+    stands clean.
+  - **Prediction 5 PASS.** Window-12 recount of all 100 truths: the 5 known
+    mislabels confirmed (sys_02/26/64/81 = 3 images, sys_19 = 4) plus 3 NEW
+    (sys_15 = 3, sys_41 = 4–5, sys_44 = 3) — 8 total, under the ≤5-additional
+    bound (falsifier (e) not fired). Caveat: the 3 new ones are
+    ladder-unstable between min_distance 0.05/0.025 (counts differ by rung);
+    confirm with the 0.01 rung before final exclusion lists.
+  - **Falsifier (a) FIRED (Class A recovery refuted).** sys_67 passed both
+    metrics (lt 0.902 / neff 0.927 — the pre-noted weak test); sys_35 passed
+    lenstronomy (1.000) but not the audit fraction (0.635, median N_eff
+    2.30); sys_69 FAILED lenstronomy outright: 0.308 (3 raw images on 69% of
+    draws) while its fine-audit N_eff reads ≈ 2.06 — a direct operator-vs-
+    discrete-count contradiction on the system whose truth-level operator
+    CONVERGES. Post-hoc mechanism hypothesis (unregistered, needs its own
+    test): the detectability weight w = 1/(1+(mu_min|det A|)^4) suppresses
+    demagnified third images that lenstronomy's raw position count includes —
+    i.e. the two metrics count different things, and the constraint permits
+    "2 detectable + 1 faint" configurations. Check the |det A| of the extra
+    images before believing this.
+  - **Falsifier (b) FIRED (the headline).** sys_57: lenstronomy frac(count==2)
+    = 0.000 (hist {3: 500}), fine-audit median 2.855 — the mc2 posterior
+    stayed in the phantom 3-image basin despite the ≈ +6 log-like penalty
+    differential favouring the truth basin. Per the pre-commitment: the
+    smoothed constraint cannot handle near-caustic doubles at any resolution;
+    method redesign required before any triple arm.
+  - **Prediction 3 MISSED on magnitude (hypothesis fails per discipline).**
+    Displacement was real for sys_38/86 — but in the OPPOSITE tail to the one
+    registered: truth lands HIGH in the unpenalized-loglik ranks (PIT 0.99 /
+    0.96; sys_69 too at 0.95), i.e. truth fits the data better than the
+    penalized posterior's draws — the registered "PIT ≤ 0.1" was a sign
+    error (rank counts draws BELOW truth). sys_99 was unexpectedly healthy
+    (lt 1.000, PIT 0.52) despite pen_fine(truth) = −7.7. And the population
+    scan blew through the prediction: N(pen_fine(truth) < −0.5) = 26 (16
+    below −2) vs the predicted 7–12. The intrinsic near-caustic excess is
+    population-broad: at eps 0.05" the constraint penalizes a QUARTER of all
+    truths. Corollary: the coarse operator's blur was partially protective —
+    a full 100-system fine-config arm would likely break the calibration the
+    coarse arm achieved. Also notable: truth-level penalties are heterogeneous
+    between configs in BOTH directions (e.g. sys_98 coarse −6.9 vs fine −4.0;
+    sys_83 −8.3 coarse), yet mc1's parameter SBC still passed at n = 100.
+  - **Falsifier (d) FIRED.** Fine-vs-2x rung agreement on 500 mc2 sys_57
+    draws: 0.016 (max |delta| = 0.30) — the audit N_eff is quadrature-
+    unconverged near caustics (convergence degrades as eps shrinks, opposite
+    to the remedy's premise). All N_eff-based numbers above carry this
+    asterisk; every basin claim rests on the pre-declared-primary lenstronomy
+    counts.
+  - **Gate note:** sys_86 mc2 fails the convergence gate (max R-hat 1.105,
+    min ESS 66) — its numbers (lt 0.980) are indicative only. All other six
+    reruns pass (R-hat ≤ 1.036).
+  - **Verdict.** The fine-resolution remedy is REFUTED as the fix for the
+    P-10 basin failures, and the eps-refinement direction is closed off on
+    principle: (1) the smoothed N_eff proxy diverges from the discrete image
+    count near caustics at ANY resolution (measured: truth-level excess
+    0.33–0.99 across rungs on 4 systems, 26-system population incidence);
+    (2) its quadrature convergence WORSENS as eps shrinks (falsifier d);
+    (3) where it does relocate posteriors (sys_38/86), it displaces them off
+    truth. What survives: the COARSE-constraint mc1 arm is a calibrated
+    population method (SBC 1/13 + now-clean loglik), with a known ~7-system
+    basin-failure tail. Follow-up P-12 is a DESIGN decision, not a rerun:
+    candidate directions — (a) excess-aware target (penalize
+    max(N_eff − n_obs − excess(theta), 0) or use the truth-level excess as a
+    per-system offset), (b) a discrete differentiable count (image-finding +
+    soft assignment) replacing the quadrature proxy, (c) keep the coarse
+    constraint and flag/exclude near-caustic systems via the cheap
+    pen_fine(truth)-style diagnostic, (d) revert to post-hoc filtering with
+    better coverage. Dataset regeneration with lt_search_window ≥ 12 (8
+    mislabels) is required before ANY new arm regardless of the P-12 choice.
 
 - **2026-07-31 (P-10 RESOLVED: double-arm rerun with the in-likelihood
   multiplicity constraint — core claim substantiated; one operator-accuracy

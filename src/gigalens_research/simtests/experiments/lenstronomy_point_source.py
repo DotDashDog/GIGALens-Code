@@ -454,7 +454,6 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
 
-    from gigalens.jax.inference import ModellingSequence
     from gigalens.jax.scene import Component, Plane, LensModel
     from gigalens.jax.scene_prob_model import ProbModel
     from gigalens.jax.cosmo import wCDM_Cosmo
@@ -559,7 +558,7 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
     else:
         data = PointSourcePositionData(ps_comp, x, y, sigma_ast, **common)
 
-    return ModellingSequence(ProbModel(model, data))
+    return ProbModel(model, data)
 
 
 # ---------------------------------------------------------------------------

@@ -78,7 +78,7 @@ _STATIC_TERM_TD_FIELDS = ("z_lens", "z_source", "cosmology_mode")
 
 
 def _get_prob(seq_or_prob: Any) -> Any:
-    """Accept a ``ModellingSequence`` or a ``ProbModel``."""
+    """Accept a scene ``ProbModel`` (or a legacy wrapper exposing one)."""
     return getattr(seq_or_prob, "prob_model", seq_or_prob)
 
 

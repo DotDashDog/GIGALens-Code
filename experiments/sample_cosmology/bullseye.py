@@ -25,11 +25,11 @@ from gigalens.simulator import SimulatorConfig
 
 # --- research-side pipeline / diagnostics (gigalens_research) ----------------
 from gigalens_research.inference_utils import (
-    InferenceContext, Pipeline, MAPStage, BridgeStage, MCLMCStage,
+    InferenceContext, Pipeline, MAPStage, BridgeStage, MCLMCStage, MAMSStage
 )
 from gigalens_research.plotting import PosteriorReport, PipelineReport
 import photutils.psf as psf
-
+import copy
 
 def tNCDF_bij(low, high):
     return tfb.Chain([tfb.Shift(low), tfb.Scale(high - low), tfb.NormalCDF()])
@@ -45,13 +45,57 @@ class UniformBij(tfd.Uniform):
     def _default_event_space_bijector(self):
         return self._esb
 
-def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_centroids=False):
-    z_lens = 0.5
-    z_source1 = 1.0
-    z_source2 = 1.5
-    z_source3 = 4.0
-    z_source4 = 7.0
-    z_source5 = 13.0
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+
+# --- replace with your actual arrays ---
+# arrays = [img1, img2, img3, img4, img5]   # each 2D, same shape
+# labels = 
+def plot_color_composite(arrays):
+    labels = ["Source 1", "Source 2", "Source 3", "Source 4", "Source 5"]
+    # Distinct, validated-for-distinguishability hues (blue, orange, aqua, yellow, magenta)
+    colors = np.array([
+        [0x2a, 0x78, 0xd6],  # blue
+        [0xeb, 0x68, 0x34],  # orange
+        [0x1b, 0xaf, 0x7a],  # aqua
+        [0xed, 0xa1, 0x00],  # yellow
+        [0xe8, 0x7b, 0xa4],  # magenta
+    ]) / 255.0
+    
+    def make_composite(arrays, colors):
+        h, w = arrays[0].shape
+        composite = np.zeros((h, w, 3))
+        for i, arr in enumerate(arrays):
+            norm = np.pow((arr - arr.min()) / (arr.max() - arr.min() + 1e-12), 2)
+            composite += norm[..., None] * colors[i][None, None, :]
+        return np.clip(composite, 0, 1)
+    
+    composite = make_composite(arrays, colors)
+    
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.imshow(composite)
+    ax.axis("off")
+    
+    legend_handles = [Patch(facecolor=c, label=l) for c, l in zip(colors, labels)]
+    ax.legend(
+        handles=legend_handles,
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        frameon=False,
+    )
+    
+    plt.tight_layout()
+    plt.show()
+
+def make_bullseye(sample_wa, z_lens=0.5, zs=[1.0, 1.5, 4.0, 7.0, 13.0], i_def_ratio_ref=1, theta_E=13.2, snr_scale=1., light_kwargs={}, use_DESI_cosmo_centroids=False):
+    # z_lens = 0.5
+    # z_source1 = 1.0
+    # z_source2 = 1.5
+    # z_source3 = 4.0
+    # z_source4 = 7.0
+    # z_source5 = 13.0
 
     s = theta_E/0.9
 
@@ -76,37 +120,18 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
                 center_y=tfd.Normal(0*s, 2*s),
                 e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
                 e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
-                n_sersic=tfd.Uniform(1, 10),
+                n_sersic=tfd.Uniform(0.2, 10),
                 R_sersic=tfd.LogNormal(jnp.log(1.*s), 0.15),
                 Ie=tfd.LogNormal(jnp.log(150/s2), 1),
             )
-    
-    source1 = Component(
-        SersicEllipse(use_lstsq=False),
-        sourceprior_dict(),
-    )
-    source2 = Component(
-        SersicEllipse(use_lstsq=False),
-        sourceprior_dict(),
-    )
-    
-    
-    source3 = Component(
-        SersicEllipse(use_lstsq=False),
-        sourceprior_dict(),
-    )
-    
-    source4 = Component(
-        SersicEllipse(use_lstsq=False),
-        sourceprior_dict(),
-    )
-    
-    source5 = Component(
-        SersicEllipse(use_lstsq=False),
-        sourceprior_dict(),
-    )
-    
-    
+        
+    source_lights = []
+    for _ in zs:
+        source_lights.append(Component(
+            SersicEllipse(use_lstsq=False),
+            sourceprior_dict(),
+        ))
+        
     def tNCDF_bij(low, high):
         return tfb.Chain([tfb.Shift(low), tfb.Scale(high - low), tfb.NormalCDF()])
     
@@ -120,19 +145,13 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
     
         def _default_event_space_bijector(self):
             return self._esb
-    
-    from gigalens_research.priors.ratio_pair_coords import RatioPairUniform,deflection_ratio_pair_fn
-    
-    cos = w0waCDM_Cosmo(z_lens, z_source2)
+   
+    cos = w0waCDM_Cosmo(z_lens, zs[i_def_ratio_ref])
     cosmo = Component(cos, {
                 "H0": 70.0, "k": 0.0, "wa": 0.0, 
                 "Om0":UniformBij(jnp.float64(0.0), jnp.float64(1.0)),
                 "w0":UniformBij(jnp.float64(-2.0), jnp.float64(-1 / 3)),
                 "wa": UniformBij(jnp.float64(-3.0), jnp.float64(2.0)) if sample_wa else 0.0,
-                # ("Om0", "w0"): RatioPairUniform(
-                #     deflection_ratio_pair_fn(cos, (z_source2, z_source3),
-                #                              fixed=dict(H0=70.0, k=0.0, wa=0.0)),
-                #     (0.044, 0.994), (-2.0, -1.0 / 3.0)),
             })
     
     
@@ -141,11 +160,7 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
     model = LensModel(
         [
             Plane(redshift=z_lens, mass=[lens]),
-            Plane(redshift=z_source1, light=[source1]),
-            Plane(redshift=z_source2, light=[source2]),
-            Plane(redshift=z_source3, light=[source3]),
-            Plane(redshift=z_source4, light=[source4]),
-            Plane(redshift=z_source5, light=[source5]),
+            *[Plane(redshift=zs[i], light=[source_lights[i]]) for i in range(len(zs))]
         ],
         cosmo=cosmo,
     )
@@ -164,54 +179,76 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
         cos_params = dict(H0=70.0, Om0=0.3, k=0.0, w0=-1.0, wa=0.0)
         print(f"USING Boring cosmology for cosmology truth: {cos_params}")
     
-    truth_scene = {
-        "planes": {
-            0: {
+    # truth_scene = {
+    #     "planes": {
+    #         0: {
+    #             "geometry": {"redshift": z_lens},
+    #             "mass": {
+    #                 0: {"theta_E": 0.9*s, "s_E":0.4, "e1": 0.05, "e2": 0.02, # "gamma": 1.6, 
+    #                     "center_x": 0.0*s, "center_y": 0.0*s},
+    #             },
+    #         },
+    #         1: {
+    #             "geometry": {"redshift": z_source1},
+    #             "light": {
+    #                 0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.05, "e2": 0.,
+    #                     "center_x": 0.15*s, "center_y": 0.*s, "Ie": Ie*snr_scale/s2},
+    #             },
+    #         },
+    #         2: {
+    #             "geometry": {"redshift": z_source2},
+    #             "light": {
+    #                 0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
+    #                     "center_x": 0.*s, "center_y": 0.01*s, "Ie": Ie*snr_scale/s2},
+    #             },
+    #         },
+    #         3: {
+    #             "geometry": {"redshift": z_source3},
+    #             "light": {
+    #                 0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
+    #                     "center_x": 0.*s, "center_y": 0.05*s, "Ie": Ie*snr_scale/s2},
+    #             },
+    #         },
+    #         4: {
+    #             "geometry": {"redshift": z_source4},
+    #             "light": {
+    #                 0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
+    #                     "center_x": 0.05*s, "center_y": 0.05*s, "Ie": Ie*snr_scale/s2},
+    #             },
+    #         },
+    #         5: {
+    #             "geometry": {"redshift": z_source5},
+    #             "light": {
+    #                 0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
+    #                     "center_x": 0.1*s, "center_y": 0.0*s, "Ie": Ie*snr_scale/s2},
+    #             },
+    #         },
+    #     },
+    #     "cosmo": cos_params,
+    # }
+
+    truth_scene = {"planes": { 0: {
                 "geometry": {"redshift": z_lens},
                 "mass": {
                     0: {"theta_E": 0.9*s, "s_E":0.4, "e1": 0.05, "e2": 0.02, # "gamma": 1.6, 
                         "center_x": 0.0*s, "center_y": 0.0*s},
                 },
-            },
-            1: {
-                "geometry": {"redshift": z_source1},
-                "light": {
-                    0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.05, "e2": 0.,
-                        "center_x": 0.15*s, "center_y": 0.*s, "Ie": Ie*snr_scale/s2},
-                },
-            },
-            2: {
-                "geometry": {"redshift": z_source2},
-                "light": {
-                    0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.*s, "center_y": 0.01*s, "Ie": Ie*snr_scale/s2},
-                },
-            },
-            3: {
-                "geometry": {"redshift": z_source3},
-                "light": {
-                    0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.*s, "center_y": 0.05*s, "Ie": Ie*snr_scale/s2},
-                },
-            },
-            4: {
-                "geometry": {"redshift": z_source4},
-                "light": {
-                    0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.05*s, "center_y": 0.05*s, "Ie": Ie*snr_scale/s2},
-                },
-            },
-            5: {
-                "geometry": {"redshift": z_source5},
-                "light": {
-                    0: {"R_sersic": 1.*s, "n_sersic": 2., "e1": 0.0, "e2": 0.05,
-                        "center_x": 0.1*s, "center_y": 0.0*s, "Ie": Ie*snr_scale/s2},
-                },
-            },
-        },
-        "cosmo": cos_params,
-    }
+            }},"cosmo": cos_params,}
 
+    for i in range(1, len(zs)+1):
+        truth_scene["planes"][i] = {}
+        truth_scene["planes"][i]["geometry"] = {"redshift": zs[i-1]}
+
+        light_args_unscaled = {"R_sersic": 1, "n_sersic": 2., "e1": 0.05, "e2": 0.,
+                        "center_x": 0.05, "center_y": 0., "Ie": Ie} | light_kwargs
+        
+        light_args_scaled = copy.deepcopy(light_args_unscaled)
+        light_args_scaled["R_sersic"] = light_args_unscaled["R_sersic"]*s
+        light_args_scaled["center_x"] = light_args_unscaled["center_x"]*s
+        light_args_scaled["center_y"] = light_args_unscaled["center_y"]*s
+        light_args_scaled["Ie"] = light_args_unscaled["Ie"]*snr_scale/s2
+
+        truth_scene["planes"][i]["light"] = {0: light_args_scaled}
     
 
 
@@ -250,71 +287,42 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
     #     return img + poisson + bkg
 
     from gigalens.jax.utils import add_noise
+    sims = [SceneSimulator(model, sim_config_truth, sees=[l]) for l in source_lights]
 
-    sim1 = SceneSimulator(model, sim_config_truth, sees=[source1])
-    sim2 = SceneSimulator(model, sim_config_truth, sees=[source2])
-    sim3 = SceneSimulator(model, sim_config_truth, sees=[source3])
-    sim4 = SceneSimulator(model, sim_config_truth, sees=[source4])
-    sim5 = SceneSimulator(model, sim_config_truth, sees=[source5])
-    
-    print("trace mode (both simulators, same single-mass-plane model):",
-      sim1.trace_mode, sim2.trace_mode)
-    
-    img1 = np.asarray(sim1.simulate(truth_scene))
-    img2 = np.asarray(sim2.simulate(truth_scene))
-    img3 = np.asarray(sim3.simulate(truth_scene))
-    img4 = np.asarray(sim4.simulate(truth_scene))
-    img5 = np.asarray(sim5.simulate(truth_scene))
+    imgs = [np.asarray(sim.simulate(truth_scene)) for sim in sims]
 
-    k1, k2, k3, k4, k5 = jax.random.split(jax.random.PRNGKey(0), 5)
-    observed_image1 = add_noise(k1, img1, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image2 = add_noise(k2, img2, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image3 = add_noise(k3, img3, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image4 = add_noise(k4, img4, exp_time=exp_time, sigma_bkd=background_rms)
-    observed_image5 = add_noise(k5, img5, exp_time=exp_time, sigma_bkd=background_rms)
-    
+    keys = jax.random.split(jax.random.PRNGKey(0), 5)
+    observed_images = [add_noise(keys[i], imgs[i], exp_time=exp_time, sigma_bkd=background_rms) for i in range(len(zs))]
+
     plt.figure(figsize=(16, 3))
-    ax = plt.subplot(151)
-    plt.imshow(observed_image1, extent=extent)
-    plt.colorbar()
-    ax = plt.subplot(152)
-    plt.imshow(observed_image2, extent=extent)
-    plt.colorbar()
-    ax = plt.subplot(153)
-    plt.imshow(observed_image3, extent=extent)
-    plt.colorbar()
-    ax = plt.subplot(154)
-    plt.imshow(observed_image4, extent=extent)
-    plt.colorbar()
-    ax = plt.subplot(155)
-    plt.imshow(observed_image5, extent=extent)
-    plt.colorbar()
+    for i in range(len(zs)):
+        ax = plt.subplot(int(f"1{len(zs)}{i+1}"))
+        plt.imshow(observed_images[i], extent=extent)
+        plt.colorbar()
     plt.show()
-    
-    dataset1 = ImageData(observed_image1, sim_config, background_rms=background_rms,
-                    exp_time=exp_time, sees=[source1])
-    dataset2 = ImageData(observed_image2, sim_config, background_rms=background_rms,
-                        exp_time=exp_time, sees=[source2])
-    dataset3 = ImageData(observed_image3, sim_config, background_rms=background_rms,
-                        exp_time=exp_time, sees=[source3])
-    dataset4 = ImageData(observed_image4, sim_config, background_rms=background_rms,
-                        exp_time=exp_time, sees=[source4])
-    dataset5 = ImageData(observed_image5, sim_config, background_rms=background_rms,
-                        exp_time=exp_time, sees=[source5])
-    
-    prob_model = ProbModel(model, [dataset1, dataset2, dataset3, dataset4, dataset5], mode="forward")
-    ctx = InferenceContext.from_prob_model(prob_model)
+
+    plot_color_composite(observed_images)
 
 
-    import copy
+    datasets = [ImageData(observed_images[i], sim_config, background_rms=background_rms,
+                    exp_time=exp_time, sees=[source_lights[i]]) for i in range(len(zs))]
+    
+    prob_model = ProbModel(model, datasets, mode="forward")
+
+    planes_def_ratio = []
+    for i in range(len(zs)):
+        l = source_lights[i]
+        if i < i_def_ratio_ref:
+            planes_def_ratio.append(Plane(deflection_ratio=tfd.Uniform(0.5,1), light=[l]))
+        elif i == i_def_ratio_ref:
+            planes_def_ratio.append(Plane(deflection_ratio=1.0, light=[l]))
+        else:
+            planes_def_ratio.append(Plane(deflection_ratio=tfd.Uniform(1.0,1.7), light=[l]))
+        
     model_def_ratio = LensModel(
         [
             Plane(mass=[lens]),
-            Plane(deflection_ratio=tfd.Uniform(0.5,1), light=[source1]),
-            Plane(deflection_ratio=1.0, light=[source2]),
-            Plane(deflection_ratio=tfd.Uniform(1.0,1.7), light=[source3]),
-            Plane(deflection_ratio=tfd.Uniform(1.0,1.7), light=[source4]),
-            Plane(deflection_ratio=tfd.Uniform(1.0,1.7), light=[source5]),
+            *planes_def_ratio
         ],
     )
     
@@ -324,19 +332,18 @@ def make_5spl_bullseye(sample_wa, theta_E=13.2, snr_scale=1., use_DESI_cosmo_cen
         tc["planes"][k]["geometry"]["deflection_ratio"] = float(jnp.squeeze(cos.deflection_ratio(tc["planes"][k]["geometry"].pop("redshift"), **cos_truth)))
     truth_def_ratio = tc
     
-    prob_model_dr = ProbModel(model_def_ratio, [dataset1, dataset2, dataset3, dataset4,dataset5], mode="forward")
-    ctx_dr = InferenceContext.from_prob_model(prob_model_dr)
+    prob_model_dr = ProbModel(model_def_ratio, datasets, mode="forward")
 
 
     return prob_model, prob_model_dr, truth_scene, truth_def_ratio
 
 
-def standard_pipeline(ctx_in, seed=42):
+def standard_pipeline(ctx_in, seed=42, n_map=1000, use_mams=False, n_chains=8, mams_kwargs = {}):
 
     pipeline = Pipeline(ctx_in, seed=seed)
     pipeline.add(MAPStage(
-        num_steps=4000,
-        n_samples=1000,
+        num_steps=2000,
+        n_samples=n_map,
         pbar_interval=100,
         seed=1,
     ))
@@ -355,16 +362,26 @@ def standard_pipeline(ctx_in, seed=42):
         produces=("qz",),
         fn=make_diag_qz,
     ))
-    
-    pipeline.add(MCLMCStage(
-        n_chains=8,
-        num_burnin_steps=10000,
-        num_results=10000,
-        desired_energy_variance=5e-4,
-        seed=10,
-        progress_bar=True,
-        debug=True,
-    ))
+    if not use_mams:
+        pipeline.add(MCLMCStage(
+            n_chains=n_chains,
+            num_burnin_steps=10000,
+            num_results=10000,
+            desired_energy_variance=5e-4,
+            seed=10,
+            progress_bar=True,
+            debug=True,
+        ))
+    else:
+        pipeline.add(MAMSStage(
+            n_chains=n_chains,
+            num_burnin_steps=2000,
+            num_results=2000,
+            seed=10,
+            **mams_kwargs,
+            progress_bar=True,
+            debug=True,
+        ))
     return pipeline
 
 

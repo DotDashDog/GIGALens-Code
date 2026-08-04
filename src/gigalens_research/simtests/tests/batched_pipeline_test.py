@@ -34,22 +34,25 @@ MC_KW = dict(n_chains=4, num_burnin_steps=2000, num_results=3000,
 SEEDS = {"map": (11, 21), "svi": (12, 22), "mclmc": (13, 23)}
 
 
-def _solo_pipeline(seq, seed_map, seed_svi, seed_mclmc):
+def _solo_pipeline(prob_model, seed_map, seed_svi, seed_mclmc):
     import jax.numpy as jnp
     import optax
+    from gigalens.jax.inference import MAP as _MAP, SVI as _SVI
     from gigalens_research.inference import MCLMC_JIT
 
     map_opt = optax.chain(optax.zero_nans(),
                           optax.clip_by_global_norm(MAP_KW["map_clip_norm"]),
                           optax.adam(MAP_KW["map_lr"]))
-    samples, lps, chisqs = seq.MAP(
+    samples, lps, chisqs = _MAP(
+        prob_model,
         optimizer=map_opt, start=None, n_samples=MAP_KW["n_samples"],
         num_steps=MAP_KW["num_steps"], seed=seed_map,
         output_type="best_step", pbar_interval=0)
     best = int(np.nanargmax(np.asarray(lps)))
     z_best = np.asarray(samples)[best]
 
-    qz_raw, _ = seq.SVI(
+    qz_raw, _ = _SVI(
+        prob_model,
         start=jnp.asarray(z_best), optimizer=optax.adabelief(
             SVI_KW["svi_lr"], b1=0.95, b2=0.99),
         n_vi=SVI_KW["n_vi"], init_scales=SVI_KW["init_scales"],
@@ -64,7 +67,7 @@ def _solo_pipeline(seq, seed_map, seed_svi, seed_mclmc):
         scale_tril=jnp.asarray(np.asarray(qz_raw.scale_tril)))
 
     samples_z = MCLMC_JIT(
-        model_seq=seq, qz=qz, n_hmc=MC_KW["n_chains"],
+        prob_model=prob_model, qz=qz, n_hmc=MC_KW["n_chains"],
         num_burnin_steps=MC_KW["num_burnin_steps"],
         num_results=MC_KW["num_results"],
         desired_energy_variance=MC_KW["desired_energy_variance"],
@@ -95,13 +98,11 @@ def test_batched_pipeline_matches_solo():
     with tempfile.TemporaryDirectory() as td:
         systems = _generate(td, n_systems=2, seed=31)
         seqs = _build_all(systems)      # ProbModels
-        from gigalens_research.simtests.experiments.lenstronomy_point_source import (
-            build_epl_shear_point_source_obs,
-        )
-        raw_seqs = [build_epl_shear_point_source_obs(s) for s in systems]
         bp = BatchedPointSourceProb.from_probs(seqs)
 
-        solo = [_solo_pipeline(raw_seqs[i], SEEDS["map"][i], SEEDS["svi"][i],
+        # The builder returns the scene ProbModel directly, which is what both
+        # the batched prob and the solo free-function stages consume.
+        solo = [_solo_pipeline(seqs[i], SEEDS["map"][i], SEEDS["svi"][i],
                                SEEDS["mclmc"][i]) for i in range(2)]
 
         # Stage-isolated comparison: each batched stage gets the SAME input the
