@@ -53,44 +53,110 @@ Source-light priors: two structural changes
    ``source1213_prior``) has ``shared_params=[]`` and needs no ``shared()`` at all -- each
    leaf already has its own independent distribution in the original dict.
 
-``deflection_ratio`` -> ``Plane(deflection_ratio=...)``, not a cosmology
--------------------------------------------------------------------------
-Every source profile here is built with ``cosmo_sample=False``, and no cosmology
-``Prior``/``Component`` is defined anywhere in this file: the old model samples each
-source's deflection ratio directly, rather than deriving it from a cosmology + redshift
-(contrast ``translate_old_params.py``, which *does* have a fixed cosmology and therefore
-derives the ratio -- a different old fit). The new API's ``Plane`` geometry is "exactly
-one of ``deflection_ratio`` (no cosmology) or ``redshift`` (with cosmology)"
-(``scene.py``); with no cosmology ``Component`` supplied here, ``deflection_ratio`` is the
-correct field, and it accepts a ``tfd.Distribution`` exactly like any ``Component``
-prior -- so each source's ``deflection_ratio`` prior moves onto its ``Plane`` unchanged,
-still the same free parameter it always was. This is the only place a ``Plane`` needs
-building at all: mass ``Component``s are left bare below, exactly as unassembled as they
-were as bare ``Prior``s in the original file (this file was never the place they got
-grouped into a lens plane; that stays whoever's job it already was).
+Update: cosmology (flat LambdaCDM), and one assembled LensModel
+-----------------------------------------------------------------
+The above was the first pass: every source's deflection ratio was a free
+``Plane(deflection_ratio=...)`` parameter, matching the original file's ``cosmo_sample=
+False`` exactly, and no ``LensModel`` was assembled (mass ``Component``s were left bare,
+same as the original file left them). Per request, this now instead:
 
-Each source's ``z_source`` comment is kept for reference only, unused as a value here,
-exactly as it was already unused (commented out) in ``ersatz_carousel_prior.py`` --
-translating ``deflection_ratio`` needs no redshift at all.
+1. **Adds a flat LambdaCDM cosmology.** The new API has two cosmology profiles,
+   ``wCDM_Cosmo`` (params ``H0, Om0, k, w0``) and ``w0waCDM_Cosmo`` (adds ``wa``) -- no
+   dedicated ``LambdaCDM`` class exists (``cosmo.py``), so LambdaCDM is ``wCDM_Cosmo``
+   with ``w0`` FIXED at ``-1.0`` (not sampled) rather than given a prior; ``wa`` is not a
+   parameter of ``wCDM_Cosmo`` at all, so it does not need fixing separately. Following
+   ``experiments/sample_cosmology/bullseye.py``'s own cosmo ``Component`` (the setup this
+   was modeled on): ``H0=70.0`` and ``k=0.0`` fixed (flat, standard), ``Om0`` free via
+   ``UniformBij(0.0, 1.0)`` -- the same custom Shift/Scale/NormalCDF event-space bijector
+   bullseye uses in place of TFP's default sigmoid one for a bounded uniform, copied
+   verbatim from there (``tNCDF_bij``/``UniformBij``). ``z_lens=0.49`` and
+   ``z_source_ref=1.432`` are ``translate_old_params.STRUCTURE``'s values for this exact
+   physical setup (read off ``boiler(2).py`` there), not new numbers.
 
-Not translated: none of this changes what is or isn't a free parameter. ``Ie`` stays
-absent everywhere it was absent (``use_lstsq=True`` throughout, both files), and every
-bound, scale, and location number is verbatim from ``ersatz_carousel_prior.py``.
+   This is a genuine choice, not a mechanical translation: which cosmological parameters
+   are fixed vs sampled was not specified, and this follows bullseye's own precedent
+   (fix H0/k, sample Om0) rather than inventing a different split.
+
+2. **Every source's redshift is now real, not a comment.** With a cosmology supplied,
+   ``Plane`` requires ``redshift``, not ``deflection_ratio`` (mutually exclusive --
+   ``scene.py``: "Geometry is exactly one of ``deflection_ratio`` (no cosmology) or
+   ``redshift`` (with cosmology)"). Each source's ``z_source`` -- previously kept only as
+   a reference comment, since the original file's ``cosmo_sample=False`` never consumed
+   it -- is exactly the value needed here, and is unchanged from that comment (in turn
+   matching ``translate_old_params.STRUCTURE["source_ids"]``'s keys). The mass (cluster)
+   plane is likewise given ``redshift=z_lens``.
+
+   This REPLACES each source's ``deflection_ratio`` prior (kept only as a comment below,
+   for audit) with a value *derived* from the cosmology + redshifts at sample time --
+   the direct trade the user asked for by asking to "switch to using cosmology": a
+   source's line-of-sight distance stops being an independently free parameter and
+   becomes physically tied to the same (Om0, H0, k, w0) for every source and to the
+   shared lens redshift.
+
+3. **One assembled ``LensModel``.** ``model`` at the bottom collects the cluster mass
+   plane (all six mass ``Component``s, unchanged) and all nine source planes, in ascending
+   redshift order (observer -> source, as the new API requires), with the cosmology
+   ``Component`` above passed as ``cosmo=``.
+
+Not translated: none of this changes what is or isn't a free MASS or LIGHT parameter.
+``Ie`` stays absent everywhere it was absent (``use_lstsq=True`` throughout, both files),
+and every mass/light bound, scale, and location number is still verbatim from
+``ersatz_carousel_prior.py``. Only the geometry layer (deflection ratio vs cosmology +
+redshift) and the top-level assembly are new.
 """
 from __future__ import annotations
 
 import jax.numpy as jnp
 from tensorflow_probability.substrates.jax import distributions as tfd
+from tensorflow_probability.substrates.jax import bijectors as tfb
 
-from gigalens.jax.scene import Component, Plane, shared
+from gigalens.jax.scene import Component, Plane, LensModel, shared
+from gigalens.jax.cosmo import wCDM_Cosmo
 from gigalens.jax.profiles.mass.nfw_ellipse_slope import NFW_ELLIPSE_SLOPE
 from gigalens.jax.profiles.mass.piemd import DPIE
 from gigalens.jax.profiles.mass.shear import Shear
 from gigalens.jax.profiles.mass.epl import EPL
 from gigalens.jax.profiles.light.sersic import SersicEllipse
 
+# translate_old_params.STRUCTURE's values for this exact physical setup (from
+# boiler(2).py) -- not new numbers.
+_Z_LENS = 0.49
+_Z_SOURCE_REF = 1.432
+
+
+def _tNCDF_bij(low, high):
+    return tfb.Chain([tfb.Shift(low), tfb.Scale(high - low), tfb.NormalCDF()])
+
+
+# Verbatim from experiments/sample_cosmology/bullseye.py: a tfd.Uniform with a
+# Shift/Scale/NormalCDF event-space bijector in place of TFP's default (sigmoid-based)
+# one for Uniform.
+class _UniformBij(tfd.Uniform):
+    def __init__(self, *args, event_space_bijector_class=_tNCDF_bij, **kwargs):
+        self._esb = event_space_bijector_class(*args)
+        super().__init__(*args, **kwargs)
+
+    def _default_event_space_bijector(self):
+        return self._esb
+
+
+# Flat LambdaCDM: wCDM_Cosmo (H0, Om0, k, w0) with w0 FIXED at -1.0, not sampled --
+# there is no dedicated LambdaCDM profile class, and this is what makes wCDM_Cosmo one.
+# H0/k fixed and Om0 free follow bullseye's own cosmo Component precedent (see module
+# docstring); z_lens/z_source_ref are STRUCTURE's, not new.
+cosmo = Component(
+    wCDM_Cosmo(z_lens=_Z_LENS, z_source_ref=_Z_SOURCE_REF),
+    dict(
+        H0=70.0,
+        k=0.0,
+        w0=-1.0,
+        Om0=_UniformBij(jnp.float64(0.0), jnp.float64(1.0)),
+    ),
+    name="lambdaCDM",
+)
+
 # --------------------------------------------------------------------------------
-# Mass priors -- bare Components, unassembled, exactly as they were bare Priors.
+# Mass priors -- Components, grouped into the cluster Plane below.
 # Names match translate_old_params.STRUCTURE["lens_names"] (same profile, same
 # position) for the five that appear in that STRUCTURE.
 # --------------------------------------------------------------------------------
@@ -226,9 +292,9 @@ sersic_1 = Component(
     name="sersic_1",
 )
 source1_plane = Plane(
-    # z_source = 0.962 -- kept for reference only, same as the commented-out value in
-    # ersatz_carousel_prior.py; no cosmology is defined here, so no redshift is needed.
-    deflection_ratio=tfd.Uniform(0.5, 1),
+    # was deflection_ratio=tfd.Uniform(0.5, 1) -- superseded by cosmology + redshift
+    # (see module docstring, point 2); kept here for audit only, not used.
+    redshift=0.962,
     light=[sersic_0_0, sersic_0_1, sersic_1],
     name="source1_2",
 )
@@ -266,8 +332,8 @@ source3_sersic_1 = Component(
     name="sersic_1",
 )
 source3_plane = Plane(
-    # z_source = 1.166 -- reference only.
-    deflection_ratio=tfd.Uniform(0.5, 1),
+    # was deflection_ratio=tfd.Uniform(0.5, 1) -- superseded, see source1_plane above.
+    redshift=1.166,
     light=[source3_sersic_0, source3_sersic_1],
     name="source3",
 )
@@ -298,12 +364,9 @@ source45_sersic_1 = Component(
     ),
     name="sersic_1",
 )
-# deflection_ratio = 1 in the original (a fixed constant, not a distribution) -- a
-# Component/Plane prior value may be either, and gigalens classifies it as fixed the
-# same way it would classify a fixed float anywhere else.
 source45_plane = Plane(
-    # z_source = 1.432 -- reference only.
-    deflection_ratio=1,
+    # was deflection_ratio=1 (fixed) -- superseded, see source1_plane above.
+    redshift=1.432,
     light=[source45_sersic_0, source45_sersic_1],
     name="source4_5",
 )
@@ -322,8 +385,8 @@ source9_sersic = Component(
     name="sersic",
 )
 source9_plane = Plane(
-    # z_source = 1.506 -- reference only.
-    deflection_ratio=tfd.Uniform(0.75, 1.25),
+    # was deflection_ratio=tfd.Uniform(0.75, 1.25) -- superseded, see source1_plane above.
+    redshift=1.506,
     light=[source9_sersic],
     name="source9",
 )
@@ -342,8 +405,8 @@ source7_sersic = Component(
     name="sersic",
 )
 source7_plane = Plane(
-    # z_source = 1.627 -- reference only.
-    deflection_ratio=tfd.Uniform(1., 1.5),
+    # was deflection_ratio=tfd.Uniform(1., 1.5) -- superseded, see source1_plane above.
+    redshift=1.627,
     light=[source7_sersic],
     name="source7",
 )
@@ -362,8 +425,8 @@ source6_sersic = Component(
     name="sersic",
 )
 source6_plane = Plane(
-    # z_source = 1.656 -- reference only.
-    deflection_ratio=tfd.Uniform(1., 1.5),
+    # was deflection_ratio=tfd.Uniform(1., 1.5) -- superseded, see source1_plane above.
+    redshift=1.656,
     light=[source6_sersic],
     name="source6",
 )
@@ -395,8 +458,8 @@ source1213_sersic_1 = Component(
     name="sersic_1",
 )
 source1213_plane = Plane(
-    # z_source = 3.086 -- reference only.
-    deflection_ratio=tfd.Uniform(1, 1.5),
+    # was deflection_ratio=tfd.Uniform(1, 1.5) -- superseded, see source1_plane above.
+    redshift=3.086,
     light=[source1213_sersic_0, source1213_sersic_1],
     name="source12_13",
 )
@@ -415,8 +478,8 @@ source8_sersic = Component(
     name="sersic",
 )
 source8_plane = Plane(
-    # z_source = 3.549 -- reference only.
-    deflection_ratio=tfd.Uniform(1, 1.5),
+    # was deflection_ratio=tfd.Uniform(1, 1.5) -- superseded, see source1_plane above.
+    redshift=3.549,
     light=[source8_sersic],
     name="source8",
 )
@@ -435,8 +498,30 @@ source11_sersic = Component(
     name="sersic",
 )
 source11_plane = Plane(
-    # z_source = 4.090 -- reference only.
-    deflection_ratio=tfd.Uniform(1., 1.5),
+    # was deflection_ratio=tfd.Uniform(1., 1.5) -- superseded, see source1_plane above.
+    redshift=4.090,
     light=[source11_sersic],
     name="source11",
+)
+
+# --------------------------------------------------------------------------------
+# One assembled LensModel: the cluster mass plane (all six mass Components) plus every
+# source plane, in ascending redshift order (observer -> source, as the new API
+# requires -- already the order they were defined in above), with the LambdaCDM
+# cosmology from the top of this file.
+# --------------------------------------------------------------------------------
+cluster_plane = Plane(
+    redshift=_Z_LENS,
+    mass=[halo_model, ld_free_ellip_model, shear_model, le_free_model,
+          group_halo_free_model, upper_right_halo],
+    name="cluster",
+)
+
+model = LensModel(
+    [
+        cluster_plane,
+        source1_plane, source3_plane, source45_plane, source9_plane,
+        source7_plane, source6_plane, source1213_plane, source8_plane, source11_plane,
+    ],
+    cosmo=cosmo,
 )
