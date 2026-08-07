@@ -13,16 +13,96 @@ noise-inflation would treat the wrong disease.
 
 ## Current state
 
-DC-1 logged below; approved by Linus in conversation (2026-08-07, "go ahead with this",
-after the predictions/falsifiers were stated). Script: `experiments/undersampling_corrugation/`.
-Outputs: `$PSCRATCH/gigalens/results/undersampling_corrugation/` via `gigalens_research.paths`.
-No runs yet.
+run1 (pilot) and run2 (DC-2, definitive for now) complete; claims C-1..C-5 registered
+below, all UNCERTIFIED pending grader inspection of
+`$PSCRATCH/gigalens/results/undersampling_corrugation/run2/plots/`. Harness:
+`experiments/undersampling_corrugation/` (branch `corrugation-testbed`). Headlines:
+corrugation = cusp-power quadrature aliasing (comb at f=ss, collapses under core
+softening); A(ss) is NON-monotone pre-asymptotically (ss=4 can be worse than ss=1);
+frozen σ_render noise inflation de-biases the mode and kills teeth *inside its
+footprint* but is not a global smoother; n=8 cusps defeat ss_ref=64 certification.
+Open next steps: lensed reproduction; model-dependent σ_render(θ) variant; archive run2
+to CFS if kept.
 
 ---
 
 ## Claims register
 
-(none yet — populated after the first scan runs)
+All claims below are from **run2** (`$PSCRATCH/gigalens/results/undersampling_corrugation/run2/`,
+harness commit `acce3e3`, gigalens `linusu-dev-merge` @ 923cefd) unless noted. Producer:
+Claude (agent session, 2026-08-07). All **proposed (UNCERTIFIED)** — grader has not inspected.
+
+### C-1 — Likelihood corrugation on an unlensed Sersic is subgrid quadrature aliasing
+- **Status:** `proposed (UNCERTIFIED)`
+- **Evidence:** comb locked at f = ss cyc/pix wherever the comb dominates the spectrum
+  (f_peak/ss = 0.999–1.000 on the cuspy lanes; `plots/spectrum_*.png`); pipeline validated
+  by injection (P1c: 6.1% amplitude error, freq within a bin); amplitude ordering correct in
+  n and R_e; control relative amplitude ≤ 2×10⁻³ of the cuspiest lane at every ss;
+  **softened-core arm**: at ss ≥ 2, A collapses monotonically with r_c by 1–3 orders of
+  magnitude (e.g. ss=4: 4101 → 47 → 22 → 4.6 logL for r_c = 0, 0.25, 0.5, 1 pix), the
+  discriminating signature of cusp-power aliasing (`plots/soft_arm.png`).
+- **Doubt report:** (a) P1a's argmax criterion *failed* on low-amplitude configs — the
+  global argmax lands on 0.75–1.5 cyc/pix detrending leftovers; the spectra still show the
+  comb at f=ss as a secondary peak, so the criterion (argmax), not the mechanism, is what
+  failed — but this is a producer's reading of plots, not a passing pre-registered test.
+  (b) P1b slope = 0.90 (outside 1±0.05), dragged by the same ss=1 argmax misdetection.
+  (c) At ss=1 the soft arm is non-monotone (A rises at r_c=0.25): softening only bites when
+  r_c ≳ subpixel scale — consistent with band-limiting but NOT predicted in DC-2, which
+  wrongly pinned the criterion to ss=1.
+
+### C-2 — Pre-asymptotic aliasing: raising ss can *worsen* corrugation (STRUCTURAL)
+- **Status:** `proposed (UNCERTIFIED)` — falsifies the naive "A monotone ↓ in ss" prediction
+- **Evidence:** on reference-**certified** lanes (cert_gap < 0.03σ), A(ss) peaks interior:
+  n4_re0.5_nopsf: 814 → 2241 → 4101 → 297 logL across ss = 1,2,4,8; same shape for
+  n4_re1, n4_re3. Pre-declared as structural in DC-2 §7 and it fired.
+- **Interpretation (producer's):** the error is dominated by the subgrid cell nearest the
+  near-singular profile peak; its node-to-peak distance is a phase/resonance function of ss
+  and the fixed truth sub-pixel offset, so the pre-asymptotic amplitude is non-monotone.
+  Practical: moderate supersampling (2–4×) can make sampling *worse* on deeply
+  undersampled cusps; only ss far into the asymptotic regime helps.
+
+### C-3 — Aliasing bias = quantified "sub-pixel games"
+- **Status:** `proposed (UNCERTIFIED)`
+- **Evidence:** mode displacement up to 6.6 σ_x0 on a certified lane (n4_re0.5_nopsf,
+  ss=1) and 2.3 σ at ss=2, vs ≤ 0.06 σ for the control; displacement oscillates in sign and
+  magnitude with the truth sub-pixel phase (P6b′ passed; caveat: the two extra phase lanes
+  are reference-limited, so magnitudes there are indicative only). Corrugation within ±1σ
+  of the optimum reaches 211 logL (P6 passed) — far beyond posterior-relevant.
+
+### C-4 — Stage 2, idea #3 (frozen noise inflation): a *local* de-biaser, not a global smoother
+- **Status:** `proposed (UNCERTIFIED)` — pre-registered criterion (ii) FAILED, criterion (i) passed
+- **Evidence:** lane n4_re0.5_nopsf. Mode bias 6.6σ → 0.87σ (ss=1) and 2.26σ → 0.05σ
+  (ss=2), width cost 1.8× / 1.3× — criterion (i) pass. Global full-scan suppression only
+  1.6× / 1.0× (criterion (ii) relevance_gain 0.9/0.8 < 3 — FAIL). The stage-2 plot shows
+  why: corrugation teeth are visibly annihilated *within* the frozen σ_render map's spatial
+  footprint (|Δx| ≲ 0.7 pix) and untouched beyond it; the full-scan metric integrates
+  mostly uncovered territory (±2 pix ≫ σ_x0 ≈ 0.002–0.02 pix).
+- **Practical reading:** the fit→σ_render(MAP)→refit/sample workflow should work — the
+  posterior bulk sits deep inside the footprint — but the frozen map cannot protect
+  far-from-MAP exploration. A global version needs model-dependent inflation
+  σ_render(θ) = |m_ss(θ) − m_2ss(θ)| (≈2× render cost per likelihood call). F_pred
+  (map-derived suppression forecast) failed in both runs; withdrawn as a planning tool.
+
+### C-5 — n=8 cusps defeat supersampling as its own referee
+- **Status:** `proposed (UNCERTIFIED)`
+- **Evidence:** every n=8 lane is reference-limited even at ss_ref=64 without a PSF
+  (cert_gap 0.15–1.7σ at peak-SNR-50 scaling); softened lanes certify at ~0.004–0.01σ.
+  Supersampling alone cannot produce a trustworthy reference for such profiles —
+  singularity handling (core split / pre-filtering) is required, not more factor.
+
+### Sub-findings / harness notes
+- P3′ absolute part failed as specified: control A(ss=2)=1.55 > 0.5 over the full ±2 pix
+  span, but A_within_1σ = 0.009 ≪ 0.5 — full-span peak-to-trough is a scan-span-dependent
+  quantity and was the wrong absolute observable; the posterior-relevant control amplitude
+  is tiny. (Criterion error, recorded; relative criterion passed at all ss.)
+- P4 harness check: grad/pred ratios in [0.36, 4.96] — outside the factor-3 band on
+  sawtooth-like configs (high crest factor); expected for non-sinusoidal combs.
+- P5 (descriptive): PSF is **not** an anti-aliasing filter here — A_nopsf/A_psf straddles 1
+  (0.53–4.8): convolution happens after subgrid sampling, so committed aliasing is not
+  removed (grader's caution confirmed).
+- PSF-lane references converge far worse than no-PSF (cert_gap up to 0.66σ at ss_ref=32):
+  much of the "reference error" lives in the PSF convention path (native vs subgrid kernel
+  + fused path), corroborating the undersampling diagnostic's convention-gap finding.
 
 ---
 
