@@ -141,9 +141,12 @@ def plot_corner(
         the order given. Mutually exclusive with the filters above.
     truth : optional
         A truth point, either scene-nested
-        (``{"planes": {0: {"mass": {0: {...}}}}, "cosmo": {...}}``) or path-keyed
-        (``{"planes/0/mass/0/theta_E": ...}``). Drawn as crosshairs. Parameters
-        it doesn't define simply get no marker.
+        (``{"planes": {"lens": {"mass": {"host": {...}}}}, "cosmo": {...}}``) or
+        path-keyed (``{"planes/lens/mass/host/theta_E": ...}``). Keys are the
+        scene's — a component's name where it has one, ``str(index)`` where it does
+        not. Drawn as crosshairs. Parameters it doesn't define simply get no marker,
+        so a truth built against differently-named components silently draws nothing;
+        take the names from the file that defines the model.
     overplots : dict, optional
         Map ``{legend_label: point}`` of extra points to overplot as stars, in
         either truth form. Useful for marking a MAP point on top of HMC samples.

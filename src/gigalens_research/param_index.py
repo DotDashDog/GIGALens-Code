@@ -1,17 +1,37 @@
 """The parameter index: one record per free parameter, in the scene's own path space.
 
 Every free parameter of a scene-backed model has a *site path* — the place it
-lives in the physical model — and the scene already knows it. Paths are tuples::
+lives in the physical model — and the scene already knows it. Paths are tuples of
+**strings**, and they are the params-tree keys::
 
-    ("planes", 1, "mass", 0, "theta_E")      -> plane 1, mass component 0
-    ("planes", 1, "light", 0, "R_sersic")    -> plane 1, light component 0
-    ("planes", 1, "geometry", "redshift")    -> plane 1's geometry
-    ("cosmo", "H0")                          -> cosmology
+    ("planes", "lens", "mass", "host", "theta_E")  -> plane "lens", mass "host"
+    ("planes", "1", "light", "0", "R_sersic")      -> plane 1, light component 0
+    ("planes", "1", "geometry", "redshift")        -> plane 1's geometry
+    ("cosmo", "H0")                                -> cosmology
 
 so ``kind`` / ``plane`` / ``component`` are read off the path rather than
 re-derived. :func:`param_sites` walks ``LensModel._site_to_unique`` (the
 authoritative ``(path, unique_key, component_index)`` list) and returns one
 :class:`ParamSite` per free parameter, in a canonical order.
+
+Keys, names and indices
+-----------------------
+A plane/component segment is the scene's ``name`` when it has one and ``str(index)``
+when it does not (gigalens ``scene.py`` §names, commit ``cc5a078``). Every segment is
+a ``str`` either way — never a bare ``int`` — because a dict mixing ``int`` and ``str``
+keys cannot be flattened by JAX at all.
+
+So a path segment is an *identity*, not a position, and the two must not be confused:
+
+- :attr:`ParamSite.plane_keys` / :attr:`ParamSite.component_keys` are the raw key
+  segments — what indexes a params tree.
+- :attr:`ParamSite.planes` / :attr:`ParamSite.components` are integer **positions** in
+  ``scene.planes``. They are resolved once, at index time, because a
+  :class:`ParamSite` outlives the scene that could resolve them.
+
+Both are selectable: ``select_sites(plane=1)`` and ``select_sites(plane="lens")`` are
+equally valid. Positions are what ordering uses — sorting on the key text would put
+plane ``"10"`` before ``"2"`` and would shuffle panels whenever a plane is renamed.
 
 Why this module exists
 ----------------------
@@ -170,7 +190,7 @@ class ParamSite:
     ----------
     ukey : str
         The scene's unique key for this parameter — the key into a bijector
-        output dict (``planes/0/mass/0/theta_E``, ``shared_7``, ``coupled_3``,
+        output dict (``planes/lens/mass/host/theta_E``, ``shared_7``, ``coupled_3``,
         or a pipe-joined grouped-prior key).
     cidx : int or None
         Which component of a grouped / coupled prior's vector value this is
@@ -180,9 +200,9 @@ class ParamSite:
         One of :data:`KINDS`.
     param : str
         Bare parameter name, e.g. ``theta_E``.
-    paths : tuple of tuple
-        Every scene site this free parameter feeds. Length > 1 exactly when it
-        is a ``shared()`` parameter.
+    paths : tuple of tuple of str
+        Every scene site this free parameter feeds, as all-string path tuples.
+        Length > 1 exactly when it is a ``shared()`` parameter.
     key : str
         Canonical stable identity: the primary site path, slash-joined.
     plane_tags : tuple of (int, str)
@@ -195,6 +215,14 @@ class ParamSite:
         when the scene names it. The role letter survives naming because Component
         names are unique only per *(plane, kind)*: a plane may hold a mass ``host``
         AND a light ``host``, and only the letter tells those apart.
+    plane_keys : tuple of str
+        The raw params-tree key of every plane this parameter acts on — the name when
+        named, ``str(index)`` when not. What indexes a params dict, as against
+        :attr:`planes`, which is the position in ``scene.planes``.
+    component_keys : tuple of (str, str)
+        ``(role, raw key)`` for every component this parameter acts on. Carries the
+        role for the same reason :attr:`comp_tags` does: names are unique only per
+        *(plane, kind)*, so ``host`` alone does not identify a component.
     group_name : str or None
         Display name of the ``shared()`` / ``coupled()`` handle behind this column,
         when it has one. A shared parameter spans several sites, so it has no single
@@ -207,10 +235,12 @@ class ParamSite:
     param: str
     paths: Tuple[tuple, ...]
     key: str
-    # Naming is additive and optional: a scene built before names, or by a caller who
-    # never passes them, indexes exactly as it did before.
+    # Positions and display tags are resolved against the scene at index time; a
+    # ParamSite outlives the scene, so they cannot be recovered from the path later.
     plane_tags: Tuple[Tuple[int, str], ...] = ()
     comp_tags: Tuple[Tuple[str, int, str], ...] = ()
+    plane_keys: Tuple[str, ...] = ()
+    component_keys: Tuple[Tuple[str, str], ...] = ()
     group_name: Optional[str] = None
 
     @property
@@ -220,14 +250,17 @@ class ParamSite:
 
     @property
     def planes(self) -> FrozenSet[int]:
-        """Every plane this parameter acts on (empty for cosmology)."""
-        return frozenset(
-            p[1] for p in self.paths if p and p[0] == "planes" and isinstance(p[1], int)
-        )
+        """Every plane INDEX this parameter acts on (empty for cosmology).
+
+        Read from :attr:`plane_tags` rather than from the path: a path segment is a
+        key (a name, or ``str(index)``), and only the scene could say which position
+        a name sits at — by the time anyone asks, it is gone.
+        """
+        return frozenset(i for i, _tag in self.plane_tags)
 
     @property
     def plane(self) -> Optional[int]:
-        """The plane, when unambiguous; ``None`` for cosmology or for a shared
+        """The plane index, when unambiguous; ``None`` for cosmology or for a shared
         parameter spanning several planes (see :attr:`planes`)."""
         pl = self.planes
         return next(iter(pl)) if len(pl) == 1 else None
@@ -236,11 +269,7 @@ class ParamSite:
     def components(self) -> FrozenSet[Tuple[str, int]]:
         """Every ``(role, index)`` component this parameter acts on, where role
         is ``"mass"`` or ``"light"``. Empty for cosmology and geometry."""
-        return frozenset(
-            (p[2], p[3])
-            for p in self.paths
-            if len(p) == 5 and p[0] == "planes" and p[2] in (KIND_MASS, KIND_LIGHT)
-        )
+        return frozenset((role, j) for role, j, _tag in self.comp_tags)
 
     @property
     def component(self) -> Optional[int]:
@@ -254,12 +283,26 @@ class ParamSite:
 # ---------------------------------------------------------------------------
 
 
+def _plane_name(scene: Any, i: int) -> Optional[str]:
+    """Plane ``i``'s scene name, or ``None``."""
+    try:
+        return getattr(scene.planes[i], "name", None) or None
+    except (AttributeError, IndexError, TypeError):
+        return None
+
+
+def _comp_name(scene: Any, i: int, role: str, j: int) -> Optional[str]:
+    """Component ``j``'s scene name within plane ``i``'s ``role`` list, or ``None``."""
+    try:
+        comps = scene.planes[i].mass if role == KIND_MASS else scene.planes[i].light
+        return getattr(comps[j], "name", None) or None
+    except (AttributeError, IndexError, TypeError):
+        return None
+
+
 def _plane_tag(scene: Any, i: int) -> str:
     """A plane's display tag: its name, else its index (§names)."""
-    try:
-        name = getattr(scene.planes[i], "name", None)
-    except (AttributeError, IndexError, TypeError):
-        name = None
+    name = _plane_name(scene, i)
     return name if name else str(i)
 
 
@@ -270,13 +313,59 @@ def _comp_tag(scene: Any, i: int, role: str, j: int) -> str:
     *(plane, kind)*, so a mass ``host`` and a light ``host`` — one galaxy's two
     aspects — are distinguished by the letter alone.
     """
-    name = None
-    try:
-        comps = scene.planes[i].mass if role == KIND_MASS else scene.planes[i].light
-        name = getattr(comps[j], "name", None)
-    except (AttributeError, IndexError, TypeError):
-        name = None
+    name = _comp_name(scene, i, role, j)
     return f"{role[0]}:{name}" if name else f"{role[0]}{j}"
+
+
+# -- params-tree keys ---------------------------------------------------------------
+# The scene owns this mapping (``LensModel.plane_key`` / ``component_key``), so ask it
+# rather than re-deriving. The fallback is ``str(index)``, NOT the name: a scene old
+# enough to lack these accessors also predates names in keys, and keyed its paths
+# positionally. Guessing the name there would build a lookup table that matches no
+# path the scene actually emits.
+
+
+def _plane_key(scene: Any, i: int) -> str:
+    """Plane ``i``'s params-tree key."""
+    fn = getattr(scene, "plane_key", None)
+    if fn is not None:
+        return str(fn(i))
+    return str(i)
+
+
+def _component_key(scene: Any, i: int, role: str, j: int) -> str:
+    """Component ``j``'s params-tree key within plane ``i``'s ``role`` list."""
+    fn = getattr(scene, "component_key", None)
+    if fn is not None:
+        return str(fn(i, role, j))
+    return str(j)
+
+
+def _index_maps(scene: Any) -> Tuple[Dict[str, int], Dict[Tuple[str, str, str], int]]:
+    """``(plane key -> index, (plane key, role, component key) -> index)``.
+
+    The inverse of the scene's own key derivation, built once per index so that every
+    site path can be resolved back to the positions ordering and selection need.
+    """
+    planes: Dict[str, int] = {}
+    comps: Dict[Tuple[str, str, str], int] = {}
+    for i, plane in enumerate(getattr(scene, "planes", ()) or ()):
+        pk = _plane_key(scene, i)
+        planes[pk] = i
+        for role in (KIND_MASS, KIND_LIGHT):
+            for j, _c in enumerate(getattr(plane, role, ()) or ()):
+                comps[(pk, role, _component_key(scene, i, role, j))] = j
+    return planes, comps
+
+
+def _as_path(path: Any) -> tuple:
+    """Normalize a scene site path to an all-``str`` tuple.
+
+    Scenes predating ``cc5a078`` emitted positional ``int`` segments; normalizing here
+    means the rest of this module has exactly one path space to reason about, and
+    ``path_of_key`` stays an exact inverse of :attr:`ParamSite.key` in both eras.
+    """
+    return tuple(str(seg) for seg in path)
 
 
 def _group_name(scene: Any, ukey: str) -> Optional[str]:
@@ -305,10 +394,15 @@ def _classify(path: tuple) -> Optional[Tuple[str, str]]:
 
 
 def path_of_key(key: str) -> tuple:
-    """The site path behind a slash-joined key: the inverse of
-    :attr:`ParamSite.key`. Numeric segments become ints, so the result compares
-    equal to the scene's own path tuples."""
-    return tuple(int(s) if s.isdigit() else s for s in key.split("/"))
+    """The site path behind a slash-joined key: the exact inverse of
+    :attr:`ParamSite.key`.
+
+    Every segment stays a ``str``. An all-digit segment is a positional key, not an
+    ``int`` to be recovered: params-tree keys are always strings (a dict mixing
+    ``int`` and ``str`` keys cannot be flattened by JAX), and ``int("0") == 0`` would
+    produce a tuple that indexes no params tree and compares equal to no scene path.
+    """
+    return tuple(key.split("/"))
 
 
 def kind_of_key(key: str) -> Optional[str]:
@@ -365,6 +459,7 @@ def param_sites(source: Any) -> List[ParamSite]:
     parameters and never appear.
     """
     scene = _scene_of(source)
+    plane_at, comp_at = _index_maps(scene)
 
     grouped: Dict[Tuple[str, Optional[int]], List[tuple]] = {}
     order: List[Tuple[str, Optional[int]]] = []
@@ -377,7 +472,7 @@ def param_sites(source: Any) -> List[ParamSite]:
         if ident not in grouped:
             grouped[ident] = []
             order.append(ident)
-        grouped[ident].append(tuple(path))
+        grouped[ident].append(_as_path(path))
 
     sites: List[ParamSite] = []
     for ukey, cidx in order:
@@ -386,14 +481,28 @@ def param_sites(source: Any) -> List[ParamSite]:
         if spec is None:
             continue
         kind, param = spec
+        # A path whose plane/component key is absent from the scene's own key maps is
+        # dropped from the tags rather than guessed at. That is unreachable for a
+        # scene that built these paths, and a silent wrong index would be worse than a
+        # missing one: it would put a parameter on the wrong panel.
+        plane_keys = tuple(sorted({
+            p[1] for p in paths if p and p[0] == "planes"
+        }))
         plane_tags = tuple(sorted({
-            (p[1], _plane_tag(scene, p[1]))
-            for p in paths if p and p[0] == "planes" and isinstance(p[1], int)
+            (plane_at[p[1]], _plane_tag(scene, plane_at[p[1]]))
+            for p in paths if p and p[0] == "planes" and p[1] in plane_at
+        }))
+        component_keys = tuple(sorted({
+            (p[2], p[3]) for p in paths
+            if len(p) == 5 and p[0] == "planes" and p[2] in (KIND_MASS, KIND_LIGHT)
         }))
         comp_tags = tuple(sorted({
-            (p[2], p[3], _comp_tag(scene, p[1], p[2], p[3]))
+            (p[2],
+             comp_at[(p[1], p[2], p[3])],
+             _comp_tag(scene, plane_at[p[1]], p[2], comp_at[(p[1], p[2], p[3])]))
             for p in paths
             if len(p) == 5 and p[0] == "planes" and p[2] in (KIND_MASS, KIND_LIGHT)
+            and p[1] in plane_at and (p[1], p[2], p[3]) in comp_at
         }))
         sites.append(
             ParamSite(
@@ -402,9 +511,11 @@ def param_sites(source: Any) -> List[ParamSite]:
                 kind=kind,
                 param=param,
                 paths=paths,
-                key="/".join(map(str, paths[0])),
+                key="/".join(paths[0]),
                 plane_tags=plane_tags,
                 comp_tags=comp_tags,
+                plane_keys=plane_keys,
+                component_keys=component_keys,
                 group_name=_group_name(scene, ukey),
             )
         )
@@ -435,17 +546,14 @@ def _suffix(site: ParamSite) -> str:
     """
     parts: List[str] = []
     if site.plane_tags:
+        # Sorted by plane INDEX, not by tag text, so renaming a plane cannot reorder a
+        # shared parameter's "0+1" tag.
         parts.append("+".join(tag for _i, tag in sorted(site.plane_tags)))
-    elif site.planes:  # scene predating plane_tags
-        parts.append("+".join(str(p) for p in sorted(site.planes)))
     if site.comp_tags:
         # Sort by (index, role) exactly as before, so an unnamed model's tags are
         # byte-for-byte unchanged; only the rendered tag substitutes a name.
         comps = sorted(site.comp_tags, key=lambda t: (t[1], t[0]))
         parts.append("+".join(tag for _r, _i, tag in comps))
-    elif site.components:
-        comps = sorted(site.components, key=lambda rc: (rc[1], rc[0]))
-        parts.append("+".join(f"{role[0]}{idx}" for role, idx in comps))
     return ",".join(parts)
 
 
@@ -513,13 +621,29 @@ def _as_set(value: Any) -> frozenset:
     return frozenset([value])
 
 
-def _normalize_planes(plane: Any) -> frozenset:
-    out = set()
+def _normalize_planes(plane: Any) -> Tuple[frozenset, frozenset]:
+    """Split a ``plane=`` selection into integer indices and string keys.
+
+    Both are accepted because both are meaningful: ``plane=1`` is the second plane
+    whatever it is called, ``plane="lens"`` is that particular object wherever it sits.
+    An all-digit *string* is treated as a key, not an index — the scene rejects
+    all-digit names precisely so that ``"0"`` can only ever be the positional key of
+    plane 0, which makes the two readings agree there anyway.
+    """
+    idxs, keys = set(), set()
     for p in _as_set(plane):
-        if isinstance(p, bool) or not isinstance(p, (int, np.integer)):
-            raise TypeError(f"plane must be an int or list of ints; got {p!r}.")
-        out.add(int(p))
-    return frozenset(out)
+        if isinstance(p, bool):
+            raise TypeError(f"plane must be an int or a name; got {p!r}.")
+        if isinstance(p, (int, np.integer)):
+            idxs.add(int(p))
+        elif isinstance(p, str):
+            keys.add(p)
+        else:
+            raise TypeError(
+                f"plane must be an int (index), a str (name), or a list of those; "
+                f"got {p!r}."
+            )
+    return frozenset(idxs), frozenset(keys)
 
 
 def _normalize_kinds(kind: Any) -> frozenset:
@@ -537,33 +661,48 @@ def _normalize_kinds(kind: Any) -> frozenset:
     return frozenset(out)
 
 
-def _normalize_components(component: Any) -> Tuple[frozenset, frozenset]:
-    """Split a ``component=`` selection into bare indices and ``(role, index)``
-    pairs. Accepts ``0``, ``[0, 1]``, ``("mass", 0)``, or a list mixing them."""
+def _normalize_components(
+    component: Any,
+) -> Tuple[frozenset, frozenset, frozenset, frozenset]:
+    """Split a ``component=`` selection into four buckets.
+
+    ``(bare indices, (role, index) pairs, bare names, (role, name) pairs)``. Accepts
+    ``0``, ``[0, 1]``, ``("mass", 0)``, ``"host"``, ``("light", "host")``, or a list
+    mixing them — a name is as valid an identifier as an index, and the role-pair form
+    matters more for names than for indices, since ``host`` may well be both a mass
+    and a light.
+    """
     if _is_role_pair(component):
         raw = [component]  # a lone ("mass", 0) is one pair, not two selections
     elif isinstance(component, (list, tuple)):
         raw = list(component)
     else:
         raw = [component]
-    idxs, pairs = set(), set()
+    idxs, pairs, names, name_pairs = set(), set(), set(), set()
     for item in raw:
         if _is_role_pair(item):
-            role, idx = item
+            role, ident = item
             role = role.lower()
             if role not in (KIND_MASS, KIND_LIGHT):
                 raise ValueError(
-                    f"component role must be 'mass' or 'light'; got {role!r}."
+                    f"component role must be 'mass' or 'light'; got {role!r}. (A "
+                    f"2-tuple is read as a (role, component) pair — to select several "
+                    f"components by name, pass a list: component=['a', 'b'].)"
                 )
-            pairs.add((role, int(idx)))
+            if isinstance(ident, str):
+                name_pairs.add((role, ident))
+            else:
+                pairs.add((role, int(ident)))
         elif isinstance(item, (int, np.integer)) and not isinstance(item, bool):
             idxs.add(int(item))
+        elif isinstance(item, str):
+            names.add(item)
         else:
             raise TypeError(
-                f"component must be an int, a (role, index) pair, or a list of "
-                f"those; got {item!r}."
+                f"component must be an int (index), a str (name), a (role, index) or "
+                f"(role, name) pair, or a list of those; got {item!r}."
             )
-    return frozenset(idxs), frozenset(pairs)
+    return frozenset(idxs), frozenset(pairs), frozenset(names), frozenset(name_pairs)
 
 
 def _is_role_pair(item: Any) -> bool:
@@ -571,7 +710,8 @@ def _is_role_pair(item: Any) -> bool:
         isinstance(item, tuple)
         and len(item) == 2
         and isinstance(item[0], str)
-        and isinstance(item[1], (int, np.integer))
+        and isinstance(item[1], (int, np.integer, str))
+        and not isinstance(item[1], bool)
     )
 
 
@@ -590,12 +730,14 @@ def select_sites(
     ----------
     kind : str or list of str, optional
         One or more of :data:`KINDS` (``"cosmo"`` and ``"geom"`` also accepted).
-    plane : int or list of int, optional
-        Plane index. A shared parameter matches if *any* of its sites is on a
-        named plane.
-    component : int, (role, index), or list, optional
-        Component index within its ``(plane, role)``. Pass ``("mass", 0)`` to
-        pin the role, or combine a bare index with ``kind=``/``plane=``.
+    plane : int, str, or list, optional
+        Plane index (``1``) or scene name / params-tree key (``"lens"``). A shared
+        parameter matches if *any* of its sites is on a selected plane.
+    component : int, str, (role, index), (role, name), or list, optional
+        Component index or name within its ``(plane, role)``. Pass ``("mass", 0)`` or
+        ``("light", "host")`` to pin the role, or combine a bare index/name with
+        ``kind=``/``plane=``. Pinning the role matters for names: one galaxy's mass
+        and light may both be called ``host``.
     select : callable, optional
         Escape hatch: a predicate on :class:`ParamSite` for anything the keyword
         filters don't express, e.g. ``select=lambda s: s.param.startswith("e")``.
@@ -611,14 +753,20 @@ def select_sites(
         wanted = _normalize_kinds(kind)
         out = [s for s in out if s.kind in wanted]
     if plane is not None:
-        wanted_planes = _normalize_planes(plane)
-        out = [s for s in out if s.planes & wanted_planes]
+        wanted_idxs, wanted_keys = _normalize_planes(plane)
+        out = [
+            s for s in out
+            if (s.planes & wanted_idxs) or (frozenset(s.plane_keys) & wanted_keys)
+        ]
     if component is not None:
-        idxs, pairs = _normalize_components(component)
+        idxs, pairs, names, name_pairs = _normalize_components(component)
         out = [
             s
             for s in out
-            if ({i for _r, i in s.components} & idxs) or (s.components & pairs)
+            if ({i for _r, i in s.components} & idxs)
+            or (s.components & pairs)
+            or ({n for _r, n in s.component_keys} & names)
+            or (frozenset(s.component_keys) & name_pairs)
         ]
     if select is not None:
         out = [s for s in out if select(s)]
@@ -635,10 +783,15 @@ def select_sites(
 
 def _available(sites: Sequence[ParamSite]) -> str:
     kinds = sorted({s.kind for s in sites}, key=lambda k: _KIND_ORDER.get(k, 99))
-    planes = sorted({p for s in sites for p in s.planes})
+    # Report each plane as index and key together: a name-based selection that missed
+    # is otherwise undiagnosable from a list of bare indices.
+    planes = sorted({(i, tag) for s in sites for i, tag in s.plane_tags})
+    shown = [i if str(i) == tag else f"{i} ({tag!r})" for i, tag in planes]
+    comps = sorted({n for s in sites for _r, n in s.component_keys if not n.isdigit()})
     return (
-        f"This model has kind={kinds} and plane={planes}; "
-        f"{len(sites)} free parameters in total."
+        f"This model has kind={kinds} and plane=[{', '.join(map(str, shown))}]"
+        + (f"; named components {comps}" if comps else "")
+        + f"; {len(sites)} free parameters in total."
     )
 
 
@@ -677,21 +830,40 @@ _LEGACY_GROUP_KEYS = {"lens_mass", "lens_light", "source_light"}
 
 
 def _nested_get(truth: Any, path: tuple) -> Any:
-    """Walk a scene-nested truth by site path, tolerating int-vs-str keys and
-    list-indexed planes/components. Returns ``None`` if absent."""
+    """Walk a scene-nested truth by site path. Returns ``None`` if absent.
+
+    Path segments are strings, but a truth may have been written against an older
+    scene (``{"planes": {0: ...}}``), hand-built with ``int`` keys, or stored as
+    lists. All three are accepted: a truth is data the user brings, often persisted
+    long before the model was rebuilt, so being liberal here costs nothing and saves
+    a re-derivation.
+
+    Names are *not* resolved to positions. A truth keyed ``{"lens": ...}`` joins a
+    model whose plane is named ``lens``; against a model where that plane is unnamed
+    the lookup simply misses, and :func:`truth_row` fills ``NaN`` and warns. That is
+    the intended behaviour — silently pairing a truth's ``lens`` with position 0
+    would be a guess, and the whole point of naming is that position and identity
+    are different claims.
+    """
     node = truth
     for seg in path:
         if isinstance(node, dict):
             if seg in node:
                 node = node[seg]
-            elif str(seg) in node:
-                node = node[str(seg)]
-            else:
+                continue
+            # A str path segment against an int-keyed truth, or vice versa.
+            alt = int(seg) if isinstance(seg, str) and seg.isdigit() else str(seg)
+            if alt in node:
+                node = node[alt]
+                continue
+            return None
+        elif isinstance(node, (list, tuple)):
+            if not (isinstance(seg, str) and seg.isdigit()):
                 return None
-        elif isinstance(node, (list, tuple)) and isinstance(seg, int):
-            if seg >= len(node):
+            idx = int(seg)
+            if idx >= len(node):
                 return None
-            node = node[seg]
+            node = node[idx]
         else:
             return None
     return node
@@ -701,9 +873,13 @@ def _truth_getter(truth: Any) -> Callable[[ParamSite], Any]:
     """Resolve a truth into a per-site lookup.
 
     Accepts the two forms the scene API actually produces: a scene-nested point
-    (``{"planes": {0: {"mass": {0: {...}}}}, "cosmo": {...}}``) or a flat
-    path-keyed dict (``{"planes/0/mass/0/theta_E": ..., "cosmo/H0": ...}``,
+    (``{"planes": {"lens": {"mass": {"host": {...}}}}, "cosmo": {...}}``) or a flat
+    path-keyed dict (``{"planes/lens/mass/host/theta_E": ..., "cosmo/H0": ...}``,
     the idiom gigalens' own tests use).
+
+    A truth built against a *renamed* model joins by name and so simply misses, which
+    :func:`truth_row` reports as a warning rather than silently mispairing. Take the
+    names from the file that defines the model.
     """
     if not isinstance(truth, dict):
         raise TypeError(
@@ -715,7 +891,7 @@ def _truth_getter(truth: Any) -> Callable[[ParamSite], Any]:
             "this truth is in the retired 3-group label space "
             "({'lens_mass': ..., 'lens_light': ..., 'source_light': ...}). Corner "
             "plots now work in the scene's path space: pass the scene-nested "
-            "truth ({'planes': {0: {'mass': {0: {...}}}}, 'cosmo': {...}}) or a "
+            "truth ({'planes': {'0': {'mass': {'0': {...}}}}, 'cosmo': {...}}) or a "
             "path-keyed dict ({'planes/0/mass/0/theta_E': ...}) instead. The "
             "3-group form could not say which plane a parameter was on."
         )

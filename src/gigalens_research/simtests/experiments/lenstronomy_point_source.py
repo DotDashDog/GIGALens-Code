@@ -335,18 +335,24 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
         # Offset-mode truth: the likelihood's centroid is the mean of the NOISY
         # observed positions delensed under the (truth) mass, with the gigalens
         # EPL quadrature the fit uses.
-        mp_t = {0: {k: jnp.asarray(v) for k, v in epl_t.items()},
-                1: {k: jnp.asarray(v) for k, v in shr_t.items()}}
+        # A LIST, matching how ``_total_deflection`` indexes it — see
+        # :func:`gigalens_research.inference_utils.params.mass_params_list`.
+        mp_t = [{k: jnp.asarray(v) for k, v in epl_t.items()},
+                {k: jnp.asarray(v) for k, v in shr_t.items()}]
         axd, ayd = _total_deflection([epl_prof, shear_prof], mp_t,
                                      jnp.asarray(x_obs), jnp.asarray(y_obs))
         dx_t = sx - float(jnp.mean(jnp.asarray(x_obs) - axd))
         dy_t = sy - float(jnp.mean(jnp.asarray(y_obs) - ayd))
 
+        # String keys, matching the scene's own params-tree keys: these planes and
+        # components are unnamed, so their keys are ``str(index)``. (JSON round-trips
+        # int keys to strings anyway, so this is also what a reloaded truth looked
+        # like all along.)
         truth_x = {
             "planes": {
-                0: {"mass": {0: dict(epl_t), 1: dict(shr_t)}},
-                1: {"light": {0: {"center_x": sx, "center_y": sy,
-                                  "dx": dx_t, "dy": dy_t, "amp": amp_t}}},
+                "0": {"mass": {"0": dict(epl_t), "1": dict(shr_t)}},
+                "1": {"light": {"0": {"center_x": sx, "center_y": sy,
+                                      "dx": dx_t, "dy": dy_t, "amp": amp_t}}},
             },
             "cosmo": {"H0": H0_t},
         }
@@ -696,13 +702,12 @@ def _truth_unique(scene: Any, truth: Dict[str, Any]) -> Optional[Dict[str, Any]]
     Returns None if the truth is silent on any sampled parameter (the log-lik
     rank is then undefined for this run).
     """
-    from gigalens_research.param_index import _nested_get
+    from gigalens_research.param_index import _nested_get, path_of_key
     import jax.numpy as jnp
 
     unique: Dict[str, Any] = {}
     for name in scene.z_param_names:
-        path = tuple(int(seg) if seg.isdigit() else seg for seg in name.split("/"))
-        v = _nested_get(truth, path)
+        v = _nested_get(truth, path_of_key(name))
         if v is None:
             return None
         unique[name] = jnp.asarray(float(np.squeeze(np.asarray(v))))
@@ -768,6 +773,8 @@ def ps_solver_health(posterior: Any, system: Any) -> Dict[str, float]:
         import jax.numpy as jnp
         from gigalens.jax.point_source_position import _delens_and_jacobian
 
+        from gigalens_research.inference_utils.params import mass_params_list
+
         term = terms[0]
         model = prob.model
         event_size = float(term.event_size)
@@ -776,7 +783,10 @@ def ps_solver_health(posterior: Any, system: Any) -> Dict[str, float]:
         def diag(z):
             params = model.to_params(prob.bij.forward(z))
             tx, ty, bsx, bsy = term.solve(params)
-            mp = params["planes"][term.lens_i]["mass"]
+            # An ordered list, not the ``["mass"]`` dict: the helper pairs
+            # ``mass_params[j]`` with ``mass_profiles[j]`` positionally.
+            mp = mass_params_list(model, params, term.lens_i,
+                                  len(term.mass_profiles))
             (bx, by), _ = _delens_and_jacobian(term.mass_profiles, mp, tx, ty)
             src_res = jnp.max(jnp.hypot(bx - bsx, by - bsy), axis=0)
             _, chi2 = term.log_like(params)
