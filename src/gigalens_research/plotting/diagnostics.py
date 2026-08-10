@@ -89,6 +89,136 @@ def _tuning_boundaries(config: Dict) -> Tuple[int, int, int]:
     return int(f1 * nb), int((f1 + f2) * nb), int((f1 + f2 + f3) * nb)
 
 
+# ---------------------------------------------------------------------------
+# Inverse mass matrix history (shared by MCLMC and MAMS)
+# ---------------------------------------------------------------------------
+# gigalens used to emit one dense metric per chain per step. It now emits a COMPACT
+# history -- the starting metric plus the one installed at each window boundary -- with
+# `inverse_mass_matrix_steps` giving the step each row became active at. The metric only
+# ever changed at those boundaries, so the per-step array was the same matrix repeated
+# thousands of times: O(total_steps * dim^2) on disk for O(n_windows * dim^2) of content.
+#
+# Both layouts are read here. Runs saved before the change are still on disk and are
+# still worth plotting, and the compact form is a strict subset of what the dense form
+# said, so one renderer serves both.
+
+
+def _mass_matrix_history(arr: Dict) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    """``(matrices, steps)`` for the inverse-mass-matrix history, or ``None``.
+
+    ``matrices`` is ``(n_records, dim, dim)`` and ``steps`` is the ``(n_records,)``
+    step index at which each became the active metric. ``matrices[-1]`` is the final
+    metric — the one carried into sampling — under either layout.
+
+    Layout is read off the rank, which separates the two cleanly:
+
+    - **3-D** ``(n_records, dim, dim)`` — the compact history. Replicated across
+      chains, so there is no chain axis to index.
+    - **4-D** ``(n_chains, n_steps, dim, dim)`` — the legacy dense history. Chain 0 is
+      taken; the metric was replicated across chains then too (and the pipeline only
+      ever saved chain 0).
+    """
+    if "inverse_mass_matrix" not in arr:
+        return None
+    imm = np.asarray(arr["inverse_mass_matrix"])
+    if imm.ndim == 4:                                   # legacy dense, per chain/step
+        mats = imm[0]
+        steps = np.asarray(arr.get("inverse_mass_matrix_steps",
+                                   np.arange(mats.shape[0])))
+    elif imm.ndim == 3:                                 # compact window history
+        mats = imm
+        if "inverse_mass_matrix_steps" not in arr:
+            # Without the step index the rows cannot be placed on the shared step axis.
+            # Report only the final metric rather than guess: drawing 6 window updates
+            # against step 0..5 of a 20,000-step run would read as "the metric froze
+            # immediately", which is both wrong and plausible-looking.
+            return mats[-1:], None
+        steps = np.asarray(arr["inverse_mass_matrix_steps"])
+    else:
+        raise ValueError(
+            f"inverse_mass_matrix has rank {imm.ndim}; expected 3 "
+            "(n_records, dim, dim) for the compact window history or 4 "
+            "(n_chains, n_steps, dim, dim) for the legacy per-step history."
+        )
+    return mats, np.asarray(steps)
+
+
+def _total_steps(arr: Dict) -> Optional[int]:
+    """Length of the run in steps, read off any per-step trace.
+
+    Needed to extend the last metric's segment to the end of the run: the final window
+    stays active through all of sampling, and a step plot that stopped at the last
+    update would imply the preconditioner simply ended there.
+    """
+    for key in ("step_size", "L", "nonan", "xi", "acceptance_rate"):
+        if key in arr:
+            a = np.asarray(arr[key])
+            if a.ndim >= 2:
+                return int(a.shape[1])
+    return None
+
+
+def _plot_mass_matrix_panel(ax, arr: Dict) -> None:
+    """Eigenvalue spread (min/mean/max) of the inverse mass matrix, vs step.
+
+    Drawn as a step function because that is what the quantity is: the metric is
+    piecewise-constant in step, rewritten only at a window boundary. Markers sit at the
+    updates themselves, so the handful of points that actually exist are visible rather
+    than implied by a line through them.
+
+    The final draws' covariance eigenvalue spread is overlaid as horizontal dashed
+    lines. The inverse mass matrix targets that covariance, so the traces should settle
+    toward those levels — the single most useful read on this panel.
+    """
+    hist = _mass_matrix_history(arr)
+    if hist is not None:
+        mats, steps = hist
+        eig = np.linalg.eigvalsh(mats)                  # (n_records, dim), ascending
+        series = (
+            (eig.min(axis=1), "min", "tab:blue"),
+            (eig.mean(axis=1), "mean", "black"),
+            (eig.max(axis=1), "max", "tab:red"),
+        )
+        if steps is None:
+            # Positions unknown (see _mass_matrix_history): show the final metric's
+            # levels only, and say so, rather than place them at invented steps.
+            for vals, label, color in series:
+                ax.axhline(float(vals[-1]), color=color, linestyle="-", linewidth=1.2,
+                           label=f"final {label}")
+            ax.set_title("Inverse mass-matrix eigenvalues "
+                         "(final only — update steps not recorded)")
+        else:
+            x = np.asarray(steps, dtype=float)
+            end = _total_steps(arr)
+            if end is not None and x.size and end > x[-1]:
+                # Extend the last window through the sampling phase.
+                x = np.append(x, float(end - 1))
+            for vals, label, color in series:
+                y = np.asarray(vals, dtype=float)
+                if y.size < x.size:
+                    y = np.append(y, y[-1])
+                ax.plot(x, y, color=color, label=label, drawstyle="steps-post")
+                # One marker per real update; skip when the legacy dense layout makes
+                # that one marker per step.
+                if len(steps) <= 32:
+                    ax.plot(steps, vals, linestyle="none", marker="o", markersize=3,
+                            color=color)
+            ax.set_title("Inverse mass-matrix eigenvalues")
+        ax.set_yscale("log")
+        if "samples_cov" in arr:
+            cov_eig = np.linalg.eigvalsh(np.asarray(arr["samples_cov"]))
+            for val, color, lbl in (
+                (cov_eig.min(), "tab:blue", "sample cov min"),
+                (cov_eig.mean(), "black", "sample cov mean"),
+                (cov_eig.max(), "tab:red", "sample cov max"),
+            ):
+                ax.axhline(val, color=color, linestyle="--", linewidth=1, label=lbl)
+        ax.legend(fontsize=8, ncol=2)
+    else:
+        ax.set_title("Inverse mass-matrix eigenvalues")
+    ax.set_ylabel("eigenvalue")
+
+
 @register_diagnostic_plotter("MCLMCStage")
 def plot_mclmc_diagnostics(
     diagnostics,
@@ -101,11 +231,14 @@ def plot_mclmc_diagnostics(
 
     1. per-chain step size,
     2. per-chain trajectory length ``L``,
-    3. inverse-mass-matrix eigenvalue spread (min/mean/max, log y), with the
-       final output samples' covariance eigenvalue spread overlaid as horizontal
-       dashed lines (min/mean/max),
+    3. inverse-mass-matrix eigenvalue spread (min/mean/max, log y) as a step
+       function over the adaptation windows, with the final output samples'
+       covariance eigenvalue spread overlaid as horizontal dashed lines,
     4. the per-step energy-error ratio ``xi`` for one chain (raw + smoothed),
     5. a success heatmap (green = finite step, red = NaN/blow-up).
+
+    Panel 3 is a step function, not a trace: the metric is rewritten only at a window
+    boundary and is constant in between, and markers sit on the updates themselves.
 
     Vertical dashed lines mark the boundaries of MCLMC's three tuning stages
     (step size, mass matrix, ``L``); anything after the last line is sampling.
@@ -132,30 +265,8 @@ def plot_mclmc_diagnostics(
     ax_L.set_title("Chain-wise L")
     ax_L.set_ylabel("L")
 
-    # 3. inverse-mass-matrix eigenvalues (stored chain-0 only; replicated)
-    if "inverse_mass_matrix" in arr:
-        imm = np.asarray(arr["inverse_mass_matrix"])[0]  # (n_steps, dim, dim)
-        # Symmetric PD covariance -> use eigvalsh (real, ascending).
-        eig = np.linalg.eigvalsh(imm)  # (n_steps, dim)
-        ax_eig.plot(eig.min(axis=1), label="min", color="tab:blue")
-        ax_eig.plot(eig.mean(axis=1), label="mean", color="black")
-        ax_eig.plot(eig.max(axis=1), label="max", color="tab:red")
-        ax_eig.set_yscale("log")
-        # Overlay the eigenvalue spread of the final output samples' covariance
-        # as horizontal dashed lines (min/mean/max), matching the trace colors.
-        # The inverse mass matrix targets this posterior covariance, so the
-        # traces above should settle toward these levels.
-        if "samples_cov" in arr:
-            cov_eig = np.linalg.eigvalsh(np.asarray(arr["samples_cov"]))
-            for val, color, lbl in (
-                (cov_eig.min(), "tab:blue", "sample cov min"),
-                (cov_eig.mean(), "black", "sample cov mean"),
-                (cov_eig.max(), "tab:red", "sample cov max"),
-            ):
-                ax_eig.axhline(val, color=color, linestyle="--", linewidth=1, label=lbl)
-        ax_eig.legend(fontsize=8)
-    ax_eig.set_title("Inverse mass-matrix eigenvalues")
-    ax_eig.set_ylabel("eigenvalue")
+    # 3. inverse-mass-matrix eigenvalues, as a step function over the window updates
+    _plot_mass_matrix_panel(ax_eig, arr)
 
     # 4. xi (energy-error ratio) for one chain, raw + smoothed
     if "xi" in arr:
@@ -209,9 +320,9 @@ def plot_mams_diagnostics(
 
     1. per-chain step size,
     2. per-chain trajectory length ``L``,
-    3. inverse-mass-matrix eigenvalue spread (min/mean/max, log y), with the
-       final output samples' covariance eigenvalue spread overlaid as horizontal
-       dashed lines,
+    3. inverse-mass-matrix eigenvalue spread (min/mean/max, log y) as a step
+       function over the adaptation windows, with the final output samples'
+       covariance eigenvalue spread overlaid as horizontal dashed lines,
     4. per-transition Metropolis acceptance rate (per-chain raw + cross-chain
        smoothed mean), with the dual-averaging target drawn as a dashed line,
     5. trajectory length in integrator steps (the shared deterministic Halton
@@ -249,25 +360,8 @@ def plot_mams_diagnostics(
     ax_L.set_title("Chain-wise L")
     ax_L.set_ylabel("L")
 
-    # 3. inverse-mass-matrix eigenvalues (stored chain-0 only; replicated)
-    if "inverse_mass_matrix" in arr:
-        imm = np.asarray(arr["inverse_mass_matrix"])[0]  # (n_steps, dim, dim)
-        eig = np.linalg.eigvalsh(imm)  # (n_steps, dim)
-        ax_eig.plot(eig.min(axis=1), label="min", color="tab:blue")
-        ax_eig.plot(eig.mean(axis=1), label="mean", color="black")
-        ax_eig.plot(eig.max(axis=1), label="max", color="tab:red")
-        ax_eig.set_yscale("log")
-        if "samples_cov" in arr:
-            cov_eig = np.linalg.eigvalsh(np.asarray(arr["samples_cov"]))
-            for val, color, lbl in (
-                (cov_eig.min(), "tab:blue", "sample cov min"),
-                (cov_eig.mean(), "black", "sample cov mean"),
-                (cov_eig.max(), "tab:red", "sample cov max"),
-            ):
-                ax_eig.axhline(val, color=color, linestyle="--", linewidth=1, label=lbl)
-        ax_eig.legend(fontsize=8)
-    ax_eig.set_title("Inverse mass-matrix eigenvalues")
-    ax_eig.set_ylabel("eigenvalue")
+    # 3. inverse-mass-matrix eigenvalues, as a step function over the window updates
+    _plot_mass_matrix_panel(ax_eig, arr)
 
     # 4. acceptance rate: per-chain raw (faint) + cross-chain smoothed mean,
     #    with the dual-averaging target overlaid. This is the MAMS analogue of
@@ -457,7 +551,11 @@ def plot_mclmc_surrogate_corner(
     surrogate_color: str = "tab:red",
     **corner_kwargs,
 ):
-    """Corner plot of the final MCLMC draws vs. a Gaussian surrogate.
+    """Corner plot of a sampler's final draws vs. a Gaussian surrogate.
+
+    Serves MCLMC and MAMS alike — they capture the same debug arrays, and
+    ``PosteriorReport.diagnostics_surrogate_corner`` routes both here. The figure
+    title names whichever stage produced the draws.
 
     The surrogate is a multivariate normal with mean equal to the sample mean
     and covariance equal to the **final inverse mass matrix** used during
@@ -494,10 +592,11 @@ def plot_mclmc_surrogate_corner(
     samples = np.asarray(arr["samples_z"])           # (n_chains, n_steps, dim)
     flat = samples.reshape(-1, samples.shape[-1])     # (N, dim)
     dim = flat.shape[-1]
-    # Final inverse mass matrix actually used for sampling: chain-0 is stored,
-    # and the last tuning step is the one carried into the sampling phase.
-    imm = np.asarray(arr["inverse_mass_matrix"])[0]   # (n_steps, dim, dim)
-    cov = imm[-1]
+    # Final inverse mass matrix actually used for sampling. Row -1 is that matrix under
+    # both the compact window history and the legacy per-step one, so _mass_matrix_history
+    # is the only thing that needs to know which it is holding.
+    mats, _steps = _mass_matrix_history(arr)
+    cov = mats[-1]
 
     mean = flat.mean(axis=0)
     rng = np.random.default_rng(seed)
@@ -546,6 +645,10 @@ def plot_mclmc_surrogate_corner(
         ],
         loc="upper right", frameon=False, fontsize=10,
     )
-    fig.suptitle("MCLMC final draws vs. Gaussian surrogate "
+    # Name the stage that actually produced the draws. MAMS captures the same keys and
+    # is routed here by PosteriorReport.diagnostics_surrogate_corner, so a hard-coded
+    # "MCLMC" would mislabel a MAMS figure.
+    sampler = str(getattr(diagnostics, "stage_class", "") or "").removesuffix("Stage")
+    fig.suptitle(f"{sampler or 'Sampler'} final draws vs. Gaussian surrogate "
                  "(unconstrained z-space)", fontsize=13)
     return fig

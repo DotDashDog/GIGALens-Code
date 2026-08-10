@@ -292,22 +292,24 @@ def load_baseline_frozen_metric(diag_npz=BASELINE_DIAG_NPZ, verbose=True):
     """Final shared (inverse_mass_matrix, step_size, L) from the baseline MCLMC run's
     debug diagnostics (`MCLMCStage(debug=True)` -> `<out_dir>/mclmc/diagnostics.npz`).
 
-    `inverse_mass_matrix` has shape (1, num_burnin+num_results, dim, dim) -- ONE shared
-    dense metric broadcast to all chains and logged only once per step (see
-    `MCLMCStage.run`'s `diagnostics["inverse_mass_matrix"] = hist.inverse_mass_matrix[:1]`
-    in `src/gigalens_research/inference_utils/pipeline.py`); `step_size`/`L` are logged
-    per-chain but converge to an identical shared value after burn-in (step-size sync +
-    shared L per `full_mclmc_with_adapt_sharded`). Asserts both facts rather than
-    assuming them.
+    The metric is ONE shared dense matrix broadcast to all chains. gigalens records it
+    compactly -- ``(n_windows + 1, dim, dim)``, the starting metric plus the one
+    installed at each adaptation-window boundary -- and older runs on disk hold the
+    legacy dense ``(1, T, dim, dim)``. Either way the FINAL metric is row ``[-1]``, and
+    `_mass_matrix_history` is what knows the difference.
+
+    `step_size`/`L` are logged per-chain but converge to an identical shared value after
+    burn-in (step-size sync + shared L per `full_mclmc_with_adapt_sharded`). Asserted
+    rather than assumed.
     """
+    from gigalens_research.plotting.diagnostics import _mass_matrix_history
+
     with np.load(diag_npz) as d:
-        imm_hist = np.asarray(d["inverse_mass_matrix"])   # (1, T, dim, dim)
+        mats, _steps = _mass_matrix_history(dict(d))
         step_size_hist = np.asarray(d["step_size"])        # (n_chains, T)
         L_hist = np.asarray(d["L"])                         # (n_chains, T)
 
-    if imm_hist.shape[0] != 1:
-        raise ValueError(f"expected inverse_mass_matrix leading dim 1, got {imm_hist.shape}")
-    inverse_mass_matrix = imm_hist[0, -1]                    # (dim, dim)
+    inverse_mass_matrix = mats[-1]                          # (dim, dim)
     dim = inverse_mass_matrix.shape[-1]
     if inverse_mass_matrix.shape != (dim, dim):
         raise ValueError(f"expected square inverse_mass_matrix, got {inverse_mass_matrix.shape}")
