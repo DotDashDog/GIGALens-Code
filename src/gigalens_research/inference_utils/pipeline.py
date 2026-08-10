@@ -1439,6 +1439,32 @@ class HessianSurrogateStage(InferenceStage):
         return SurrogatePosterior(ctx, qz=qz)
 
 
+def _mass_matrix_diagnostics(hist) -> Dict[str, np.ndarray]:
+    """The inverse-mass-matrix history to persist, from an MCLMC/MAMS debug ``hist``.
+
+    gigalens emits a COMPACT history: the starting metric plus the one installed at
+    each adaptation-window boundary, ``(n_windows + 1, dim, dim)``, alongside
+    ``inverse_mass_matrix_steps`` giving the step each row became active at. The metric
+    only ever changed at those boundaries, so the old per-step-per-chain array was one
+    matrix repeated thousands of times — 16 GB for a 20k-step, 64-chain, dim-44 run,
+    and the bulk of a ~340 MB saved diagnostic. Both are kept whole.
+
+    A build predating that change emits the dense ``(n_chains, n_steps, dim, dim)``
+    array instead, and only chain 0 is kept — the metric is replicated across chains,
+    so the rest is exact duplication. Slicing ``[:1]`` is right for THAT layout only:
+    applied to the compact one it silently keeps the starting metric alone, discarding
+    the entire adaptation history while still returning a well-shaped array.
+    """
+    imm = np.asarray(hist.inverse_mass_matrix)
+    if imm.ndim == 4:                       # legacy dense: drop the replicated chains
+        return {"inverse_mass_matrix": imm[:1]}
+    out = {"inverse_mass_matrix": imm}
+    steps = getattr(hist, "inverse_mass_matrix_steps", None)
+    if steps is not None:
+        out["inverse_mass_matrix_steps"] = np.asarray(steps)
+    return out
+
+
 class MCLMCStage(InferenceStage):
     """MCLMC sampler. Wraps ``gigalens_research.inference.MCLMC_JIT``.
 
@@ -1521,8 +1547,7 @@ class MCLMCStage(InferenceStage):
             # debug_output=True returns the full tuning `Hist`; the kept draws
             # are the last `num_results` positions. We also capture the tuning
             # traces (step_size, L, xi, success mask, mass matrix) for the
-            # diagnostic plotter. The inverse mass matrix is replicated across
-            # chains, so we keep only chain 0 to bound the on-disk size.
+            # diagnostic plotter.
             hist = out
             samples = np.asarray(hist.position[:, -self.num_results:, :])
             # Empirical covariance of the kept draws (chains flattened together),
@@ -1536,7 +1561,7 @@ class MCLMCStage(InferenceStage):
                 "L": np.asarray(hist.L),
                 "xi": np.asarray(hist.xi),
                 "nonan": np.asarray(hist.nonan),
-                "inverse_mass_matrix": np.asarray(hist.inverse_mass_matrix[:1]),
+                **_mass_matrix_diagnostics(hist),
                 "samples_cov": np.asarray(samples_cov),
                 # The kept draws themselves (unconstrained z-space), so the
                 # surrogate corner plot can compare them against an MVN built
@@ -1914,8 +1939,7 @@ class MAMSStage(InferenceStage):
             # are the last `num_results` positions. We also capture the tuning
             # traces (step_size, L, acceptance_rate, trajectory length in
             # integrator steps, success mask, mass matrix) for the diagnostic
-            # plotter. The inverse mass matrix is replicated across chains, so we
-            # keep only chain 0 to bound the on-disk size.
+            # plotter.
             hist = out
             samples = np.asarray(hist.position[:, -self.num_results:, :])
             # Empirical covariance of the kept draws (chains flattened together),
@@ -1929,7 +1953,7 @@ class MAMSStage(InferenceStage):
                 "acceptance_rate": np.asarray(hist.acceptance_rate),
                 "num_integration_steps": np.asarray(hist.num_integration_steps),
                 "nonan": np.asarray(hist.nonan),
-                "inverse_mass_matrix": np.asarray(hist.inverse_mass_matrix[:1]),
+                **_mass_matrix_diagnostics(hist),
                 "samples_cov": np.asarray(samples_cov),
                 # The kept draws themselves (unconstrained z-space), so the
                 # surrogate corner plot can compare them against an MVN built
