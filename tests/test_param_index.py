@@ -260,7 +260,12 @@ def test_plain_labels_when_latex_off(sites):
 
 @pytest.fixture(scope="module")
 def shared_scene():
-    """One EPL slope shared across two planes: ONE free parameter, two sites."""
+    """One EPL slope shared across two planes: ONE free parameter, two sites.
+
+    Plane 1 carries light as well as mass because a ``deflection_ratio`` is only
+    accepted on a plane that has light to deflect (gigalens §3.1); a ratio on a
+    lightless plane would deflect the plane's own light and is rejected outright.
+    """
     g = shared(tfd.Normal(2.0, 0.1))
     p0 = Plane(
         deflection_ratio=None,
@@ -271,7 +276,11 @@ def shared_scene():
         deflection_ratio=1.0,
         mass=[_c(epl.EPL(), theta_E=tfd.Normal(0.5, 0.1), gamma=g,
                  e1=0.0, e2=0.0, center_x=0.0, center_y=0.0)],
-        light=[],
+        light=[
+            _c(sersic.SersicEllipse(), R_sersic=tfd.Normal(0.3, 0.05),
+               n_sersic=tfd.Normal(1.0, 0.2), Ie=tfd.Normal(2.0, 0.2),
+               e1=0.0, e2=0.0, center_x=0.0, center_y=0.0),
+        ],
     )
     return LensModel(planes=[p0, p1])
 

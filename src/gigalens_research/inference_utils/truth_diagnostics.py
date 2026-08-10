@@ -8,9 +8,10 @@ imported by both modeling and plotting code.
 Conventions
 -----------
 - ``truth_x`` names parameters the way the model does: either scene-nested
-  (``{"planes": {0: {"mass": {0: {...}}}}, "cosmo": {...}}``) or path-keyed
-  (``{"planes/0/mass/0/theta_E": ...}``). A parameter is matched by *where it
-  lives*, so results are keyed by scene path.
+  (``{"planes": {"lens": {"mass": {"host": {...}}}}, "cosmo": {...}}``) or
+  path-keyed (``{"planes/lens/mass/host/theta_E": ...}``). A parameter is matched
+  by *where it lives*, so results are keyed by scene path — and a plane/component
+  key is its name where the scene names it, ``str(index)`` where it does not.
 - A truth persisted by ``simtests`` is still in the old 3-group form; it is
   adapted at the boundary by
   :func:`gigalens_research.inference_utils.params.truth_x_to_scene_params`

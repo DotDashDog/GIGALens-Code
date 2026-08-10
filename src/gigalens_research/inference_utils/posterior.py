@@ -39,6 +39,8 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow_probability.substrates.jax as tfp
 
+from .params import component_params, plane_params
+
 _tfd = tfp.distributions
 
 #: Default cap on the number of (chain-flattened) samples returned by
@@ -549,7 +551,7 @@ class Posterior(ABC):
             offset = 0
             for i, j, comp, depth in seen_light:
                 if selected(i, comp):
-                    lp = params["planes"][i]["light"][j]
+                    lp = component_params(self._scene_model, params, i, "light", j)
                     stack = comp.profile.light(X, Y, **lp)
                     if coeffs is None:
                         img = img + jnp.squeeze(stack)
@@ -614,7 +616,7 @@ class Posterior(ABC):
         xs, ys = [], []
         for i, j, comp, _ in seen_light:
             if selected(i, comp):
-                lp = params["planes"][i]["light"][j]
+                lp = component_params(self._scene_model, params, i, "light", j)
                 xs.append(float(np.squeeze(np.asarray(lp.get("center_x", 0.0)))))
                 ys.append(float(np.squeeze(np.asarray(lp.get("center_y", 0.0)))))
         half = self._cutout_half(dataset)
@@ -632,7 +634,7 @@ class Posterior(ABC):
         ratio normalized to the cosmology's ``z_source_ref``). Raises if the plane
         carries neither — it is then not a well-defined source plane.
         """
-        geom = params["planes"][plane_index].get("geometry", {})
+        geom = plane_params(self._scene_model, params, plane_index).get("geometry", {})
         if "deflection_ratio" in geom:
             return float(np.squeeze(np.asarray(geom["deflection_ratio"])))
         cosmo = self._scene_model.cosmo

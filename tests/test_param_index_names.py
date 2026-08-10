@@ -1,10 +1,18 @@
-"""Scene Component/Plane names reaching the display labels.
+"""Scene Component/Plane names reaching the keys and the display labels.
 
-Names are a scene-side DISPLAY layer: they never touch a key, a column order or the
-path space this index is built on (see gigalens ``scene.py`` §names). So the contract
-here is narrow and worth pinning from both sides — an unnamed scene must label exactly
-as it did before names existed, and a named one must substitute the name while keeping
-every disambiguation the positional tag provided.
+Names ARE the params-tree keys (gigalens ``scene.py`` §names, ``cc5a078``): a named
+plane keys as ``planes/lens/...`` where an unnamed one keys as ``planes/0/...``. What
+naming must *not* do is move a parameter — gigalens orders flat-z columns by
+derivation rather than by key text precisely so that a rename changes column names
+without permuting the vector, and this index inherits that guarantee.
+
+So the contract is pinned from three sides:
+
+- an unnamed scene labels exactly as it did before names existed;
+- a named one substitutes the name into both the key and the tag, while keeping every
+  disambiguation the positional tag provided;
+- naming changes the keys and *only* the keys — same parameters, same order, same
+  planes and components, same kinds.
 """
 
 import matplotlib
@@ -18,7 +26,7 @@ from gigalens.jax.profiles.light import sersic
 from gigalens.jax.profiles.mass import epl, shear
 from gigalens.jax.scene import Component, LensModel, Plane, shared
 
-from gigalens_research.param_index import param_sites, site_labels
+from gigalens_research.param_index import param_sites, select_sites, site_labels
 
 tfd = tfp.distributions
 
@@ -91,32 +99,69 @@ def test_unnamed_scene_labels_are_unchanged():
     assert lab["planes/0/mass/1/gamma1"] == "gamma1"
 
 
+def test_names_replace_indices_in_the_key():
+    """The name IS the key segment, in place of the positional fallback."""
+    named = {s.key for s in param_sites(_build(True))}
+    unnamed = {s.key for s in param_sites(_build(False))}
+    assert "planes/lens/mass/host/center_x" in named
+    assert "planes/src/light/arc/center_x" in named
+    assert "planes/0/mass/0/center_x" in unnamed
+    assert not any(k.startswith("planes/0/") for k in named)
+
+
 def test_names_replace_indices_in_the_tag():
     lab = _labels(_build(True))
-    assert lab["planes/0/mass/0/center_x"] == "center_x (lens,m:host)"
-    assert lab["planes/1/light/0/center_x"] == "center_x (src,l:arc)"
+    assert lab["planes/lens/mass/host/center_x"] == "center_x (lens,m:host)"
+    assert lab["planes/src/light/arc/center_x"] == "center_x (src,l:arc)"
 
 
 def test_mass_and_light_sharing_a_name_stay_separable():
-    """The role letter is load-bearing: names are unique only per (plane, kind)."""
+    """The role letter is load-bearing: names are unique only per (plane, kind).
+
+    Note the two collide in the KEY space too — ``planes/lens/mass/host`` and
+    ``planes/lens/light/host`` differ only in the kind segment, which is why gigalens
+    always renders ``kind`` and why the tag keeps the ``m``/``l`` letter.
+    """
     lab = _labels(_build(True))
-    assert lab["planes/0/mass/0/center_x"] == "center_x (lens,m:host)"
-    assert lab["planes/0/light/0/center_x"] == "center_x (lens,l:host)"
+    assert lab["planes/lens/mass/host/center_x"] == "center_x (lens,m:host)"
+    assert lab["planes/lens/light/host/center_x"] == "center_x (lens,l:host)"
     assert len(set(lab.values())) == len(lab), "labels must stay unique"
 
 
-def test_naming_does_not_change_the_path_space():
-    """Names are display only — the index itself must be identical."""
+def test_naming_changes_the_keys_and_only_the_keys():
+    """A rename must not move a parameter.
+
+    gigalens orders flat-z columns by derivation rather than by sorting key text, so
+    naming may rewrite every key without permuting a single column. This is the
+    property that makes names safe to add to a live model — and the one that would
+    silently invalidate every saved chain if it ever regressed.
+    """
     a, b = param_sites(_build(False)), param_sites(_build(True))
-    assert [s.key for s in a] == [s.key for s in b]
     assert [s.kind for s in a] == [s.kind for s in b]
     assert [s.param for s in a] == [s.param for s in b]
+    assert [s.planes for s in a] == [s.planes for s in b]
+    assert [s.components for s in a] == [s.components for s in b]
+    # The keys, and only the keys, differ.
+    assert [s.key for s in a] != [s.key for s in b]
+
+
+def test_names_are_selectable_by_name_and_by_index():
+    """A named plane/component stays reachable positionally: the name is an added
+    identity, not a replacement for the index."""
+    sites = param_sites(_build(True))
+    by_name = select_sites(sites, plane="lens")
+    by_index = select_sites(sites, plane=0)
+    assert [s.key for s in by_name] == [s.key for s in by_index]
+    host_mass = select_sites(sites, component=("mass", "host"))
+    assert {s.key for s in host_mass} == {
+        s.key for s in select_sites(sites, kind="mass", plane="lens", component=0)
+    }
 
 
 def test_uncollided_labels_still_render_bare():
     """Naming must not start decorating parameters that need no disambiguation."""
     lab = _labels(_build(True))
-    assert lab["planes/0/mass/0/theta_E"] == "theta_E"
+    assert lab["planes/lens/mass/host/theta_E"] == "theta_E"
 
 
 # -- the mathtext trap ----------------------------------------------------------------
@@ -158,6 +203,9 @@ def test_shared_param_name_is_recorded():
             )
         ]
     )
-    shared_sites = [s for s in param_sites(m) if s.ukey.startswith("shared_")]
+    # A NAMED handle keys as ``shared/<name>``; only an unnamed one is ``shared_0007``.
+    shared_sites = [s for s in param_sites(m)
+                    if s.ukey.startswith(("shared_", "shared/"))]
     assert len(shared_sites) == 1
+    assert shared_sites[0].ukey == "shared/einstein_radius"
     assert shared_sites[0].group_name == "einstein_radius"
