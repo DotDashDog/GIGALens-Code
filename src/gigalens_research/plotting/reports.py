@@ -315,6 +315,9 @@ class PosteriorReport:
         center: Optional[Any] = None,
         observed: Optional[np.ndarray] = None,
         with_observed: bool = True,
+        scale: str = "asinh",
+        linear_width: Optional[float] = None,
+        log_vmin: float = 1e-2,
         frame_frac: float = 0.99,
     ) -> Figure:
         """One row **per source plane**: the intrinsic source-plane image (with that
@@ -365,6 +368,7 @@ class PosteriorReport:
                 grid_pix=grid_pix, fov_arcsec=_per_view(fov_arcsec, plane_i, d),
                 center=_per_view(center, plane_i, d),
                 dataset=d, plane_index=plane_i, deflection_ratio=dr,
+                scale=scale, linear_width=linear_width, log_vmin=log_vmin,
                 frame_frac=frame_frac,
                 title=f"Source plane {plane_i} (dr={dr:.3f}{band})",
             )
@@ -380,7 +384,8 @@ class PosteriorReport:
             # delta_pix (different instruments, different IFU cutouts), and a shared
             # extent would silently mis-place the critical curve overlaid below it.
             plot_image(axs[row][1], obs_disp, extent=self._band_extent(d),
-                       title=f"Observed{band}", scale="asinh")
+                       title=f"Observed{band}", scale=scale,
+                       linear_width=linear_width, log_vmin=log_vmin)
             plot_critical_curves(axs[row][1], self.posterior, point=point,
                                  plane=plane_i, deflection_ratio=dr)
         return self._finalize(fig)
@@ -464,6 +469,7 @@ class PosteriorReport:
                 center=_per_view(center, plane_i, d),
                 dataset=d, plane_index=plane_i, deflection_ratio=dr,
                 with_caustics=with_curves, with_image_border=with_image_border,
+                scale=scale, linear_width=linear_width, log_vmin=log_vmin,
                 frame_frac=frame_frac,
                 title=f"Source plane {plane_i} (dr={dr:.3f})",
             )
@@ -878,6 +884,9 @@ def plot_scene(
     fov_arcsec: Optional[Any] = None,
     center: Optional[Any] = None,
     combined: bool = True,
+    scale: str = "asinh",
+    linear_width: Optional[float] = None,
+    log_vmin: float = 1e-2,
     **kw,
 ) -> Dict[str, Figure]:
     """Render a scene at explicit parameters: model images and source planes.
@@ -907,6 +916,14 @@ def plot_scene(
     that and accept a scalar or a per-view dict — see
     :meth:`PosteriorReport.source_panel`. Extra keywords reach the panel builder.
 
+    ``scale`` sets the color scale on **both** columns and in both ``combined`` modes:
+    ``"asinh"`` (default), ``"sqrt"`` (:class:`~matplotlib.colors.PowerNorm` with
+    ``gamma=0.5``), ``"linear"``, or ``"log"``. ``linear_width`` tunes the asinh knee
+    and ``log_vmin`` the log floor; each is ignored by the scales it does not apply to.
+    Reach for ``"sqrt"`` or ``"linear"`` when the compressive default is flattening
+    real structure — a low-Sersic-index source rendered in asinh reads as a flat disc
+    whether or not it actually has a core.
+
     This is deliberately thin: the work is in
     :class:`~gigalens_research.inference_utils.posterior.FixedParams`, which makes
     every existing plotter work on a forward scene. Reach for the class directly when
@@ -921,14 +938,17 @@ def plot_scene(
     if combined:
         figs: Dict[str, Figure] = {
             "scene": report.scene_panel(
-                grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center, **kw),
+                grid_pix=grid_pix, fov_arcsec=fov_arcsec, center=center,
+                scale=scale, linear_width=linear_width, log_vmin=log_vmin, **kw),
         }
     else:
         figs = {
-            "model": report.model_panel(),
+            "model": report.model_panel(
+                scale=scale, linear_width=linear_width, log_vmin=log_vmin),
             "source": report.source_panel(
                 with_observed=False, grid_pix=grid_pix,
-                fov_arcsec=fov_arcsec, center=center, **kw),
+                fov_arcsec=fov_arcsec, center=center,
+                scale=scale, linear_width=linear_width, log_vmin=log_vmin, **kw),
         }
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
