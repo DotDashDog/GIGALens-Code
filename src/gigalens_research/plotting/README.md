@@ -12,6 +12,7 @@ control display and saving.
 - [Quick start](#quick-start)
 - [PosteriorReport — single-posterior compound panels](#posteriorReport)
   - [image_panel](#image_panel)
+  - [point_source_panel](#point_source_panel)
   - [convergence_panel](#convergence_panel)
   - [source_panel](#source_panel)
   - [corner](#corner)
@@ -38,6 +39,7 @@ control display and saving.
 | Module | What it provides |
 |---|---|
 | `image.py` | `plot_image`, `normalized_residual`, `plot_residual_histogram` |
+| `point_source.py` | `plot_positions`, `plot_position_zoom`, `plot_position_pulls`, `plot_source_position`, `plot_chi2_decomposition`, `plot_solver_health`, `plot_trust_occupancy`, `plot_magnifications`, `plot_flux_channel`, `plot_time_delay_channel` |
 | `source_plane.py` | `plot_source_plane`, `plot_caustics`, `plot_critical_curves`, `plot_caustics_critical` |
 | `convergence.py` | `plot_chain_traces`, `plot_running_rhat`, `plot_running_ess`, `plot_loss_history` |
 | `corner.py` | `plot_corner`, `plot_corner_overlay` |
@@ -125,6 +127,63 @@ fig = report.image_panel(
 fig.savefig("image.pdf", bbox_inches="tight")
 ```
 
+One row **per imaging dataset**. A model fit jointly against imaging and
+point-source observations contributes rows only for the imaging ones; the
+point-source datasets get [`point_source_panel`](#point_source_panel).
+
+---
+
+### point_source_panel
+
+The point-source counterpart of `image_panel`, for
+`gigalens.jax.point_source_position` observations
+(`PointSourcePositionData` / `PointSourceObsData`). Three rows:
+
+1. **Configuration** — observed vs solved image positions with the critical
+   curve; the source plane with the caustic and the delensed images; the
+   whitened position pulls; the χ² decomposition.
+2. **Zooms** — one axes per image at the astrometric noise scale, in mas
+   offsets from the observed position, plus solver-health and trust-region
+   panels.
+3. **Channels** — magnification, and the flux / time-delay channels when the
+   dataset carries them.
+
+```python
+fig = report.point_source_panel(
+    dataset=None,      # defaults to the model's only point-source dataset
+    point="median",
+    n_draws=2000,      # thinned posterior draws behind the predictive clouds
+    sigma_scale=1.0,   # inflate error ellipses on the OVERVIEW only
+)
+```
+
+Notes on what the panels mean:
+
+- **Zooms, not one axes.** Image separations are ~arcsec and astrometric σ is
+  ~0.005–0.05″, so a system-scale view cannot show a residual. Each zoom frames
+  on max(3σ, the 95th percentile of the predictive cloud), capped at the
+  solver's trust radius; the trust boundary is drawn when the frame reaches it.
+- **Pulls, no pull histogram.** A quad is 8 numbers. They are shown
+  individually; a normality test on 8 points measures nothing, so there is no
+  histogram-with-Gaussian-fit companion. For a diagonal covariance the two
+  components per image are the x and y pulls; for correlated astrometry they
+  are the Cholesky-whitened components, and the title says so.
+- **χ² decomposition.** Splits each image's χ² into the terms the likelihood
+  sums: displacement (a genuine astrometric residual), the saturated honesty
+  charge (an image the model cannot reproduce — bounded, hence flat, hence
+  sampler-trappable), the source-plane anchor, and the flux channel. With
+  `draws` it also reports the share of the position χ² the honesty charge
+  carries **across the posterior**, which is the question a point-estimate
+  breakdown cannot answer. The recomputed parts are checked against the term's
+  own scored χ² and a mismatch is stated on the figure.
+- **Predictive clouds** are `corner`-style filled 1/2σ contours — the same
+  renderer and level convention as [`corner`](#corner) — from thinned draws
+  (even in-chain stride, not a random pick from the pooled array). A point
+  estimate has no draws, so the clouds and the two health panels are omitted
+  and say so.
+- **Flux is plotted as `1/F`**, the observable the likelihood is Gaussian in,
+  with the delta-method σ. `F` has a pole at the critical curve; `1/F` does not.
+
 ---
 
 ### convergence_panel
@@ -205,13 +264,19 @@ figs = report.full_report(
     z_score_kind="mass",         # parameter class shown in the z-score bar plot
 )
 # Returns a dict. Keys depend on the posterior type and truth inputs:
-# "image"              — always included
+# "image"              — only if the model has an imaging dataset
+# "point_source"       — one per point-source dataset ("point_source_<i>"
+#                        when there is more than one)
 # "convergence"        — SamplerPosterior only
-# "source"             — always included
+# "source"             — only if the model has an imaging dataset
 # "corner"             — always included
 # "z_scores"           — only if truth_x is provided
 # "source_comparison"  — only if truth_source_* is provided
 ```
+
+Panels are chosen **per dataset kind**, so a point-source-only fit yields no
+image/source panels rather than failing, and a joint imaging + point-source fit
+gets both.
 
 ---
 

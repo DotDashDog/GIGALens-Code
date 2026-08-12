@@ -3,6 +3,9 @@
 Organized so each module does one thing:
 
 - :mod:`.image` — image-plane primitives (``plot_image``, residuals, histogram).
+- :mod:`.point_source` — lensed point-source primitives (image positions with
+  predictive clouds and noise-scale zooms, whitened pulls, the chi2 decomposition,
+  solver health, flux/time-delay channels).
 - :mod:`.source_plane` — source plane + caustic/critical curve overlays.
 - :mod:`.convergence` — chain traces, running R-hat / ESS, loss histories.
 - :mod:`.corner` — corner plots from :class:`Posterior` objects.
@@ -34,6 +37,18 @@ from .diagnostics import (
 )
 from .image import normalized_residual, plot_image, plot_residual_histogram
 from .labels import LATEX_LABELS, latex_label
+from .point_source import (
+    plot_chi2_decomposition,
+    plot_flux_channel,
+    plot_magnifications,
+    plot_position_pulls,
+    plot_position_zoom,
+    plot_positions,
+    plot_solver_health,
+    plot_source_position,
+    plot_time_delay_channel,
+    plot_trust_occupancy,
+)
 from .reports import PipelineReport, PosteriorReport, plot_scene
 from .source_plane import (
     plot_caustics,
@@ -54,21 +69,31 @@ __all__ = [
     "param_sites",
     "plot_caustics",
     "plot_chain_traces",
+    "plot_chi2_decomposition",
     "plot_corner",
     "plot_critical_curves",
     "plot_corner_overlay",
+    "plot_flux_channel",
     "plot_image",
     "plot_image_border",
     "plot_loss_history",
+    "plot_magnifications",
     "plot_mclmc_diagnostics",
     "plot_mclmc_surrogate_corner",
+    "plot_position_pulls",
+    "plot_position_zoom",
+    "plot_positions",
     "plot_residual_histogram",
     "plot_scene",
     "plot_running_ess",
     "plot_running_rhat",
+    "plot_solver_health",
     "plot_source_comparison",
     "plot_source_plane",
+    "plot_source_position",
     "plot_stage_diagnostics",
+    "plot_time_delay_channel",
+    "plot_trust_occupancy",
     "plot_z_scores",
     "register_diagnostic_plotter",
     "select_sites",

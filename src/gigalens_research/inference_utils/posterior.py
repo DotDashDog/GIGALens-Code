@@ -39,6 +39,7 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow_probability.substrates.jax as tfp
 
+from .datasets import KIND_IMAGE, dataset_kind
 from .params import component_params, plane_params
 
 _tfd = tfp.distributions
@@ -247,22 +248,74 @@ class Posterior(ABC):
                 "(e.g. PosteriorReport.source_panel(with_observed=False)).")
 
     def n_datasets(self) -> int:
-        """Number of observed datasets/bands this posterior was fit against.
+        """Number of observed datasets this posterior was fit against — of every kind.
 
         For a forward-mode context the count comes from the supplied simulators (one
         per observation) — there are no Datasets, but there is still more than one
-        view of the scene, and ``source_plane_views`` iterates this."""
+        view of the scene.
+
+        This counts point-source observations too, so it is **not** the number of
+        image-plane bands. Iterate :meth:`datasets_of_kind` (or
+        :meth:`imaging_datasets`) rather than ``range(n_datasets())`` anywhere the
+        body assumes pixels."""
         ds = self._prob_datasets
         if ds is not None:
             return len(ds)
         sims = getattr(self.ctx, "simulators", None)
         return len(sims) if sims else 1
 
+    # -- dataset kinds ---------------------------------------------------------
+
+    def dataset_kinds(self) -> List[str]:
+        """The :mod:`~gigalens_research.inference_utils.datasets` kind of each dataset.
+
+        A forward-mode context has no Datasets, only imaging simulators, so every
+        entry is :data:`~gigalens_research.inference_utils.datasets.KIND_IMAGE`.
+        """
+        ds = self._prob_datasets
+        if ds is None:
+            return [KIND_IMAGE] * self.n_datasets()
+        return [dataset_kind(d) for d in ds]
+
+    def dataset_kind(self, dataset: int = 0) -> str:
+        """The kind of one dataset."""
+        return self.dataset_kinds()[dataset]
+
+    def datasets_of_kind(self, kind: str) -> List[int]:
+        """Indices of the datasets of a given kind, in dataset order."""
+        return [i for i, k in enumerate(self.dataset_kinds()) if k == kind]
+
+    def imaging_datasets(self) -> List[int]:
+        """Indices of the datasets that carry a pixel grid.
+
+        The list every image-plane panel should iterate: a model fit jointly against
+        imaging and point-source observations has both in ``datasets``, and only these
+        indices have an image, an error map, a mask or a simulator.
+        """
+        return self.datasets_of_kind(KIND_IMAGE)
+
+    def _require_imaging(self, dataset: int, what: str) -> None:
+        """Raise a targeted error when an image-plane accessor is given a dataset
+        that has no pixels."""
+        kind = self.dataset_kind(dataset)
+        if kind == KIND_IMAGE:
+            return
+        ds = self._prob_datasets
+        name = type(ds[dataset]).__name__ if ds is not None else "?"
+        raise TypeError(
+            f"{what} needs an imaging dataset, but dataset {dataset} is a {name} "
+            f"(kind {kind!r}) — it has no image, error map, mask or pixel grid. Use "
+            f"Posterior.imaging_datasets() to iterate the image-plane bands, or "
+            f"Posterior.predict(dataset={dataset}) for this observation's own "
+            "prediction. Imaging datasets on this model: "
+            f"{self.imaging_datasets()}.")
+
     def observed_for(self, dataset: int = 0) -> np.ndarray:
         """The observed image for band ``dataset`` (avoids the single-dataset-only
         ``observed_image`` property, which raises for multi-dataset models)."""
         ds = self._prob_datasets
         if ds is not None:
+            self._require_imaging(dataset, "observed_for()")
             return np.asarray(ds[dataset].image)
         self._require_data("observed_for()")
         return np.asarray(self.ctx.prob_model.observed_image)
@@ -270,6 +323,7 @@ class Posterior(ABC):
     def _error_for(self, dataset: int = 0) -> Optional[np.ndarray]:
         ds = self._prob_datasets
         if ds is not None:
+            self._require_imaging(dataset, "the per-band error map")
             return np.asarray(ds[dataset].error_map)
         return np.asarray(getattr(self.ctx.prob_model, "error_map"))
 
@@ -286,6 +340,7 @@ class Posterior(ABC):
         (treat as all-True, i.e. no masking)."""
         ds = self._prob_datasets
         if ds is not None:
+            self._require_imaging(dataset, "the per-band fit mask")
             return ds[dataset].mask
         return None
 
@@ -296,15 +351,40 @@ class Posterior(ABC):
     def _sim_for(self, dataset: int = 0):
         """The simulator for band ``dataset``: the prob_model's per-dataset
         simulator when available (correct ``sees`` + PSF), else the legacy
-        whole-scene fallback."""
-        sims = getattr(getattr(self.ctx, "prob_model", None), "simulators", None)
+        whole-scene fallback.
+
+        ``ProbModel.simulators`` is **compacted to the imaging terms** — a
+        point-source observation contributes a likelihood term but no simulator — so
+        it cannot be indexed by dataset position. A model fit against
+        ``[ImageData, PointSourcePositionData, ImageData]`` has two simulators, and
+        indexing them by dataset index would return band 1's renderer for band 2 and
+        run off the end for the last band. The dataset index is therefore translated
+        into a simulator index by counting the imaging datasets before it.
+        """
+        prob = getattr(self.ctx, "prob_model", None)
+        sims = getattr(prob, "simulators", None)
         if sims is None:
             # Forward-mode context: simulators are supplied directly (one per
             # observation, each with its own ``sees`` view and PSF).
             sims = getattr(self.ctx, "simulators", None)
-        if sims is not None:
+            if sims is not None:
+                return sims[dataset]
+            return self._lens_sim()
+
+        ds = self._prob_datasets
+        if ds is None:
             return sims[dataset]
-        return self._lens_sim()
+
+        self._require_imaging(dataset, "rendering a model image")
+        imaging = self.imaging_datasets()
+        if len(sims) != len(imaging):
+            raise RuntimeError(
+                f"ProbModel exposes {len(sims)} simulator(s) but this posterior counts "
+                f"{len(imaging)} imaging dataset(s) at indices {imaging}. The mapping "
+                "from dataset index to simulator index is therefore ambiguous, and "
+                "guessing it would silently render one band through another band's "
+                "PSF and grid.")
+        return sims[imaging.index(dataset)]
 
     def z_to_x(self, z) -> List:
         """Apply the bijector forward to a ``z`` of shape ``(n_params,)`` or
@@ -663,7 +743,9 @@ class Posterior(ABC):
         source_ids = {id(c) for c in self._scene_model.source_plane_light()}
         views = []
         seen_planes = set()
-        for d in range(self.n_datasets()):
+        # Imaging datasets only: a source plane is "reconstructed" from solved linear
+        # amplitudes on a pixel grid, which a point-source observation has none of.
+        for d in self.imaging_datasets():
             sim = self._sim_for(d)
             for i, j, comp, depth in sim._light:
                 if id(comp) in source_ids and i not in seen_planes:
@@ -671,6 +753,52 @@ class Posterior(ABC):
                     views.append((d, int(i), self._deflection_ratio_at(i, params)))
         views.sort(key=lambda t: t[1])
         return views
+
+    # -- kind-dispatched prediction ------------------------------------------
+
+    def predict(self, point: str = "median", *, dataset: int = 0):
+        """The model's prediction for ``dataset``, in that observation's own terms.
+
+        The single entry point a report can call for a dataset of unknown kind:
+
+        - imaging -> the rendered, PSF-convolved image (:meth:`simulate`), an
+          ``ndarray`` on that band's grid;
+        - point source -> a
+          :class:`~gigalens_research.inference_utils.point_source.PointSourcePrediction`
+          — solved image positions, source position, whitened residuals, the chi2
+          decomposition and the solver-health quantities.
+
+        Dispatching here rather than at each call site is what lets the panels stay
+        kind-specific while the report stays kind-agnostic: it iterates datasets, asks
+        for the prediction, and hands it to the plotter registered for that kind.
+        """
+        from .datasets import KIND_POINT_SOURCE
+        kind = self.dataset_kind(dataset)
+        if kind == KIND_IMAGE:
+            return self.simulate(point=point, dataset=dataset)
+        if kind == KIND_POINT_SOURCE:
+            return self.point_source_prediction(dataset=dataset, point=point)
+        raise TypeError(
+            f"no prediction is defined for dataset {dataset} of kind {kind!r}. "
+            "Supported kinds: 'image' (rendered image) and 'point_source' "
+            "(gigalens.jax.point_source_position).")
+
+    def point_source_prediction(self, *, dataset: int = 0, point: str = "median"):
+        """Point-source prediction for one dataset. See
+        :func:`gigalens_research.inference_utils.point_source.point_source_prediction`.
+        """
+        from .point_source import point_source_prediction
+        return point_source_prediction(self, dataset=dataset, point=point)
+
+    def point_source_draws(self, *, dataset: int = 0, n_draws: Optional[int] = None):
+        """Posterior-predictive point-source quantities over thinned draws, or
+        ``None`` for a posterior with no draw distribution. See
+        :func:`gigalens_research.inference_utils.point_source.point_source_draws`.
+        """
+        from .point_source import DEFAULT_PREDICTIVE_DRAWS, point_source_draws
+        return point_source_draws(
+            self, dataset=dataset,
+            n_draws=DEFAULT_PREDICTIVE_DRAWS if n_draws is None else n_draws)
 
     # -- common conveniences -------------------------------------------------
 

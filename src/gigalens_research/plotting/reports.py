@@ -27,8 +27,33 @@ from .convergence import (
 )
 from .corner import plot_corner, plot_corner_overlay
 from .image import normalized_residual, plot_image, plot_residual_histogram
-from .source_plane import plot_critical_curves, plot_source_plane
+from .point_source import (
+    plot_chi2_decomposition,
+    plot_flux_channel,
+    plot_magnifications,
+    plot_position_pulls,
+    plot_position_zoom,
+    plot_positions,
+    plot_solver_health,
+    plot_source_position,
+    plot_time_delay_channel,
+    plot_trust_occupancy,
+)
+from .source_plane import plot_caustics, plot_critical_curves, plot_source_plane
 from .truth import plot_source_comparison, plot_z_scores
+
+#: Multiple of the observed images' maximum radius used to size the critical-curve /
+#: caustic tracing window for a point-source observation. A point-source model has no
+#: cutout to inherit a field of view from (``LensSolver`` requires ``window=``
+#: explicitly rather than defaulting one), and the images bracket the Einstein radius,
+#: so a window comfortably enclosing them encloses the curves. Framing only — it sets
+#: where curves are traced, never what is fit.
+_PS_CURVE_WINDOW_FACTOR = 3.0
+
+#: Points along the longer side of the point-source curve-tracing grid. Kept under
+#: ``LensSolver``'s internal ``_MAX_CURVE_GRID`` so the solver never has to coarsen the
+#: scale it derived — and warn about it — on every panel.
+_PS_CURVE_GRID = 600
 
 
 # ---------------------------------------------------------------------------
@@ -162,13 +187,21 @@ class PosteriorReport:
         observed and model panels, one per source plane the model carries (each at
         its own deflection ratio).
         """
-        n_ds = self.posterior.n_datasets()
+        bands = self.posterior.imaging_datasets()
+        if not bands:
+            raise TypeError(
+                "image_panel() found no imaging datasets on this model — every "
+                f"dataset is non-imaging ({self.posterior.dataset_kinds()}). For a "
+                "point-source observation use point_source_panel(); full_report() "
+                "picks the right panel per dataset automatically.")
+        n_ds = len(bands)
         views = (self.posterior.source_plane_views(point=point)
                  if with_critical_curves else [])
         obs_override = None if observed is None else np.asarray(observed)
 
         fig, axs = plt.subplots(n_ds, 4, figsize=(13, 3.2 * n_ds), squeeze=False)
-        for k, row_ax in enumerate(axs):
+        for row, row_ax in zip(bands, axs):
+            k = row
             # Per band: rows may come from grids of different size/scale.
             extent = self._band_extent(k)
             observed_k = (obs_override if obs_override is not None
@@ -269,7 +302,13 @@ class PosteriorReport:
         own deflection ratio, since the Jacobian ``I - r * dalpha/dtheta`` depends on
         ``r`` and every source redshift therefore has its own curve.
         """
-        n_ds = self.posterior.n_datasets()
+        bands = self.posterior.imaging_datasets()
+        if not bands:
+            raise TypeError(
+                "model_panel() renders image-plane models, but this model has no "
+                f"imaging datasets ({self.posterior.dataset_kinds()}). A point-source "
+                "observation predicts positions, not pixels — see point_source_panel().")
+        n_ds = len(bands)
         views = (self.posterior.source_plane_views(point=point)
                  if with_critical_curves else [])
         by_band: Dict[int, List[Tuple[int, float]]] = {}
@@ -277,8 +316,8 @@ class PosteriorReport:
             by_band.setdefault(d, []).append((plane_i, dr))
 
         fig, axs = plt.subplots(n_ds, 1, figsize=(5.5, 4.6 * n_ds), squeeze=False)
-        for k in range(n_ds):
-            ax = axs[k][0]
+        for row, k in enumerate(bands):
+            ax = axs[row][0]
             predicted = np.asarray(self.posterior.simulate(point=point, dataset=k))
             band = f" band {k}" if n_ds > 1 else ""
             plot_image(ax, predicted, extent=self._band_extent(k),
@@ -289,6 +328,148 @@ class PosteriorReport:
                 plot_critical_curves(ax, self.posterior, point=point,
                                      plane=plane_i, deflection_ratio=dr)
         return self._finalize(fig)
+
+    # -- point-source panel --------------------------------------------------
+
+    def _resolve_ps_dataset(self, dataset: Optional[int]) -> int:
+        """Resolve ``dataset=None`` to the model's only point-source observation."""
+        from ..inference_utils.datasets import KIND_POINT_SOURCE
+        candidates = self.posterior.datasets_of_kind(KIND_POINT_SOURCE)
+        if dataset is not None:
+            return dataset
+        if not candidates:
+            raise TypeError(
+                "point_source_panel() found no point-source datasets on this model "
+                f"(kinds: {self.posterior.dataset_kinds()}). This panel covers "
+                "gigalens.jax.point_source_position observations.")
+        if len(candidates) > 1:
+            raise ValueError(
+                f"this model has {len(candidates)} point-source datasets (indices "
+                f"{candidates}); pass dataset= to say which one. full_report() builds "
+                "one panel per dataset automatically.")
+        return candidates[0]
+
+    def point_source_panel(
+        self,
+        *,
+        dataset: Optional[int] = None,
+        point: str = "median",
+        n_draws: Optional[int] = None,
+        with_curves: bool = True,
+        sigma_scale: float = 1.0,
+    ) -> Figure:
+        """Full diagnostic panel for one point-source observation.
+
+        The counterpart of :meth:`image_panel`, in three rows:
+
+        1. **Configuration** — observed vs solved image positions with the critical
+           curve; the source plane with the caustic and the delensed images; the
+           whitened position pulls; the chi2 decomposition.
+        2. **Zooms** — one axes per image at the astrometric noise scale (an
+           arcsec-scale overview cannot show a 5-mas residual), plus the two
+           solver-health panels.
+        3. **Channels** — magnification, and the flux / time-delay channels when the
+           dataset carries them.
+
+        Posterior draws are thinned (see
+        :func:`~gigalens_research.inference_utils.point_source.thin_draws_z`) and drawn
+        as ``corner``-style 1/2-sigma contours, the same estimator and level convention
+        as :meth:`corner`. A point estimate has no draws, so the clouds are omitted and
+        the two health panels say so rather than being drawn from one point.
+
+        ``sigma_scale`` inflates the error ellipses on the **overview** only, for
+        visibility at system scale; the zooms always show them at true size.
+        """
+        from ..inference_utils.point_source import point_source_term
+
+        dataset = self._resolve_ps_dataset(dataset)
+        pred = self.posterior.point_source_prediction(dataset=dataset, point=point)
+        draws = self.posterior.point_source_draws(dataset=dataset, n_draws=n_draws)
+
+        n_img = pred.n_images
+        has_flux = pred.inv_flux_obs is not None
+        has_td = pred.td_obs is not None
+        n_channels = 1 + int(has_flux) + int(has_td)
+
+        fig = plt.figure(figsize=(14.5, 10.0))
+        outer = fig.add_gridspec(3, 1, height_ratios=[4.2, 2.8, 2.4], hspace=0.60)
+        g_top = outer[0].subgridspec(1, 4, wspace=0.34)
+        g_mid = outer[1].subgridspec(1, n_img + 2, wspace=0.55)
+        # Always three channel slots, however many are filled: one panel stretched
+        # across the full figure width reads as the most important thing on it, and a
+        # position-only fit (magnification alone) is exactly the case where it is not.
+        g_bot = outer[2].subgridspec(1, max(n_channels, 3), wspace=0.30)
+
+        ax_sky = fig.add_subplot(g_top[0, 0])
+        ax_src = fig.add_subplot(g_top[0, 1])
+        ax_pull = fig.add_subplot(g_top[0, 2])
+        ax_chi2 = fig.add_subplot(g_top[0, 3])
+
+        # Curves FIRST: the position plotters frame on the union of their own points
+        # and whatever is already on the axes, so drawing curves first both puts them
+        # under the predictive cloud and keeps a caustic that runs wide of the markers
+        # inside the frame instead of cropped out of it.
+        if with_curves:
+            # The tracing window comes from the data (the images bracket the Einstein
+            # radius): a point-source model has no cutout, and LensSolver requires an
+            # explicit window rather than inventing one.
+            term = point_source_term(self.posterior, dataset)
+            radius = float(np.max(np.hypot(pred.x_obs, pred.y_obs)))
+            window = _PS_CURVE_WINDOW_FACTOR * max(radius, 1e-6)
+            # Pin the tracing scale so the grid lands under LensSolver's internal
+            # ``max_grid`` bound. Left to default it derives a >800px side and warns
+            # that it is coarsening — a warning about a resolution the caller never
+            # asked for, on every panel.
+            scale = window / _PS_CURVE_GRID
+            plot_critical_curves(ax_sky, self.posterior, point=point,
+                                 plane=term.src_i, deflection_ratio=1.0,
+                                 window=window, scale=scale, label="critical")
+            plot_caustics(ax_src, self.posterior, point=point,
+                          plane=term.src_i, deflection_ratio=1.0,
+                          window=window, scale=scale, label="caustic")
+
+        plot_positions(ax_sky, pred, draws=draws, sigma_scale=sigma_scale)
+        plot_source_position(ax_src, pred, draws=draws)
+        plot_position_pulls(ax_pull, pred)
+        plot_chi2_decomposition(ax_chi2, pred, draws=draws)
+
+        for i in range(n_img):
+            plot_position_zoom(fig.add_subplot(g_mid[0, i]), pred, i, draws=draws)
+
+        ax_health = fig.add_subplot(g_mid[0, n_img])
+        ax_trust = fig.add_subplot(g_mid[0, n_img + 1])
+        if draws is None:
+            for ax, what in ((ax_health, "solver health"), (ax_trust, "trust region")):
+                ax.text(0.5, 0.5, f"{what}\nneeds posterior draws\n(point estimate)",
+                        transform=ax.transAxes, ha="center", va="center", fontsize=7)
+                ax.set_xticks([])
+                ax.set_yticks([])
+        else:
+            plot_solver_health(ax_health, draws)
+            plot_trust_occupancy(ax_trust, draws)
+
+        col = 0
+        plot_magnifications(fig.add_subplot(g_bot[0, col]), pred, draws=draws)
+        col += 1
+        if has_flux:
+            plot_flux_channel(fig.add_subplot(g_bot[0, col]), pred)
+            col += 1
+        if has_td:
+            plot_time_delay_channel(fig.add_subplot(g_bot[0, col]), pred)
+            col += 1
+        for spare in range(col, max(n_channels, 3)):
+            fig.add_subplot(g_bot[0, spare]).set_axis_off()
+
+        bits = [f"dataset {dataset}", f"{n_img} images",
+                rf"$\chi^2/\nu$ = {pred.red_chi2:.3g}"]
+        if draws is not None:
+            bits.append(f"{draws.n_draws} draws")
+            bits.append(f"{draws.frac_unconverged:.1%} unconverged")
+        title = "Point source — " + ", ".join(bits)
+        if self.prefix and self.prefix.strip():
+            title = f"{self.prefix.strip()} — {title}"
+        fig.suptitle(title, fontsize=11)
+        return fig
 
     def _band_extent(self, dataset: int) -> Tuple[float, float, float, float]:
         """``imshow`` extent in arcsec for one band's grid.
@@ -608,15 +789,31 @@ class PosteriorReport:
         Use ``z_score_kind`` to switch which parameter class is shown
         (default ``'mass'``).
 
+        Panels are chosen per dataset kind: imaging datasets get the image and
+        source-plane panels, point-source datasets get one
+        :meth:`point_source_panel` each (keyed ``point_source`` for a single one,
+        ``point_source_<index>`` when the model carries several). A model with no
+        imaging dataset at all simply gets no image panel, rather than failing.
+
         Returns a dict ``{name: fig}`` so callers can post-process before
         showing or saving manually.
         """
         import os
+        from ..inference_utils.datasets import KIND_POINT_SOURCE
+
         figs: Dict[str, Figure] = {}
-        figs["image"] = self.image_panel(observed)
+        has_imaging = bool(self.posterior.imaging_datasets())
+        if has_imaging:
+            figs["image"] = self.image_panel(observed)
         if hasattr(self.posterior, "samples_z"):
             figs["convergence"] = self.convergence_panel()
-        figs["source"] = self.source_panel(observed=observed)
+        if has_imaging:
+            figs["source"] = self.source_panel(observed=observed)
+
+        ps_datasets = self.posterior.datasets_of_kind(KIND_POINT_SOURCE)
+        for d in ps_datasets:
+            key = "point_source" if len(ps_datasets) == 1 else f"point_source_{d}"
+            figs[key] = self.point_source_panel(dataset=d)
         # Corner needs a sample distribution; a point estimate (MAP) has a single
         # point with no dynamic range, so skip it there (mirrors the convergence guard).
         if hasattr(self.posterior, "flat_z"):
