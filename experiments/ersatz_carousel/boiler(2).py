@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from copy import deepcopy
 
+from gigalens.jax.inference import ModellingSequence
 from gigalens.jax.prob_model import ForwardProbModel, BackwardProbModel, ForwardMultiModel, BackwardMultiModel
 from gigalens.model import PhysicalModelBase
 from gigalens.jax.physical_model import PhysicalModel
@@ -57,17 +58,19 @@ with open('models/EvanNFW459.json', 'r') as file:
     
 halo_model = Prior(
     #mass.epl.EPL(),
-    mass.nfw.NFW_ELLIPSE_EINSTEIN(),
+    # mass.nfw.NFW_ELLIPSE_EINSTEIN(),
+    mass.nfw_ellipse_slope.NFW_ELLIPSE_SLOPE(),
     # mass.bpl.BPL(),
     # mass.piemd.PIEMD(),
     # best_model['lens_mass']['0'] | 
     dict(
-        center_x = tfd.Normal(6.69965551, 1),
-        center_y = tfd.Normal(4.80431651, 1), 
+        center_x = 5.28956836933847,#tfd.Normal(6.69965551, 1),
+        center_y = 3.83181032286269,#tfd.Normal(4.80431651, 1), 
         e1 = tfd.TruncatedNormal(0, 0.1, -0.3, 0.3),
         e2 = tfd.TruncatedNormal(0, 0.1, -0.3, 0.3),
-        Rs = tfd.Uniform(20, 100),
-        theta_E = tfd.Uniform(12, 14),
+        # Rs = tfd.Uniform(20, 100),
+        s_E = 0.3978946756627397, #tfd.Uniform(0., 0.8),
+        theta_E = 13.556713787406036,#tfd.Uniform(12, 14),
         
         # # #gamma = tfd.TruncatedNormal(1.6, 0.5, 1 , 3),
         # gamma = tfd.Uniform(1,3)
@@ -85,58 +88,61 @@ ld_free_ellip_model = Prior(
     # mass.epl.EPL(),
     # best_model['lens_mass']['1'],
     dict(
-        center_x = tfd.Normal(11.80977389, 0.1),
-        center_y = tfd.Normal(23.0283886, 0.1),
+        center_x = 10.9095267696554,#tfd.Normal(11.80977389, 0.1),
+        center_y = 22.85239233620674,#tfd.Normal(23.0283886, 0.1),
         # theta_E = 1.6730331,
         # r_cut = 2.749177,
         # r_core = 0.2986106,
         # e1 = 0.41781854,
         # e2 = 0.07367268,
-        theta_E = tfd.TruncatedNormal(1.6730331, 0.1, 1, 2.5),
-        r_cut = tfd.LogNormal(jnp.log(10), 1),
-        r_core = 0.05, #tfd.LogNormal(jnp.log(0.5), 0.1),
+        theta_E = 1.335966110153807,#tfd.TruncatedNormal(1.6730331, 0.5, 1, 2.5),
+        r_cut = 3.860579321566192,#lambda theta_E: tfd.TruncatedNormal(2*theta_E, theta_E, theta_E, 5*theta_E),#tfd.LogNormal(jnp.log(10), 1),
+        r_core = 0.04837694366159099,#0.05, #tfd.LogNormal(jnp.log(0.5), 0.1),
         # gamma = tfd.TruncatedNormal(2., 0.5, 1, 3),
-        e1 = tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
-        e2 = tfd.TruncatedNormal(0, 0.05, -0.3, 0.3), #lambda e1: tfd.TruncatedNormal(0, 0.05, -np.sqrt(0.09-e1**2), np.sqrt(0.09-e1**2)),
+        e1 = tfd.TruncatedNormal(0, 0.1, -0.5, 0.5),
+        e2 = tfd.TruncatedNormal(0, 0.1, -0.5, 0.5), #lambda e1: tfd.TruncatedNormal(0, 0.05, -np.sqrt(0.09-e1**2), np.sqrt(0.09-e1**2)),
     ) #| best_model['lens_mass']['1']
 )
 
 shear_model = Prior(mass.shear.Shear(),
                     # best_model['lens_mass']['3'] | 
                     dict(
-                        gamma1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
-                        gamma2 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+                        gamma1 = 0.028809092138689242,#tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+                        gamma2 = -0.007526399864387709,#tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
                     ))
 
-le_free_model = Prior(mass.epl.EPL(),
+le_free_model = Prior(#mass.epl.EPL(),
+                      mass.piemd.DPIE(),
                       # best_model['lens_mass']['1'] |
                    dict(
-                       center_x = tfd.Normal(-21.17580938, 0.1),
-                       center_y = tfd.Normal(-24.25810504, 0.1),
+                       center_x = -21.732666052159754,#tfd.Normal(-21.17580938, 0.1),
+                       center_y = -25.17310936655802,#tfd.Normal(-24.25810504, 0.1),
                        # e1 = 0.07383415,
                        # e2 = 0.03570823, 
                        e1 = tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
                        e2 = tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
-                       theta_E = tfd.TruncatedNormal(1.6711541, 0.1, 1, 2.5),
-                       gamma = tfd.TruncatedNormal(2.007689, 0.5, 1, 3)
+                       theta_E = 2.5086596250074105,#tfd.TruncatedNormal(1.6711541, 0.1, 1, 2.5),
+                       # gamma = tfd.TruncatedNormal(2.007689, 0.5, 1, 3)
+                       r_core = 0.05281439136800418,
+                       r_cut = 19.905073498903953,
                    ) #| best_model['lens_mass']['3']
-                     )
+                   )
 
 group_halo_free_model = Prior(#mass.epl.EPL(),
                               mass.piemd.DPIE(),
                               # best_model['lens_mass']['2'] |
                    dict(
-                       center_x = tfd.Normal(-15.10088063, .1),
-                       center_y = tfd.Normal(-4.66657821, .1),
+                       center_x = -13.505915151958629,#tfd.Normal(-15.10088063, .1),
+                       center_y = -5.2701832742086285,#tfd.Normal(-4.66657821, .1),
                        # center_x = -15.10088063,
                        # center_y = -4.66657821,
                        # e1 = -0.00561034,
                        # e2 = -0.3605992,
                        e1 = tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
                        e2 = tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
-                       theta_E = tfd.TruncatedNormal(0.8151327, 0.05, 0.2, 1.5),
-                       r_cut = tfd.LogNormal(jnp.log(10), 1),
-                       r_core = 0.05, #tfd.LogNormal(jnp.log(0.5), 0.1),
+                       theta_E = 1.1288838445528762,#tfd.TruncatedNormal(0.8151327, 0.1, 0.2, 1.5),
+                       r_cut = 1.6134949111841166,#tfd.LogNormal(jnp.log(10), 1),
+                       r_core = 0.04782463457346131,#0.05, #tfd.LogNormal(jnp.log(0.5), 0.1),
                        # gamma = tfd.TruncatedNormal(2.2266, 0.5, 1, 3)
                    ) #| best_model['lens_mass']['4']
 )
@@ -155,17 +161,18 @@ upper_right_halo = Prior(mass.epl.EPL(),
 source1_prior = Prior(
     light.combined_profile.CombinedProfile(
         profiles=[
-            light.sersic_shapelets.SersicShapelets(6, use_lstsq=True, interpolate=False), #10
-            light.sersic.SersicEllipse(use_lstsq=True)
+            light.sersic_shapelets.SersicShapelets(8, use_lstsq=True, interpolate=False, cosmo_sample=True), #6
+            light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True)
         ],
         shared_params=[],
-        use_lstsq=True
+        use_lstsq=True,
+        cosmo_sample=True
     ),
     dict(
         # deflection_ratio = tfd.Uniform(0.5,1),
         z_source = 0.962,
-        center_x_0 = tfd.Normal(7.67187389, 2),
-        center_y_0 = tfd.Normal(3.31911655, 2),
+        center_x_0 = 6.666238062480575,#tfd.Normal(7.67187389, 5),
+        center_y_0 = 3.0602264453326686,#tfd.Normal(3.31911655, 5),
         e1_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3), 
         n_sersic_0 = tfd.Uniform(1,10),
@@ -173,8 +180,8 @@ source1_prior = Prior(
         beta_0 = tfd.Uniform(1e-3,1),#tfd.LogNormal(jnp.log(0.4), 0.15),
         # Ie = tfd.LogNormal(jnp.log(40), 1),
 
-        center_x_1 = tfd.Normal(0, 2),
-        center_y_1 = tfd.Normal(0, 2),
+        center_x_1 = 10.637716074545258,#tfd.Normal(10, 5),
+        center_y_1 = 4.160684375621603,#tfd.Normal(3, 5),
         e1_1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2_1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         n_sersic_1 = tfd.Uniform(1,10),
@@ -185,26 +192,32 @@ source1_prior = Prior(
 source3_prior = Prior(
     light.combined_profile.CombinedProfile(
         profiles=[
-            light.sersic_shapelets.SersicShapelets(10, use_lstsq=True, interpolate=False), #15
-            light.sersic.SersicEllipse(use_lstsq=True)
+            # light.elliptical_shapelets.EllipticalShapelets(8, use_lstsq=True, cosmo_sample=True), #10
+            light.sersic_shapelets.SersicShapelets(8, use_lstsq=True, cosmo_sample=True),
+            light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
+            # light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True)
         ],
-        shared_params=['center_x', 'center_y'],
-        use_lstsq=True
+        # shared_params=['center_x', 'center_y', 'e1', 'e2'],
+        shared_params = [],
+        use_lstsq=True,
+        cosmo_sample=True
     ),
     dict(
         # deflection_ratio = tfd.Uniform(0.5,1),
         z_source = 1.166,
-        center_x = tfd.Normal(6.79821086, 2),
-        center_y = tfd.Normal(7.91570776, 2),
+        center_x_0 = 6.1369255971174095,#tfd.Normal(6.79821086, 5),
+        center_y_0 = 7.685360645174283,#tfd.Normal(7.91570776, 5),
+        center_x_1 = tfd.Normal(6.79821086, 5),
+        center_y_1 = tfd.Normal(7.91570776, 5),
         e1_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e1_1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2_1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
-        n_sersic_0 = tfd.Uniform(1,10),
+        n_sersic_0 = tfd.Uniform(.25,10),
         R_sersic_0 = tfd.Uniform(1e-3,1),#tfd.LogNormal(jnp.log(0.4), 0.15),
-        n_sersic_1 = tfd.Uniform(1,10),
+        n_sersic_1 = tfd.Uniform(.25,10),
+        beta_0 = lambda R_sersic_0: tfd.Normal(R_sersic_0, 0.01),#tfd.Uniform(1e-3,1),#tfd.LogNormal(jnp.log(0.4), 0.15),
         R_sersic_1 = tfd.Uniform(1e-3,1),#tfd.LogNormal(jnp.log(0.05), 0.05),
-        beta_0 = tfd.Uniform(1e-3,1),#tfd.LogNormal(jnp.log(0.4), 0.15),
         # Ie = tfd.LogNormal(jnp.log(40), 1),
     )
 )
@@ -212,22 +225,23 @@ source45_prior = Prior(
     light.combined_profile.CombinedProfile(
         profiles=[
             # light.sersic.SersicEllipse(),
-            light.sersic_shapelets.SersicShapelets(8, use_lstsq=True, interpolate=False), #12
-            light.sersic.SersicEllipse(use_lstsq=True),
+            light.sersic_shapelets.SersicShapelets(8, use_lstsq=True, interpolate=False, cosmo_sample=True), #12
+            light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
             # light.sersic_shapelets.SersicShapelets(4, use_lstsq=True, interpolate=True),
             # light.shapelets.Shapelets(4, use_lstsq=True, interpolate=False),
         ],
         shared_params=[],
         use_lstsq=True,
+        cosmo_sample=True
     ),
     # best_model['source_light']['0'] | 
     dict(
         # deflection_ratio = 1,
         z_source = 1.432,
-        center_x_0 = tfd.Normal(4.63, 2),
-        center_y_0 = tfd.Normal(3.79, 2),
-        center_x_1 = tfd.Normal(4.78792923, 2),
-        center_y_1 = tfd.Normal(0.84347007, 2),
+        center_x_0 = 3.761158158471543,#tfd.Normal(4.63, 5),
+        center_y_0 = 3.6118983086105794,#tfd.Normal(3.79, 5),
+        center_x_1 = 4.057624247997563,#tfd.Normal(4.78792923, 5),
+        center_y_1 = 0.4413611666181448,#tfd.Normal(0.84347007, 5),
         e1_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         
@@ -246,13 +260,13 @@ source45_prior = Prior(
 # source 9
 source9_prior = Prior(
     # light.sersic_shapelets.SersicShapelets(4, use_lstsq=True),
-    light.sersic.SersicEllipse(use_lstsq=True),
+    light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
     # best_model['source_light']['1'] | 
     dict(
         # deflection_ratio = tfd.Uniform(0.75, 1.25),
         z_source = 1.506,
-        center_x = tfd.Normal(-7, 2),
-        center_y = tfd.Normal(-13, 2),
+        center_x = -10.161034520497429,#tfd.Normal(-7, 5),
+        center_y = -15.583412851334739,#tfd.Normal(-13, 5),
         e1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3), 
         n_sersic = tfd.Uniform(1,10),
@@ -271,12 +285,12 @@ source9_prior = Prior(
 #     )
 # )
 source7_prior = Prior(
-    light.sersic.SersicEllipse(use_lstsq=True),
+    light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
     dict(
         # deflection_ratio = tfd.Uniform(1.,1.5),
-        z_source = 1.628,
-        center_x = tfd.Normal(0, 2),
-        center_y = tfd.Normal(0, 2),
+        z_source = 1.627,
+        center_x = 3.4914342655737154,#tfd.Normal(0, 5),
+        center_y = 0.5186553807078114,#tfd.Normal(0, 5),
         e1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         n_sersic = tfd.Uniform(1,10),
@@ -285,12 +299,12 @@ source7_prior = Prior(
     )
 )
 source6_prior = Prior(
-    light.sersic.SersicEllipse(use_lstsq=True),
+    light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
     dict(
         # deflection_ratio = tfd.Uniform(1.,1.5),
         z_source = 1.656,
-        center_x = tfd.Normal(0, 2),
-        center_y = tfd.Normal(0, 2),
+        center_x = 2.6964945132787275,#tfd.Normal(0, 5),
+        center_y = 3.4428081595645543,#tfd.Normal(0, 5),
         e1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         n_sersic = tfd.Uniform(1,10),
@@ -300,20 +314,21 @@ source6_prior = Prior(
 )
 source1213_prior = Prior(
     light.combined_profile.CombinedProfile(
-        profiles=[light.sersic_shapelets.SersicShapelets(6, use_lstsq=True, interpolate=False), #8
+        profiles=[light.sersic_shapelets.SersicShapelets(8, use_lstsq=True, interpolate=False, cosmo_sample=True), #8
                   # light.sersic.SersicEllipse(use_lstsq=True),
-                  light.sersic.SersicEllipse(use_lstsq=True),],
+                  light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),],
         shared_params=[],
         use_lstsq=True,
+        cosmo_sample=True
     ),
     dict(
         # deflection_ratio = 1.2674489,
         # deflection_ratio = tfd.Uniform(1,1.5),
         z_source = 3.086,
-        center_x_0 = tfd.Normal(2.906817674636841, 2),
-        center_y_0 = tfd.Normal(4.523301601409912, 2),
-        center_x_1 = tfd.Normal(6.670745849609375, 2),
-        center_y_1 = tfd.Normal(5.6769537925720215, 2),
+        center_x_0 = tfd.Normal(2.906817674636841, 5),
+        center_y_0 = tfd.Normal(4.523301601409912, 5),
+        center_x_1 = tfd.Normal(6.670745849609375, 5),
+        center_y_1 = tfd.Normal(5.6769537925720215, 5),
         e1_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2_0 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e1_1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
@@ -328,13 +343,13 @@ source1213_prior = Prior(
     )
 )
 source8_prior = Prior(
-    light.sersic.SersicEllipse(use_lstsq=True),
+    light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
     # light.sersic_shapelets.SersicShapelets(6, use_lstsq=True),
     dict(
         # deflection_ratio = tfd.Uniform(1,1.5),
         z_source = 3.549,
-        center_x = tfd.Normal(6.1898108, 2),
-        center_y = tfd.Normal(6.8792906, 2),
+        center_x = tfd.Normal(6.1898108, 5),
+        center_y = tfd.Normal(6.8792906, 5),
         e1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         n_sersic = tfd.Uniform(1,10),
@@ -344,12 +359,12 @@ source8_prior = Prior(
     )
 )
 source11_prior = Prior(
-    light.sersic.SersicEllipse(use_lstsq=True),
+    light.sersic.SersicEllipse(use_lstsq=True, cosmo_sample=True),
     dict(
         # deflection_ratio = tfd.Uniform(1.,1.5),
         z_source = 4.090,
-        center_x = tfd.Normal(4.4566746, 2),
-        center_y = tfd.Normal(2.0770147, 2),
+        center_x = tfd.Normal(4.4566746, 5),
+        center_y = tfd.Normal(2.0770147, 5),
         e1 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         e2 = tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
         n_sersic = tfd.Uniform(1,10),
@@ -363,8 +378,8 @@ cosmo_prior = Prior(
         cosmo_model,  # you need to set the redshifts for the cosmology to work, theta_E is relative to z_source_ref
     dict(
         H0=70.,
-        Om0=tfd.Uniform(0,1),
-        w0=tfd.Uniform(-2,1/3),
+        Om0=0.3,#tfd.Uniform(0,1),
+        w0=-1,#tfd.Uniform(-2,-1/3),
         # wa=tfd.Uniform(-3.0, 1.),
         wa=0.0,
         k=0.0,
@@ -381,18 +396,18 @@ source9 = SourcePlane(prior=source9_prior, path='model_data/muse/cutouts/source9
 source11 = SourcePlane(prior=source11_prior, path='model_data/muse/cutouts/source11.fits')
 source1213 = SourcePlane(prior=source1213_prior, path='model_data/muse/cutouts/source12-13.fits')
 
-names = ('1', '3', '4-5', '6', '7', '8', '9', '11', '12-13')
-sources = [source1, source3, source45, source6, source7, source8, source9, source11, source1213]
-for name, source in zip(names, sources):
-    source.observed_image = np.load(f'model_data/simulated_images/simulated{name}.npy')
+# names = ('1', '3', '4-5', '6', '7', '8', '9', '11', '12-13')
+# sources = [source1, source3, source45, source6, source7, source8, source9, source11, source1213]
+# for name, source in zip(names, sources):
+#     source.observed_image = np.load(f'model_data/simulated_images/simulated{name}.npy')
 
-# mask11 = np.ones((300,300)).astype('bool')
-# mask11[150:250,150:250] = 0
-# source11.mask &= mask11
+mask11 = np.ones((300,300)).astype('bool')
+mask11[150:250,150:250] = 0
+source11.mask &= mask11
 
-# mask7 = np.ones((300,300)).astype('bool')
-# mask7[150:250,150:250] = 0
-# source7.mask &= mask7
+mask7 = np.ones((300,300)).astype('bool')
+mask7[150:250,150:250] = 0
+source7.mask &= mask7
 
 sources = [source1, source3, source45, source6, source7, source8, source9, source11, source1213]
 

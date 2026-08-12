@@ -290,6 +290,19 @@ class PosteriorReport:
                                      plane=plane_i, deflection_ratio=dr)
         return self._finalize(fig)
 
+    def _plane_title(self, plane_i: int) -> str:
+        """``"Source plane 4 — src9_z1.506"``, or just the index when unnamed.
+
+        The index stays even when there is a name: it is what the per-view framing
+        arguments (``fov_arcsec={4: ...}``) are keyed on, so dropping it would leave
+        the figure showing one identifier and the API taking another. The name is what
+        makes a panel identifiable as a particular object rather than the fourth
+        plane in redshift order.
+        """
+        planes = getattr(self.posterior._scene_model, "planes", ())
+        name = getattr(planes[plane_i], "name", None) if plane_i < len(planes) else None
+        return f"Source plane {plane_i}" + (f" \u2014 {name}" if name else "")
+
     def _band_extent(self, dataset: int) -> Tuple[float, float, float, float]:
         """``imshow`` extent in arcsec for one band's grid.
 
@@ -366,7 +379,7 @@ class PosteriorReport:
                 center=_per_view(center, plane_i, d),
                 dataset=d, plane_index=plane_i, deflection_ratio=dr,
                 frame_frac=frame_frac,
-                title=f"Source plane {plane_i} (dr={dr:.3f}{band})",
+                title=f"{self._plane_title(plane_i)} (dr={dr:.3f}{band})",
             )
             if not with_observed:
                 continue
@@ -465,7 +478,7 @@ class PosteriorReport:
                 dataset=d, plane_index=plane_i, deflection_ratio=dr,
                 with_caustics=with_curves, with_image_border=with_image_border,
                 frame_frac=frame_frac,
-                title=f"Source plane {plane_i} (dr={dr:.3f})",
+                title=f"{self._plane_title(plane_i)} (dr={dr:.3f})",
             )
         return self._finalize(fig)
 

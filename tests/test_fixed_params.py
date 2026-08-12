@@ -494,3 +494,21 @@ def test_plot_scene_accepts_per_view_framing(scene):
     figs = plot_scene(model, sims, params, grid_pix=32,
                       fov_arcsec={1: 2.0}, center={2: (0.0, 0.0)})
     assert set(figs) == {"scene"}
+
+
+def test_panel_titles_name_the_plane():
+    """Panels identify the plane by name, not only by its index in redshift order.
+
+    A source is a numbered object in a catalogue; "plane 4" is an accident of how the
+    model happens to be sorted. The index stays because the per-view framing dicts
+    key on it.
+    """
+    model = _clump_model()
+    model.planes[1].name = "src9_z1.506"
+    sims = [SceneSimulator(model, _wide_cfg(), sees=p.light)
+            for p in model.planes if p.has_light]
+    titles = _titles(PosteriorReport(FixedParams(model, sims,
+                                                 model.to_params({}))).scene_panel(
+        grid_pix=24))
+    assert any("src9_z1.506" in t for t in titles), titles
+    assert any("Source plane 1" in t for t in titles), titles

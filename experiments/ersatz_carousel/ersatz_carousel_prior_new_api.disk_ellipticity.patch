@@ -1,0 +1,536 @@
+--- /global/u1/l/linusu/GIGALens-Code/experiments/ersatz_carousel/ersatz_carousel_prior_new_api.py.pre_disk_ellipticity.bak	2026-08-07 16:44:16.824114000 -0700
++++ /global/u1/l/linusu/GIGALens-Code/experiments/ersatz_carousel/ersatz_carousel_prior_new_api.py	2026-08-10 11:15:21.878443000 -0700
+@@ -98,19 +98,56 @@
+    redshift order (observer -> source, as the new API requires), with the cosmology
+    ``Component`` above passed as ``cosmo=``.
+ 
++Update: ellipticity priors are now DiskEllipticity, not box-truncated normals
++----------------------------------------------------------------------------
++Every ``(e1, e2)`` pair -- previously two INDEPENDENT ``tfd.TruncatedNormal``s on a
++box ``[-b, b]^2`` -- is now a single grouped (tuple-key) ``DiskEllipticity`` prior,
++``("e1", "e2"): _disk_e(sd, b)``. See :func:`_disk_e` for the two numbers and how
++each is derived from the prior it replaces; the short version is ``e_max =
++max(0.5, b*sqrt(2))`` (0.5, or the old box's CORNER if that reaches further) and a
++``scale`` chosen so the width in ellipticity space is unchanged.
++
++Two mechanical consequences, neither of them a modelling choice:
++
++* A joint prior over two parameters has to sit at a TUPLE key, which cannot be
++  written in ``dict(e1=..., e2=...)`` keyword form, so the affected components' prior
++  dicts became ``{...}`` literals. Key ORDER is preserved: a grouped prior "sorts into
++  its first member's z-column slot" (``scene.py``), so leaving ``("e1", "e2")`` where
++  ``e1`` used to be keeps the z-column order of the model identical.
++* Where the old file shared ``e1`` and ``e2`` across two sub-Sersics via two separate
++  ``shared()`` handles (``source3``, and ``source1_2``'s commented-out pair), that is
++  now ONE ``shared()`` handle wrapping the joint prior -- ``shared()`` is accepted at a
++  tuple key (``scene._classify_group``), and the pair is one prior now, so it cannot be
++  shared in two halves. Side effect on NAMING, the only externally visible difference:
++  ``_build_z_param_names`` names a grouped entry by its member param paths, and a shared
++  group has several sites per member, so ``source3``'s two ellipticity z-columns are now
++  keyed ``planes/2/light/1/e1``/``e2`` (labelled ``source3/light/sersic_1/e1``/``e2``)
++  where they used to be ``shared_0002``/``shared_0003`` (labelled ``source3_e1``/``e2``).
++  Same columns in the same positions, still one draw feeding BOTH Sersics -- but the name
++  no longer announces the sharing, and any saved chain keyed by ``z_param_names`` will
++  disagree with a new one on those two of 106 columns.
++
++``gamma1``/``gamma2`` of ``ext_shear`` are deliberately NOT swapped: ``DiskEllipticity``
++does serve any disk-bounded pair, but external shear is not an ellipticity and was not
++part of the request. Change it here if that was intended.
++
+ Not translated: none of this changes what is or isn't a free MASS or LIGHT parameter.
+ ``Ie`` stays absent everywhere it was absent (``use_lstsq=True`` throughout, both files),
+-and every mass/light bound, scale, and location number is still verbatim from
+-``ersatz_carousel_prior.py``. Only the geometry layer (deflection ratio vs cosmology +
+-redshift) and the top-level assembly are new.
++and every mass/light bound, scale, and location number outside the ellipticity pairs is
++still verbatim from ``ersatz_carousel_prior.py``. Only the geometry layer (deflection
++ratio vs cosmology + redshift), the ellipticity priors, and the top-level assembly are
++new.
+ """
+ from __future__ import annotations
+ 
++import math
++
+ import jax.numpy as jnp
+ from tensorflow_probability.substrates.jax import distributions as tfd
+ from tensorflow_probability.substrates.jax import bijectors as tfb
+ 
+ from gigalens.jax.scene import Component, Plane, LensModel, shared
++from gigalens.jax.utils.grouped_priors import DiskEllipticity
+ from gigalens.jax.cosmo import w0waCDM_Cosmo
+ from gigalens.jax.profiles.mass.nfw_ellipse_slope import NFW_ELLIPSE_SLOPE
+ from gigalens.jax.profiles.mass.piemd import DPIE
+@@ -140,6 +177,51 @@
+         return self._esb
+ 
+ 
++# --------------------------------------------------------------------------------
++# Ellipticity: box-truncated (e1, e2) -> DiskEllipticity
++# --------------------------------------------------------------------------------
++# Which quantity "the standard deviation stays the same" refers to. This is the one
++# judgement call in the swap, and it is worth a factor of ~2 in prior width, so it is a
++# switch rather than a buried constant:
++#   "e" -- the sd in ELLIPTICITY space is preserved (default).
++#   "u" -- the old sd is passed straight through as DiskEllipticity's ``scale``, i.e.
++#          the literal parameter-name mapping. This NARROWS the prior (see _disk_e).
++_SD_CONVENTION = "e"
++
++
++def _disk_e(sd, box_half):
++    """The ``DiskEllipticity`` replacing an ``(e1, e2)`` pair of independent
++    ``tfd.TruncatedNormal(0, sd, -box_half, box_half)``.
++
++    ``e_max`` (the disk's hard cap on ``|e|``) is ``max(0.5, box_half*sqrt(2))``: 0.5,
++    or the CORNER of the old box -- the largest modulus the old prior could reach --
++    whenever that is larger, so the disk never cuts away ellipticity the box allowed.
++    Here that is 0.5 at every site except ``bcg_dpie``'s ``box_half=0.5``, which gives
++    ``0.5*sqrt(2) = 0.70711`` (``q > 0.17``).
++
++    ``scale`` is NOT the sd of ``e``: it is the sd of the unconstrained Gaussian on
++    ``u``, and the disk map is ``e = e_max * u / sqrt(1 + |u|^2)``, so ``e ~ e_max * u``
++    near the centre. Passing ``sd`` through verbatim would therefore shrink the prior's
++    width in ellipticity space by roughly ``e_max`` -- a factor of 2 at ``e_max = 0.5``.
++    Under ``_SD_CONVENTION = "e"`` this uses ``scale = sd / e_max`` so the widths match
++    instead. Monte-Carlo check of the realised marginal ``sd(e1)``, old vs new:
++
++        sd=0.10, box +/-0.3 (e_max 0.500):  0.0987 -> 0.0932   [verbatim scale: 0.0490]
++        sd=0.10, box +/-0.5 (e_max 0.707):  0.1000 -> 0.0964   [verbatim scale: 0.0694]
++        sd=0.05, box +/-0.3 (e_max 0.500):  0.0500 -> 0.0490   [verbatim scale: 0.0249]
++
++    The residual ~5% narrowing is the disk map's own compression at larger ``|u|``, not
++    a free knob; correcting it exactly would mean fitting ``scale`` numerically per site.
++
++    ``mode`` is left at its default ``(0, 0)`` -- every prior replaced here was centred
++    on zero ellipticity. ``dtype`` is left at the ambient default float, which is what
++    the rest of this model's priors already use (LensModel enforces dtype uniformity).
++    """
++    e_max = max(0.5, box_half * math.sqrt(2.0))
++    scale = sd if _SD_CONVENTION == "u" else sd / e_max
++    return DiskEllipticity(e_max=e_max, scale=scale)
++
++
+ # Flat LambdaCDM: wCDM_Cosmo (H0, Om0, k, w0) with w0 FIXED at -1.0, not sampled --
+ # there is no dedicated LambdaCDM profile class, and this is what makes wCDM_Cosmo one.
+ # H0/k fixed and Om0 free follow bullseye's own cosmo Component precedent (see module
+@@ -163,29 +245,28 @@
+ # --------------------------------------------------------------------------------
+ halo_model = Component(
+     NFW_ELLIPSE_SLOPE(),
+-    dict(
+-        center_x=tfd.Normal(6.69965551, 1),
+-        center_y=tfd.Normal(4.80431651, 1),
+-        e1=tfd.TruncatedNormal(0, 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0, 0.1, -0.3, 0.3),
+-        s_E=tfd.Uniform(0., 0.8),
+-        theta_E=tfd.Uniform(12, 14),
+-    ),
++    {
++        "center_x": tfd.Normal(6.69965551, 1),
++        "center_y": tfd.Normal(4.80431651, 1),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "s_E": tfd.Uniform(0., 0.8),
++        "theta_E": tfd.Uniform(12, 14),
++    },
+     name="cluster_halo",
+ )
+ 
+ # fixed position, PIEMD
+ ld_free_ellip_model = Component(
+     DPIE(),
+-    dict(
+-        center_x=tfd.Normal(11.80977389, 0.1),
+-        center_y=tfd.Normal(23.0283886, 0.1),
+-        theta_E=tfd.TruncatedNormal(1.6730331, 0.5, 1, 2.5),
+-        r_cut=tfd.LogNormal(jnp.log(10), 1),
+-        r_core=tfd.LogNormal(jnp.log(0.05), 0.01),
+-        e1=tfd.TruncatedNormal(0, 0.1, -0.5, 0.5),
+-        e2=tfd.TruncatedNormal(0, 0.1, -0.5, 0.5),
+-    ),
++    {
++        "center_x": tfd.Normal(11.80977389, 0.1),
++        "center_y": tfd.Normal(23.0283886, 0.1),
++        "theta_E": tfd.TruncatedNormal(1.6730331, 0.5, 1, 2.5),
++        "r_cut": tfd.LogNormal(jnp.log(10), 1),
++        "r_core": tfd.LogNormal(jnp.log(0.05), 0.01),
++        # the one site whose old box corner (0.5*sqrt(2)) reaches past 0.5
++        ("e1", "e2"): _disk_e(0.1, 0.5),
++    },
+     name="bcg_dpie",
+ )
+ 
+@@ -200,29 +281,27 @@
+ 
+ le_free_model = Component(
+     DPIE(),
+-    dict(
+-        center_x=tfd.Normal(-21.17580938, 0.1),
+-        center_y=tfd.Normal(-24.25810504, 0.1),
+-        e1=tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
+-        theta_E=tfd.TruncatedNormal(1.6711541, 0.1, 1, 2.5),
+-        r_cut=tfd.LogNormal(jnp.log(10), 1),
+-        r_core=tfd.LogNormal(jnp.log(0.05), 0.01),
+-    ),
++    {
++        "center_x": tfd.Normal(-21.17580938, 0.1),
++        "center_y": tfd.Normal(-24.25810504, 0.1),
++        ("e1", "e2"): _disk_e(0.05, 0.3),
++        "theta_E": tfd.TruncatedNormal(1.6711541, 0.1, 1, 2.5),
++        "r_cut": tfd.LogNormal(jnp.log(10), 1),
++        "r_core": tfd.LogNormal(jnp.log(0.05), 0.01),
++    },
+     name="le_dpie",
+ )
+ 
+ group_halo_free_model = Component(
+     DPIE(),
+-    dict(
+-        center_x=tfd.Normal(-15.10088063, .1),
+-        center_y=tfd.Normal(-4.66657821, .1),
+-        e1=tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
+-        theta_E=tfd.TruncatedNormal(0.8151327, 0.1, 0.2, 1.5),
+-        r_cut=tfd.LogNormal(jnp.log(10), 1),
+-        r_core=tfd.LogNormal(jnp.log(0.05), 0.01),
+-    ),
++    {
++        "center_x": tfd.Normal(-15.10088063, .1),
++        "center_y": tfd.Normal(-4.66657821, .1),
++        ("e1", "e2"): _disk_e(0.05, 0.3),
++        "theta_E": tfd.TruncatedNormal(0.8151327, 0.1, 0.2, 1.5),
++        "r_cut": tfd.LogNormal(jnp.log(10), 1),
++        "r_core": tfd.LogNormal(jnp.log(0.05), 0.01),
++    },
+     name="group_dpie",
+ )
+ 
+@@ -230,14 +309,13 @@
+ # STRUCTURE); translated anyway since it is defined here, same as in the old file.
+ # upper_right_halo = Component(
+ #     EPL(),
+-#     dict(
+-#         center_x=tfd.Normal(32, .5),
+-#         center_y=tfd.Normal(22, .5),
+-#         e1=tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
+-#         e2=tfd.TruncatedNormal(0, 0.05, -0.3, 0.3),
+-#         theta_E=tfd.LogNormal(jnp.log(1), 0.05),
+-#         gamma=tfd.TruncatedNormal(2, 0.5, 1, 3),
+-#     ),
++#     {
++#         "center_x": tfd.Normal(32, .5),
++#         "center_y": tfd.Normal(22, .5),
++#         ("e1", "e2"): _disk_e(0.05, 0.3),
++#         "theta_E": tfd.LogNormal(jnp.log(1), 0.05),
++#         "gamma": tfd.TruncatedNormal(2, 0.5, 1, 3),
++#     },
+ #     name="upper_right_halo",
+ # )
+ 
+@@ -253,43 +331,41 @@
+ # ties its two Sersics' centre/ellipticity together -- one sampled value, not two.
+ _source1_center_x_0 = shared(tfd.Normal(7.67187389, 5), name="source1_2_center_x_0")
+ _source1_center_y_0 = shared(tfd.Normal(3.31911655, 5), name="source1_2_center_y_0")
+-_source1_e1_0 = shared(tfd.TruncatedNormal(0., 0.1, -0.3, 0.3), name="source1_2_e1_0")
+-_source1_e2_0 = shared(tfd.TruncatedNormal(0., 0.1, -0.3, 0.3), name="source1_2_e2_0")
++# One shared handle for the PAIR (was one per component): the two are a single joint
++# prior now, so they cannot be shared in halves.
++_source1_e_0 = shared(_disk_e(0.1, 0.3), name="source1_2_e_0")
+ 
+ # sersic_0_0 = Component(
+ #     SersicEllipse(use_lstsq=True),
+-#     dict(
+-#         center_x=_source1_center_x_0,
+-#         center_y=_source1_center_y_0,
+-#         e1=_source1_e1_0,
+-#         e2=_source1_e2_0,
+-#         n_sersic=tfd.Uniform(.25, 10),
+-#         R_sersic=tfd.LogNormal(jnp.log(0.4), 0.15),
+-#     ),
++#     {
++#         "center_x": _source1_center_x_0,
++#         "center_y": _source1_center_y_0,
++#         ("e1", "e2"): _source1_e_0,
++#         "n_sersic": tfd.Uniform(.25, 10),
++#         "R_sersic": tfd.LogNormal(jnp.log(0.4), 0.15),
++#     },
+ #     name="sersic_0_0",
+ # )
+ sersic_0 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(7.67187389, 5),#_source1_center_x_0,
+-        center_y=tfd.Normal(3.31911655, 5), #_source1_center_y_0,
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),#,_source1_e1_0,
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),#_source1_e2_0,
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.LogNormal(jnp.log(0.4), 0.15),
+-    ),
++    {
++        "center_x": tfd.Normal(7.67187389, 5),#_source1_center_x_0,
++        "center_y": tfd.Normal(3.31911655, 5), #_source1_center_y_0,
++        ("e1", "e2"): _disk_e(0.1, 0.3),#_source1_e_0,
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.LogNormal(jnp.log(0.4), 0.15),
++    },
+     name="sersic_0",
+ )
+ sersic_1 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(10, 5),
+-        center_y=tfd.Normal(3, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(0.25, 10),
+-        R_sersic=tfd.LogNormal(jnp.log(0.4), 0.15),
+-    ),
++    {
++        "center_x": tfd.Normal(10, 5),
++        "center_y": tfd.Normal(3, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(0.25, 10),
++        "R_sersic": tfd.LogNormal(jnp.log(0.4), 0.15),
++    },
+     name="sersic_1",
+ )
+ source1_plane = Plane(
+@@ -305,31 +381,29 @@
+ # DoubleSersic's default. Both Sersics share one centre/ellipticity.
+ _source3_center_x = shared(tfd.Normal(6.79821086, 5), name="source3_center_x")
+ _source3_center_y = shared(tfd.Normal(7.91570776, 5), name="source3_center_y")
+-_source3_e1 = shared(tfd.TruncatedNormal(0., 0.1, -0.3, 0.3), name="source3_e1")
+-_source3_e2 = shared(tfd.TruncatedNormal(0., 0.1, -0.3, 0.3), name="source3_e2")
++# One shared handle for the PAIR (was one per parameter) -- see source1_2 above.
++_source3_e = shared(_disk_e(0.1, 0.3), name="source3_e")
+ 
+ source3_sersic_0 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=_source3_center_x,
+-        center_y=_source3_center_y,
+-        e1=_source3_e1,
+-        e2=_source3_e2,
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.LogNormal(jnp.log(0.4), 0.15),
+-    ),
++    {
++        "center_x": _source3_center_x,
++        "center_y": _source3_center_y,
++        ("e1", "e2"): _source3_e,
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.LogNormal(jnp.log(0.4), 0.15),
++    },
+     name="sersic_0",
+ )
+ source3_sersic_1 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=_source3_center_x,
+-        center_y=_source3_center_y,
+-        e1=_source3_e1,
+-        e2=_source3_e2,
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": _source3_center_x,
++        "center_y": _source3_center_y,
++        ("e1", "e2"): _source3_e,
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic_1",
+ )
+ source3_plane = Plane(
+@@ -343,26 +417,24 @@
+ # shared_params=[]) -- no sharing; two fully independent Sersics.
+ source45_sersic_0 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(4.63, 5),
+-        center_y=tfd.Normal(3.79, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(4.63, 5),
++        "center_y": tfd.Normal(3.79, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic_0",
+ )
+ source45_sersic_1 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(4.78792923, 5),
+-        center_y=tfd.Normal(0.84347007, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(4.78792923, 5),
++        "center_y": tfd.Normal(0.84347007, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic_1",
+ )
+ source45_plane = Plane(
+@@ -375,14 +447,13 @@
+ # source 9 (z_source = 1.506): plain SersicEllipse, never combined.
+ source9_sersic = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(-7, 5),
+-        center_y=tfd.Normal(-13, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(-7, 5),
++        "center_y": tfd.Normal(-13, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic",
+ )
+ source9_plane = Plane(
+@@ -395,14 +466,13 @@
+ # source 7 (z_source = 1.627): plain SersicEllipse, never combined.
+ source7_sersic = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(0, 5),
+-        center_y=tfd.Normal(0, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(0, 5),
++        "center_y": tfd.Normal(0, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic",
+ )
+ source7_plane = Plane(
+@@ -415,14 +485,13 @@
+ # source 6 (z_source = 1.656): plain SersicEllipse, never combined.
+ source6_sersic = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(0, 5),
+-        center_y=tfd.Normal(0, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(0, 5),
++        "center_y": tfd.Normal(0, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic",
+ )
+ source6_plane = Plane(
+@@ -436,26 +505,24 @@
+ # shared_params=[]) -- no sharing; two fully independent Sersics.
+ source1213_sersic_0 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(2.906817674636841, 5),
+-        center_y=tfd.Normal(4.523301601409912, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(2.906817674636841, 5),
++        "center_y": tfd.Normal(4.523301601409912, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic_0",
+ )
+ source1213_sersic_1 = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(6.670745849609375, 5),
+-        center_y=tfd.Normal(5.6769537925720215, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(6.670745849609375, 5),
++        "center_y": tfd.Normal(5.6769537925720215, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic_1",
+ )
+ source1213_plane = Plane(
+@@ -468,14 +535,13 @@
+ # source 8 (z_source = 3.549): plain SersicEllipse, never combined.
+ source8_sersic = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(6.1898108, 5),
+-        center_y=tfd.Normal(6.8792906, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(6.1898108, 5),
++        "center_y": tfd.Normal(6.8792906, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic",
+ )
+ source8_plane = Plane(
+@@ -488,14 +554,13 @@
+ # source 11 (z_source = 4.090): plain SersicEllipse, never combined.
+ source11_sersic = Component(
+     SersicEllipse(use_lstsq=True),
+-    dict(
+-        center_x=tfd.Normal(4.4566746, 5),
+-        center_y=tfd.Normal(2.0770147, 5),
+-        e1=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        e2=tfd.TruncatedNormal(0., 0.1, -0.3, 0.3),
+-        n_sersic=tfd.Uniform(.25, 10),
+-        R_sersic=tfd.Uniform(1e-3, 1),
+-    ),
++    {
++        "center_x": tfd.Normal(4.4566746, 5),
++        "center_y": tfd.Normal(2.0770147, 5),
++        ("e1", "e2"): _disk_e(0.1, 0.3),
++        "n_sersic": tfd.Uniform(.25, 10),
++        "R_sersic": tfd.Uniform(1e-3, 1),
++    },
+     name="sersic",
+ )
+ source11_plane = Plane(

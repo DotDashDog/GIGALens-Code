@@ -1,0 +1,408 @@
+"""Ellipticity priors here are DiskEllipticity, not box-truncated normals.
+
+Same treatment as ``ersatz_carousel_prior_new_api.py`` received, applied to this file.
+Every ``(e1, e2)`` pair -- previously two INDEPENDENT ``tfd.TruncatedNormal``s on a box
+``[-b, b]^2`` -- is now a single grouped (tuple-key) ``DiskEllipticity`` prior,
+``("e1", "e2"): _disk_e(sd, b)``. See :func:`_disk_e` for the two numbers and how each is
+derived from the prior it replaces; the short version is ``e_max = max(0.5, b*sqrt(2))``
+(0.5, or the old box's CORNER if that reaches further) and a ``scale`` chosen so the
+width in ellipticity space is unchanged. Nothing else about the model is touched: every
+location, scale, and bound outside the ellipticity pairs is still exactly what it was,
+no parameter changed from fixed to free or back, and the planes/cosmology at the bottom
+are untouched.
+
+Two mechanical consequences, neither of them a modelling choice:
+
+* A joint prior over two parameters has to sit at a TUPLE key, which cannot be written in
+  ``dict(e1=..., e2=...)`` keyword form, so the affected components' prior dicts became
+  ``{...}`` literals. Key ORDER is preserved: a grouped prior "sorts into its first
+  member's z-column slot" (``scene.py``), so leaving ``("e1", "e2")`` exactly where ``e1``
+  used to be keeps the z-column order of the model identical.
+* Where the (commented-out) shapelet blocks shared ``e1`` and ``e2`` across two components
+  via two separate ``shared()`` handles, that is now ONE ``shared()`` handle wrapping the
+  joint prior -- ``shared()`` is accepted at a tuple key (``scene._classify_group``), and
+  the pair is one prior now, so it cannot be shared in two halves. Those blocks are all
+  commented out here, so this has no effect on the live model; it is done so that
+  uncommenting one still works.
+
+One thing to be aware of, and it differs from what the same rule did in
+``ersatz_carousel_prior_new_api.py``: the boxes in THIS file are wider (+/-0.4 and
++/-0.5, where that file was mostly +/-0.3), so the corner rule binds nearly everywhere
+rather than almost nowhere. Only ``lhalo`` (+/-0.2) keeps ``e_max = 0.5``; the three DPIE
+haloes get 0.566 (``q > 0.28``) and every source light gets 0.707 (``q > 0.17``). That is
+the faithful "never cut away ellipticity the box allowed" reading, but it does mean the
+hard caps are looser than 0.5 at 17 of the 18 sites. If a uniform ``e_max = 0.5`` is what
+was wanted instead, change the ``max(...)`` in :func:`_disk_e` to a constant -- that is a
+one-line edit, and it is a modelling decision, so it is not made here.
+
+``gamma1``/``gamma2`` of ``shear_model`` are deliberately NOT swapped: ``DiskEllipticity``
+does serve any disk-bounded pair, but external shear is not an ellipticity, it was not
+part of the request, and here it is an UNtruncated ``tfd.Normal`` -- it has no box to
+replace, so there is no bound to carry over. Change it here if that was intended.
+"""
+from __future__ import annotations
+
+import math
+
+import jax.numpy as jnp
+from tensorflow_probability.substrates.jax import distributions as tfd
+from tensorflow_probability.substrates.jax import bijectors as tfb
+
+from gigalens.jax.scene import Component, Plane, LensModel, shared
+from gigalens.jax.utils.grouped_priors import DiskEllipticity
+from gigalens.jax.cosmo import w0waCDM_Cosmo
+from gigalens.jax.profiles import mass#.nfw_ellipse_slope import NFW_ELLIPSE_SLOPE
+from gigalens.jax.profiles.mass.piemd import DPIE
+from gigalens.jax.profiles.mass.shear import Shear
+from gigalens.jax.profiles.mass.epl import EPL
+from gigalens.jax.profiles import light#.sersic import SersicEllipse
+
+# --------------------------------------------------------------------------------
+# Ellipticity: box-truncated (e1, e2) -> DiskEllipticity
+# --------------------------------------------------------------------------------
+# Which quantity "the standard deviation stays the same" refers to. This is the one
+# judgement call in the swap, and it is worth a factor of ~2 in prior width, so it is a
+# switch rather than a buried constant:
+#   "e" -- the sd in ELLIPTICITY space is preserved (default).
+#   "u" -- the old sd is passed straight through as DiskEllipticity's ``scale``, i.e.
+#          the literal parameter-name mapping. This NARROWS the prior (see _disk_e).
+_SD_CONVENTION = "e"
+
+
+def _disk_e(sd, box_half):
+    """The ``DiskEllipticity`` replacing an ``(e1, e2)`` pair of independent
+    ``tfd.TruncatedNormal(0, sd, -box_half, box_half)``.
+
+    ``e_max`` (the disk's hard cap on ``|e|``) is ``max(0.5, box_half*sqrt(2))``: 0.5,
+    or the CORNER of the old box -- the largest modulus the old prior could reach --
+    whenever that is larger, so the disk never cuts away ellipticity the box allowed.
+    Here only ``lhalo``'s ``box_half=0.2`` stays at 0.5; ``box_half=0.4`` gives
+    ``0.4*sqrt(2) = 0.56569`` (``q > 0.28``) and ``box_half=0.5`` gives ``0.70711``
+    (``q > 0.17``). See the module docstring on that being looser than 0.5 nearly
+    everywhere in this particular file.
+
+    ``scale`` is NOT the sd of ``e``: it is the sd of the unconstrained Gaussian on
+    ``u``, and the disk map is ``e = e_max * u / sqrt(1 + |u|^2)``, so ``e ~ e_max * u``
+    near the centre. Passing ``sd`` through verbatim would therefore shrink the prior's
+    width in ellipticity space by roughly ``e_max`` -- a factor of 2 at ``e_max = 0.5``.
+    Under ``_SD_CONVENTION = "e"`` this uses ``scale = sd / e_max`` so the widths match
+    instead. Monte-Carlo check (4e5 draws) of the realised marginal ``sd(e1)``, old vs
+    new, for the three (sd, box_half) pairs this file actually uses:
+
+        sd=0.05, box +/-0.2 (e_max 0.500):  0.0500 -> 0.0491   [verbatim scale: 0.0249]
+        sd=0.10, box +/-0.4 (e_max 0.566):  0.1000 -> 0.0946   [verbatim scale: 0.0554]
+        sd=0.10, box +/-0.5 (e_max 0.707):  0.1000 -> 0.0964   [verbatim scale: 0.0693]
+
+    The residual ~2-5% narrowing is the disk map's own compression at larger ``|u|``, not
+    a free knob; correcting it exactly would mean fitting ``scale`` numerically per site.
+
+    ``mode`` is left at its default ``(0, 0)`` -- every prior replaced here was centred
+    on zero ellipticity.
+
+    ``dtype`` is left at the ambient default float. Note this file is NOT dtype-uniform
+    under x64: every ``tfd`` prior here is built from python floats, which TFP makes
+    float32 whatever the ambient default, whereas ``DiskEllipticity`` follows the ambient
+    default and so becomes float64 once ``jax_enable_x64`` is on. Checked: the model
+    still assembles either way (104 z params, x64 on or off), so this is a note rather
+    than a defect -- but if a float64 run ever complains about mixed prior dtypes, pass
+    ``dtype=jnp.float64`` here and give the other priors explicit float64 arguments.
+    """
+    e_max = max(0.5, box_half * math.sqrt(2.0))
+    scale = sd if _SD_CONVENTION == "u" else sd / e_max
+    return DiskEllipticity(e_max=e_max, scale=scale)
+
+
+lhalo = Component(mass.nfw.NFW_ELLIPSE_EINSTEIN(),
+               {
+                   "theta_E": tfd.Normal(13., 0.5),
+                   "Rs": tfd.Uniform(20,100),
+                   ("e1", "e2"): _disk_e(0.05, 0.2),
+                   "center_x": tfd.Normal(5.1, 0.05),
+                   "center_y": tfd.Normal(3.8, 0.05),
+               },
+                  name='halo'
+)
+
+ld = Component(mass.piemd.DPIE(),
+                {
+                    "theta_E": tfd.TruncatedNormal(1.2, 0.1, 0.8, 2.5),
+                    "r_core": tfd.TruncatedNormal(0.05, 0.01, 0, 0.2),
+                    "r_cut": tfd.Uniform(0.2,20),
+                    ("e1", "e2"): _disk_e(0.1, 0.4),
+                    "center_x": tfd.Normal(11.7, 0.5),
+                    "center_y": tfd.Normal(23.3, 0.5),
+                },
+                  name='Ld'
+)
+
+le = Component(mass.piemd.DPIE(),
+                   {
+                       "theta_E": tfd.TruncatedNormal(2.4, 0.1, 1.5, 3.5),
+                       "r_core": tfd.TruncatedNormal(0.05, 0.01, 0, 0.2),
+                       "r_cut": tfd.Uniform(0.2,20),
+                       ("e1", "e2"): _disk_e(0.1, 0.4),
+                       "center_x": tfd.Normal(-22.0, 0.1),
+                       "center_y": tfd.Normal(-25.4, 0.1),
+                   },
+                  name='Le',
+)
+
+lf = Component(mass.piemd.DPIE(),
+                   {
+                       "theta_E": tfd.TruncatedNormal(0.8, 0.1, 0.5, 1.5),
+                       "r_core": tfd.TruncatedNormal(0.05, 0.01, 0, 0.2),
+                       "r_cut": tfd.Uniform(0.2,20),
+                       "center_x": tfd.Normal(-14.0, 0.5),
+                       "center_y": tfd.Normal(-5.3, 0.5),
+                       ("e1", "e2"): _disk_e(0.1, 0.4),
+                   },
+                  name='Lf',
+)
+
+# External shear: NOT swapped -- not an ellipticity, and untruncated, so there is no box
+# to carry over. See the module docstring.
+shear_model = Component(mass.shear.Shear(),
+                    dict(
+                        gamma1 = tfd.Normal(0., 0.05),
+                        gamma2 = tfd.Normal(0., 0.05),
+                    ),
+                  name='shear')
+
+# One shared handle for the PAIR (was one per parameter): the two are a single joint
+# prior now, so they cannot be shared in halves.
+# e_shared_1 = shared(_disk_e(0.1, 0.5))
+# x_shared_1 = shared(tfd.Normal(6.1, 0.3))
+# y_shared_1 = shared(tfd.Normal(2.8, 0.3))
+# scale_1 = shared(tfd.LogNormal(jnp.log(0.1), 0.2))
+
+source1_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 0.962,
+            "center_x": tfd.Normal(6.1, 0.3),
+            "center_y": tfd.Normal(2.8, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source1'
+)
+
+# source1_light_details = Component(
+#         light.elliptical_shapelets.EllipticalShapelets(8, use_lstsq=True),
+#         {
+#             # z_source = 0.962,
+#             "center_x": x_shared_1,
+#             "center_y": y_shared_1,
+#             "beta": scale_1,
+#             ("e1", "e2"): e_shared_1,
+#         }
+# )
+
+source2_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 0.962,
+            "center_x": tfd.Normal(10.4, 0.3),
+            "center_y": tfd.Normal(3.8, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source2'
+)
+
+# e_shared_3 = shared(_disk_e(0.1, 0.5))
+# x_shared_3 = shared(tfd.Normal(5.9, 0.3))
+# y_shared_3 = shared(tfd.Normal(7.0, 0.3))
+# scale_3 = shared(tfd.LogNormal(jnp.log(0.1), 0.2))
+
+source3_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 1.166,
+            "center_x": tfd.Normal(5.9, 0.3),
+            "center_y": tfd.Normal(7.0, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source3'
+)
+
+# source3_light_details = Component(
+#         light.elliptical_shapelets.EllipticalShapelets(8, use_lstsq=True),
+#         {
+#             # z_source = 1.166,
+#             "center_x": x_shared_3,
+#             "center_y": y_shared_3,
+#             "beta": tfd.LogNormal(jnp.log(0.1), 0.2),
+#             ("e1", "e2"): e_shared_3,
+#         }
+# )
+
+# e_shared_4 = shared(_disk_e(0.1, 0.5))
+# x_shared_4 = shared(tfd.Normal(3.7, 0.3))
+# y_shared_4 = shared(tfd.Normal(3.2, 0.3))
+# scale_4 = shared(tfd.LogNormal(jnp.log(0.1), 0.2))
+
+source4_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 1.432,
+            "center_x": tfd.Normal(3.7, 0.3),
+            "center_y": tfd.Normal(3.2, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.2),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source4'
+)
+
+# source4_light_details = Component(
+#         light.elliptical_shapelets.EllipticalShapelets(8, use_lstsq=True),
+#         {
+#             # z_source = 1.432,
+#             "center_x": x_shared_4,
+#             "center_y": y_shared_4,
+#             "beta": tfd.LogNormal(jnp.log(0.1), 0.2),
+#             ("e1", "e2"): e_shared_4,
+#         }
+# )
+
+source5_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 1.432,
+            "center_x": tfd.Normal(4.0, 0.3),
+            "center_y": tfd.Normal(0.6, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.2),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source5'
+)
+
+source9_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 1.506,
+            "center_x": tfd.Normal(-8.9, 1.5),
+            "center_y": tfd.Normal(-13.8, 1.5),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source9'
+)
+
+source7_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 1.627,
+            "center_x": tfd.Normal(3.5, 0.3),
+            "center_y": tfd.Normal(0.7, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.2),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source7'
+)
+
+source6_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 1.656,
+            "center_x": tfd.Normal(2.8, 0.3),
+            "center_y": tfd.Normal(3.1, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.2),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source6'
+)
+
+# e_shared_12 = shared(_disk_e(0.1, 0.5))
+# x_shared_12 = shared(tfd.Normal(1.2, 0.3))
+# y_shared_12 = shared(tfd.Normal(4.4, 0.3))
+# scale_12 = shared(tfd.LogNormal(jnp.log(0.1), 0.2))
+
+source12_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 3.086,
+            "center_x": tfd.Normal(1.2, 0.3),
+            "center_y": tfd.Normal(4.4, 0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source12'
+)
+
+source13_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 3.086,
+            "center_x": tfd.Normal(5.7,0.3),
+            "center_y": tfd.Normal(6.1,0.3),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source13'
+)
+
+# e_shared_8 = shared(_disk_e(0.1, 0.5))
+# x_shared_8 = shared(tfd.Normal(6, 1))
+# y_shared_8 = shared(tfd.Normal(6, 1))
+# scale_8 = shared(tfd.LogNormal(jnp.log(0.1), 0.2))
+
+source8_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 3.549,
+            "center_x": tfd.Normal(6, 1),
+            "center_y": tfd.Normal(6, 1),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source8'
+)
+
+source11_light = Component(
+        light.sersic.SersicEllipse(use_lstsq=True),
+        {
+            # z_source = 4.090,
+            "center_x": tfd.Normal(3.,1),
+            "center_y": tfd.Normal(1.5,1),
+            "R_sersic": tfd.LogNormal(jnp.log(0.1), 0.4),
+            "n_sersic": tfd.Uniform(0.1,15),
+            ("e1", "e2"): _disk_e(0.1, 0.5),
+        },
+        name='source11'
+)
+
+cosmo_model = w0waCDM_Cosmo(z_lens=0.49, z_source_ref=1.432)
+cosmo = Component(
+    w0waCDM_Cosmo(z_lens=0.49, z_source_ref=1.432),
+    dict(
+        H0=70.0,
+        k=0.0,
+        wa=tfd.Uniform(-3.0, 2.0),
+        w0=tfd.Uniform(-2.0, -1/3),
+        Om0=tfd.Uniform(0.0, 1.0),
+    ),
+)
+
+lens_plane = Plane(redshift=0.49, mass=[lhalo, ld, le, lf, shear_model], name='cluster')
+source1_2 = Plane(redshift=0.962, light=[source1_light, source2_light], name='source1_2')
+source3 = Plane(redshift=1.166, light=[source3_light], name='source3')
+source4_5 = Plane(redshift=1.432, light=[source4_light, source5_light], name='source4_5')
+source6 = Plane(redshift=1.656, light=[source6_light], name='source6')
+source7 = Plane(redshift=1.627, light=[source7_light], name='source7')
+source9 = Plane(redshift=1.506, light=[source9_light], name='source9')
+source12_13 = Plane(redshift=3.086, light=[source12_light, source13_light], name='source12_13')
+source8 = Plane(redshift=3.549, light=[source8_light], name='source8')
+source11 = Plane(redshift=4.090, light=[source11_light], name='source11')

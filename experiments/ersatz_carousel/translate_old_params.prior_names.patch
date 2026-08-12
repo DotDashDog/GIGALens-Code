@@ -1,0 +1,571 @@
+--- /global/u1/l/linusu/GIGALens-Code/experiments/ersatz_carousel/translate_old_params.py.pre_prior_names.bak	2026-08-05 13:10:34.901342000 -0700
++++ /global/u1/l/linusu/GIGALens-Code/experiments/ersatz_carousel/translate_old_params.py	2026-08-10 11:45:15.971332000 -0700
+@@ -64,6 +64,33 @@
+    default, which is correct: a negative ``Ie`` is a negative-surface-brightness
+    source. Use ``--zero-negative-amplitudes`` to proceed deliberately.
+ 
++Where the model itself comes from
++---------------------------------
++This module no longer builds a model. It loads the one in
++``ersatz_carousel_prior_new_api.py`` (:data:`PRIOR_FILE`) -- the *fitting* model, priors
++and all -- and pins every parameter to this dump's value with ``LensModel.fix_to``. The
++JSON supplies numbers; the prior file supplies names, component order, plane order,
++profile classes and the ``shared()`` links.
++
++That used to be two independent models with two sets of component names kept in step by
++hand. It stopped being a matter of tidiness when gigalens put names INTO the parameter
++keys (``planes/source3/light/source3_main/R_sersic``): two vocabularies now mean a truth
++dict and a chain from the fitting model key differently, and every downstream join --
++corner overlays, chain persistence, SBC -- silently fails to find anything rather than
++erroring. One scene, defined once, is the fix.
++
++:func:`align` is where the two sides meet, and it checks rather than assumes: plane
++count and redshifts in order, one old-API *leaf* per prior light Component, profile
++class equality at every position, and full parameter coverage. A dump that is not the
++same scene raises there. Two consequences worth knowing:
++
++* A dump whose sources are ``SersicShapelets`` (the coworker's ``MAP_best_*.json``) has
++  light the prior file has no Component for, so it CANNOT be pinned this way -- pinning
++  it would quietly drop the shapelet half. :func:`truth_scene` refuses. ``--audit-only``
++  still parses it fine.
++* ``sersic-simulated-full.json`` puts three clumps behind source 1_2 where the prior
++  file has two (its ``sersic_0_0`` is commented out), so it raises too, by design.
++
+ Parameter *values* transfer 1:1 — the profile classes used here (``NFW_ELLIPSE_SLOPE``,
+ ``DPIE``, ``SHEAR``, ``SERSIC_ELLIPSE``, ``SHAPELETS``) have identical ``_params`` in
+ both APIs, and the only numerical change in the shared code is a DPIE NaN-guard that
+@@ -74,17 +101,24 @@
+     PYTHONPATH=/global/u1/l/linusu/gigalens/src \
+         ~/.conda/envs/gigalens_oldapi/bin/python translate_old_params.py
+ 
+-    python translate_old_params.py --json path/to/MAP.json --audit-only
+-
+-    # The plain-Sersic simulated version of the same model -- no shapelets, so no
+-    # STRUCTURE['n_max'] check triggers, but it has negative Ie too:
+-    python translate_old_params.py --json sersic-simulated.json --zero-negative-amplitudes
++    # sersic-simulated.json is the default: it is the dump whose structure matches the
++    # prior file. It has one negative Ie, so building it needs the flag.
++    python translate_old_params.py --zero-negative-amplitudes
++
++    # Parses and audits any dump, including the shapelet one, without gigalens:
++    python translate_old_params.py --json MAP_best_31JulNFW_fixedcosmo_fixedLowZ.json \
++        --audit-only
+ 
+ From a notebook::
+ 
+-    from translate_old_params import build
+-    model, truth = build("MAP_best_31JulNFW_fixedcosmo_fixedLowZ.json")
+-    model, truth = build("sersic-simulated.json", zero_negative_amplitudes=True)
++    from translate_old_params import build, truth_scene, prior_model, parse
++
++    # the fitting model's scene, pinned to the dump: same names, same parameter keys
++    model, spec = build("sersic-simulated.json", zero_negative_amplitudes=True)
++    params = model.to_params({})           # ready for SceneSimulator.simulate
++
++    # just the values, keyed the way the fitting model keys them
++    truth = truth_scene(parse(json.load(open("sersic-simulated.json"))))
+ """
+ from __future__ import annotations
+ 
+@@ -108,8 +142,12 @@
+     # the fixed centres in that file (e.g. index 0 center_x 5.2895684 == 5.28956836933847).
+     # `upper_right_halo` (EPL) is commented out there and absent from the JSON.
+     "lens_profiles": ["NFW_ELLIPSE_SLOPE", "DPIE", "SHEAR", "DPIE", "DPIE"],
+-    # Human labels, same order.
+-    "lens_names": ["cluster_halo", "bcg_dpie", "ext_shear", "le_dpie", "group_dpie"],
++    # Human labels, same order. OFFLINE FALLBACK ONLY: the authoritative names are the
++    # Component names in PRIOR_FILE, and :func:`align` asserts the two agree, so a
++    # rename there fails loudly here instead of silently producing two vocabularies.
++    # This list exists solely so --audit-only can label mass components without
++    # importing gigalens.
++    "lens_names": ["halo", "Ld", "ext_shear", "Le", "Lf"],
+     # Shapelet order for every SersicShapelets in the model: SersicShapelets(8) in
+     # boiler(2).py. Also implied by the 45 stored amplitudes ((8+1)(8+2)/2 == 45), and
+     # this script asserts the two agree rather than trusting either alone.
+@@ -306,12 +344,12 @@
+                 width = len(str(len(amps)))
+                 components.append({
+                     "profile": "SERSIC_ELLIPSE", "name": f"sersic{tag}",
+-                    "n_max": None,
++                    "n_max": None, "leaf": tag,
+                     "params": {k: v for k, v in rest.items() if k != "beta"},
+                 })
+                 components.append({
+                     "profile": "SHAPELETS", "name": f"shapelets{tag}",
+-                    "n_max": n_max,
++                    "n_max": n_max, "leaf": tag,
+                     "params": {
+                         "beta": rest["beta"],
+                         # Shared with the sersic above -- this is the old
+@@ -328,7 +366,7 @@
+                 # in either case, so this is just the profile's own parameters.
+                 components.append({
+                     "profile": "SERSIC_ELLIPSE", "name": f"sersic{tag}",
+-                    "n_max": None, "params": rest,
++                    "n_max": None, "leaf": tag, "params": rest,
+                 })
+ 
+         spec["sources"].append({
+@@ -341,49 +379,363 @@
+ 
+ 
+ # --------------------------------------------------------------------------------
+-# Spec -> LensModel
++# The prior file is the single source of NAMES and STRUCTURE; the JSON supplies VALUES
+ # --------------------------------------------------------------------------------
+-def _profile(name: str, n_max=None, use_lstsq: bool = False):
+-    from gigalens.jax.profiles.mass.nfw_ellipse_slope import NFW_ELLIPSE_SLOPE
+-    from gigalens.jax.profiles.mass.piemd import DPIE
+-    from gigalens.jax.profiles.mass.shear import Shear
+-    from gigalens.jax.profiles.light.sersic import SersicEllipse
+-    from gigalens.jax.profiles.light.shapelets import Shapelets
+-
+-    if name == "NFW_ELLIPSE_SLOPE":
+-        return NFW_ELLIPSE_SLOPE()
+-    if name == "DPIE":
+-        return DPIE()
+-    if name == "SHEAR":
+-        return Shear()
+-    if name == "SERSIC_ELLIPSE":
+-        return SersicEllipse(use_lstsq=use_lstsq)
+-    if name == "SHAPELETS":
+-        return Shapelets(n_max, use_lstsq=use_lstsq)
+-    raise ValueError(f"no new-API profile mapped for {name!r}")
++# This module used to assemble a second, independent LensModel and name its Components
++# itself, so the fitting model (PRIOR_FILE) and the truth model (here) carried two
++# separate vocabularies that had to be kept in step by hand. Since gigalens put names
++# INTO the parameter keys (``planes/<plane>/light/<component>/<param>``; commit
++# "Put names in parameter keys"), that is no longer merely untidy -- a truth dict and a
++# chain from the fitting model would key differently, so nothing downstream (corner
++# plots, chain persistence, truth overlays) would line up, and the mismatch would show
++# up as absent parameters rather than as an error.
++#
++# So the scene is now defined ONCE, in PRIOR_FILE, and this module pins it with
++# ``LensModel.fix_to``. Names, component order, plane order, sharing, and profile
++# classes all come from there; the JSON contributes only numbers. :func:`align` refuses
++# to proceed unless the dump really is the same scene, checked component by component.
++PRIOR_FILE = "ersatz_carousel_prior_new_api.py"
++
++_PRIOR_CACHE: Dict[str, Any] = {}
++
++
++def prior_model(path: str | None = None):
++    """The assembled ``LensModel`` from :data:`PRIOR_FILE` -- the *fitting* model.
++
++    Loaded by file path (it is a script beside this one, not an installed module) and
++    cached per path: ``fix_to`` matches its ``free=`` argument by OBJECT IDENTITY, so
++    handing callers two separately-imported copies of the same file would silently stop
++    that matching.
++    """
++    import importlib.util
++
++    if path is None:
++        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), PRIOR_FILE)
++    path = os.path.abspath(path)
++    if path not in _PRIOR_CACHE:
++        module_spec = importlib.util.spec_from_file_location("_ersatz_prior", path)
++        if module_spec is None or module_spec.loader is None:
++            raise ImportError(f"cannot load the prior file at {path}")
++        module = importlib.util.module_from_spec(module_spec)
++        module_spec.loader.exec_module(module)
++        if not hasattr(module, "model"):
++            raise AttributeError(
++                f"{path} defines no `model`; this needs the assembled LensModel.")
++        _PRIOR_CACHE[path] = module.model
++    return _PRIOR_CACHE[path]
++
++
++#: new-API profile class -> the JSON/STRUCTURE vocabulary :func:`parse` speaks.
++_PROFILE_ALIAS = {
++    "NFW_ELLIPSE_SLOPE": "NFW_ELLIPSE_SLOPE", "DPIE": "DPIE", "Shear": "SHEAR",
++    "SersicEllipse": "SERSIC_ELLIPSE", "Shapelets": "SHAPELETS",
++}
++
++
++def _profile_kind(profile) -> str:
++    return _PROFILE_ALIAS.get(type(profile).__name__, type(profile).__name__)
++
++
++def _leaf_groups(components: List[Dict[str, Any]]
++                 ) -> List[Tuple[str, List[Dict[str, Any]]]]:
++    """Regroup a plane's parsed components into old-API *leaf profiles*.
++
++    ``parse`` emits one component per leaf, except an old ``SersicShapelets`` leaf which
++    becomes two (a Sersic and a Shapelets sharing one centre). Collecting the consecutive
++    entries carrying the same ``leaf`` tag undoes that, so what gets matched 1:1 against
++    the prior model's light Components is a LEAF, not a component -- otherwise a
++    two-profile clump would swallow its neighbour's slot and every later component in the
++    plane would shift by one.
++    """
++    groups: List[Tuple[str, List[Dict[str, Any]]]] = []
++    for entry in components:
++        if groups and groups[-1][0] == entry["leaf"]:
++            groups[-1][1].append(entry)
++        else:
++            groups.append((entry["leaf"], [entry]))
++    return groups
++
++
++def _prior_param_names(comp) -> List[str]:
++    """Every parameter a Component's prior dict covers, tuple (grouped) keys expanded."""
++    names: List[str] = []
++    for key in comp.priors:
++        names.extend(key if isinstance(key, tuple) else (key,))
++    return names
++
++
++def align(spec: Dict[str, Any], model=None):
++    """Bind each parsed JSON component to the prior-model Component that owns it.
++
++    Writes two fields onto every spec entry, in place, and returns the model:
++
++      ``name``  the prior model's Component name -- replacing ``parse``'s structural
++                ``sersic_0`` placeholder. That placeholder is the JSON's vocabulary;
++                this is the model's, and only one of them may reach a parameter key.
++      ``key``   the params-tree path ``(plane_key, kind, component_key)`` that
++                :func:`truth_scene` and ``fix_to`` address values by.
++
++    The correspondence is ultimately positional, and positional matching is precisely how
++    components get mixed up, so every position is checked before it is used:
++
++      * plane count, and each plane's redshift matched IN ORDER against the model's --
++        both sides are sorted by redshift, but this asserts it instead of trusting it
++        (STRUCTURE's own warning: source NUMBER order and redshift order disagree for six
++        of the nine planes);
++      * mass -- one component per index, profile class equal, and the model's name equal
++        to ``STRUCTURE["lens_names"]`` so the offline fallback cannot drift;
++      * light -- one old-API LEAF per prior light Component, profile class equal;
++      * parameters -- every parameter the prior Component prices must be in the dump.
++
++    Anything that does not match raises. A dump with a different structure (a shapelet
++    leaf, an extra clump) is a different scene and is not bent to fit this one.
++    """
++    model = prior_model() if model is None else model
++    planes = model.planes
++
++    if len(planes) != 1 + len(spec["sources"]):
++        raise ValueError(
++            f"the prior model has {len(planes)} planes (1 cluster + "
++            f"{len(planes) - 1} sources) but the dump has {len(spec['sources'])} "
++            "sources; these are not the same scene.")
++
++    # ---- cluster plane / mass ---------------------------------------------------
++    if abs(float(planes[0].redshift) - STRUCTURE["z_lens"]) > 5e-4:
++        raise ValueError(
++            f"prior plane 0 is at z={float(planes[0].redshift)} but STRUCTURE['z_lens'] "
++            f"is {STRUCTURE['z_lens']}; plane 0 must be the cluster.")
++    plane_key = model.plane_key(0)
++    if len(planes[0].mass) != len(spec["lens"]):
++        raise ValueError(
++            f"prior cluster plane has {len(planes[0].mass)} mass components but the dump "
++            f"has {len(spec['lens'])}.")
++    for j, (comp, entry) in enumerate(zip(planes[0].mass, spec["lens"])):
++        kind, want = _profile_kind(comp.profile), entry["profile"]
++        if kind != want:
++            raise ValueError(
++                f"mass component {j}: the prior model has {kind} but the dump's "
++                f"lens_mass[{j}] is {want} (STRUCTURE['lens_profiles']). One of the two "
++                "orders is wrong -- do not reorder blindly, re-read boiler(2).py.")
++        comp_key = model.component_key(0, "mass", j)
++        if comp_key != STRUCTURE["lens_names"][j]:
++            raise ValueError(
++                f"mass component {j} is named {comp_key!r} in {PRIOR_FILE} but "
++                f"{STRUCTURE['lens_names'][j]!r} in STRUCTURE['lens_names']. The prior "
++                "file is authoritative -- update STRUCTURE['lens_names'] to match.")
++        entry["name"] = comp_key
++        entry["key"] = (plane_key, "mass", comp_key)
++        _check_covered(comp, entry, f"{plane_key}/mass/{comp_key}")
++
++    # ---- source planes ----------------------------------------------------------
++    for i, source in enumerate(spec["sources"], start=1):
++        plane = planes[i]
++        if abs(float(plane.redshift) - source["redshift"]) > 5e-4:
++            raise ValueError(
++                f"plane {i}: the prior model is at z={float(plane.redshift):g} but the "
++                f"dump's source {source['index']} is at z={source['redshift']:g}. Both "
++                "sides must be sorted by redshift; a mismatch here means every "
++                "component after it would be attached to the wrong source.")
++        plane_key = model.plane_key(i)
++        source["plane_key"] = plane_key
++        source["source_id"] = source_id(source["redshift"])
++
++        groups = _leaf_groups(source["components"])
++        if len(groups) != len(plane.light):
++            raise ValueError(
++                f"plane {plane_key!r} (z={source['redshift']:g}, source "
++                f"{source['source_id']}): the prior model has {len(plane.light)} light "
++                f"components {[c.name for c in plane.light]} but the dump expands to "
++                f"{len(groups)} leaf profiles {[g[0] for g in groups]}. Same scene, "
++                "different clumps -- fix the prior file or use a matching dump.")
++        for j, ((leaf, entries), comp) in enumerate(zip(groups, plane.light)):
++            comp_key = model.component_key(i, "light", j)
++            kind = _profile_kind(comp.profile)
++            main = [e for e in entries if e["profile"] == kind]
++            if len(main) != 1:
++                raise ValueError(
++                    f"{plane_key}/light/{comp_key}: the prior model is {kind} but leaf "
++                    f"{leaf!r} of the dump is {[e['profile'] for e in entries]}.")
++            main[0]["name"] = comp_key
++            main[0]["key"] = (plane_key, "light", comp_key)
++            _check_covered(comp, main[0], f"{plane_key}/light/{comp_key}")
++            # An old SersicShapelets leaf also carries a Shapelets half, which the prior
++            # file has no Component for. Name it after the Sersic it shares a centre with
++            # and mark it: truth_scene refuses to build a truth that the prior model
++            # cannot represent, rather than dropping light on the floor.
++            for extra in entries:
++                if extra is main[0]:
++                    continue
++                extra["name"] = f"{comp_key}_{extra['profile'].lower()}"
++                extra["key"] = (plane_key, "light", extra["name"])
++                extra["unrepresented"] = True
++    return model
++
++
++def _check_covered(comp, entry: Dict[str, Any], where: str):
++    """Every parameter the prior Component prices must be present in the dump."""
++    missing = [n for n in _prior_param_names(comp) if n not in entry["params"]]
++    if missing:
++        raise ValueError(
++            f"{where}: the dump has no value for {sorted(missing)}, which "
++            f"{PRIOR_FILE} treats as parameters of this component. fix_to needs a truth "
++            "for every one of them.")
++
++
++def truth_scene(spec: Dict[str, Any], model=None) -> Dict[str, Any]:
++    """The dump's values as a structured truth dict keyed by the PRIOR MODEL's names.
++
++    This is the §5 ``planes``/``cosmo`` layout ``fix_to`` consumes, and -- because the
++    keys are the prior model's own -- also the dict to hand a truth overlay, an SBC
++    check, or anything else that has to line a chain up against the input values.
++
++    Amplitudes (``Ie``, ``amp*``) are included even though ``fix_to`` ignores them: they
++    are not parameters of an ``use_lstsq=True`` Component, but
++    :func:`_with_explicit_amplitudes` needs them right after.
++    """
++    model = align(spec, model)
++
++    unrepresented = [f"{s['plane_key']}/{e['name']}" for s in spec["sources"]
++                     for e in s["components"] if e.get("unrepresented")]
++    if unrepresented:
++        raise ValueError(
++            f"this dump has {len(unrepresented)} light component(s) with no counterpart "
++            f"in {PRIOR_FILE}: {unrepresented}. They are the Shapelets halves of old "
++            "SersicShapelets profiles; the prior file models those sources as plain "
++            "Sersics. Pinning the prior model to this dump would silently DROP that "
++            "light. Add the shapelet Components to the prior file, or translate a dump "
++            "whose sources are plain Sersics.")
++
++    truth: Dict[str, Any] = {"cosmo": dict(spec["cosmo"]), "planes": {}}
++
++    def put(entry: Dict[str, Any]):
++        plane_key, kind, comp_key = entry["key"]
++        plane = truth["planes"].setdefault(plane_key, {})
++        plane.setdefault(kind, {})[comp_key] = dict(entry["params"])
++
++    cluster_key = model.plane_key(0)
++    truth["planes"].setdefault(cluster_key, {})["geometry"] = {
++        "redshift": STRUCTURE["z_lens"]}
++    for entry in spec["lens"]:
++        put(entry)
++    for source in spec["sources"]:
++        truth["planes"].setdefault(source["plane_key"], {})["geometry"] = {
++            "redshift": source["redshift"]}
++        for entry in source["components"]:
++            put(entry)
++
++    _check_shared_consistency(model, truth)
++    return truth
++
++
++def _check_shared_consistency(model, truth: Dict[str, Any]):
++    """Linked sites in the prior model must hold ONE value in the dump.
++
++    A ``shared()`` handle means several sites draw a single value (the prior file shares
++    source3's centre and ellipticity across its two Sersics). The old API stored such a
++    parameter once, bare, and ``_split_one_level`` re-broadcasts it to every sub-profile,
++    so the sites SHOULD agree exactly. If they ever did not, ``fix_to`` would pin them to
++    different numbers without complaint and produce a "truth" the fitting model cannot
++    represent -- a truth no fit could ever recover.
++
++    Checked through the model's own gather/scatter rather than by hand: ``to_unique``
++    keeps one value per unique parameter and ``to_params`` writes it back to every site
++    it feeds, so any disagreement shows up as a changed value.
++    """
++    try:
++        round_trip = model.to_params(model.to_unique(truth))
++    except Exception as exc:                      # pragma: no cover - defensive
++        raise ValueError(
++            f"could not round-trip the truth through the prior model: {exc}") from exc
++
++    problems: List[str] = []
++    for plane_key, kinds in truth["planes"].items():
++        for kind in ("mass", "light"):
++            for comp_key, params in kinds.get(kind, {}).items():
++                got = round_trip["planes"][plane_key][kind][comp_key]
++                for name, value in params.items():
++                    if name not in got:
++                        continue          # lstsq amplitude: not a model parameter
++                    if abs(float(got[name]) - float(value)) > 1e-9:
++                        problems.append(
++                            f"{plane_key}/{kind}/{comp_key}/{name}: dump {value!r} vs "
++                            f"{float(got[name])!r} after the model's own sharing")
++    if problems:
++        raise ValueError(
++            "the dump's values disagree across parameters that " + PRIOR_FILE +
++            " links with shared(): \n  " + "\n  ".join(problems) +
++            "\nThe prior model cannot represent this truth. Either the sharing in the "
++            "prior file is wrong, or the two components really are independent in the "
++            "dump.")
++
++
++def _with_explicit_amplitudes(model, truth: Dict[str, Any]):
++    """Re-render every lstsq light Component with its stored amplitude made explicit.
++
++    ``fix_to`` pins parameter VALUES but keeps each Component's profile instance, and the
++    prior file's Sersics are ``use_lstsq=True`` -- their ``Ie`` is not a parameter at all,
++    it is solved per evaluation against data. Simulating has no data to solve against, so
++    the stored amplitude must become a fixed parameter, which takes a new profile instance
++    with ``use_lstsq=False``. That is exact, not approximate: both modes return the same
++    basis and differ only by the multiply (``sersic.py``: ``ret[jnp.newaxis, ...] if
++    use_lstsq else Ie * ret``).
++    """
++    from gigalens.jax.scene import Component, Plane, LensModel
++
++    new_planes = []
++    for i, plane in enumerate(model.planes):
++        plane_key = model.plane_key(i)
++        light = []
++        for j, comp in enumerate(plane.light):
++            if not getattr(comp.profile, "use_lstsq", False):
++                light.append(comp)
++                continue
++            comp_key = model.component_key(i, "light", j)
++            stored = truth["planes"][plane_key]["light"][comp_key]
++            amps = {k: v for k, v in stored.items()
++                    if k == "Ie" or k.startswith("amp")}
++            if not amps:
++                raise ValueError(
++                    f"{plane_key}/light/{comp_key} is an lstsq component but the dump "
++                    "stores no amplitude for it, so it cannot be made explicit.")
++            try:
++                profile = type(comp.profile)(use_lstsq=False)
++            except TypeError as exc:
++                raise TypeError(
++                    f"cannot rebuild {type(comp.profile).__name__} with use_lstsq=False "
++                    f"for {plane_key}/light/{comp_key}") from exc
++            light.append(Component(profile, {**comp.priors, **amps}, name=comp.name))
++        new_planes.append(Plane(redshift=plane.redshift,
++                                deflection_ratio=plane.deflection_ratio,
++                                mass=list(plane.mass), light=light, name=plane.name))
++    return LensModel(new_planes, cosmo=model.cosmo)
+ 
+ 
+ def build(json_path: str, use_lstsq: bool = False,
+           zero_negative_amplitudes: bool = False) -> Tuple[Any, Dict[str, Any]]:
+-    """Build the new-API model. Returns ``(model, spec)``.
++    """The prior model, pinned to this dump's values. Returns ``(model, spec)``.
+ 
+-    With ``use_lstsq=False`` (the default, and what you want for simulating) every
+-    parameter including the amplitudes is fixed, so ``model.num_free_params == 0`` and
+-    ``model.to_params({})`` yields the full structured params dict for
+-    ``SceneSimulator.simulate``. With ``use_lstsq=True`` the amplitudes are dropped and
+-    solved against data instead, matching how the coworker's fit was run.
++    Same contract as before -- with ``use_lstsq=False`` (the default, and what you want
++    for simulating) every parameter including the amplitudes is fixed, so
++    ``model.num_free_params == 0`` and ``model.to_params({})`` yields the full structured
++    params dict for ``SceneSimulator.simulate``; with ``use_lstsq=True`` the amplitudes
++    are left to be solved against data, matching how the fit was run -- but the model is
++    now the one from :data:`PRIOR_FILE` with its parameters fixed, not a second model
++    built here, so its component names and parameter keys ARE the fitting model's.
+ 
+     ``zero_negative_amplitudes`` sets any negative sersic ``Ie`` to 0.0, which silences
+-    the physicality raise by *deleting* those components' light. It changes the model;
+-    it is not a fix. Shapelet amplitudes are left alone -- they are sign-indefinite
+-    basis coefficients by construction and the physicality layer exempts them.
++    the physicality raise by *deleting* those components' light. It changes the model; it
++    is not a fix. It also only matters when the amplitudes are explicit: with
++    ``use_lstsq=True`` they are not parameters and never reach the physicality layer.
+     """
+-    from gigalens.jax.cosmo import w0waCDM_Cosmo
+-    from gigalens.jax.scene import Component, Plane, LensModel
++    model = prior_model()
+ 
+     with open(json_path) as handle:
+         spec = parse(json.load(handle))
+ 
++    # Before anything reports a component by name: bind the dump to the prior model, so
++    # every message below names components the way the fitting model does.
++    align(spec, model)
++
+     if zero_negative_amplitudes:
+         for where, name, value in negative_amplitudes(spec):
+             print(f"  zeroing {where}/{name}: Ie {value:g} -> 0.0 (component removed)")
+@@ -392,29 +744,11 @@
+                 if entry["params"].get("Ie", 0.0) < 0:
+                     entry["params"]["Ie"] = 0.0
+ 
+-    cosmo = Component(
+-        w0waCDM_Cosmo(z_lens=STRUCTURE["z_lens"],
+-                      z_source_ref=STRUCTURE["z_source_ref"]),
+-        spec["cosmo"], name="w0waCDM")
+-
+-    def to_component(entry, is_light):
+-        params = dict(entry["params"])
+-        if is_light and use_lstsq:
+-            params = {k: v for k, v in params.items()
+-                      if k != "Ie" and not k.startswith("amp")}
+-        return Component(_profile(entry["profile"], entry["n_max"],
+-                                  use_lstsq=use_lstsq and is_light),
+-                         params, name=entry["name"])
+-
+-    planes = [Plane(redshift=STRUCTURE["z_lens"], name="cluster",
+-                    mass=[to_component(e, False) for e in spec["lens"]])]
+-    for source in spec["sources"]:
+-        planes.append(Plane(
+-            redshift=source["redshift"],
+-            name=f"src{source_id(source['redshift'])}_z{source['redshift']:g}",
+-            light=[to_component(e, True) for e in source["components"]]))
+-
+-    return LensModel(planes, cosmo=cosmo), spec
++    truth = truth_scene(spec, model)
++    fixed = model.fix_to(truth)
++    if not use_lstsq:
++        fixed = _with_explicit_amplitudes(fixed, truth)
++    return fixed, spec
+ 
+ 
+ # --------------------------------------------------------------------------------
+@@ -512,8 +846,10 @@
+ def main() -> int:
+     here = os.path.dirname(os.path.abspath(__file__))
+     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+-    parser.add_argument(
+-        "--json", default=os.path.join(here, "MAP_best_31JulNFW_fixedcosmo_fixedLowZ.json"))
++    # The default is the dump the prior file's structure matches. MAP_best_*.json is a
++    # SersicShapelets fit; it still parses with --audit-only, but it cannot be pinned
++    # onto the prior model (see the module docstring), so it is no longer the default.
++    parser.add_argument("--json", default=os.path.join(here, "sersic-simulated.json"))
+     parser.add_argument("--audit-only", action="store_true",
+                         help="parse and audit without importing gigalens")
+     parser.add_argument("--lstsq", action="store_true",
+@@ -542,6 +878,20 @@
+               f"cutout {STRUCTURE['cutout_ext'].get(sid, sid.replace('_', '-')):<5s} "
+               f"{kinds}")
+ 
++    if model is not None:
++        # The whole correspondence, printed. Everything downstream keys off these names,
++        # so this is the table to read when a component looks like it landed in the
++        # wrong place.
++        print(f"\n--- component map: dump -> {PRIOR_FILE} ---")
++        for j, entry in enumerate(spec["lens"]):
++            print(f"  lens_mass[{j}]           {entry['profile']:<18} -> "
++                  f"{'/'.join(entry['key'])}")
++        for source in spec["sources"]:
++            for leaf, entries in _leaf_groups(source["components"]):
++                for entry in entries:
++                    print(f"  source_light[{source['index']}]{leaf:<9} "
++                          f"{entry['profile']:<18} -> {'/'.join(entry['key'])}")
++
+     print("\n--- parameter audit ---")
+     problems = audit(spec)
+     if problems:
