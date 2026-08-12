@@ -618,14 +618,17 @@ def measure_astrometry(
     pso_particles, pso_iterations:
         Particle-swarm settings for the global optimisation.
     polish_iterations:
-        Nelder-Mead iterations run after the swarm. Do not set this to zero
-        without checking what it costs you. A swarm that stops slightly short of
-        the optimum scatters the reported position from fit to fit, and that
-        scatter is invisible to the Hessian — which describes the curvature at
-        wherever the optimiser happened to stop, not the distance from there to
-        the true minimum. The result is a covariance that is too small by an
-        amount no internal diagnostic reveals; it shows up only as a pull width
-        above 1 in :func:`~gigalens_research.astrometry.validate.pull_test`.
+        Nelder-Mead iterations run after the swarm. This guards against a real
+        but, in the configurations tested so far, non-binding failure: a swarm
+        that stops short of the minimum scatters the reported position from fit
+        to fit, and that scatter is invisible to the Hessian, which describes
+        the curvature wherever the optimiser stopped rather than the distance
+        from there to the true minimum. Measured on the demo quad the polish
+        changes nothing (pull width 1.063 at zero iterations, 1.062 at 400 and
+        at 3000), so it is on by default as cheap insurance rather than as a
+        fix. Nelder-Mead stops on its own tolerance well before the cap, so
+        raising this number costs little and buys little; the setting that
+        matters is whether it runs at all.
     extra_fitting_steps:
         Appended to the fitting sequence after the PSO, in lenstronomy's
         ``[[name, kwargs], ...]`` form. The Hessian is always evaluated at

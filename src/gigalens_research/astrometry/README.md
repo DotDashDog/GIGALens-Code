@@ -203,12 +203,16 @@ central-difference, and every result carries a `hessian_step_stability`
 diagnostic comparing the covariance at the chosen step against twice it; if that
 is not small, the step is wrong and the number is not trustworthy.
 
-**A PSO alone under-reports the errors.** A swarm that stops slightly short of
-the optimum scatters the position from fit to fit, and that scatter is invisible
-to the Hessian, which describes the curvature wherever the optimiser stopped —
-not the distance from there to the true minimum. Measured here: pull width 1.12
-with PSO alone, 1.06 after adding a Nelder–Mead polish. Hence `polish_iterations`
-defaults to non-zero; setting it to zero silently shrinks the error bars.
+**A Nelder–Mead polish follows the swarm, as cheap insurance.** The concern is
+real in principle: an optimiser that stops short of the minimum scatters the
+position from fit to fit, and that scatter is invisible to the Hessian, which
+describes the curvature wherever the optimiser stopped rather than the distance
+from there to the true minimum. In the demo configuration it turns out **not** to
+be the binding constraint — pull width is 1.063 with no polish, 1.062 at 400
+iterations and 1.062 at 3000, i.e. the PSO was already close enough and the
+polish changes nothing measurable. It is kept on by default because it is cheap
+(~0.4 s) and the failure it guards against is silent, but it should not be
+credited with fixing anything here.
 
 **Ordering is built from named indices.** lenstronomy's parameter vector is
 blocked `[ra..., dec...]`; gigalens wants interleaved `[x0, y0, ...]`. Rather
@@ -221,6 +225,18 @@ pinned against gigalens' own `interleave_xy_cov` in `tests/test_astrometry.py`.
 
 ## Known limits
 
+- **The Laplace covariance is reproducibly ~6% too small, cause not isolated.**
+  In the demo configuration the pull width settles at 1.062–1.063 and mean χ² at
+  9.01 against 8 expected (60 realizations, ~1.9σ). It is a *uniform* scale
+  error, not a few bad fits: the robust scale is 1.15 with 0% of realizations
+  beyond the 99th percentile of χ²(8). It is not the optimiser — the number is
+  unchanged across `polish_iterations` of 0, 400 and 3000 — and not the
+  finite-difference step, which is stable to 0.4% under doubling. Remaining
+  candidates are the Laplace approximation itself and a mismatch between the
+  variance lenstronomy uses in the likelihood and the variance the noise was
+  drawn from. Until it is chased down, treat σ from this package as good to
+  ~10%, not to 1%, and re-measure the excess on a configuration resembling your
+  own data. The harness reports it; that is what it is for.
 - **Statistical correlations between well-separated images are tiny.** In the
   demo (four unblended images, no lens light) the statistical correlation peaks
   at ~0.004, and χ² using only the diagonal is indistinguishable from the full
