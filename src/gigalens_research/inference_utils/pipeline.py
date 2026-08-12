@@ -1056,7 +1056,8 @@ class Pipeline:
         # Order from richest to leanest posterior; pick the last entry whose
         # stage class has its own ``to_posterior`` override. Bridges and
         # other stages without a view are skipped.
-        scores = {"HMCStage": 2, "MCLMCStage": 2, "MAMSStage": 2, "SVIStage": 1, "MAPStage": 0}
+        scores = {"HMCStage": 2, "NUTSStage": 2, "MCLMCStage": 2, "MAMSStage": 2,
+                  "SVIStage": 1, "MAPStage": 0}
         best, best_score = None, -1
         for s in self.stages:
             if s.instance_name not in self.results:
@@ -1972,6 +1973,126 @@ class MAMSStage(InferenceStage):
                 "num_steps": int(samples_np.shape[1]),
                 "n_params": int(samples_np.shape[2]),
                 "debug": self.debug,
+            },
+            diagnostics=diagnostics,
+        )
+
+    @classmethod
+    def to_posterior(cls, arrays, ctx):
+        from .posterior import SamplerPosterior
+        return SamplerPosterior(ctx, samples_z=arrays["samples_z"])
+
+
+class NUTSStage(InferenceStage):
+    """NUTS with per-chain window adaptation. Wraps
+    ``gigalens.jax.inference.NUTS``.
+
+    The wrapped implementation is EXPERIMENTAL (restored WIP code; see its
+    module docstring) and is being validated separately -- this adapter only
+    standardizes its pipeline contract and persists its gradient-evaluation
+    accounting; it does not certify the sampler.
+
+    Requires ``qz`` (chain initialization and the initial inverse mass matrix
+    handed to window adaptation). Produces ``samples_z`` of canonical shape
+    ``(num_chains, num_steps, n_params)``.
+
+    ``num_burnin_steps`` has NO default by design (benchmark-campaign policy:
+    burn-in budgets must be an explicit, recorded choice).
+
+    With ``count_grad_evals=True`` (the default) the stage persists the
+    per-chain gradient-evaluation curves into its diagnostics:
+
+    - ``grad_evals_burnin``: shape ``(n_chains,)``, warmup gradient count per
+      chain (one gradient per leapfrog step; velocity Verlet).
+    - ``grad_evals_cumulative``: shape ``(n_chains, num_results)``, entry
+      ``[c, t]`` = total gradients chain ``c`` had spent once retained step
+      ``t`` was complete, burn-in included -- the curve to pair with a
+      running R-hat ("gradients to R-hat < 1.01").
+    """
+
+    name: ClassVar[str] = "nuts"
+    schema_version: ClassVar[int] = 1
+    requires: ClassVar[Tuple[str, ...]] = ("qz",)
+    produces: ClassVar[Tuple[str, ...]] = ("samples_z",)
+
+    def __init__(
+        self,
+        *,
+        num_burnin_steps: int,
+        n_chains: int = 16,
+        num_results: int = 500,
+        init_step_size: float = 1.0,
+        target_acceptance_rate: float = 0.8,
+        max_tree_depth: int = 8,
+        count_grad_evals: bool = True,
+        name: Optional[str] = None,
+        seed: Optional[int] = None,
+    ):
+        super().__init__(name=name, seed=seed)
+        self.n_chains = int(n_chains)
+        self.num_burnin_steps = int(num_burnin_steps)
+        self.num_results = int(num_results)
+        self.init_step_size = float(init_step_size)
+        self.target_acceptance_rate = float(target_acceptance_rate)
+        self.max_tree_depth = int(max_tree_depth)
+        self.count_grad_evals = bool(count_grad_evals)
+
+    def diagnostics_config(self):
+        return {
+            "num_burnin_steps": self.num_burnin_steps,
+            "num_results": self.num_results,
+            "target_acceptance_rate": self.target_acceptance_rate,
+            "max_tree_depth": self.max_tree_depth,
+        }
+
+    def run(self, ctx, artifacts, seed):
+        # Local import: keeps NUTS's blackjax dependency optional for users
+        # who only need MAP/SVI/HMC (mirrors MCLMCStage/MAMSStage).
+        from gigalens.jax.inference import NUTS as _NUTS
+        t0 = time.perf_counter()
+        out = _NUTS(
+            ctx.prob_model,
+            q_z=artifacts["qz"],
+            n_chains=self.n_chains,
+            num_burnin_steps=self.num_burnin_steps,
+            num_results=self.num_results,
+            init_step_size=self.init_step_size,
+            target_acceptance_rate=self.target_acceptance_rate,
+            max_tree_depth=self.max_tree_depth,
+            seed=seed,
+            count_grad_evals=self.count_grad_evals,
+        )
+        diagnostics: Dict[str, np.ndarray] = {}
+        metadata: Dict[str, Any] = {}
+        if self.count_grad_evals:
+            samples, counts = out
+            burnin = np.asarray(counts.burnin)
+            cumulative = np.asarray(counts.cumulative)
+            diagnostics = {
+                "grad_evals_burnin": burnin,
+                "grad_evals_cumulative": cumulative,
+            }
+            metadata = {
+                # Total = summed over chains; sequential = the critical path
+                # (slowest chain), the wall-clock-relevant count on
+                # chain-parallel hardware.
+                "grad_evals_total": int(cumulative[:, -1].sum()),
+                "grad_evals_sequential": int(cumulative[:, -1].max()),
+                "grads_per_step": 1,
+                "integrator": "velocity_verlet",
+            }
+        else:
+            samples = out
+        # NUTS already returns the canonical (n_chains, num_results, n_params).
+        samples_np = np.asarray(samples)
+        return StageResult(
+            arrays={"samples_z": samples_np},
+            metadata={
+                "wall_time_s": time.perf_counter() - t0,
+                "num_chains": int(samples_np.shape[0]),
+                "num_steps": int(samples_np.shape[1]),
+                "n_params": int(samples_np.shape[2]),
+                **metadata,
             },
             diagnostics=diagnostics,
         )

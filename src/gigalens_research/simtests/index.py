@@ -225,7 +225,8 @@ def _flatten_row(record: Dict[str, Any]) -> Dict[str, Any]:
     """Flatten a run record dict to a single-level dict for CSV."""
     flat: Dict[str, Any] = {}
     for k in ("campaign", "system_id", "sweep_name", "ctx_hash", "status",
-               "wall_time_s", "peak_gpu_bytes"):
+               "wall_time_s", "peak_gpu_bytes", "pipeline", "seed",
+               "trunk_wall_time_s"):
         flat[k] = record.get(k, "")
 
     for k, v in (record.get("sweep") or {}).items():
