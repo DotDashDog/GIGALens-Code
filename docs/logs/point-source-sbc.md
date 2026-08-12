@@ -653,6 +653,38 @@ the likelihood as an opt-in annealed term and rerun the double arm.
 
 ## Log (newest first)
 
+- **2026-08-12 (tooling, no scientific claim): point-source diagnostic panels in
+  `gigalens_research.plotting`.** The ad-hoc `diagnostics/sys_*_{trace,corner,scan}.png`
+  figures and the scalar `ps_solver_health` metric were the only way to see a
+  point-source fit; both are per-campaign, and neither shows *why* a χ² is what it is.
+  Added a `PosteriorReport.point_source_panel()` alongside `image_panel()`, plus the
+  `plotting/point_source.py` primitives and an
+  `inference_utils/point_source.py` prediction layer that goes through the term's own
+  `solve()` (no second lens-equation implementation).
+  - The panel that did not exist before: a **per-image χ² decomposition** into
+    displacement / saturated honesty charge / source anchor / flux. This is the C-2
+    (sys_76 phantom shelf) and P-4 failure made visible — a bounded honesty charge and
+    a genuine astrometric residual are indistinguishable in a total reduced χ², and
+    with draws the panel also reports the honesty share **across the posterior**, not
+    just at the median draw.
+  - `ps_solver_health`'s numbers are now also a distribution (source-plane residual vs
+    the 1e-4″ gate) with a companion trust-region-occupancy histogram; mass at
+    `|θ̂-θ_obs|/R_trust = 1` means iterates pinned on the confinement boundary.
+  - **Self-check, not trust:** the recomputed decomposition is compared against the
+    term's own scored χ² on every call (`chi2_closes`) and a mismatch is printed on the
+    figure. Verified closing to ≤2e-16 relative both at convergence and over draws well
+    off it, and the batched draw path reproduces the single-point path to ≤4e-15.
+  - Prerequisite bug fixed en route: the research-side `Posterior` assumed every
+    dataset was imaging. `observed_for`/`_error_for`/`mask_for` raised `AttributeError`
+    on a point-source dataset, and `_sim_for` indexed `ProbModel.simulators` — which is
+    *compacted to imaging terms* — by dataset position, so a `[point source, image]`
+    model returned the wrong simulator or ran off the end. Datasets now carry a kind and
+    panels dispatch on it.
+  - Scope: covers `point_source_position` only. The three-term
+    `gigalens.jax.point_source` loss is classified as a distinct kind and rejected by
+    name — its "χ²" is a hand-weighted loss over a stand-in event count, so pulls and a
+    reduced χ² drawn from it would claim a calibration that module does not offer.
+
 - **2026-08-04 (P-11 RESOLVED: fine-operator remedy REFUTED; loglik artifact
   and dataset recount cleanly settled).** Job 24529614 (es0, 4x 2080 Ti,
   11:47 h, COMPLETED; all slices + rerank + recount + audit green; results in
