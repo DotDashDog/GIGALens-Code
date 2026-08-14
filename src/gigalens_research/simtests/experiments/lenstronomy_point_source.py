@@ -771,9 +771,6 @@ def ps_solver_health(posterior: Any, system: Any) -> Dict[str, float]:
     try:
         import jax
         import jax.numpy as jnp
-        from gigalens.jax.point_source_position import _delens_and_jacobian
-
-        from gigalens_research.inference_utils.params import mass_params_list
 
         term = terms[0]
         model = prob.model
@@ -783,11 +780,7 @@ def ps_solver_health(posterior: Any, system: Any) -> Dict[str, float]:
         def diag(z):
             params = model.to_params(prob.bij.forward(z))
             tx, ty, bsx, bsy = term.solve(params)
-            # An ordered list, not the ``["mass"]`` dict: the helper pairs
-            # ``mass_params[j]`` with ``mass_profiles[j]`` positionally.
-            mp = mass_params_list(model, params, term.lens_i,
-                                  len(term.mass_profiles))
-            (bx, by), _ = _delens_and_jacobian(term.mass_profiles, mp, tx, ty)
+            (bx, by), _ = term._delens_and_jacobian(params, tx, ty)
             src_res = jnp.max(jnp.hypot(bx - bsx, by - bsy), axis=0)
             _, chi2 = term.log_like(params)
             return src_res, chi2

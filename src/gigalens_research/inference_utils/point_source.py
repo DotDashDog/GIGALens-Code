@@ -290,14 +290,10 @@ def _solve_bundle(term, params) -> Dict[str, Any]:
     Batch dims ride inside ``params``, so this is shape-agnostic: leading axis
     ``n_images``, trailing axes the parameter batch.
     """
-    from gigalens.jax.point_source_position import _delens_and_jacobian
-
     ds = term.dataset
     n = ds.n_images
     tx, ty, bsx, bsy = term.solve(params)
-    mass_params = mass_params_list(term.model, params, term.lens_i,
-                                   len(term.mass_profiles))
-    (bx, by), jac = _delens_and_jacobian(term.mass_profiles, mass_params, tx, ty)
+    (bx, by), jac = term._delens_and_jacobian(params, tx, ty)
     sx, sy = term._newton_from_jacobian(bx, by, jac, bsx, bsy)
 
     bd = tx.ndim - 1
