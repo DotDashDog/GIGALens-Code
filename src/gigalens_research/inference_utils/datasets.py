@@ -92,15 +92,65 @@ def is_imaging(dataset: Any) -> bool:
     return dataset_kind(dataset) == KIND_IMAGE
 
 
+#: Cross-image block magnitude, as a fraction of the largest per-image variance,
+#: above which a full joint (2n, 2n) cov_img is treated as carrying real image-to-
+#: image correlation. Below this, dropping the off-diagonal blocks to get a per-image
+#: (n, 2, 2) covariance is numerical noise, not an approximation; above it, the term's
+#: own likelihood (which whitens all 2n coordinates jointly, see
+#: ``gigalens.jax.point_source_position._validate_cov_img``) is scoring a shared mode
+#: this plotting layer's per-image chi2 decomposition (``mahalanobis_sq``) cannot
+#: represent, so silently keeping only the diagonal blocks would make the panel
+#: disagree with what was actually fit.
+_CROSS_IMAGE_COV_RTOL = 1e-3
+
+
+def _diagonal_blocks(cov2n: np.ndarray, n: int, source: str) -> np.ndarray:
+    """Extract the ``n`` per-image 2x2 diagonal blocks from a full joint
+    ``(2n, 2n)`` astrometric covariance.
+
+    ``cov_img`` on a :class:`~gigalens.jax.point_source_position.PointSourcePositionData`
+    is always stored in this INTERLEAVED form (``[x0, y0, x1, y1, ...]``, image
+    ``i``'s x at index ``2i``, its y at ``2i+1``) once constructed — the constructor
+    normalizes the ``(n, 2, 2)`` per-image-block input form into it too. Raises rather
+    than silently truncating when the off-diagonal (cross-image) blocks are not
+    negligible; see :data:`_CROSS_IMAGE_COV_RTOL`.
+    """
+    c = np.asarray(cov2n, dtype=float)
+    blocks = np.stack([c[2 * i:2 * i + 2, 2 * i:2 * i + 2] for i in range(n)])
+    off = c.copy()
+    for i in range(n):
+        off[2 * i:2 * i + 2, 2 * i:2 * i + 2] = 0.0
+    off_mag = float(np.abs(off).max()) if off.size else 0.0
+    scale = float(np.abs(np.diag(c)).max())
+    if scale > 0 and off_mag > _CROSS_IMAGE_COV_RTOL * scale:
+        raise ValueError(
+            f"{source} has shape {c.shape} (the full joint (2n, 2n) astrometric "
+            f"covariance) with a non-negligible cross-image block (max off-diagonal "
+            f"block entry {off_mag:.3e}, {off_mag / scale:.3e} of the largest "
+            f"variance, vs. a {_CROSS_IMAGE_COV_RTOL:.0e} tolerance). This plotting "
+            "layer's chi2 decomposition (mahalanobis_sq) sums PER-IMAGE quadratic "
+            "forms and cannot represent image-to-image correlation, so extracting the "
+            "diagonal blocks here would silently disagree with the likelihood's "
+            "actual jointly-whitened scored chi2 for this dataset. The panel needs "
+            "the joint form (the term's own whiten) before this dataset can be "
+            "plotted correctly.")
+    return blocks
+
+
 def _as_covariance(sig: np.ndarray, n: int, source: str) -> np.ndarray:
     """Normalize one astrometric-uncertainty array to ``(n, 2, 2)`` covariances.
 
-    Accepted forms, matching what ``PointSourcePositionData`` validates on input:
+    Accepted forms:
 
     - scalar -> one isotropic sigma shared by every image and coordinate,
     - ``(n,)`` -> per-image isotropic sigma,
     - ``(n, 2)`` -> per-image, per-coordinate sigma (x, y),
-    - ``(n, 2, 2)`` -> per-image full covariance.
+    - ``(n, 2, 2)`` -> per-image full covariance,
+    - ``(2n, 2n)`` -> the full joint astrometric covariance
+      :class:`~gigalens.jax.point_source_position.PointSourcePositionData` actually
+      stores as ``cov_img`` (INTERLEAVED ``[x0, y0, x1, y1, ...]``); reduced to its
+      ``n`` diagonal blocks via :func:`_diagonal_blocks`, which raises rather than
+      dropping a non-negligible cross-image correlation silently.
 
     The 1-D and 2-D forms hold **standard deviations** (the dataset's own
     convention), so they are squared onto the diagonal. The 3-D form is the only
@@ -137,11 +187,13 @@ def _as_covariance(sig: np.ndarray, n: int, source: str) -> np.ndarray:
                 f"{eigs.min():.3e}); a Gaussian likelihood is undefined there, so "
                 "there is no honest pull or error ellipse to draw.")
         return sig
+    if sig.shape == (2 * n, 2 * n):
+        return _diagonal_blocks(sig, n, source)
     raise ValueError(
         f"{source} has shape {sig.shape}, which is none of the recognized forms for "
-        f"{n} images: scalar, ({n},), ({n}, 2) standard deviations, or ({n}, 2, 2) "
-        "covariances. Refusing to broadcast — a broadcastable-but-wrong shape would "
-        "silently misweight every residual.")
+        f"{n} images: scalar, ({n},), ({n}, 2) standard deviations, ({n}, 2, 2), or "
+        f"({2 * n}, {2 * n}) covariances. Refusing to broadcast — a "
+        "broadcastable-but-wrong shape would silently misweight every residual.")
 
 
 def image_position_covariances(dataset: Any) -> np.ndarray:
