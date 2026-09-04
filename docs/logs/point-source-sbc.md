@@ -5,7 +5,7 @@ on 100 lenstronomy-simulated EPL+shear quads: `experiments/hundred_point_sources
 plugin `simtests/experiments/lenstronomy_point_source.py`,
 results `simtests_results/hundred_point_sources_v1/`.
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-09-04
 
 ---
 
@@ -47,6 +47,36 @@ operator (search_window=6) misses outer images of big-theta_E lenses and
 merging-pair members near cusps — P-7 unaffected (same operator on both
 sides), but future generators should use window >= 12. Next: wire N_eff into
 the likelihood as an opt-in annealed term and rerun the double arm.
+
+2026-09-04 update (migration + P-12 retirement). Two facts, kept separate.
+**(a) The campaign outputs did not migrate.** Only the code and this log moved
+from Lawrencium to Perlmutter; every v1/v2 run directory, aggregate and figure
+still lives on Lawrencium scratch and is not readable here. The repo-root
+`simtests_results` symlink now points at `/pscratch/sd/l/linusu/gigalens/simtests_results`,
+which holds unrelated campaigns — no point-source results. Everything quoted
+above from v1/v2 stands on this log, not on re-readable artifacts.
+**(b) The smoothed multiplicity constraint (P-8 … P-11) is RETIRED** and
+replaced by the discrete term `gigalens.jax.point_source_multiplicity.PointSourceMultiplicityData`
+(gigalens branch `multiplicity-term`, PR pending; this repo's branch of the same
+name). It is a hard indicator — `log L = 0` if the model produces exactly
+`n_observed` detectable images, `-inf` otherwise — ADDED to the other terms, so
+every gradient is the unconstrained one and MAP's best-particle argmax over
+VALUES is itself the phantom-image screen (no annealing phase, no extra stage).
+It marks the ProbModel `discontinuous`: SVI and MCLMC refuse it by name
+(gradient-only stages cannot see a wall), MAP/MAMS/NUTS/HMC proceed, and MAMS is
+the campaign sampler via the new `map_mams` pipeline (MAP -> diagonal-qz bridge
+-> MAMS). The generator now SELECTS with the same operator — lenstronomy finds
+the images at `lt_search_window: 12` (window 6 mislabelled 8/100 v2 "doubles"),
+a `count_floor` decides which are detectable, and a draw is rejected
+(`operator_mismatch`) if the gigalens count at the truth disagrees; the manifest
+records the mismatch rate. The batched runner is MCLMC-only and now refuses a
+discontinuous target, so it CANNOT run the new arms (a MAMS port is the missing
+piece). `campaign_v3_quad.yaml` / `campaign_v3_double.yaml` (fresh dataset seeds
+12/13, window 12, `count_floor: {mu_min: 0.1}`, `map_mams`,
+`multiplicity: from_dataset`) are added but NOT launched; the MAMS budget and
+the mu_min-vs-flux_min choice are Linus's calls before launch. The retired
+configs and analyses are in
+`experiments/hundred_point_sources/archive_smoothed_constraint/`.
 
 ---
 
@@ -195,6 +225,31 @@ the likelihood as an opt-in annealed term and rerun the double arm.
 ---
 
 ## Design checkpoints (criteria awaiting approval)
+
+- **P-12 — retire the smoothed image-count constraint; adopt the DISCRETE
+  multiplicity term.** **Claim type:** design decision, not a run (P-11 already
+  supplied the measurement). **Status: RESOLVED 2026-09-04 by design decision
+  (option (b) of the P-11 follow-up list, in its exact form).**
+
+  **Rationale.** The smoothed count is `N_eps = N ⊛ g_eps`: the integer image
+  count blurred over the source plane. That is not an approximation that gets
+  better with resolution in the place that matters — it is exact only away from
+  caustics, and *every* truth within ~eps of a caustic reads a fractional count
+  and is penalized at ANY eps. P-11 measured this directly: truth-level excess
+  0.33–0.99 across three operator rungs on 4 systems, and a population scan at
+  eps = 0.05" found 26/100 truths with pen_fine(truth) < −0.5 (predicted 7–12),
+  i.e. a quarter of all truths penalized; and the quadrature convergence WORSENS as eps
+  shrinks (falsifier d fired). Options (a), (c) and (d) all keep a proxy whose
+  penalty at an admissible truth is non-zero and have to model or excuse that
+  bias; the discrete count has no such term to excuse — at every admissible
+  truth its penalty is identically zero, and its only cost is that it has no
+  gradient. That cost is paid by WHERE it may run (MAP by argmax, MAMS/NUTS/HMC
+  by exact rejection at the wall; SVI and unadjusted MCLMC refuse), which is a
+  scheduling constraint, not a bias. Falsifier retained for the successor, not
+  for this decision: if a v3 arm shows SBC non-uniformity that tracks distance
+  to the caustic, the discrete operator's own resolution limits (window,
+  min_separation, grid) are the suspect — which is why the generator selects
+  with the identical operator and reports the residual disagreement rate.
 
 - **P-1 (pre-registered PREDICTION, no run needed).** Hypothesis: C-1 (MAP-init failure
   causes catastrophic R̂). **sys_91's** MAP manifest (written before its sampling

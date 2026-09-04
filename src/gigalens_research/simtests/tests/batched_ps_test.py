@@ -40,6 +40,12 @@ def _generate(tmpdir, n_systems=3, seed=11):
             "generator": "lenstronomy_point_source",
             "n_systems": n_systems,
             "multiplicity": "quad",
+            # Required since the discrete multiplicity term landed. -inf = no
+            # detectability floor (every root counts), which is the historical
+            # behaviour of this fixture; cheap operator knobs keep the
+            # generator's per-draw count check affordable on CPU.
+            "count_floor": {"mu_min": float("-inf"), "grid_n": 64,
+                            "inner_grid_n": 32},
         },
         "inference": {
             "builder": "epl_shear_point_source_obs",
@@ -56,6 +62,10 @@ def _build_all(systems, **kw):
     from gigalens_research.simtests.experiments.lenstronomy_point_source import (
         build_epl_shear_point_source_obs,
     )
+    # The batched path is the POSITION term only: the discrete multiplicity
+    # term would add a second term (which batching refuses) and a discontinuity
+    # (which the batched MCLMC refuses). Off explicitly, not by default.
+    kw.setdefault("multiplicity", None)
     seqs = [build_epl_shear_point_source_obs(s, **kw) for s in systems]
     return [getattr(s, "prob_model", s) for s in seqs]
 

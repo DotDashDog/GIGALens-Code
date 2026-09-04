@@ -14,7 +14,11 @@ references:
   :class:`~gigalens.jax.scene_prob_model.ProbModel` over
   :class:`~gigalens.jax.point_source_position.PointSourceObsData` (or the
   position-only dataset when both channels are off).
-- ``"map_svi_mclmc"`` pipeline — MAPStage -> SVIStage -> MCLMCStage.
+- ``"map_svi_mclmc"`` pipeline — MAPStage -> SVIStage -> MCLMCStage. Only for
+  configs WITHOUT the multiplicity term (SVI and MCLMC refuse a discontinuous
+  ProbModel).
+- ``"map_mams"`` pipeline — MAPStage -> diagonal-qz bridge -> MAMSStage; the
+  pipeline for the discrete multiplicity term.
 - ``"sbc_ranks"`` / ``"loglik_rank"`` / ``"ps_solver_health"`` per-run metrics.
 - ``"sbc_uniformity"`` campaign metric — rank-ECDF uniformity analysis over
   converged runs, with attrition accounting.
@@ -84,12 +88,141 @@ _GENERATOR_DEFAULTS: Dict[str, Any] = {
     "sigma_td": 1.0,                # days, per non-reference image
     # lenstronomy truth solver
     "lt_min_distance": 0.01,
-    "lt_search_window": 6.0,
+    # 12 arcsec, not 6: at window 6 lenstronomy misses the outer image of a
+    # big-theta_E lens and one member of a merging cusp pair, which MISLABELS
+    # the selected multiplicity -- measured on the v2 double dataset, 8/100
+    # "doubles" are really quads when recounted at window 12
+    # (docs/logs/point-source-sbc.md, 2026-07-31 and 2026-08-04 entries).
+    # Selection is only as good as the operator that defines it.
+    "lt_search_window": 12.0,
     "lt_precision_limit": 1e-10,
     # gigalens EPL quadrature order (used for the offset-mode truth here and as
     # the builder's default fit profile, so the two stay consistent)
     "epl_niter": 18,
+    # Detectability floor + count-operator knobs (see _resolve_count_floor).
+    # REQUIRED, no default: what counts as a detectable image is a scientific
+    # choice, and the SAME choice defines the dataset's selection and the
+    # inference term's truncation. ``{mu_min: -.inf}`` asks for the raw root
+    # count.
+    "count_floor": None,
 }
+
+
+# The ``count_floor`` block: the detectability floor plus the knobs of the
+# gigalens count operator (``PointSourceMultiplicityData``). Exactly one of
+# mu_min / flux_min, mirroring that class -- both at once would be two
+# definitions of "detectable", neither would be a silent scientific default.
+_COUNT_FLOORS = ("mu_min", "flux_min")
+_COUNT_OPERATOR_KNOBS = ("grid_n", "n_minima", "n_nearest", "inner_grid_n",
+                         "inner_scale", "n_minima_inner", "n_nearest_inner",
+                         "newton_steps", "window", "window_scale",
+                         "min_separation", "precision")
+_COUNT_FLOOR_KEYS = _COUNT_FLOORS + _COUNT_OPERATOR_KNOBS
+_COUNT_INT_KNOBS = ("grid_n", "n_minima", "n_nearest", "inner_grid_n",
+                    "n_minima_inner", "n_nearest_inner", "newton_steps")
+
+
+def _resolve_count_floor(block: Any, who: str) -> Dict[str, Any]:
+    """Validate + normalize a ``count_floor`` block into
+    :class:`~gigalens.jax.point_source_multiplicity.PointSourceMultiplicityData`
+    kwargs.
+
+    The SAME dict drives the generator's selection and -- persisted into
+    ``ps_config`` and rebuilt by the builder's ``multiplicity: from_dataset`` --
+    the inference term, so the truncation that selected the truths is the
+    truncation in the target. That identity is what makes SBC meaningful on a
+    multiplicity-selected dataset.
+    """
+    if block is None:
+        raise ValueError(
+            f"{who} is required: the detectability floor decides which images are "
+            f"'observed' (hence the selected multiplicity) AND the inference term's "
+            f"truncation, so it must be stated, never defaulted. Give exactly one of "
+            f"{list(_COUNT_FLOORS)} -- e.g. {{mu_min: 0.1}}, or {{mu_min: -.inf}} for "
+            f"the raw root count -- optionally with operator knobs "
+            f"{list(_COUNT_OPERATOR_KNOBS)}.")
+    if not isinstance(block, dict):
+        raise ValueError(f"{who} must be a mapping; got {type(block).__name__}.")
+    unknown = set(block) - set(_COUNT_FLOOR_KEYS)
+    if unknown:
+        raise ValueError(
+            f"{who}: unknown keys {sorted(unknown)}. Known: "
+            f"{sorted(_COUNT_FLOOR_KEYS)}. A typo'd operator knob must not silently "
+            f"fall back to a default -- the operator IS the selection.")
+    out = {}
+    for k, v in block.items():
+        if v is None:
+            out[k] = None
+        elif k in _COUNT_INT_KNOBS:
+            out[k] = int(v)
+        else:
+            out[k] = float(v)
+    n_floor = sum(1 for k in _COUNT_FLOORS if out.get(k) is not None)
+    if n_floor != 1:
+        raise ValueError(
+            f"{who} needs exactly ONE detectability floor of {list(_COUNT_FLOORS)}; "
+            f"got {n_floor}. flux_min (amp * |mu|) is the principled choice when "
+            f"fluxes are fitted (a detection threshold is a flux); mu_min is a "
+            f"magnification floor; -.inf counts every root.")
+    return out
+
+
+# Sentinel: "the yaml did not mention multiplicity at all" (in which case a
+# dataset that carries a persisted selection operator turns the term ON) vs an
+# explicit ``multiplicity: null`` (the term stays off, deliberately).
+_MULT_UNSET = object()
+
+
+def _resolve_multiplicity_kwarg(value: Any, cfg: Dict[str, Any], n_images: int
+                                ) -> Tuple[Optional[Dict[str, Any]], int]:
+    """``(PointSourceMultiplicityData kwargs | None, n_observed)``.
+
+    See :func:`build_epl_shear_point_source_obs` for the accepted values. The
+    default (sentinel) is ``"from_dataset"`` whenever the dataset persisted a
+    ``count_floor``: the generator selected its truths with that operator, so a
+    fit without the matching truncation is not the same target.
+    """
+    persisted = cfg.get("count_floor")
+    if value is _MULT_UNSET:
+        value = "from_dataset" if persisted else None
+    if value is None:
+        return None, int(n_images)
+    n_obs = int(n_images)
+    if isinstance(value, str):
+        if value != "from_dataset":
+            raise ValueError(
+                f"multiplicity={value!r} is not understood; use 'from_dataset', "
+                f"None, or a dict of overrides.")
+        if not persisted:
+            raise ValueError(
+                "multiplicity='from_dataset' but this dataset persisted no "
+                "count_floor (it predates the discrete multiplicity term, or was "
+                "generated without one). Regenerate with a dataset.count_floor "
+                "block, or pass an explicit dict -- inventing an operator here "
+                "would silently make the target's truncation differ from the "
+                "selection's.")
+        return _resolve_count_floor(dict(persisted),
+                                    "multiplicity (from ps_config.count_floor)"), n_obs
+    if not isinstance(value, dict):
+        raise ValueError(
+            f"multiplicity must be None, 'from_dataset', or a dict of overrides; "
+            f"got {type(value).__name__}.")
+    over = dict(value)
+    unknown = set(over) - set(_COUNT_FLOOR_KEYS) - {"n_observed"}
+    if unknown:
+        raise ValueError(
+            f"multiplicity: unknown keys {sorted(unknown)}. Known: "
+            f"{sorted(_COUNT_FLOOR_KEYS)} plus 'n_observed'.")
+    if "n_observed" in over:
+        n_obs = int(over.pop("n_observed"))
+    base = dict(persisted or {})
+    if any(k in over for k in _COUNT_FLOORS):
+        # An explicit floor REPLACES the persisted one (the term refuses two).
+        for k in _COUNT_FLOORS:
+            base.pop(k, None)
+    base.update(over)
+    return _resolve_count_floor(base, "multiplicity (overrides)"), n_obs
+
 
 _TRUTH_PRIORS = ("inference", "simulation")
 _MULTIPLICITIES = ("quad", "triple", "double", "any2plus")
@@ -106,8 +239,14 @@ def _resolve_generator_cfg(extra: Dict[str, Any]) -> Dict[str, Any]:
         )
     cfg = dict(_GENERATOR_DEFAULTS)
     cfg.update(extra)
+    # count_floor is a mapping, not a scalar: validate it on its own and keep
+    # it out of the scalar coercion below.
+    count_floor = _resolve_count_floor(
+        cfg.pop("count_floor"), "[lenstronomy_point_source] dataset.count_floor")
     # normalize types (yaml can deliver ints where floats are meant, etc.)
     for k, default in _GENERATOR_DEFAULTS.items():
+        if k == "count_floor":
+            continue
         if isinstance(default, bool):
             cfg[k] = bool(cfg[k])
         elif isinstance(default, int):
@@ -124,6 +263,7 @@ def _resolve_generator_cfg(extra: Dict[str, Any]) -> Dict[str, Any]:
                          f"got {cfg['multiplicity']!r}")
     if not (cfg["H0_min"] < cfg["H0_max"]):
         raise ValueError("H0_min must be < H0_max")
+    cfg["count_floor"] = count_floor
     return cfg
 
 
@@ -186,10 +326,36 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
     """Simulate ``n_systems`` lensed point sources with lenstronomy.
 
     Per system: rejection-sample a truth (mass + source position + amp + H0)
-    until the lenstronomy image count matches ``multiplicity`` and the
-    noiseless images are separated by at least ``min_image_sep`` — a pure
-    function of the candidate truth, scanned in draw order, so the accepted
-    truths are exact draws from the prior conditioned on acceptance. Then:
+    until it passes selection — a pure function of the candidate truth, scanned
+    in draw order, so the accepted truths are exact draws from the prior
+    conditioned on acceptance. Selection is, in order:
+
+    1. lenstronomy finds the images; the ``count_floor`` (``mu_min`` on |mu|,
+       or ``flux_min`` on ``amp * |mu|``) decides which of them are DETECTABLE.
+       Only detectable images are "observed": they are what gets persisted, and
+       ``n_images`` is their count.
+    2. the ``multiplicity`` test (quad/triple/double/any2plus) is applied to
+       THAT count, and ``min_image_sep`` to those images.
+    3. the gigalens count operator — the very
+       :class:`~gigalens.jax.point_source_multiplicity.PointSourceMultiplicityData`
+       the fit will carry, with the persisted ``count_floor`` knobs, evaluated
+       at the candidate truth — must return the same count; otherwise the draw
+       is rejected as ``operator_mismatch``.
+
+    Step 3 is what makes this dataset usable for SBC with the multiplicity
+    term: SBC asks whether the truncation that selected the truths equals the
+    truncation in the target, and the target's truncation IS this operator.
+    lenstronomy still does the image finding (it is independent of the solver
+    under test, and it supplies magnifications and arrival times), so the
+    accepted set is ``{lenstronomy count == n} ∩ {gigalens count == n}`` — a
+    subset of the term's ``{gigalens count == n}``. The residual is measured,
+    not assumed: the manifest's ``selection.operator_mismatch_rate`` is the
+    fraction of otherwise-acceptable draws the two operators disagreed on.
+    NOTE that step 3 runs for every campaign, including arms fitted WITHOUT the
+    term; for those the extra truncation has no counterpart in the target, and
+    the same mismatch rate bounds how much that matters.
+
+    Then:
 
     - images sorted by arrival time (image 0 = first arriving; the time-delay
       reference, ``td_obs[0] == 0`` by the PointSourceObsData convention);
@@ -242,8 +408,18 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
     system_ids: List[str] = []
     key = random.PRNGKey(seed)
     epl_prof, shear_prof = EPL(niter=cfg["epl_niter"]), Shear()
-    reject_counts = {"multiplicity": 0, "min_sep": 0, "solver_error": 0}
+    reject_counts = {"multiplicity": 0, "min_sep": 0, "solver_error": 0,
+                     "operator_mismatch": 0}
     attempts_total = 0
+
+    # The inference scene, built ONCE from the same persisted spec the builder
+    # uses, so the selection operator is the inference operator. Cosmology-free
+    # and flux-free unless the floor needs a flux: neither changes the count
+    # (see _build_scene_model).
+    floor = cfg["count_floor"]
+    count_model, count_src = _build_scene_model(
+        cfg, fit_flux=(floor.get("flux_min") is not None), fit_td=False)
+    n_operator_checks = 0
 
     for i in range(n_systems):
         sys_key = random.fold_in(key, i)
@@ -274,10 +450,22 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
                 reject_counts["solver_error"] += 1
                 continue
             x_t, y_t = np.asarray(cx, float).reshape(-1), np.asarray(cy, float).reshape(-1)
+            if x_t.size == 0:
+                reject_counts["multiplicity"] += 1
+                continue
+            # Detectability floor, applied to lenstronomy's images: below-floor
+            # roots are not observed at all, so they enter neither the
+            # observables nor the multiplicity test.
+            mu_all = np.asarray(lm.magnification(x_t, y_t, kw), float).reshape(-1)
+            if floor.get("flux_min") is not None:
+                detectable = amp_t * np.abs(mu_all) >= floor["flux_min"]
+            else:
+                detectable = np.abs(mu_all) >= floor["mu_min"]
+            x_t, y_t = x_t[detectable], y_t[detectable]
             n_img = x_t.size
             ok_mult = {"quad": n_img == 4,
                        # 3-image = naked-cusp region (high |e|+shear tails);
-                       # selection is on the SOLVER-FOUND count, like the others
+                       # selection is on the DETECTABLE count, like the others
                        "triple": n_img == 3,
                        "double": n_img == 2,
                        "any2plus": n_img >= 2}[cfg["multiplicity"]]
@@ -292,6 +480,26 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
                 if min_sep < cfg["min_image_sep"]:
                     reject_counts["min_sep"] += 1
                     continue
+            # The gigalens count operator at the candidate truth, seeded with
+            # the detectable images (at inference the seeds are the NOISY
+            # positions; seeds only ADD candidates to the same Newton solve, and
+            # keeping selection a pure function of the truth is what makes the
+            # accepted truths exact conditioned prior draws).
+            truth_tree = _truth_tree(epl_t, shr_t,
+                                     {"center_x": sx, "center_y": sy, "amp": amp_t})
+            unique = _truth_unique(count_model, truth_tree)
+            if unique is None:                      # cannot happen; guard loudly
+                raise RuntimeError(
+                    "[lenstronomy_point_source] the candidate truth is silent on a "
+                    "sampled parameter of the count model — generator and builder "
+                    "have drifted apart.")
+            term = _multiplicity_term(count_model, count_src, x_t, y_t,
+                                      cfg["sigma_ast"], n_img, floor)
+            n_operator_checks += 1
+            n_gl = int(np.asarray(term.count(count_model.to_params(unique))))
+            if n_gl != n_img:
+                reject_counts["operator_mismatch"] += 1
+                continue
             accepted = (epl_t, shr_t, sx, sy, amp_t, H0_t, lm, kw, x_t, y_t, a)
             break
 
@@ -344,18 +552,10 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
         dx_t = sx - float(jnp.mean(jnp.asarray(x_obs) - axd))
         dy_t = sy - float(jnp.mean(jnp.asarray(y_obs) - ayd))
 
-        # String keys, matching the scene's own params-tree keys: these planes and
-        # components are unnamed, so their keys are ``str(index)``. (JSON round-trips
-        # int keys to strings anyway, so this is also what a reloaded truth looked
-        # like all along.)
-        truth_x = {
-            "planes": {
-                "0": {"mass": {"0": dict(epl_t), "1": dict(shr_t)}},
-                "1": {"light": {"0": {"center_x": sx, "center_y": sy,
-                                      "dx": dx_t, "dy": dy_t, "amp": amp_t}}},
-            },
-            "cosmo": {"H0": H0_t},
-        }
+        truth_x = _truth_tree(
+            epl_t, shr_t,
+            {"center_x": sx, "center_y": sy, "dx": dx_t, "dy": dy_t, "amp": amp_t},
+            H0=H0_t)
         obs = {
             "x_obs": x_obs.tolist(), "y_obs": y_obs.tolist(),
             "sigma_ast": cfg["sigma_ast"],
@@ -404,6 +604,16 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
                 "attempts_total": attempts_total,
                 "acceptance_rate": n_systems / max(attempts_total, 1),
                 "rejects": reject_counts,
+                # How often lenstronomy's floored count and the gigalens count
+                # operator disagreed, over the draws that reached the check.
+                # This is the residual SBC truncation mismatch: the term
+                # truncates to {gigalens count == n}, the dataset to that
+                # intersected with {lenstronomy count == n}.
+                "operator_checks": int(n_operator_checks),
+                "operator_mismatch": int(reject_counts["operator_mismatch"]),
+                "operator_mismatch_rate": (
+                    reject_counts["operator_mismatch"] / n_operator_checks
+                    if n_operator_checks else None),
             },
         },
     )
@@ -419,6 +629,119 @@ def _load_ps_system(system: Any) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             f"datasets written by the 'lenstronomy_point_source' generator."
         )
     return json.loads(assets["ps_obs"]), json.loads(assets["ps_config"])
+
+
+def _build_scene_model(cfg: Dict[str, Any], *, fit_flux: bool, fit_td: bool,
+                       src_parameterization: str = "absolute",
+                       offset_prior_scale: float = 0.05,
+                       epl_niter: Optional[int] = None) -> Tuple[Any, Any]:
+    """The campaign's gigalens scene, built from the persisted physics config.
+
+    Returns ``(model, ps_comp)``. SHARED by the inference builder and by the
+    generator's selection step, so the count operator that selects a dataset is
+    evaluated on exactly the scene the fit will use (same EPL quadrature order,
+    same profiles, same priors -- the operator's answer depends on the mass
+    model, not on who built it).
+
+    ``fit_td`` decides whether cosmology exists in the scene. The image count
+    does NOT depend on it: with ``z_source_ref = z_source`` the source plane's
+    deflection ratio is 1 either way, which is also the cosmology-free scene's
+    value, so the generator may (and does) count on the cheaper cosmology-free
+    model.
+    """
+    import tensorflow_probability.substrates.jax as tfp
+
+    from gigalens.jax.scene import Component, Plane, LensModel
+    from gigalens.jax.cosmo import wCDM_Cosmo
+    from gigalens.jax.profiles.mass.epl import EPL
+    from gigalens.jax.profiles.mass.shear import Shear
+    from gigalens.jax.profiles.light.point_source import PointSourcePosition
+
+    tfd = tfp.distributions
+    if src_parameterization not in ("absolute", "offset"):
+        raise ValueError(f"src_parameterization must be 'absolute' or 'offset'; "
+                         f"got {src_parameterization!r}")
+    dists = _truth_dists(cfg)
+    niter = int(cfg["epl_niter"] if epl_niter is None else epl_niter)
+
+    # Point source: sampled position (+ amp iff the flux channel is on).
+    if src_parameterization == "absolute":
+        ps_prior = dict(center_x=dists["src"]["center_x"],
+                        center_y=dists["src"]["center_y"])
+    else:
+        # Offset mode's implied absolute-position prior is data-dependent, so
+        # it cannot exactly match the generator draw -- approximate SBC for
+        # dx/dy (see the campaign yaml header, note 2).
+        ps_prior = dict(dx=tfd.Normal(0.0, offset_prior_scale),
+                        dy=tfd.Normal(0.0, offset_prior_scale))
+    if fit_flux:
+        ps_prior["amp"] = dists["amp"]
+    ps_comp = Component(
+        PointSourcePosition(absolute=(src_parameterization == "absolute"),
+                            with_amp=fit_flux),
+        ps_prior,
+    )
+    epl_comp = Component(EPL(niter=niter), dict(dists["epl"]))
+    shear_comp = Component(Shear(), dict(dists["shear"]))
+
+    if fit_td:
+        cosmo_comp = Component(
+            wCDM_Cosmo(z_lens=cfg["z_lens"], z_source_ref=cfg["z_source"]),
+            dict(H0=dists["H0"], Om0=cfg["Om0"], k=0.0, w0=-1.0),
+        )
+        model = LensModel(
+            [Plane(redshift=cfg["z_lens"], mass=[epl_comp, shear_comp]),
+             Plane(redshift=cfg["z_source"], light=[ps_comp])],
+            cosmo=cosmo_comp,
+        )
+    else:
+        # No delays -> no H0 sensitivity -> cosmology-free scene (a lone lensed
+        # plane defaults to deflection_ratio 1).
+        model = LensModel(
+            [Plane(mass=[epl_comp, shear_comp]),
+             Plane(deflection_ratio=1.0, light=[ps_comp])],
+        )
+    return model, ps_comp
+
+
+def _multiplicity_term(model: Any, ps_comp: Any, x: Any, y: Any,
+                       sigma_ast: float, n_observed: int,
+                       floor: Dict[str, Any]) -> Any:
+    """A bound :class:`PointSourceMultiplicityLikelihoodTerm` on ``model``.
+
+    Used by the GENERATOR to evaluate the count operator at a candidate truth.
+    Built through a real ``ProbModel`` over the same two datasets the inference
+    builder assembles, so nothing about the operator can drift between
+    selection and inference.
+    """
+    from gigalens.jax.point_source_position import PointSourcePositionData
+    from gigalens.jax.point_source_multiplicity import PointSourceMultiplicityData
+    from gigalens.jax.scene_prob_model import ProbModel
+
+    pos = PointSourcePositionData(ps_comp, x, y, sigma_ast)
+    mult = PointSourceMultiplicityData(pos, n_observed=int(n_observed), **floor)
+    return ProbModel(model, [pos, mult]).terms[-1]
+
+
+def _truth_tree(epl_t: Dict[str, float], shr_t: Dict[str, float],
+                src: Dict[str, float], H0: Optional[float] = None
+                ) -> Dict[str, Any]:
+    """The scene-nested truth dict (the ``truth_x`` layout).
+
+    String keys, matching the scene's own params-tree keys: these planes and
+    components are unnamed, so their keys are ``str(index)``. (JSON round-trips
+    int keys to strings anyway, so this is also what a reloaded truth looked
+    like all along.)
+    """
+    tree: Dict[str, Any] = {
+        "planes": {
+            "0": {"mass": {"0": dict(epl_t), "1": dict(shr_t)}},
+            "1": {"light": {"0": dict(src)}},
+        },
+    }
+    if H0 is not None:
+        tree["cosmo"] = {"H0": float(H0)}
+    return tree
 
 
 # ---------------------------------------------------------------------------
@@ -447,30 +770,32 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
     gigalens ``PointSourcePositionData``: tilts the saturated honesty charge's
     shelf so MAP/chains cannot stall on unconverged-solve plateaus (the sys_76
     failure, docs/logs/point-source-sbc.md P-4). Natural scale: ``sigma_ast``.
-    ``multiplicity_constraint`` (None = off) — opt-in smoothed-image-count
-    penalty of gigalens ``PointSourcePositionData``: a dict
-    ``{n_obs, mu_min, eps, lam, grid_n, n_tiles, window|window_scale}``
-    (``n_obs`` defaults to the system's observed image count) adding
-    ``-lam (N_eff - n_obs)^2`` to log_like so phantom-image posterior modes
-    are suppressed IN the likelihood rather than by post-hoc draw filtering
-    (docs/logs/point-source-sbc.md P-8/P-9). The batched pipeline anneals its
-    eps during a dedicated MAP refinement phase and keeps it fixed through
-    SVI scoring and MCLMC (batched_pipeline.batched_map_anneal).
-    """
-    import jax.numpy as jnp
-    import tensorflow_probability.substrates.jax as tfp
+    ``multiplicity`` — the DISCRETE image-multiplicity term of gigalens
+    ``PointSourceMultiplicityData`` ("this source has exactly n_observed
+    detectable images; no phantom image was seen"), appended to the ProbModel
+    after the position dataset. Values:
 
-    from gigalens.jax.scene import Component, Plane, LensModel
+    - ``"from_dataset"`` — rebuild the operator the generator SELECTED with,
+      from the persisted ``ps_config["count_floor"]``, with
+      ``n_observed`` = the system's observed image count. This is the DEFAULT
+      whenever the dataset carries a persisted operator (exactly as
+      ``priors: from_dataset`` is the only supported prior source): a selected
+      dataset whose target lacks the matching truncation is not an SBC test.
+    - ``None`` — off. The right choice only for a dataset that was not
+      multiplicity-selected, or for a deliberate mismatch experiment.
+    - a dict — the persisted knobs with these overridden (unknown keys raise).
+      Naming a floor (``mu_min``/``flux_min``) replaces the persisted floor.
+      ``n_observed`` may also be overridden.
+
+    The term is discontinuous (``ProbModel.discontinuous``), so SVI and MCLMC
+    refuse it by name: use the ``map_mams`` pipeline, not ``map_svi_mclmc``.
+    """
     from gigalens.jax.scene_prob_model import ProbModel
-    from gigalens.jax.cosmo import wCDM_Cosmo
-    from gigalens.jax.profiles.mass.epl import EPL
-    from gigalens.jax.profiles.mass.shear import Shear
-    from gigalens.jax.profiles.light.point_source import PointSourcePosition
     from gigalens.jax.point_source_position import (
         PointSourceObsData, PointSourcePositionData,
     )
+    from gigalens.jax.point_source_multiplicity import PointSourceMultiplicityData
 
-    tfd = tfp.distributions
     obs, cfg = _load_ps_system(system)
 
     fit_flux = bool(kwargs.get("fit_flux", True))
@@ -494,9 +819,9 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
     src_anchor_sigma = kwargs.get("src_anchor_sigma", None)
     if src_anchor_sigma is not None:
         src_anchor_sigma = float(src_anchor_sigma)
-    multiplicity_constraint = kwargs.get("multiplicity_constraint", None)
-    if multiplicity_constraint is not None:
-        multiplicity_constraint = dict(multiplicity_constraint)
+    n_images = len(np.asarray(obs["x_obs"], float).reshape(-1))
+    mult_floor, mult_n_obs = _resolve_multiplicity_kwarg(
+        kwargs.get("multiplicity", _MULT_UNSET), cfg, n_images)
 
     # Metric knobs: metrics only receive (posterior, system), but the builder
     # runs first in the same process (run._run_one), so the yaml's sbc knobs are
@@ -507,51 +832,16 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
     _LOGLIK_RANK_DRAWS = int(kwargs.get("loglik_rank_draws", _LOGLIK_RANK_DRAWS))
     _SOLVER_HEALTH_DRAWS = int(kwargs.get("solver_health_draws", _SOLVER_HEALTH_DRAWS))
 
-    dists = _truth_dists(cfg)
-
-    # Point source: sampled position (+ amp iff the flux channel is on).
-    if src_par == "absolute":
-        ps_prior = dict(center_x=dists["src"]["center_x"],
-                        center_y=dists["src"]["center_y"])
-    else:
-        # Offset mode's implied absolute-position prior is data-dependent, so
-        # it cannot exactly match the generator draw — approximate SBC for
-        # dx/dy (see the campaign yaml header, note 2).
-        ps_prior = dict(dx=tfd.Normal(0.0, offset_prior_scale),
-                        dy=tfd.Normal(0.0, offset_prior_scale))
-    if fit_flux:
-        ps_prior["amp"] = dists["amp"]
-    ps_comp = Component(
-        PointSourcePosition(absolute=(src_par == "absolute"), with_amp=fit_flux),
-        ps_prior,
-    )
-    epl_comp = Component(EPL(niter=epl_niter), dict(dists["epl"]))
-    shear_comp = Component(Shear(), dict(dists["shear"]))
-
-    if fit_td:
-        cosmo_comp = Component(
-            wCDM_Cosmo(z_lens=cfg["z_lens"], z_source_ref=cfg["z_source"]),
-            dict(H0=dists["H0"], Om0=cfg["Om0"], k=0.0, w0=-1.0),
-        )
-        model = LensModel(
-            [Plane(redshift=cfg["z_lens"], mass=[epl_comp, shear_comp]),
-             Plane(redshift=cfg["z_source"], light=[ps_comp])],
-            cosmo=cosmo_comp,
-        )
-    else:
-        # No delays -> no H0 sensitivity -> cosmology-free scene (a lone lensed
-        # plane defaults to deflection_ratio 1).
-        model = LensModel(
-            [Plane(mass=[epl_comp, shear_comp]),
-             Plane(deflection_ratio=1.0, light=[ps_comp])],
-        )
+    model, ps_comp = _build_scene_model(
+        cfg, fit_flux=fit_flux, fit_td=fit_td,
+        src_parameterization=src_par, offset_prior_scale=offset_prior_scale,
+        epl_niter=epl_niter)
 
     x = np.asarray(obs["x_obs"], float)
     y = np.asarray(obs["y_obs"], float)
     sigma_ast = float(obs["sigma_ast"])
     common = dict(newton_steps=newton_steps, trust_region_frac=trust_region_frac,
-                  src_anchor_sigma=src_anchor_sigma,
-                  multiplicity_constraint=multiplicity_constraint)
+                  src_anchor_sigma=src_anchor_sigma)
     if fit_flux or fit_td:
         data = PointSourceObsData(
             ps_comp, x, y, sigma_ast,
@@ -564,7 +854,15 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
     else:
         data = PointSourcePositionData(ps_comp, x, y, sigma_ast, **common)
 
-    return ProbModel(model, data)
+    datasets = [data]
+    if mult_floor is not None:
+        # AFTER the position dataset: the constraint is a statement about the
+        # source that dataset samples, and it takes its component (and, in
+        # offset mode, the delensed centroid) from it.
+        datasets.append(PointSourceMultiplicityData(
+            data, n_observed=mult_n_obs, **mult_floor))
+
+    return ProbModel(model, datasets)
 
 
 # ---------------------------------------------------------------------------
@@ -574,7 +872,10 @@ def build_epl_shear_point_source_obs(system: Any, **kwargs) -> Any:
 
 @register_pipeline_builder("map_svi_mclmc")
 def build_map_svi_mclmc(system: Any, **kwargs) -> List[Any]:
-    """MAP -> SVI -> MCLMC. Kwargs consumed (defaults):
+    """MAP -> SVI -> MCLMC. For configs WITHOUT the multiplicity term only:
+    both SVI and MCLMC are gradient-only stages and gigalens refuses them on a
+    ``discontinuous`` ProbModel by name (``multiplicity`` on -> use
+    ``map_mams``). Kwargs consumed (defaults):
 
     ``map_num_steps`` (1500), ``map_n_samples`` (1000), ``map_lr`` (3e-3),
     ``map_clip_norm`` (1.0) — MAP runs Adam behind zero_nans + global-norm
@@ -630,6 +931,93 @@ def build_map_svi_mclmc(system: Any, **kwargs) -> List[Any]:
             frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
             frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
             debug=bool(kwargs.get("mclmc_debug", False)),
+        ),
+    ]
+
+
+@register_pipeline_builder("map_mams")
+def build_map_mams(system: Any, **kwargs) -> List[Any]:
+    """MAP -> MAMS. The campaign pipeline for a DISCONTINUOUS target.
+
+    ``map_svi_mclmc`` cannot run once the multiplicity term is on: SVI and
+    MCLMC consume only gradients, and gigalens refuses them by name on a
+    ``discontinuous`` ProbModel (a variational surrogate slides across a -inf
+    wall unopposed; an unadjusted sampler neither reflects nor rejects at it,
+    and would tune its step size on infinite energy errors). MAP is fine — the
+    term is ADDED, so every gradient is the unconstrained one and the
+    best-particle argmax over VALUES is itself the phantom-image screen — and
+    MAMS is Metropolis-adjusted, so the wall is ordinary bounded support and a
+    proposal across it is rejected exactly.
+
+    There is therefore no SVI stage to produce ``qz``. A
+    :class:`~gigalens_research.inference_utils.pipeline.BridgeStage` builds an
+    isotropic diagonal ``qz`` centred on ``z_best`` instead:
+
+    ``qz_scale`` (1e-2, in z units) — the sd of that diagonal. It is a KNOB,
+    not a fit: it only seeds MAMS's chain starts and its initial mass matrix,
+    both of which the tuning phases then adapt. Too small and the chains start
+    over-concentrated (slower warm-up); too large and some starts land outside
+    the admissible region (MAMS's own initialization handles a -inf start by
+    rejection, but the chain wastes warm-up getting back). Report it with the
+    run; do not tune it per system.
+
+    Kwargs consumed (defaults):
+    ``map_num_steps`` (1500), ``map_n_samples`` (1000), ``map_lr`` (3e-3),
+    ``map_clip_norm`` (1.0) — as in ``map_svi_mclmc``.
+    ``qz_scale`` (1e-2).
+    ``n_chains`` (8), ``num_burnin_steps`` (5000), ``num_results`` (5000),
+    ``target_acceptance`` (0.9), ``frac_tune1/2/3`` (0.2/0.6/0.2),
+    ``mams_debug`` (False).
+    """
+    import jax.numpy as jnp
+    import optax
+    import tensorflow_probability.substrates.jax as tfp
+    from gigalens_research.inference_utils.pipeline import (
+        BridgeStage, MAMSStage, MAPStage,
+    )
+
+    tfd = tfp.distributions
+    map_lr = float(kwargs.get("map_lr", 3e-3))
+    map_clip = float(kwargs.get("map_clip_norm", 1.0))
+    qz_scale = float(kwargs.get("qz_scale", 1e-2))
+    if not (qz_scale > 0):
+        raise ValueError(f"qz_scale must be positive (got {qz_scale!r}).")
+
+    def _map_optimizer():
+        return optax.chain(
+            optax.zero_nans(),
+            optax.clip_by_global_norm(map_clip),
+            optax.adam(map_lr),
+        )
+
+    def _diag_qz(z_best):
+        z = jnp.asarray(z_best)
+        return tfd.MultivariateNormalDiag(
+            loc=z, scale_diag=jnp.full((z.shape[-1],), qz_scale, dtype=z.dtype))
+
+    return [
+        MAPStage(
+            num_steps=int(kwargs.get("map_num_steps", 1500)),
+            n_samples=int(kwargs.get("map_n_samples", 1000)),
+            optimizer_factory=_map_optimizer,
+            optimizer_id=f"zero_nans_clip{map_clip}_adam{map_lr}",
+        ),
+        BridgeStage(
+            name="diag_qz_from_map",
+            version=f"iso_{qz_scale}",
+            requires=("z_best",),
+            produces=("qz",),
+            fn=_diag_qz,
+        ),
+        MAMSStage(
+            n_chains=int(kwargs.get("n_chains", 8)),
+            num_burnin_steps=int(kwargs.get("num_burnin_steps", 5000)),
+            num_results=int(kwargs.get("num_results", 5000)),
+            target_acceptance=float(kwargs.get("target_acceptance", 0.9)),
+            frac_tune1=float(kwargs.get("frac_tune1", 0.2)),
+            frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
+            frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
+            debug=bool(kwargs.get("mams_debug", False)),
         ),
     ]
 

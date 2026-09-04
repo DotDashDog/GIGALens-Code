@@ -1,0 +1,156 @@
+# =============================================================================
+# hundred_point_sources_v3_double — SBC calibration campaign, v3 (double arm)
+# =============================================================================
+# v3 = v2 physics with the DISCRETE image-multiplicity term (see campaign.yaml
+# for the base design and the three SBC validity notes). What changed vs v2
+# (2026-09-04, after P-11 refuted the smoothed constraint and P-12 retired it —
+# docs/logs/point-source-sbc.md):
+#
+#   1. FRESH dataset seed (13) — v3 datasets are new. They must be: the
+#      selection operator changed (points 2 and 3), so a v2 dataset is not a
+#      draw from this campaign's selected prior.
+#   2. lt_search_window: 12.0 (was 6.0). At window 6 lenstronomy misses the
+#      outer image of a big-theta_E lens and one member of a merging cusp pair;
+#      the v2 double dataset had 8/100 "doubles" that are really quads when
+#      recounted at window 12.
+#   3. count_floor — the detectability floor AND the count-operator knobs. The
+#      generator selects with EXACTLY this operator (it rejects any draw where
+#      the gigalens count disagrees with lenstronomy's floored count, reported
+#      as selection.operator_mismatch_rate in the dataset manifest), and the
+#      builder rebuilds it verbatim via `multiplicity: from_dataset`. The
+#      truncation that selected the truths IS the truncation in the target —
+#      which is the whole point of the term.
+#   4. pipeline: map_mams (was map_svi_mclmc). The term is discontinuous: it
+#      adds 0 or -inf, so MAP is unaffected (the -inf is ADDED, every gradient
+#      is the unconstrained one, and the best-particle argmax over values is
+#      itself the phantom-image screen) and MAMS rejects a proposal across the
+#      wall exactly — but SVI and unadjusted MCLMC only see gradients and
+#      gigalens refuses them by name. The BATCHED runner is MCLMC-only and
+#      therefore cannot run v3; use the solo driver.
+#
+# NOT LAUNCHED. Two things need Linus's decision before submitting — see the
+# count_floor and MAMS blocks below.
+
+name: hundred_point_sources_v3_double
+seed: 13
+output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v3_double
+
+plugins:
+  - gigalens_research.simtests.experiments.lenstronomy_point_source
+
+# =============================================================================
+# DATASET — physics knobs (consumed by the lenstronomy generator)
+# =============================================================================
+dataset:
+  generator: lenstronomy_point_source
+  n_systems: 100
+
+  # --- truth draw (unchanged from v1) ---------------------------------------
+  truth_prior: inference        # strict SBC: truths from the inference prior
+  source_prior_scale: 0.25      # arcsec
+  amp_median: 2.0
+  amp_sigma_log: 0.5
+
+  # --- cosmology ------------------------------------------------------------
+  # v2: H0 prior widened to match observationally agnostic bounds.
+  H0_min: 20.0                  # km/s/Mpc (v1: 60)
+  H0_max: 100.0                 # km/s/Mpc (v1: 80)
+  Om0: 0.3
+  z_lens: 0.5
+  z_source: 1.5
+
+  # --- image selection ------------------------------------------------------
+  multiplicity: double
+  max_redraws: 2000             # measured double acceptance ~0.41 (probe) -> ample
+  min_image_sep: 0.05           # arcsec
+
+  # --- observational noise (also the likelihood's assumed noise, verbatim) ---
+  sigma_ast: 0.004              # arcsec per image coordinate
+  frac_flux: 0.005              # v2: 0.5% fractional flux error (v1: 5%)
+  sigma_td: 1.0                 # days, per non-reference image
+
+  # --- lenstronomy solver (truth image finding) ------------------------------
+  lt_min_distance: 0.01
+  lt_search_window: 12.0        # v3: was 6.0 (mislabelled 8/100 doubles)
+  lt_precision_limit: 1.0e-10
+
+  # --- detectability floor + count operator (REQUIRED; no silent default) ---
+  # DECISION NEEDED BEFORE LAUNCH. mu_min is a magnification floor: it does not
+  # reference the source's intrinsic brightness, so it is not what a survey
+  # measures. flux_min (amp * |mu| >= threshold) is the PRINCIPLED alternative
+  # here, because this campaign fits fluxes (fit_flux: true) — a detection
+  # threshold is a flux, and a magnification is not observable without the
+  # intrinsic brightness. mu_min: 0.1 is carried over as the operator that was
+  # actually validated (gigalens' agreement test with lenstronomy's floored
+  # count on campaign-like draws: 0.993 at N = 300).
+  count_floor:
+    mu_min: 0.1
+    # flux_min: <threshold in amp units>   # <- the principled choice; pick one
+    grid_n: 128
+    inner_grid_n: 64
+    window_scale: 8.0        # half-width 4 theta_E; sheared shallow lenses put
+                             # images out to ~3 theta_E
+    min_separation: 0.01     # arcsec; two roots closer than this are one image
+
+# =============================================================================
+# INFERENCE — model + algorithm knobs
+# =============================================================================
+inference:
+  builder: epl_shear_point_source_obs
+  pipeline: map_mams            # v3: SVI/MCLMC refuse a discontinuous target
+  pipeline_kwargs:
+    fit_flux: true
+    fit_td: true
+
+    newton_steps: 10
+    trust_region_frac: 0.4
+    src_parameterization: absolute
+    priors: from_dataset
+    multiplicity: from_dataset  # rebuild the SELECTION operator verbatim
+    src_anchor_sigma: 0.004     # v2: anchor ON (= sigma_ast; P-4 scale)
+
+    # --- MAP (Adam over prior draws; C-6 fixed selection in gigalens) -------
+    map_n_samples: 1000
+    map_num_steps: 1500
+    map_lr: 3.0e-3
+    map_clip_norm: 1.0
+
+    # --- MAMS (Metropolis-adjusted; the wall is bounded support) ------------
+    # PLACEHOLDER BUDGET — to be set by Linus. MAMS costs more per effective
+    # sample than MCLMC and no v3 pilot has been run, so these numbers are a
+    # starting point, not a calibrated budget.
+    n_chains: 8
+    num_burnin_steps: 5000
+    num_results: 5000
+    target_acceptance: 0.9
+    frac_tune1: 0.2
+    frac_tune2: 0.6
+    frac_tune3: 0.2
+    # Isotropic diagonal qz around z_best (there is no SVI stage to fit one).
+    # A KNOB, not a fit: it seeds the chain starts and the initial mass matrix,
+    # both of which MAMS then adapts.
+    qz_scale: 1.0e-2
+
+    # --- SBC rank computation + convergence gate ----------------------------
+    sbc_rank_draws: 1024
+    sbc_rhat_max: 1.05
+    sbc_min_ess: 100
+    sbc_solver_unconverged_max: 0.05
+
+sweep:
+  - {}
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - all_zscores
+  - percent_error
+  - sbc_ranks
+  - loglik_rank
+  - ps_solver_health
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1
