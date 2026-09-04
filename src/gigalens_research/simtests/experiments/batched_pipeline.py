@@ -22,10 +22,12 @@ computation as the solo run with seed s (up to XLA reassociation roundoff,
 which the chaotic samplers amplify — certification is therefore statistical,
 not bitwise; see ``simtests/tests/batched_pipeline_test.py``):
 
-- ``batched_map`` mirrors ``ModellingSequence.MAP`` (adam behind
+- ``batched_map`` mirrors ``gigalens.jax.inference.MAP`` (adam behind
   zero_nans+clip, loss ``-mean(lp)/loss_normalization``, per-step best particle
   recorded BEFORE the update — the C-6 fix — then argmax over steps, i.e. the
-  MAPStage ``output_type="best_step"`` path).
+  MAPStage ``output_type="best_step"`` path), INCLUDING its admissible
+  initialization: non-finite prior starts are redrawn from the prior on the
+  same key stream.
 - ``batched_svi`` mirrors ``ModellingSequence.SVI`` (MVN-TriL surrogate via
   FillScaleTriL(Exp, diag_shift=1e-6), n_vi-sample ELBO, best-loss parameter
   tracking, adabelief) with the solo per-step key chain (split parent, split
@@ -69,18 +71,37 @@ def _check_seeds(seeds: Any, n_systems: int, who: str):
 
 # --------------------------------------------------------------------------- MAP
 def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
-                map_lr: float = 3e-3, map_clip_norm: float = 1.0
-                ) -> Dict[str, np.ndarray]:
+                map_lr: float = 3e-3, map_clip_norm: float = 1.0,
+                init_max_rounds: int = 20) -> Dict[str, np.ndarray]:
     """Multi-start MAP for every system at once (solo ``MAPStage`` semantics).
 
     Returns ``z_best (S, P)``, ``lp_hist (S, num_steps)``,
     ``chisq_hist (S, num_steps)``, ``best_step (S,)``.
+
+    Admissible initialization mirrors ``gigalens.jax.inference.MAP``: a prior
+    draw whose log-prob is non-finite (the EPL ``|e| >= 1`` tail; or, with a
+    discontinuous term, a draw outside its support) is REDRAWN from the prior,
+    up to ``init_max_rounds`` rounds, with the same key stream (``split`` of the
+    system's seed, one ``sub`` per round) and the same
+    ``where(bad, fresh, kept)`` update. gigalens stops as soon as every particle
+    is finite; the ``while_loop`` here does too, and a round only touches
+    particles still bad after the previous one, so the surviving particle pool
+    is the solo pool.
+
+    MEASURED (2026-09-04, the 2-system CPU fixture of
+    ``tests/batched_pipeline_test.py``): a NO-OP there — no prior draw of that
+    fixture starts non-finite, and the batched optimum is unchanged to 4 decimal
+    places with and without the redraw. It is here because the contract is "the
+    batched stage is the solo stage", and because the redraw is exactly what
+    bites once a term with bounded support is in the model.
     """
     import jax
     import jax.numpy as jnp
     import optax
 
     seeds = _check_seeds(seeds, bp.n_systems, "batched_map")
+    if int(init_max_rounds) < 0:
+        raise ValueError("batched_map: init_max_rounds must be >= 0.")
     optimizer = optax.chain(
         optax.zero_nans(),
         optax.clip_by_global_norm(float(map_clip_norm)),
@@ -91,8 +112,29 @@ def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
 
     def one(row, seed):
         p = bp._swapped(row)
-        start = prior.sample(int(n_samples), seed=jax.random.PRNGKey(seed))
-        z0 = p.bij.inverse(start)
+        key = jax.random.PRNGKey(seed)
+        z0 = p.bij.inverse(prior.sample(int(n_samples), seed=key))
+
+        # Admissible initialization (see the docstring): redraw the non-finite
+        # starts, exactly as gigalens' MAP does.
+        lp0, _ = p.log_prob(z0)
+        bad0 = ~jnp.isfinite(lp0)
+
+        def redraw_cond(state):
+            _, _, bad, r = state
+            return jnp.logical_and(jnp.any(bad), r < int(init_max_rounds))
+
+        def redraw_body(state):
+            z, k, bad, r = state
+            k, sub = jax.random.split(k)
+            fresh = p.bij.inverse(prior.sample(int(n_samples), seed=sub))
+            z = jnp.where(bad[:, None], fresh, z)
+            lp, _ = p.log_prob(z)
+            return z, k, ~jnp.isfinite(lp), r + 1
+
+        z0, _, bad, n_rounds = jax.lax.while_loop(
+            redraw_cond, redraw_body, (z0, key, bad0, jnp.asarray(0)))
+        n_bad = jnp.count_nonzero(bad)
 
         def loss(z):
             lp, chisq = p.log_prob(z)
@@ -115,11 +157,27 @@ def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
         (z_fin, _), (bz, blp, bchi) = jax.lax.scan(
             one_step, (z0, opt_state), None, length=int(num_steps))
         j = jnp.nanargmax(blp)     # MAPStage: globally best step
-        lp_fin, _ = p.log_prob(z_fin)   # final-pool scores (anneal-phase seed)
-        return bz[j], blp, bchi, j, z_fin, lp_fin
+        lp_fin, _ = p.log_prob(z_fin)   # final-pool scores
+        return bz[j], blp, bchi, j, z_fin, lp_fin, n_bad, n_rounds
 
-    z_best, lp_hist, chisq_hist, best_step, z_final, lp_final = jax.jit(
-        jax.vmap(one))(bp.data, seeds)
+    (z_best, lp_hist, chisq_hist, best_step, z_final, lp_final,
+     n_bad, n_rounds) = jax.jit(jax.vmap(one))(bp.data, seeds)
+    n_bad = np.asarray(n_bad)
+    if np.any(n_bad > 0):
+        which = {int(i): int(n) for i, n in enumerate(n_bad) if n > 0}
+        raise ValueError(
+            f"batched_map init: after {int(init_max_rounds)} rounds of prior "
+            f"redraws, these systems still have particles with a non-finite "
+            f"log-prob (system -> count): {which}. Either the prior almost never "
+            f"lands in the target's support or the likelihood is non-finite on "
+            f"typical prior draws — neither is something to start an optimization "
+            f"from silently (gigalens' MAP raises here too).")
+    n_rounds = np.asarray(n_rounds)
+    if np.any(n_rounds > 0):
+        print(f"[batched_map] redrew non-finite prior starts: "
+              f"{int(np.count_nonzero(n_rounds))}/{bp.n_systems} systems needed "
+              f"redraws (max {int(n_rounds.max())} round(s)); all particles start "
+              f"with finite log-prob.")
     return {"z_best": np.asarray(z_best), "lp_hist": np.asarray(lp_hist),
             "chisq_hist": np.asarray(chisq_hist),
             "best_step": np.asarray(best_step),
