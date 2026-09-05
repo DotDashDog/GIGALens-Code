@@ -117,3 +117,46 @@ and not the tuner; in the ratio chart a single global metric is predicted to suf
 - P3' cost: ratio-chart step time ≤ 1.5× gauss (early-exit Newton).
 **Falsifier.** P2' ESS(wa) < 3× gauss-warm ⇒ the chart is not the cure; suspect cosmology–mass
 coupling; stop reparameterising and diagnose (two-failed-fixes rule).
+
+**DC-2 outcome (2026-09-05 12:45) — P2' FAILED; P1' failed in letter, and the reason is the
+strongest evidence yet for C-4/C-5.** Four 8-chain runs, all init at truth, warm 104×104 metric:
+
+| run | burn/draws | metric | ε, L | Om0 | w0 | wa | P(wa>1.9) | ESS(wa) | ξ>10 | nuisance med. ESS |
+|---|---|---|---|---|---|---|---|---|---|---|
+| gauss warm (adaptive) | 2000/2000 | adapted (shrank 10×) | 0.61, 31 | 0.267±0.021 | −1.224±0.041 | **1.74±0.18** | 12% | 121 | 4.7% | 38 |
+| gauss frozen | 500/2000 | frozen | 0.337, 24 | 0.313±0.018 | −1.217±0.059 | **1.973±0.029** | **98%** | 560 | **82%** | 217 |
+| ratio warm (adaptive) | 2000/2000 | adapted (shrank 6–10×) | 0.97, 50 | **0.087±0.11** | −0.97 | 0.84 | 0.6% | 18 | 0.6% | 14 |
+| ratio frozen | 500/2000 | frozen | 0.337, 15 | **0.076±0.05** | −0.95 | 0.71 | 0.8% | 11 | 0.8% | 9 |
+
+Reading: (i) in the gauss chart, with the production run's own metric and ε, every chain leaves
+the truth and reaches the wa=2 wall within 2500 steps and stays (98% of draws; ξ>10 on 82% of
+steps). The production run's 16% wall occupancy was this attractor half-developed; R̂≈1.01 there
+is meaningless because all chains agree inside the trap. (ii) The ratio chart removes the wall
+attractor (<1% at wa>1.9 in both ratio runs) but the chains drift to the LOW-Om0 end of the
+filament (Om0 0.05–0.15, wa≈0.7) and stall there (R̂ 4–14, ESS ~10 for everything). (iii) All
+four end-states are ON the likelihood filament: their 8 ratios are within 1–2 baseline posterior
+sd of the truth ratios (checked per plane). So the likelihood is essentially flat along a long
+curve that ends at the wa=2 prior wall on one side and near the Om0 chart-trim/fold on the other;
+where a chain ends up is decided by sampler dynamics, not by the posterior. (iv) The 2000-step
+adaptive tuner collapses even a correct warm metric by 6–10× (the windows see chains that have
+not moved) — no ≤2k-burn-in pilot is a fair test of any chart; production-length adaptation is.
+
+**Verdict (UNCERTIFIED).** Cause confirmed: a prior-bounded, likelihood-flat curved filament in
+(Om0, w0, wa) + frozen-metric MCLMC ⇒ dynamical trapping (wall attractor) and biased marginals.
+The ratio-pair+wa chart is a correct, tested, cheap diffeomorphism that removes the wall trap and
+straightens the filament, but on its own it does not make unadjusted MCLMC equilibrate along a
+flat 1-D direction in 2k steps; it remains the candidate for the single-run approach and needs a
+production-length adaptive run to be judged (pre-registered below). The robust solution is the
+DSPL Run-A route: sample the 8 deflection ratios as free parameters (compact, well-conditioned
+posterior), then reconstruct p(Om0,w0,wa | data) ∝ π(θ)·L̂(r(θ)) on a 3-D grid — exact up to the
+density estimate of the ratio posterior, no filament to traverse, minutes of CPU.
+
+**Pre-registered production test of the chart (for the user to launch; ~40 min on 4 A100).**
+Same notebook, `cosmo=cosmo_ratio_pair_wa()`, MAP/truth init, 8 chains, 20k/20k (the baseline
+budget). Predictions: physical ESS(wa) ≥ 5× baseline (≥ 80) and R̂(wa) < 1.05; P(wa>1.9) ∈
+[0.3%, 5%]; ξ>10 fraction < 6%; nuisance ESS within 0.5–2× of baseline; the chains cover Om0 down
+to ≈0.06 and wa from −3 to 2 with per-chain means agreeing to < 0.2 in wa. Falsifier: ESS(wa) <
+3× baseline or R̂(wa) > 1.2 ⇒ abandon single-run direct cosmology sampling for this system and use
+the free-ratio route. Note the chart costs ~4× per step today (173 vs 43 ms; sequential small
+kernels in the Newton solve, launch-latency bound — NOT the iteration count), so this run is ~2 h
+unless the solve is fused; budget accordingly or run the free-ratio route first.
