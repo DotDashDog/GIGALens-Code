@@ -1,6 +1,7 @@
 # =============================================================================
 # DEBUG-QOS PILOT: 3 systems of the v3 double arm at REDUCED budgets (fits the
-# 30-minute debug queue for fast iteration); campaign_v3_pilot_double.yaml is
+# 30-minute debug queue for fast iteration; measured 2026-09-04: MAP 200x400 =
+# 72 s/system on A100, MAMS is ~0.6 s/draw solo so 4x(300+300) ~ 6 min/system); campaign_v3_pilot_double.yaml is
 # the full-budget version. on the
 # multiplicity-term PR branches (not merged). Purpose: does the map_mams
 # pipeline run end to end in the container, what does a MAMS step cost with the
@@ -123,8 +124,8 @@ inference:
     # sample than MCLMC and no v3 pilot has been run, so these numbers are a
     # starting point, not a calibrated budget.
     n_chains: 4
-    num_burnin_steps: 1000
-    num_results: 1000
+    num_burnin_steps: 300
+    num_results: 300
     target_acceptance: 0.9
     frac_tune1: 0.2
     frac_tune2: 0.6
