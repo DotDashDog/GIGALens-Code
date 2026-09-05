@@ -12,7 +12,8 @@
 # Three-system pilot of the v3 point-source SBC arms on the multiplicity-term
 # PR branches (gigalens PR #126, GIGALens-Code PR #29), NOT the merged mains:
 # PYTHONPATH puts the two worktrees' src ahead of the editable-install .pth.
-# DEBUG-QOS variant (30 min): container unit tests + GPU cost benchmark only.
+# DEBUG-QOS variant (30 min): container unit tests, GPU cost benchmark, then the
+# reduced-budget 3-system double pilot (campaign_v3_debug_double.yaml).
 set -euo pipefail
 GL=/global/u1/l/linusu/gigalens/.claude/worktrees/multiplicity-term
 GLC=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/multiplicity-term
@@ -32,5 +33,12 @@ srun -u --cpu-bind=cores --gpu-bind=none \
     cd $GLC && $PY -m pytest -q src/gigalens_research/simtests/tests/multiplicity_selection_test.py 2>&1 | tail -3
     echo "=== [2] GPU cost benchmark $(date)"
     $PY $EXP/bench_count_gpu.py
+    Y=$EXP/campaign_v3_debug_double.yaml
+    echo "=== [3] debug double pilot: generate $(date)"
+    $PY -m gigalens_research.simtests generate "$Y"
+    echo "=== [3] debug double pilot: run $(date)"
+    $PY -m gigalens_research.simtests run "$Y" --shard 0/1
+    echo "=== [3] debug double pilot: status $(date)"
+    $PY -m gigalens_research.simtests status "$Y"
     echo "=== done $(date)"
   '

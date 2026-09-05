@@ -462,6 +462,7 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
             else:
                 detectable = np.abs(mu_all) >= floor["mu_min"]
             x_t, y_t = x_t[detectable], y_t[detectable]
+            flux_det = amp_t * np.abs(mu_all[detectable])
             n_img = x_t.size
             ok_mult = {"quad": n_img == 4,
                        # 3-image = naked-cusp region (high |e|+shear tails);
@@ -494,7 +495,8 @@ def generate_lenstronomy_point_source(spec: Any, dataset_dir: str, seed: int) ->
                     "sampled parameter of the count model — generator and builder "
                     "have drifted apart.")
             term = _multiplicity_term(count_model, count_src, x_t, y_t,
-                                      cfg["sigma_ast"], n_img, floor)
+                                      cfg["sigma_ast"], n_img, floor,
+                                      flux=flux_det)
             n_operator_checks += 1
             n_gl = int(np.asarray(term.count(count_model.to_params(unique))))
             if n_gl != n_img:
@@ -706,19 +708,33 @@ def _build_scene_model(cfg: Dict[str, Any], *, fit_flux: bool, fit_td: bool,
 
 def _multiplicity_term(model: Any, ps_comp: Any, x: Any, y: Any,
                        sigma_ast: float, n_observed: int,
-                       floor: Dict[str, Any]) -> Any:
+                       floor: Dict[str, Any], flux: Any = None) -> Any:
     """A bound :class:`PointSourceMultiplicityLikelihoodTerm` on ``model``.
 
     Used by the GENERATOR to evaluate the count operator at a candidate truth.
     Built through a real ``ProbModel`` over the same two datasets the inference
     builder assembles, so nothing about the operator can drift between
-    selection and inference.
+    selection and inference. Under a flux floor the scene's source samples
+    ``amp``, and the position dataset must then carry a flux channel (the
+    sees-guard refuses an unconstrained amp): pass the candidate's true
+    ``flux`` (amp * |mu| per detectable image). The count never reads the flux
+    data — only the positions (as Newton seeds) and the params tree.
     """
-    from gigalens.jax.point_source_position import PointSourcePositionData
+    from gigalens.jax.point_source_position import (
+        PointSourceObsData, PointSourcePositionData)
     from gigalens.jax.point_source_multiplicity import PointSourceMultiplicityData
     from gigalens.jax.scene_prob_model import ProbModel
 
-    pos = PointSourcePositionData(ps_comp, x, y, sigma_ast)
+    if "amp" in getattr(ps_comp.profile, "params", []):
+        if flux is None:
+            raise ValueError(
+                "_multiplicity_term: the count model samples amp (flux floor), so "
+                "the candidate's true fluxes are required to build its dataset.")
+        flux = np.asarray(flux, float).reshape(-1)
+        pos = PointSourceObsData(ps_comp, x, y, sigma_ast, flux_obs=flux,
+                                 sigma_flux=0.01 * flux)
+    else:
+        pos = PointSourcePositionData(ps_comp, x, y, sigma_ast)
     mult = PointSourceMultiplicityData(pos, n_observed=int(n_observed), **floor)
     return ProbModel(model, [pos, mult]).terms[-1]
 
