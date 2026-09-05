@@ -151,6 +151,14 @@ DSPL Run-A route: sample the 8 deflection ratios as free parameters (compact, we
 posterior), then reconstruct p(Om0,w0,wa | data) ∝ π(θ)·L̂(r(θ)) on a 3-D grid — exact up to the
 density estimate of the ratio posterior, no filament to traverse, minutes of CPU.
 
+**Cosmology-only toy (CPU, blackjax MCLMC with its own 5k/5k tuner, diagonal metric; Gaussian
+likelihood on the 8 ratios with σ = 0.5× the baseline per-plane posterior sd; exact grid
+reference).** Gaussian-box chart: wa ESS 58 / R̂ 1.11 in 40k draws, P(wa>1.9)=0.8% vs grid 0.5%,
+P(wa<−2)=4.4% vs grid 5.9% — slow along-filament mixing but NO wall trap. So the wall attractor
+needs the full 104-d dense-metric mismatch (C-5), not the cosmology geometry alone. The
+ratio-chart arm of the toy did not finish in 3 h on the login node (vmapped Newton while_loop is
+slow on CPU) and was stopped; script: job tmp `chart/toy_fast.py` (runs from a GPU node in minutes).
+
 **Pre-registered production test of the chart (for the user to launch; ~40 min on 4 A100).**
 Same notebook, `cosmo=cosmo_ratio_pair_wa()`, MAP/truth init, 8 chains, 20k/20k (the baseline
 budget). Predictions: physical ESS(wa) ≥ 5× baseline (≥ 80) and R̂(wa) < 1.05; P(wa>1.9) ∈
