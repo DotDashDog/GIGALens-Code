@@ -40,7 +40,7 @@
 
 name: hundred_point_sources_v3_debug_double
 seed: 213
-output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v3_debug_double
+output_dir: /pscratch/sd/l/linusu/gigalens/simtests_results/hundred_point_sources_v3_debug_double
 
 plugins:
   - gigalens_research.simtests.experiments.lenstronomy_point_source

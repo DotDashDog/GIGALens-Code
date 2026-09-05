@@ -38,7 +38,7 @@
 
 name: hundred_point_sources_v3_pilot_quad
 seed: 112
-output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v3_pilot_quad
+output_dir: /pscratch/sd/l/linusu/gigalens/simtests_results/hundred_point_sources_v3_pilot_quad
 
 plugins:
   - gigalens_research.simtests.experiments.lenstronomy_point_source
