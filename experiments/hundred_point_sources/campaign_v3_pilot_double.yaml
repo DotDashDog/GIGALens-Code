@@ -1,12 +1,17 @@
 # =============================================================================
-# hundred_point_sources_v3_quad — SBC calibration campaign, v3 (quad arm)
+# PILOT: 3 systems of the v3 double arm at FULL production budgets, on the
+# multiplicity-term PR branches (not merged). Purpose: does the map_mams
+# pipeline run end to end in the container, what does a MAMS step cost with the
+# count in the loop, do the gates pass at 5000/5000. Fresh seed, separate
+# output_dir; nothing here feeds the production arms.
+# hundred_point_sources_v3_double — SBC calibration campaign, v3 (double arm)
 # =============================================================================
 # v3 = v2 physics with the DISCRETE image-multiplicity term (see campaign.yaml
 # for the base design and the three SBC validity notes). What changed vs v2
 # (2026-09-04, after P-11 refuted the smoothed constraint and P-12 retired it —
 # docs/logs/point-source-sbc.md):
 #
-#   1. FRESH dataset seed (12) — v3 datasets are new. They must be: the
+#   1. FRESH dataset seed (13) — v3 datasets are new. They must be: the
 #      selection operator changed (points 2 and 3), so a v2 dataset is not a
 #      draw from this campaign's selected prior.
 #   2. lt_search_window: 12.0 (was 6.0). At window 6 lenstronomy misses the
@@ -31,9 +36,9 @@
 # NOT LAUNCHED. Floor decided (flux_min 0.2); the MAMS budget (5000/5000) is a
 # guess to be checked by the three-system pilot (campaign_v3_pilot_*.yaml).
 
-name: hundred_point_sources_v3_quad
-seed: 12
-output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v3_quad
+name: hundred_point_sources_v3_pilot_double
+seed: 113
+output_dir: ~/GIGALens-Code/simtests_results/hundred_point_sources_v3_pilot_double
 
 plugins:
   - gigalens_research.simtests.experiments.lenstronomy_point_source
@@ -43,7 +48,7 @@ plugins:
 # =============================================================================
 dataset:
   generator: lenstronomy_point_source
-  n_systems: 100
+  n_systems: 3
 
   # --- truth draw (unchanged from v1) ---------------------------------------
   truth_prior: inference        # strict SBC: truths from the inference prior
@@ -60,8 +65,8 @@ dataset:
   z_source: 1.5
 
   # --- image selection ------------------------------------------------------
-  multiplicity: quad
-  max_redraws: 2000             # measured quad acceptance ~0.32 (v1 + probe) -> ample
+  multiplicity: double
+  max_redraws: 2000             # measured double acceptance ~0.41 (probe) -> ample
   min_image_sep: 0.05           # arcsec
 
   # --- observational noise (also the likelihood's assumed noise, verbatim) ---

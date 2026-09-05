@@ -28,8 +28,8 @@
 #      gigalens refuses them by name. The BATCHED runner is MCLMC-only and
 #      therefore cannot run v3; use the solo driver.
 #
-# NOT LAUNCHED. Two things need Linus's decision before submitting — see the
-# count_floor and MAMS blocks below.
+# NOT LAUNCHED. Floor decided (flux_min 0.2); the MAMS budget (5000/5000) is a
+# guess to be checked by the three-system pilot (campaign_v3_pilot_*.yaml).
 
 name: hundred_point_sources_v3_double
 seed: 13
@@ -75,17 +75,13 @@ dataset:
   lt_precision_limit: 1.0e-10
 
   # --- detectability floor + count operator (REQUIRED; no silent default) ---
-  # DECISION NEEDED BEFORE LAUNCH. mu_min is a magnification floor: it does not
-  # reference the source's intrinsic brightness, so it is not what a survey
-  # measures. flux_min (amp * |mu| >= threshold) is the PRINCIPLED alternative
-  # here, because this campaign fits fluxes (fit_flux: true) — a detection
-  # threshold is a flux, and a magnification is not observable without the
-  # intrinsic brightness. mu_min: 0.1 is carried over as the operator that was
-  # actually validated (gigalens' agreement test with lenstronomy's floored
-  # count on campaign-like draws: 0.993 at N = 300).
+  # Detectability floor (decided by Linus, 2026-09-04): a FLUX floor. A detection
+  # threshold is a flux, and an object's magnification is not observable without
+  # its intrinsic brightness, so flux_min (amp * |mu| >= 0.2, amp units) is the
+  # principled choice when fluxes are fitted, as here. At the amp prior median
+  # (2.0) it equals a |mu| >= 0.1 cut, the floor used in every v2-era analysis.
   count_floor:
-    mu_min: 0.1
-    # flux_min: <threshold in amp units>   # <- the principled choice; pick one
+    flux_min: 0.2
     grid_n: 128
     inner_grid_n: 64
     window_scale: 8.0        # half-width 4 theta_E; sheared shallow lenses put
