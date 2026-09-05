@@ -26,8 +26,19 @@ dataset:
   frac_flux: 0.05
   sigma_td: 1.0
   lt_min_distance: 0.01
-  lt_search_window: 6.0
+  lt_search_window: 6.0         # historical; the default is now 12 (see count_floor)
   lt_precision_limit: 1.0e-10
+
+  # --- detectability floor + count operator (REQUIRED since 2026-09-04) -----
+  # This campaign PREDATES the discrete multiplicity term. `mu_min: -.inf`
+  # means "no floor, count every root", i.e. the historical behaviour: every
+  # image lenstronomy found was observed. NOTE that regenerating this dataset
+  # today will NOT reproduce the archived one — the generator now also rejects
+  # draws where the gigalens count operator disagrees with lenstronomy's count
+  # (manifest selection.operator_mismatch_rate), and the default search window
+  # is 12, not 6 (pinned here at 6 to document what actually ran).
+  count_floor:
+    mu_min: -.inf
 
 inference:
   builder: epl_shear_point_source_obs
@@ -39,6 +50,7 @@ inference:
     trust_region_frac: 0.4
     src_parameterization: absolute
     priors: from_dataset
+    multiplicity: null          # this arm fits WITHOUT the multiplicity term
     map_n_samples: 200
     map_num_steps: 400
     map_lr: 3.0e-3

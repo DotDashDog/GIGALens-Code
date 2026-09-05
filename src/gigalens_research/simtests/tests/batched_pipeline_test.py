@@ -15,6 +15,35 @@ Thresholds were calibrated on the measured solo-vs-batched gaps (see the
 printed report; values chosen with ~3x margin over observed) — loose enough
 not to flake on sampler noise, tight enough that a wrong mass matrix, a
 mis-swapped data row, or a broken adaptation stage fails immediately.
+
+KNOWN FAILURE, 2026-09-04 (UNCERTIFIED — for Linus, not silently patched).
+On the Perlmutter login node, against the gigalens ``multiplicity-term`` branch,
+this test FAILS at the MAP gate: "system 0: MAP optima differ by -2.897 lp
+units" (threshold 2.0). What is established:
+
+* the batched side did not change — ``batched_map`` / ``batched_svi`` /
+  ``batched_mclmc`` are byte-identical to main apart from the deleted
+  ``batched_map_anneal`` and the mirrored admissible-init redraw (a measured
+  no-op here: the gap is identical to 4 decimals with and without it);
+* the solo side did NOT change numerically: gigalens ``MAP`` on the
+  ``multiplicity-term`` branch was pinned BIT-IDENTICAL to its base commit
+  (fd63b1d) on a point-source model — 64 particles x 300 Adam steps, same
+  seed, identical ``z_best`` and log-prob to the last bit. The init redraw is
+  a no-op when every prior draw is finite, and the scan body is untouched;
+* the gap is system- and context-dependent, not a fixed offset. A MAP-only
+  probe on this fixture measured gaps of -0.17 and -3.42 (dataset at
+  ``lt_search_window`` 6) and -0.30 and +1.05 (window 12, the new default),
+  while the same system inside the full test reads -2.90 — i.e. the quantity
+  the 2.0 threshold gates ranges over ~4.5 lp units here;
+* the decisive control — this test on unmodified ``main`` with the base
+  gigalens — could NOT be completed: the login node killed it (OOM) twice.
+  The threshold was calibrated on Lawrencium (2026-07-24) and this test has
+  never passed on Perlmutter, so a pre-existing platform/JAX-version
+  sensitivity of the chaotic 400-step Adam comparison is the open hypothesis.
+
+Re-deriving the threshold on a compute node (or replacing the MAP gate with
+the basin-identity check it is really trying to assert) is a certification
+decision, so it is left to the human rather than loosened here.
 """
 import os
 import sys
