@@ -19,8 +19,9 @@ can be refactored safely.
   inference workflows, such as pipeline result containers and diagnostics.
 - `src/gigalens_research/plotting/`: plotting helpers for images, residuals,
   loss histories, and corner plots.
-- `src/gigalens_research/voronoi_src/`: experimental pixelized source-modeling
-  utilities.
+- `src/gigalens_research/pixelized_source/`: pixelized (mesh / grid) source
+  models on the scene API: frozen source domains, lstsq and correlated-field
+  profiles, and the regularized-evidence likelihood term.
 - `experiments/`: runnable scripts and notebooks for specific research
   questions.
 - `data/`: local input data used by experiments.
