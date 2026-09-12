@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 import numpy as np
-try:
-    import pytest
-except ImportError:  # pragma: no cover
-    pytest = None
+import pytest
 
-from voronoi_src.pixelized_regularization import (
+from gigalens_research.voronoi_src.pixelized_regularization import (
     REGULARIZATION_BUILDERS,
     build_regularization_matrix,
 )
@@ -96,6 +93,7 @@ def test_curvature_algebraic():
     assert np.isclose(_quadratic_form(H, s), manual, rtol=1e-4, atol=1e-3)
 
 
+@pytest.mark.parametrize("kind", sorted(REGULARIZATION_BUILDERS))
 def test_regularization_spd(kind: str):
     rng = np.random.default_rng(3)
     n = 12

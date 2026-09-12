@@ -49,6 +49,20 @@ def _unique_edges_from_simplices(simplices: np.ndarray) -> np.ndarray:
     return edges.astype(np.int32)
 
 
+def _grid_xy(num_pix: int, delta_pix: float, supersample: int) -> np.ndarray:
+    """Flattened ``(N, 2)`` float32 pixel-centre coordinates of the ``supersample``-times
+    finer image grid, in the same order and convention as ``PixelizedSourceSimulator``
+    (``LensWCS.pixel_grid()``; the WCS divides ``delta_pix`` by ``supersample`` itself).
+
+    Replaces the removed ``LensSimulatorInterface.get_coords``.
+    """
+    from gigalens.simulator import LensWCS
+
+    wcs = LensWCS(n=int(num_pix), supersample=int(supersample), pix_scale=float(delta_pix))
+    X, Y = wcs.pixel_grid()
+    return np.stack([np.ravel(X), np.ravel(Y)], axis=-1).astype(np.float32)
+
+
 def _squeeze_lens_params(lens_params):
     """Return lens_params with each leaf cast to float and squeezed to scalar."""
     import jax.numpy as jnp
@@ -135,14 +149,8 @@ def build_frozen_sourceplane_delaunay_from_truth(
     seed_X, seed_Y = np.meshgrid(xs, ys, indexing="xy")
     seed_xy = np.stack([seed_X.ravel(), seed_Y.ravel()], axis=-1).astype(np.float32)
 
-    # Subpixel coordinates consistent with GIGALens
-    import gigalens.simulator as _sim
-
-    transform = (np.eye(2, dtype=np.float32) * np.float32(delta_pix)) / float(supersample)
-    _, _, img_x, img_y = _sim.LensSimulatorInterface.get_coords(
-        int(supersample), int(num_pix), transform
-    )
-    subpix_xy = np.stack([img_x.ravel(), img_y.ravel()], axis=-1).astype(np.float32)
+    # Sub-pixel coordinates, same grid/order as the simulator.
+    subpix_xy = _grid_xy(num_pix, delta_pix, supersample)
 
     # Ray-trace seeds and subpixels with truth mass model
     seed_bx, seed_by = _beta_numpy(lenses, lens_params_truth, seed_xy[:, 0], seed_xy[:, 1])
@@ -264,15 +272,10 @@ def build_brightness_adaptive_sourceplane_delaunay_from_truth(
     interpolation, whereas the current experimental simulator uses Delaunay
     barycentric interpolation on the resulting centres.
     """
-    import gigalens.simulator as _sim
     from scipy.spatial import Delaunay
 
     # Pixel-centre coordinates for placing adaptive image-plane centres.
-    pix_transform = np.eye(2, dtype=np.float32) * np.float32(delta_pix)
-    _, _, pix_x, pix_y = _sim.LensSimulatorInterface.get_coords(
-        1, int(num_pix), pix_transform
-    )
-    pix_xy = np.stack([pix_x.ravel(), pix_y.ravel()], axis=-1).astype(np.float32)
+    pix_xy = _grid_xy(num_pix, delta_pix, 1)
 
     img = np.asarray(lensed_source_image, dtype=np.float32).reshape(-1)
     mask = (
@@ -314,12 +317,8 @@ def build_brightness_adaptive_sourceplane_delaunay_from_truth(
         max_iter=int(max_iter),
     )
 
-    # Subpixel coordinates used by the mapping matrix.
-    transform = (np.eye(2, dtype=np.float32) * np.float32(delta_pix)) / float(supersample)
-    _, _, img_x, img_y = _sim.LensSimulatorInterface.get_coords(
-        int(supersample), int(num_pix), transform
-    )
-    subpix_xy = np.stack([img_x.ravel(), img_y.ravel()], axis=-1).astype(np.float32)
+    # Sub-pixel coordinates, same grid/order as the simulator.
+    subpix_xy = _grid_xy(num_pix, delta_pix, supersample)
 
     seed_bx, seed_by = _beta_numpy(lenses, lens_params_truth, seed_xy[:, 0], seed_xy[:, 1])
     sub_bx, sub_by = _beta_numpy(lenses, lens_params_truth, subpix_xy[:, 0], subpix_xy[:, 1])
@@ -369,14 +368,10 @@ def build_brightness_adaptive_imageplane_delaunay_from_truth(
     evaluation the lens maps vertices and sub-pixels to the source plane for
     barycentric weights while keeping combinatorics static (mass-differentiable path).
     """
-    import gigalens.simulator as _sim
     from scipy.spatial import Delaunay
 
-    pix_transform = np.eye(2, dtype=np.float32) * np.float32(delta_pix)
-    _, _, pix_x, pix_y = _sim.LensSimulatorInterface.get_coords(
-        1, int(num_pix), pix_transform
-    )
-    pix_xy = np.stack([pix_x.ravel(), pix_y.ravel()], axis=-1).astype(np.float32)
+    # Pixel-centre coordinates for placing adaptive image-plane centres.
+    pix_xy = _grid_xy(num_pix, delta_pix, 1)
 
     img = np.asarray(lensed_source_image, dtype=np.float32).reshape(-1)
     mask = (
@@ -418,11 +413,8 @@ def build_brightness_adaptive_imageplane_delaunay_from_truth(
         max_iter=int(max_iter),
     )
 
-    transform = (np.eye(2, dtype=np.float32) * np.float32(delta_pix)) / float(supersample)
-    _, _, img_x, img_y = _sim.LensSimulatorInterface.get_coords(
-        int(supersample), int(num_pix), transform
-    )
-    subpix_xy = np.stack([img_x.ravel(), img_y.ravel()], axis=-1).astype(np.float32)
+    # Sub-pixel coordinates, same grid/order as the simulator.
+    subpix_xy = _grid_xy(num_pix, delta_pix, supersample)
 
     tri = Delaunay(seed_xy.astype(np.float64))
     simplices = np.asarray(tri.simplices, dtype=np.int32)
@@ -490,15 +482,8 @@ def build_regular_imageplane_mesh(
     simplices = np.asarray(simplices, dtype=np.int32)
     edges = _unique_edges_from_simplices(simplices)
 
-    # Supersampled image-plane coordinates (pixel centers), using the same
-    # coordinate convention as gigalens' LensSimulatorInterface.get_coords.
-    import gigalens.simulator as _sim
-
-    transform = (np.eye(2, dtype=np.float32) * np.float32(delta_pix)) / float(supersample)
-    _, _, img_x, img_y = _sim.LensSimulatorInterface.get_coords(
-        int(supersample), int(num_pix), transform
-    )
-    subpix_xy = np.stack([img_x.ravel(), img_y.ravel()], axis=-1).astype(np.float32)
+    # Sub-pixel coordinates, same grid/order as the simulator.
+    subpix_xy = _grid_xy(num_pix, delta_pix, supersample)
 
     # Static mapping from (x,y) to triangle id.
     # Determine seed cell index (ix_cell, iy_cell). Outside extent -> -1.
@@ -520,8 +505,13 @@ def build_regular_imageplane_mesh(
     y0 = -extent + iy.astype(np.float32) * dy_seed
     u = (x - x0) / dx_seed
     v = (y - y0) / dy_seed
-    # Above diagonal (u+v >= 1) -> triangle (v00,v10,v11), else (v00,v11,v01)
-    upper = (u + v) >= 1.0
+    # The cell is split along the v00 -> v11 diagonal, i.e. the line u == v.
+    # Triangle 0 = (v00, v10, v11) is the half with u >= v; triangle 1 =
+    # (v00, v11, v01) is the half with v > u. (The original test was
+    # ``u + v >= 1``, which is the OTHER diagonal: half of all sub-pixels were
+    # assigned a triangle that does not contain them, giving barycentric
+    # weights down to -1 that the simulator then clipped silently.)
+    upper = u >= v
 
     cell_id = iy * (n_seed_x - 1) + ix  # (num_cells,) flattened
     tri_base = 2 * cell_id
