@@ -24,10 +24,11 @@ dataset:
 
   # ---- Source: which Vela galaxies, at which redshift --------------------
   scale_factor: "a0.400"          # z = 1/a - 1 = 1.5 exactly (HLSP snapshot)
-  # v1's list minus vela09 (double galaxy at z=1.5; see candidate_sources.png in
-  # vela_revised_v1). vela13 / vela20 were rejected as candidates for the same
-  # reason. 11 sources; the 12th slot is open for the group to fill.
-  vela_ids: ["02", "03", "04", "07", "08", "10", "21", "22", "23", "25", "26"]
+  # The v1 list (12 sources). vela09 is a double galaxy at z=1.5 and is kept in
+  # the review set deliberately so the group can judge it by eye
+  # (candidate_sources.png in vela_revised_v1); vela13 / vela20 were rejected
+  # as candidates for the same reason.
+  vela_ids: ["02", "03", "04", "07", "08", "09", "10", "21", "22", "23", "25", "26"]
   cam: "12"
   filter: "f814w"
   version: "v3"

@@ -63,7 +63,16 @@ for sky 22.3 AB/arcsec²; ±0.4 mag of sky moves these by ~10%.
 
 Open decisions for the group: scale the source vs. dim the lens to reach 0.5 (v2 scales the
 source, keeping the ~18.4 AB lens); 0.03" drizzled vs. 0.05" native pixels (the ePSF is exact for
-native); the 12th source; `n_reps`.
+native); the source list (vela09 kept in the review set so the group can judge it); `n_reps`.
+
+**Open question (user, 2026-09-13): how to treat dim sources in general.** Forcing every source
+to a fixed source-to-lens ratio implicitly folds in the selection effects of how lenses are
+detected and chosen for modelling (bright arcs are what gets found and modelled). Whether to
+mimic that selection, sample a brightness distribution, or reject compact/dim sources is a
+population-design decision, parked until the user has talked to the group.
+
+**Display standard (user, 2026-09-13):** `inferno` colormap with a square-root stretch floored
+at 0 (`PowerNorm(gamma=0.5, vmin=0)`) for every image of these systems; `plot_dataset.py` follows it.
 
 ## Design checkpoint — v2 review set generation (UNCERTIFIED, awaiting grader)
 
@@ -100,6 +109,35 @@ Runtime note: the login node's shared A100 is visible to JAX; a run that landed 
 `CUDA_ERROR_OUT_OF_MEMORY`. Use `JAX_PLATFORMS=cpu` for review-set generation on the login
 node (~minutes), or the GPU allocation for the full campaign.
 
+## v2 review set (2026-09-13, 12 systems = v1 list incl. vela09, CPU, seed 0) — UNCERTIFIED
+
+Dataset: `$PSCRATCH/gigalens/simtests_results/vela_revised_v2/dataset`. Figures:
+`experiments/vela_revised_v2/dataset_grid.png` (observed, 4x3) and `dataset_gallery.png`.
+
+| system | theta_E | amp | mu | outside | border | redraws | source AB unlensed | lens (cps) |
+|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.04 | 4.97 | 9.9 | 0.00% | 0.01σ | 0 | 22.06 | 705 |
+| vela03 | 1.16 | 11.0 | 11.1 | 0.00% | 0.01σ | 1 | 21.85 | 963 |
+| vela04 | 1.19 | 25.6 | 10.2 | 0.10% | 0.23σ | 0 | 21.88 | 863 |
+| vela07 | 1.35 | 4.58 | 4.1 | 0.01% | 0.35σ | 1 | 20.90 | 847 |
+| vela08 | 1.05 | 9.56 | 4.8 | 0.00% | 0.00σ | 0 | 21.26 | 714 |
+| vela09 | 1.12 | 2.37 | 4.6 | 0.00% | 0.01σ | 1 | 21.61 | 494 |
+| vela10 | 0.83 | 31.8 | 4.9 | 0.00% | 0.00σ | 0 | 20.70 | 1230 |
+| vela21 | 1.45 | 8.02 | 4.6 | 0.00% | 0.08σ | 2 | 20.52 | 1377 |
+| vela22 | 1.07 | 10.1 | 5.8 | 0.00% | 0.00σ | 0 | 21.37 | 778 |
+| vela23 | 0.91 | 31.4 | 3.5 | 0.00% | 0.00σ | 0 | 20.77 | 815 |
+| vela25 | 1.46 | 7.46 | 6.8 | 0.09% | 0.36σ | 0 | 21.64 | 721 |
+| vela26 | 1.21 | 1.97 | 7.6 | 0.00% | 0.01σ | 1 | 22.75 | 289 |
+
+All ratio 0.500 (to 1e-6). Against the design checkpoint: redraws 0–2 (predicted 0–5, OK);
+amplitudes 2.0–31.8 (predicted 4–10: **3 of 12 exceed**, the compact/low-mu sources vela04, vela10,
+vela23 → unlensed AB 20.7–21.9); no accepted image shows arc structure at the border (checked on
+the grid, sqrt stretch). Plot reading: vela09's double nucleus produces a ring plus three bright
+knots (judge-able by eye, as the user wanted); extended sources (vela07, vela21, vela26) meet the
+integrated-flux ratio but look lens-dominated because their arcs are spread thin — the ratio target
+is an integrated-flux statement, not a surface-brightness one. (The 2-system test earlier drew a
+different vela22 truth because the seed fold index follows list position.)
+
 ## Claims register
 
 | claim | status | scope |
@@ -107,4 +145,5 @@ node (~minutes), or the GPU allocation for the full campaign.
 | v1 test set is lens-dominated (source/lens 0.05–0.13) with arcs cut off (up to 21% outside) | proposed | 3 re-rendered systems + border stats on all 12 |
 | STScI ePSF resampled to 0.03" has FWHM ≈ 0.08–0.09" | proposed | unit test on synthetic ePSF + measured library PSF |
 | v2 generator reproduces the requested flux ratio to 1e-6 | proposed | end-to-end test on a synthetic source (`vela_simulated_test.py`, 18 tests pass) + 2 real systems (ratio 0.500) |
-| reaching source/lens = 0.5 by scaling the source can require 35x (unphysical source AB ~20) for compact sources | proposed | 1 of 2 review-set systems (vela22) |
+| reaching source/lens = 0.5 by scaling the source requires 25–35x (unlensed AB ~20–22) for compact, low-mu sources | proposed | 3 of 12 review-set systems (vela04, vela10, vela23) + vela22 in the 2-system test |
+| with crop 1.5" + theta_E LogNormal(1.1, 0.2) + cut-off, all 12 review systems keep ≥ 99.9% of lensed flux inside the 6" cutout with ≤ 2 redraws | proposed | 12-system review set, seed 0 |
