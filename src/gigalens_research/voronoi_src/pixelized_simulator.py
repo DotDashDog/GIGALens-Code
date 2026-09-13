@@ -68,6 +68,18 @@ class PixelizedSourceSimulator:
             shift=getattr(sim_config, "angular_shift", (0.0, 0.0)),
         )
         img_X, img_Y = wcs.pixel_grid()
+        # The mesh's sub-pixel lookup table is indexed in this grid's ravel order, so
+        # the two grids must agree exactly; refuse a mesh built for another grid.
+        grid_xy = np.stack([np.ravel(img_X), np.ravel(img_Y)], axis=-1).astype(np.float32)
+        if grid_xy.shape != mesh.subpix_xy.shape or not np.allclose(
+            grid_xy, mesh.subpix_xy, atol=1e-5
+        ):
+            raise ValueError(
+                "mesh.subpix_xy does not match the simulator's supersampled pixel grid "
+                f"(mesh {mesh.subpix_xy.shape}, grid {grid_xy.shape}, num_pix={self.num_pix}, "
+                f"supersample={self.supersample}); build the mesh with the same "
+                "num_pix / delta_pix / supersample as sim_config."
+            )
         # Flattened subpixel coordinates used by the mesh lookup (static)
         self.subpix_xy = jnp.array(mesh.subpix_xy, dtype=jnp.float32)  # (J_sub, 2)
         # Also keep grid-shaped coordinates for lens-light rendering / scatter
@@ -118,7 +130,14 @@ class PixelizedSourceSimulator:
         v2 = p - a
         denom = v0[0] * v1[1] - v0[1] * v1[0]
         is_deg = jnp.abs(denom) < area_eps
-        denom_safe = jnp.where(is_deg, jnp.sign(denom) * area_eps + area_eps, denom)
+        # Degenerate (zero-area / folded) triangles are masked out by the caller, so
+        # the value computed here is irrelevant -- but it must be FINITE, including
+        # in the backward pass: ``jnp.where`` does not stop a NaN/inf in the
+        # unselected branch from poisoning the gradient. The original guard,
+        # ``sign(denom) * eps + eps``, is exactly 0 for a slightly *negative*
+        # (inverted) denom, so it divided by zero and every gradient through a
+        # folded triangle came out NaN.
+        denom_safe = jnp.where(is_deg, jnp.ones_like(denom), denom)
 
         # Solve for weights in basis of v0, v1
         # v2 = u*v0 + v*v1

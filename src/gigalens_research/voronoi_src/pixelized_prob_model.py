@@ -8,7 +8,10 @@ import numpy as np
 from jax import jit
 from tensorflow_probability.substrates.jax import bijectors as tfb
 
-from gigalens.model import ProbabilisticModel
+# This model is written against the OLD gigalens API (explicit z -> bijector ->
+# (lens, lens_light, reg) param groups, ``log_prob(simulator, z)``); the base class
+# now lives under ``gigalens.old_api``. A scene-API rewrite is a separate task.
+from gigalens.old_api.model import ProbabilisticModel
 
 from .pixelized_regularization import build_regularization_matrix
 
