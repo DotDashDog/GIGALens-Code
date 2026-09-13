@@ -1,5 +1,11 @@
 """System-batched MAP -> SVI -> MCLMC over SBC point-source systems (phase B).
 
+Scope note (2026-09-04): MCLMC-only. The discrete image-multiplicity term
+(``gigalens.jax.point_source_multiplicity``) makes the target discontinuous,
+which SVI and unadjusted MCLMC cannot sample; ``batched_map_svi_mclmc``
+refuses such a model outright. Porting MAMS here is deliberately out of scope —
+multiplicity campaigns run through the solo ``map_mams`` pipeline.
+
 Companion to :mod:`batched_point_source` (phase A, the batched log-prob) —
 see that module's docstring for scope (SIMULATED SBC systems only) and the
 attribute-swap mechanism. This module vmaps the entire per-system inference
@@ -16,10 +22,12 @@ computation as the solo run with seed s (up to XLA reassociation roundoff,
 which the chaotic samplers amplify — certification is therefore statistical,
 not bitwise; see ``simtests/tests/batched_pipeline_test.py``):
 
-- ``batched_map`` mirrors ``ModellingSequence.MAP`` (adam behind
+- ``batched_map`` mirrors ``gigalens.jax.inference.MAP`` (adam behind
   zero_nans+clip, loss ``-mean(lp)/loss_normalization``, per-step best particle
   recorded BEFORE the update — the C-6 fix — then argmax over steps, i.e. the
-  MAPStage ``output_type="best_step"`` path).
+  MAPStage ``output_type="best_step"`` path), INCLUDING its admissible
+  initialization: non-finite prior starts are redrawn from the prior on the
+  same key stream.
 - ``batched_svi`` mirrors ``ModellingSequence.SVI`` (MVN-TriL surrogate via
   FillScaleTriL(Exp, diag_shift=1e-6), n_vi-sample ELBO, best-loss parameter
   tracking, adabelief) with the solo per-step key chain (split parent, split
@@ -63,18 +71,37 @@ def _check_seeds(seeds: Any, n_systems: int, who: str):
 
 # --------------------------------------------------------------------------- MAP
 def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
-                map_lr: float = 3e-3, map_clip_norm: float = 1.0
-                ) -> Dict[str, np.ndarray]:
+                map_lr: float = 3e-3, map_clip_norm: float = 1.0,
+                init_max_rounds: int = 20) -> Dict[str, np.ndarray]:
     """Multi-start MAP for every system at once (solo ``MAPStage`` semantics).
 
     Returns ``z_best (S, P)``, ``lp_hist (S, num_steps)``,
     ``chisq_hist (S, num_steps)``, ``best_step (S,)``.
+
+    Admissible initialization mirrors ``gigalens.jax.inference.MAP``: a prior
+    draw whose log-prob is non-finite (the EPL ``|e| >= 1`` tail; or, with a
+    discontinuous term, a draw outside its support) is REDRAWN from the prior,
+    up to ``init_max_rounds`` rounds, with the same key stream (``split`` of the
+    system's seed, one ``sub`` per round) and the same
+    ``where(bad, fresh, kept)`` update. gigalens stops as soon as every particle
+    is finite; the ``while_loop`` here does too, and a round only touches
+    particles still bad after the previous one, so the surviving particle pool
+    is the solo pool.
+
+    MEASURED (2026-09-04, the 2-system CPU fixture of
+    ``tests/batched_pipeline_test.py``): a NO-OP there — no prior draw of that
+    fixture starts non-finite, and the batched optimum is unchanged to 4 decimal
+    places with and without the redraw. It is here because the contract is "the
+    batched stage is the solo stage", and because the redraw is exactly what
+    bites once a term with bounded support is in the model.
     """
     import jax
     import jax.numpy as jnp
     import optax
 
     seeds = _check_seeds(seeds, bp.n_systems, "batched_map")
+    if int(init_max_rounds) < 0:
+        raise ValueError("batched_map: init_max_rounds must be >= 0.")
     optimizer = optax.chain(
         optax.zero_nans(),
         optax.clip_by_global_norm(float(map_clip_norm)),
@@ -85,8 +112,29 @@ def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
 
     def one(row, seed):
         p = bp._swapped(row)
-        start = prior.sample(int(n_samples), seed=jax.random.PRNGKey(seed))
-        z0 = p.bij.inverse(start)
+        key = jax.random.PRNGKey(seed)
+        z0 = p.bij.inverse(prior.sample(int(n_samples), seed=key))
+
+        # Admissible initialization (see the docstring): redraw the non-finite
+        # starts, exactly as gigalens' MAP does.
+        lp0, _ = p.log_prob(z0)
+        bad0 = ~jnp.isfinite(lp0)
+
+        def redraw_cond(state):
+            _, _, bad, r = state
+            return jnp.logical_and(jnp.any(bad), r < int(init_max_rounds))
+
+        def redraw_body(state):
+            z, k, bad, r = state
+            k, sub = jax.random.split(k)
+            fresh = p.bij.inverse(prior.sample(int(n_samples), seed=sub))
+            z = jnp.where(bad[:, None], fresh, z)
+            lp, _ = p.log_prob(z)
+            return z, k, ~jnp.isfinite(lp), r + 1
+
+        z0, _, bad, n_rounds = jax.lax.while_loop(
+            redraw_cond, redraw_body, (z0, key, bad0, jnp.asarray(0)))
+        n_bad = jnp.count_nonzero(bad)
 
         def loss(z):
             lp, chisq = p.log_prob(z)
@@ -109,118 +157,31 @@ def batched_map(bp, seeds, *, num_steps: int = 1500, n_samples: int = 1000,
         (z_fin, _), (bz, blp, bchi) = jax.lax.scan(
             one_step, (z0, opt_state), None, length=int(num_steps))
         j = jnp.nanargmax(blp)     # MAPStage: globally best step
-        lp_fin, _ = p.log_prob(z_fin)   # final-pool scores (anneal-phase seed)
-        return bz[j], blp, bchi, j, z_fin, lp_fin
+        lp_fin, _ = p.log_prob(z_fin)   # final-pool scores
+        return bz[j], blp, bchi, j, z_fin, lp_fin, n_bad, n_rounds
 
-    z_best, lp_hist, chisq_hist, best_step, z_final, lp_final = jax.jit(
-        jax.vmap(one))(bp.data, seeds)
+    (z_best, lp_hist, chisq_hist, best_step, z_final, lp_final,
+     n_bad, n_rounds) = jax.jit(jax.vmap(one))(bp.data, seeds)
+    n_bad = np.asarray(n_bad)
+    if np.any(n_bad > 0):
+        which = {int(i): int(n) for i, n in enumerate(n_bad) if n > 0}
+        raise ValueError(
+            f"batched_map init: after {int(init_max_rounds)} rounds of prior "
+            f"redraws, these systems still have particles with a non-finite "
+            f"log-prob (system -> count): {which}. Either the prior almost never "
+            f"lands in the target's support or the likelihood is non-finite on "
+            f"typical prior draws — neither is something to start an optimization "
+            f"from silently (gigalens' MAP raises here too).")
+    n_rounds = np.asarray(n_rounds)
+    if np.any(n_rounds > 0):
+        print(f"[batched_map] redrew non-finite prior starts: "
+              f"{int(np.count_nonzero(n_rounds))}/{bp.n_systems} systems needed "
+              f"redraws (max {int(n_rounds.max())} round(s)); all particles start "
+              f"with finite log-prob.")
     return {"z_best": np.asarray(z_best), "lp_hist": np.asarray(lp_hist),
             "chisq_hist": np.asarray(chisq_hist),
             "best_step": np.asarray(best_step),
             "z_final": np.asarray(z_final), "lp_final": np.asarray(lp_final)}
-
-
-# ------------------------------------------------------------- MAP anneal (mc)
-def batched_map_anneal(bp, z_pool, lp_pool, *, ladder, n_particles: int = 64,
-                       num_steps: int = 300, lr: float = 1e-3,
-                       clip_norm: float = 1.0, block: int = 16
-                       ) -> Dict[str, np.ndarray]:
-    """Multiplicity-constraint eps-annealing MAP refinement, all systems at once.
-
-    Phase 2 of the annealed-MAP design (docs/logs/point-source-sbc.md P-9):
-    bulk MAP runs WITHOUT the multiplicity term (1000 particles x quadrature
-    would be ruinous, and most particles are discarded anyway); this phase takes
-    the final phase-1 particle pool, keeps the top ``n_particles`` per system by
-    phase-1 log-prob, and Adam-descends them for ``num_steps`` per ladder rung
-    ``(eps, lam, grid_n)`` with the term ACTIVE — coarse rungs reach phantom
-    modes (capture radius ~3 eps), fine rungs sharpen the wall at the caustic.
-    Stage knobs are trace-time constants, so each rung re-jits; the term is left
-    at the FINAL rung's configuration (the measured MCLMC target) on return.
-
-    Returns ``z_best (S, P)`` scored at the final rung, plus the refined pool
-    ``anneal_z (S, K, P)`` / ``anneal_lp (S, K)`` for diagnostics.
-
-    ``block`` bounds GPU memory: the multiplicity-term gradient's working set
-    scales with (systems x particles), and all 64 particles at once OOMs an
-    11 GB card beyond ~5 systems at the final 384^2 rung (P-10 launch 1,
-    job 24307807: 13 systems x 64 = 832 lanes asked for 9.4 GiB in one op).
-    Particles are therefore Adam-descended in sequential blocks of ``block``
-    per system (lax.map), cutting peak memory by K/block at the same total
-    FLOPs. Note global-norm clipping then acts per block rather than across
-    all K particles; per-particle semantics are otherwise unchanged.
-    """
-    import jax
-    import jax.numpy as jnp
-    import optax
-
-    term = bp.prob.terms[0]
-    if not getattr(term, "mc_on", False):
-        raise ValueError(
-            "batched_map_anneal requires the multiplicity constraint on the "
-            "dataset (mc_on); without it there is no term to anneal — drop the "
-            "phase instead of running it as an expensive no-op.")
-    if not ladder:
-        raise ValueError("batched_map_anneal: empty ladder.")
-
-    z_pool = np.asarray(z_pool)
-    lp_pool = np.asarray(lp_pool)
-    S, N, P = z_pool.shape
-    k = min(int(n_particles), N)
-    top = np.argsort(-np.nan_to_num(lp_pool, nan=-np.inf), axis=1)[:, :k]
-    z = jnp.asarray(np.take_along_axis(z_pool, top[:, :, None], axis=1))
-
-    blk = max(1, min(int(block), k))
-    while k % blk:
-        blk -= 1
-    nb = k // blk
-
-    optimizer = optax.chain(
-        optax.zero_nans(),
-        optax.clip_by_global_norm(float(clip_norm)),
-        optax.adam(float(lr)),
-    )
-    loss_norm = float(bp.prob.loss_normalization)
-
-    for eps, lam, grid_n in ladder:
-        term._mc_set_stage(eps, lam, grid_n)
-        term.mc_active = True
-
-        def one(row, z0):
-            p = bp._swapped(row)
-
-            def loss(zz):
-                lp, _ = p.log_prob(zz)
-                return -jnp.mean(lp) / loss_norm
-
-            vg = jax.value_and_grad(loss)
-
-            def run_block(zb):
-                opt_state = optimizer.init(zb)
-
-                def one_step(carry, _):
-                    zz, st = carry
-                    _, grads = vg(zz)
-                    updates, st = optimizer.update(grads, st)
-                    return (optax.apply_updates(zz, updates), st), None
-
-                (zf, _), _ = jax.lax.scan(
-                    one_step, (zb, opt_state), None, length=int(num_steps))
-                return zf
-
-            return jax.lax.map(run_block, z0.reshape(nb, blk, P)).reshape(k, P)
-
-        z = jax.jit(jax.vmap(one))(bp.data, z)
-
-    def score(row, zz):
-        p = bp._swapped(row)
-        return jax.lax.map(lambda zb: p.log_prob(zb)[0],
-                           zz.reshape(nb, blk, P)).reshape(k)
-
-    lp = np.asarray(jax.jit(jax.vmap(score))(bp.data, z))
-    z = np.asarray(z)
-    j = np.nanargmax(np.nan_to_num(lp, nan=-np.inf), axis=1)
-    return {"z_best": z[np.arange(S), j], "anneal_z": z, "anneal_lp": lp,
-            "anneal_best_particle": j.astype(np.int64)}
 
 
 # --------------------------------------------------------------------------- SVI
@@ -594,101 +555,62 @@ def batched_map_svi_mclmc(bp, *, map_seeds, svi_seeds, mclmc_seeds,
     ``n_chains``, ``num_burnin_steps``, ``num_results``,
     ``desired_energy_variance``, ``frac_tune1/2/3``) plus ``thin_every``.
     Unknown knobs raise — a typo'd knob must never silently fall back.
+
+    REFUSES a discontinuous target (the discrete multiplicity term). This
+    module reimplements MCLMC itself, so gigalens's own ``require_continuous``
+    guard never fires here; the check below is that guard. MAMS is NOT ported
+    to the batched runner — out of scope for this change — so a multiplicity
+    campaign runs through the solo ``map_mams`` pipeline
+    (``python -m gigalens_research.simtests run``), not through this one.
     """
     known = {"map_num_steps", "map_n_samples", "map_lr", "map_clip_norm",
              "svi_num_steps", "svi_n_vi", "svi_init_scale", "svi_lr",
              "n_chains", "num_burnin_steps", "num_results",
              "desired_energy_variance", "frac_tune1", "frac_tune2",
-             "frac_tune3", "thin_every",
-             "mc_anneal_eps", "mc_anneal_steps", "mc_anneal_particles",
-             "mc_anneal_lr", "mc_anneal_block"}
+             "frac_tune3", "thin_every"}
     unknown = set(kwargs) - known
     if unknown:
         raise ValueError(f"batched_map_svi_mclmc: unknown knobs {sorted(unknown)}; "
                          f"known: {sorted(known)}.")
+    prob = getattr(bp, "prob", None)
+    if getattr(prob, "discontinuous", False):
+        names = sorted({type(t).__name__ for t in getattr(prob, "terms", [])
+                        if getattr(t, "discontinuous", False)})
+        raise ValueError(
+            f"batched_map_svi_mclmc cannot run this ProbModel: its log-likelihood "
+            f"is discontinuous (term(s): {', '.join(names)} — the discrete image-"
+            f"multiplicity constraint). SVI would fit a surrogate that slides across "
+            f"the -inf wall unopposed, and this module's MCLMC is UNADJUSTED: it "
+            f"neither reflects nor rejects at the wall and would tune its step size "
+            f"on infinite energy errors. gigalens refuses SVI/MCLMC on such a target "
+            f"by name; the batched code reimplements MCLMC, so that guard cannot fire "
+            f"here — this is it. Use the solo 'map_mams' pipeline (MAP -> MAMS); "
+            f"MAMS is not ported to the batched runner.")
 
-    # Multiplicity-constraint staging (P-9 design): the term defines the MEASURED
-    # target (MCLMC, and any later log_like scoring) but is disabled for the bulk
-    # 1000-particle MAP and for SVI — SVI only fits the local Gaussian
-    # preconditioner, and in the correct basin the term is inert (N_eff ~ n_obs,
-    # penalty ~ 0), so skipping it there changes efficiency, not correctness.
-    term = bp.prob.terms[0]
-    mc_on = bool(getattr(term, "mc_on", False))
-    if mc_on:
-        ds = term.dataset
-        mc_final = (float(ds.mc_eps), float(ds.mc_lam), int(ds.mc_grid_n))
-    for key in ("mc_anneal_eps", "mc_anneal_steps", "mc_anneal_particles",
-                "mc_anneal_lr", "mc_anneal_block"):
-        if key in kwargs and not mc_on:
-            raise ValueError(
-                f"batched_map_svi_mclmc: {key} was given but the dataset has no "
-                "multiplicity constraint — the knob would be silently dead.")
+    out = batched_map(
+        bp, map_seeds,
+        num_steps=int(kwargs.get("map_num_steps", 1500)),
+        n_samples=int(kwargs.get("map_n_samples", 1000)),
+        map_lr=float(kwargs.get("map_lr", 3e-3)),
+        map_clip_norm=float(kwargs.get("map_clip_norm", 1.0)))
 
-    try:
-        if mc_on:
-            term.mc_active = False
-        out = batched_map(
-            bp, map_seeds,
-            num_steps=int(kwargs.get("map_num_steps", 1500)),
-            n_samples=int(kwargs.get("map_n_samples", 1000)),
-            map_lr=float(kwargs.get("map_lr", 3e-3)),
-            map_clip_norm=float(kwargs.get("map_clip_norm", 1.0)))
+    svi = batched_svi(
+        bp, out["z_best"], svi_seeds,
+        num_steps=int(kwargs.get("svi_num_steps", 1500)),
+        n_vi=int(kwargs.get("svi_n_vi", 500)),
+        init_scales=float(kwargs.get("svi_init_scale", 1e-3)),
+        svi_lr=float(kwargs.get("svi_lr", 1e-4)))
+    out.update(svi)
 
-        if mc_on:
-            eps_f, lam_f, grid_f = mc_final
-            coarse = [float(e) for e in
-                      kwargs.get("mc_anneal_eps", (0.3, 0.15, 0.075))
-                      if float(e) > eps_f * 1.05]
-            epss = sorted(coarse, reverse=True) + [eps_f]
-            ladder = []
-            for i, e in enumerate(epss):
-                if e == eps_f:
-                    g = grid_f
-                else:
-                    # step <= eps sqrt(mu_min): coarse rungs may shrink the grid
-                    # proportionally to eps (multiple of 4 keeps 16 tiles even).
-                    g = min(grid_f, max(64, -(-int(grid_f * eps_f / e) // 4) * 4))
-                ladder.append((e, lam_f * (i + 1) / len(epss), g))
-            ladder[-1] = (eps_f, lam_f, grid_f)
-            ann = batched_map_anneal(
-                bp, out["z_final"], out["lp_final"], ladder=ladder,
-                n_particles=int(kwargs.get("mc_anneal_particles", 64)),
-                num_steps=int(kwargs.get("mc_anneal_steps", 300)),
-                lr=float(kwargs.get("mc_anneal_lr", 1e-3)),
-                block=int(kwargs.get("mc_anneal_block", 16)))
-            out["z_best_premc"] = out["z_best"]
-            out["z_best"] = ann["z_best"]
-            out["mc_anneal_lp"] = ann["anneal_lp"]
-            out["mc_anneal_best_particle"] = ann["anneal_best_particle"]
-            out["mc_anneal_ladder"] = np.asarray(ladder)
-            term.mc_active = False       # SVI: preconditioner only
-
-        svi = batched_svi(
-            bp, out["z_best"], svi_seeds,
-            num_steps=int(kwargs.get("svi_num_steps", 1500)),
-            n_vi=int(kwargs.get("svi_n_vi", 500)),
-            init_scales=float(kwargs.get("svi_init_scale", 1e-3)),
-            svi_lr=float(kwargs.get("svi_lr", 1e-4)))
-        out.update(svi)
-
-        if mc_on:
-            term._mc_set_stage(*mc_final)
-            term.mc_active = True        # MCLMC samples the FULL target
-        mclmc = batched_mclmc(
-            bp, svi["qz_loc"], svi["qz_scale_tril"], mclmc_seeds,
-            n_chains=int(kwargs.get("n_chains", 8)),
-            num_burnin_steps=int(kwargs.get("num_burnin_steps", 5000)),
-            num_results=int(kwargs.get("num_results", 10000)),
-            desired_energy_variance=float(kwargs.get("desired_energy_variance", 5e-4)),
-            frac_tune1=float(kwargs.get("frac_tune1", 0.2)),
-            frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
-            frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
-            thin_every=int(kwargs.get("thin_every", 1)))
-        out.update(mclmc)
-    finally:
-        if mc_on:
-            # The template term is SHARED with system 0's solo ProbModel: always
-            # restore the full measured target for downstream log_like scoring.
-            term._mc_set_stage(*mc_final)
-            term.mc_active = True
+    mclmc = batched_mclmc(
+        bp, svi["qz_loc"], svi["qz_scale_tril"], mclmc_seeds,
+        n_chains=int(kwargs.get("n_chains", 8)),
+        num_burnin_steps=int(kwargs.get("num_burnin_steps", 5000)),
+        num_results=int(kwargs.get("num_results", 10000)),
+        desired_energy_variance=float(kwargs.get("desired_energy_variance", 5e-4)),
+        frac_tune1=float(kwargs.get("frac_tune1", 0.2)),
+        frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
+        frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
+        thin_every=int(kwargs.get("thin_every", 1)))
+    out.update(mclmc)
     return out

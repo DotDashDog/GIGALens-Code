@@ -66,14 +66,9 @@ _SCALAR_FIELDS = {
 # systems (they select trace-time branches or enter as Python constants), so a
 # mismatch means the systems are not batchable and we must refuse loudly.
 _STATIC_DATASET_FIELDS = ("n_images", "newton_steps", "trust_region_frac",
-                          "has_flux", "has_td", "src_anchor_sigma", "event_size",
-                          # multiplicity constraint: trace-time constants shared
-                          # across a wave (all-None = off)
-                          "mc_n_obs", "mc_mu_min", "mc_eps", "mc_lam",
-                          "mc_grid_n", "mc_n_tiles", "mc_window",
-                          "mc_window_scale")
+                          "has_flux", "has_td", "src_anchor_sigma", "event_size")
 _STATIC_TERM_FIELDS = ("event_size", "src_anchor_sigma", "lens_i", "src_i",
-                       "src_j", "absolute", "mc_on")
+                       "src_j", "absolute")
 _STATIC_TERM_TD_FIELDS = ("z_lens", "z_source", "cosmology_mode")
 
 

@@ -1,5 +1,10 @@
 """Campaign runner over the batched MAP -> SVI -> MCLMC pipeline (phase C).
 
+MCLMC-only: a campaign whose builder turns the discrete multiplicity term on
+has a discontinuous target and is refused by ``batched_map_svi_mclmc`` (MAMS is
+not ported to the batched path). Run those through the solo driver
+(``python -m gigalens_research.simtests run``) with the ``map_mams`` pipeline.
+
 Runs a simtests campaign (single sweep point) through
 ``batched_pipeline.batched_map_svi_mclmc`` in GPU waves, then persists each
 system's results in the EXACT on-disk layout the solo ``run.py`` /
@@ -311,8 +316,7 @@ def main() -> None:
               "svi_num_steps", "svi_n_vi", "svi_init_scale", "svi_lr",
               "n_chains", "num_burnin_steps", "num_results",
               "desired_energy_variance", "frac_tune1", "frac_tune2",
-              "frac_tune3", "mc_anneal_eps", "mc_anneal_steps",
-              "mc_anneal_particles", "mc_anneal_lr", "mc_anneal_block")
+              "frac_tune3")
              if k in kw}
     print(f"[batched_run] knobs: {knobs}")
 
