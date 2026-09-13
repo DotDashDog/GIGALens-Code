@@ -77,6 +77,7 @@ python -m gigalens_research.simtests status campaign.yaml
 |---|---|---|
 | `hundred_sersic_v1` | `experiments/hundred_systems_GL2/campaign.yaml` | Convergence test: 100 EPL+Shear+Sérsic systems, MAP→SVI→HMC |
 | `shapelets_systematics_v1` | `experiments/shapelets_systematics/campaign.yaml` | Systematics: Vela sources, shapelet inference, sweep over `n_max` |
+| `vela_revised_v2` | `experiments/vela_revised_v2/campaign.yaml` | Fresh Vela systems simulated by the `vela_simulated` generator (scene API): YAML-tunable truth prior, STScI ePSF, instrument-derived noise, source-to-lens flux calibration, cut-off rejection |
 
 ## Extending the framework
 

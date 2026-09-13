@@ -39,11 +39,17 @@ class ImageBasedLight(gigalens.profile.LightProfile):
     source share a frame.
 
     The profile exposes ``center_x`` / ``center_y`` as free parameters; the
-    image content is treated as a fixed (non-trainable) template.
+    image content is treated as a fixed (non-trainable) template. Like every
+    gigalens light profile it also carries an amplitude parameter, here named
+    ``amp`` (a dimensionless multiplier on the image, default 1.0). The scene API
+    requires the amplitude name to be declared (the base class appends
+    ``_amp`` to ``params`` when ``use_lstsq=False``); before this was declared the
+    profile could not be placed in a :class:`gigalens.jax.scene.LensModel`.
     """
 
     _name = "IMAGEBASEDLIGHT"
     _params = ["center_x", "center_y"]
+    _amp = "amp"
 
     def __init__(self, image, image_pixel_scale, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -68,6 +74,6 @@ class ImageBasedLight(gigalens.profile.LightProfile):
             fill_value=0.0,
         )
 
-    def light(self, x, y, center_x, center_y):
+    def light(self, x, y, center_x, center_y, amp=1.0):
         points = jnp.stack([x - center_x, y - center_y], axis=-1)
-        return self.interpolator(points)
+        return amp * self.interpolator(points)
