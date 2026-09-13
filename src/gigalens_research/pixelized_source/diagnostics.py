@@ -42,9 +42,9 @@ def with_component_param(model, params: Dict, plane: int, light: int, **values) 
 
 def hyperparameter_scan(term, model, params: Dict, plane: int, light: int, name: str,
                         values: Iterable[float]) -> List[Dict[str, float]]:
-    """Evaluate a :class:`~.likelihood.RegularizedImageLikelihoodTerm`'s evidence
-    pieces on a grid of one regularizer hyperparameter, everything else fixed at
-    ``params``. Rows carry ``chi2, sHs, logdetA, logdetH, log_like, minus2logZ``."""
+    """Evaluate a gigalens ``ImageLikelihoodTerm``'s ``evidence_terms`` on a grid of one
+    regularizer hyperparameter, everything else fixed at ``params``. Rows carry
+    ``chi2, sHs, logdetA, logdetH, log_like, minus2logZ``."""
     rows = []
     for v in values:
         p = with_component_param(model, params, plane, light, **{name: jnp.asarray(float(v))})

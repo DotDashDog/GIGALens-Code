@@ -7,10 +7,11 @@ or the datasets lives here -- that is the point of putting them on the scene API
 
 * :class:`MeshSource` -- an lstsq basis with one function per vertex
   (``use_lstsq=True``, ``depth = I``). Its only parameters are the hyperparameters of
-  the :class:`~.regularizers.QuadraticRegularizer` attached to it (e.g. ``lam``); the
-  basis itself does not depend on them -- the regularized likelihood term reads them.
-  A flat-prior lstsq basis is the same profile with ``lam`` fixed to a tiny constant
-  (a parameterless component is not representable in gigalens' params tree today).
+  the optional :class:`~.regularizers.QuadraticRegularizer` attached to it (e.g.
+  ``lam``); the basis does not depend on them. With a regularizer the profile declares
+  a ``linear_prior`` (gigalens' ``LightProfile`` hook) and every imaging dataset that
+  sees it marginalizes the coefficients analytically; without one it is an ordinary
+  flat-prior lstsq component.
 * :class:`CorrelatedFieldSource` -- a forward-mode Gaussian random field on a
   :class:`~.domain.RegularGridDomain`: ``s = exp(mean_log + exp(log_amp) * f)`` with
   ``f = IFFT(A(k; slope) FFT(xi))``, unit-variance normalized, ``xi ~ N(0, 1)`` per
@@ -51,25 +52,27 @@ class MeshSource(gigalens.profile.LightProfile):
         "regularizer hyperparameters are declared by the attached QuadraticRegularizer; "
         "unlisted ones are unbounded here and constrained by their priors."))
 
-    def __init__(self, domain: SourceDomain, regularizer: QuadraticRegularizer):
+    def __init__(self, domain: SourceDomain, regularizer: Optional[QuadraticRegularizer] = None):
         super().__init__(use_lstsq=True)
-        if regularizer is None or not tuple(regularizer.hyperparams):
-            # gigalens gap (see docs/plans/pixelized-source-regularizer-options.md, F1):
-            # LensModel._derive creates params-tree sites only for declared parameters,
-            # so a component with NO parameters has no node and component_params()
-            # raises KeyError at render time. Until that is fixed upstream, a MeshSource
-            # must carry at least one parameter -- its regularizer's hyperparameter. A
-            # flat-prior lstsq basis is ``GraphLaplacian(...)`` with ``lam`` FIXED to a
-            # tiny number (e.g. 1e-12): H -> 0 and the fit is plain lstsq (tested).
-            raise ValueError(
-                "MeshSource needs a regularizer with at least one hyperparameter: a light "
-                "component with no parameters is not addressable in the current gigalens "
-                "params tree (scene.py _derive). For an unregularized basis, attach a "
-                "GraphLaplacian and fix lam to a tiny constant in the Component priors.")
         self.domain = domain
         self.regularizer = regularizer
-        self.params = list(regularizer.hyperparams)
+        self.params = list(regularizer.hyperparams) if regularizer is not None else []
         self.depth = int(domain.n_basis)
+
+    # -- coefficient prior (gigalens LightProfile.linear_prior hook) --------------------
+    @property
+    def has_linear_prior(self) -> bool:
+        return self.regularizer is not None
+
+    def linear_prior(self, **hyper):
+        """``(H, log det H)`` from the attached regularizer, or ``None`` (flat prior).
+
+        Hyperparameter leaves may carry a trailing sample-batch axis; the regularizer
+        broadcasts them to ``(batch, I, I)`` / ``(batch,)`` as the hook requires.
+        """
+        if self.regularizer is None:
+            return None
+        return self.regularizer.matrix(**hyper), self.regularizer.logdet(**hyper)
 
     @property
     def use_lstsq(self):
@@ -84,8 +87,8 @@ class MeshSource(gigalens.profile.LightProfile):
         self._use_lstsq = True
 
     def light(self, x, y, **hyper):
-        # hyper (regularizer hyperparameters) do not enter the basis: they are read by
-        # the regularized likelihood term.
+        # hyper (regularizer hyperparameters) do not enter the basis; gigalens reads them
+        # through linear_prior() when it marginalizes the coefficients.
         return self.domain.basis(x, y)
 
     def __str__(self):

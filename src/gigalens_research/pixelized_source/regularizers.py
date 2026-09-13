@@ -6,8 +6,10 @@ the vertex values of a :class:`~.profiles.MeshSource`. It owns its hyperparamete
 matrix and its log-determinant. Anything that can produce an SPD ``H`` -- graph
 Laplacians, curvature operators, a GP precision on the vertices -- fits the interface.
 
-The evidence term (:mod:`.likelihood`) is the only consumer; it needs ``matrix`` and
-``logdet`` for one sample at a time (hyperparameters are scalars per call).
+The consumer is gigalens' ``LightProfile.linear_prior`` hook via
+:meth:`~.profiles.MeshSource.linear_prior`: hyperparameter leaves may be scalars or
+carry a trailing sample-batch axis, and ``matrix`` / ``logdet`` must broadcast
+accordingly (``(I, I)`` or ``(batch, I, I)``; scalar or ``(batch,)``).
 """
 from __future__ import annotations
 
@@ -27,7 +29,7 @@ class QuadraticRegularizer:
     hyperparams: Sequence[str] = ()
 
     def matrix(self, **hyper) -> jnp.ndarray:
-        """``(I, I)`` SPD precision matrix for one set of scalar hyperparameters."""
+        """``(I, I)`` SPD precision matrix (``(batch, I, I)`` for batched hyperparameters)."""
         raise NotImplementedError
 
     def logdet(self, **hyper) -> jnp.ndarray:
@@ -112,10 +114,11 @@ class GraphLaplacian(QuadraticRegularizer):
         self.eigenvalues = eig
 
     def matrix(self, *, lam):
-        return jnp.asarray(lam) * self.L_reg
+        lam = jnp.asarray(lam)
+        return lam[..., None, None] * self.L_reg  # (I, I) or (batch, I, I)
 
     def logdet(self, *, lam):
-        return self.n * jnp.log(jnp.asarray(lam)) + self._logdet_unit
+        return self.n * jnp.log(jnp.asarray(lam)) + self._logdet_unit  # scalar or (batch,)
 
     def __repr__(self):
         return f"GraphLaplacian(kind={self.kind!r}, I={self.n}, ridge={self.ridge:.3g})"

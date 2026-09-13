@@ -3,6 +3,35 @@
 Newest first. Claims register at the bottom. Design decisions live in
 `docs/plans/pixelized-source-regularizer-options.md`.
 
+## 2026-09-12 (later) — Option B implemented in gigalens; research package repointed
+
+**Decision (user):** Option B. gigalens branch `linear-prior` (off `linusu-dev-merge`,
+held out of the release; see plan doc §5): `LightProfile.linear_prior()` → `(H, log det
+H)` or `None`; `has_linear_prior` (method-identity check); `SceneSimulator` records the
+coefficient-block offsets of declaring components at construction and, in
+`lstsq_simulate`, solves `A = XᵀX + H` with the same jitter/LU policy as the flat path,
+returning `image, coeffs, chi2, sHs, logdetA, logdetH` under `return_evidence_terms=True`;
+`ImageLikelihoodTerm.log_like` uses the marginal likelihood iff a seen profile declares a
+prior (D1), and exposes `evidence_terms()`. F1 fixed: `_derive` creates a params-tree
+node for every component, so parameterless components render.
+
+**Research side:** `MeshSource.linear_prior` delegates to the regularizer (batched
+`lam` → `(batch, I, I)`); `regularizer=None` is again a plain flat-prior basis;
+`likelihood.py` (Option A) deleted. Tests unchanged in intent: 17 green against the hook
+branch, including the weak-prior limit now checked against a *separate* flat-prior
+MeshSource model (exercises F1 and the untouched historical path).
+
+**gigalens verification (login node, per file):** `tests/test_linear_prior.py` 7/7
+(stock profiles declare nothing; evidence path with H = 0 reproduces the flat image
+and coefficients to 1e-12 and the flat `log_like` equals evidence + ½ log det A; a toy
+ridge prior matches numpy to 1e-9 and lands on the right block; batched == unbatched;
+gradients finite; shape errors loud; parameterless component addressable). Existing
+files on the touched paths: see the table in the PR; the structure-guard failures are
+the pre-existing int-key merge skew (identical on the pristine checkout).
+
+**Physicality note (user question):** the earlier F2 "gap" was a test-construction trap,
+not a bypass — the layer ran and found negligible prior mass at `theta_E <= 0`.
+
 ## 2026-09-12 — restructure onto the scene API (branch `worktree-pixelized-source-restructure`)
 
 **Decision (user):** the tessellation never changes inside an inference algorithm;
@@ -75,7 +104,8 @@ gigalens (`MeshSource` therefore requires a regularizer; flat prior = `lam` fixe
 | claim | status | evidence |
 |---|---|---|
 | Frozen-domain mesh source is differentiable in the mass through the scene API | **verified** (unit) | finite gradients, 17 tests |
-| Research-side evidence term equals the Suyu/WD03 formula | **verified** (unit, rtol 1e-9) | independent numpy |
+| gigalens `linear_prior` marginal likelihood equals the Suyu/WD03 formula | **verified** (unit, rtol 1e-9, both repos) | independent numpy |
+| Flat lstsq path byte-identical with the hook present | **verified** | regression anchor + image/coeff equality 1e-12 |
 | Evidence picks an interior lambda that yields chi²/ν ≈ 1 at SNR 100 | **UNCERTIFIED**, one mock, one seed | scan table above |
 | Evidence-optimal lambda scales with σ⁻² | **open** — not seen at decade resolution; needs a fine lam grid and a normalization check | — |
 | Correlated field recovers a source / samples with MCLMC | **not attempted** | — |

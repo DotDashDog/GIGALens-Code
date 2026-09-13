@@ -13,9 +13,11 @@ Three separable pieces (see ``docs/plans/pixelized-source-regularizer-options.md
    :class:`CorrelatedFieldSource` (a forward-mode Gaussian random field whose latent
    excitations are ordinary sampled parameters).
 3. **A swappable coefficient prior**: :mod:`.regularizers` builds the quadratic
-   penalty ``H`` for :class:`MeshSource`; :mod:`.likelihood` holds the research-side
-   evidence term that consumes it (Option A in the plan doc — the gigalens hook is
-   deliberately NOT implemented here).
+   penalty ``H`` for :class:`MeshSource`, which declares it through gigalens'
+   ``LightProfile.linear_prior`` hook (Option B in the plan doc); the scene simulator
+   and image likelihood term then marginalize the coefficients analytically. Requires
+   the gigalens branch ``linear-prior`` (held out of ``linusu-dev-merge`` until after
+   the next release).
 
 The old ``voronoi_src`` package (parallel simulator + prob model on the pre-scene API)
 is retired to ``attic/voronoi_src``.
@@ -28,7 +30,6 @@ from .domain import (
     adaptive_delaunay_domain,
     kmeans_weights,
 )
-from .likelihood import RegularizedImageData, RegularizedImageLikelihoodTerm
 from .profiles import CorrelatedFieldSource, MeshSource
 from .regularizers import GraphLaplacian, QuadraticRegularizer
 
@@ -42,6 +43,4 @@ __all__ = [
     "CorrelatedFieldSource",
     "QuadraticRegularizer",
     "GraphLaplacian",
-    "RegularizedImageData",
-    "RegularizedImageLikelihoodTerm",
 ]

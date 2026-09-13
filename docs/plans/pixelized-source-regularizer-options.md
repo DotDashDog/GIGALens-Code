@@ -1,12 +1,13 @@
 # Pixelized sources on the scene API: where the regularizer should live
 
-**Status:** decision doc, September 2026. The restructure itself is done in
-`src/gigalens_research/pixelized_source/` (frozen domains, `MeshSource`,
-`CorrelatedFieldSource`, `GraphLaplacian`). What is *not* decided is the permanent home of
-the quadratic-prior / evidence machinery, because it changes what "lstsq mode" means in
-gigalens. This doc lays out the options with concrete code so the choice can be made on
-the diff, not on prose. The research repo ships **Option A** as a working prototype so
-everything is exercisable today; nothing in `~/gigalens` was touched.
+**Status:** DECIDED 2026-09-12 — **Option B**, implemented on the gigalens branch
+`linear-prior` (based on `linusu-dev-merge`; `LightProfile.linear_prior` +
+`SceneSimulator.lstsq_simulate(return_evidence_terms=)` + `ImageLikelihoodTerm.log_like`
+/ `.evidence_terms`, D1 as recommended below, plus the F1 fix). The research package
+consumes it through `MeshSource.linear_prior`; the Option A prototype
+(`RegularizedImageData`) is deleted. **Release hold:** the branch is deliberately NOT
+merged into `linusu-dev-merge` (the route to `dev`) until after the next release; see
+§5. Options A/C/D below are kept as the record of the choice.
 
 Lab log: `docs/logs/pixelized-source.md`.
 
@@ -157,7 +158,21 @@ on the observation; with two bands seeing one source you would declare it twice.
   `planes/<i>/light/<key>` node for every component in `_derive`. Until then `MeshSource`
   requires a regularizer and a flat-prior basis is `lam` fixed to a tiny constant
   (tested: chi² agrees with plain lstsq to 1e-6).
-- **F2 — `z = 0` is not "the prior mean".** For a Normal prior the unconstrained
-  coordinate is the raw value, so `z = 0` puts `theta_E = 0`, where the EPL gradient is
-  NaN. Not a bug, but a trap for test authors; `LensModel.unconstrained(params)` is the
-  safe way to build a `z`.
+- **F2 — withdrawn as a gap.** `z = 0` under `Normal(0.9, 0.05)` is `theta_E = 0`, 18σ
+  outside the prior, where the EPL gradient is NaN. The physicality layer was NOT
+  bypassed: it ran at `LensModel` construction and (correctly) found the prior mass at
+  `theta_E <= 0` far below `EPS_MASS = 1e-6`, so a sampler would never visit that point.
+  Test authors should build `z` with `LensModel.unconstrained(params)` from physical
+  values, which is what the tests now do. F1 is fixed on the `linear-prior` branch.
+
+## 5. Keeping it off the release
+
+`dev` is produced by merging `linusu-dev-merge` wholesale, so git offers no way to keep
+one commit on `linusu-dev-merge` but out of `dev`. The mechanism used (PR #102
+precedent, adaptive supersampling) is a **long-lived side branch**: `linear-prior` is
+based on `linusu-dev-merge`, GIGALens-Code pins to it, it is merged forward from
+`linusu-dev-merge` as needed, and it merges INTO `linusu-dev-merge` only after the
+release is cut. Note the hook is inert by construction — no gigalens profile declares a
+prior, and the flat path is byte-identical (regression anchor green) — so landing it
+early would not put pixelated sources in the release either; the hold is a policy
+choice, not a technical necessity.

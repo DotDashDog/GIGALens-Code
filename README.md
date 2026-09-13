@@ -21,7 +21,9 @@ can be refactored safely.
   loss histories, and corner plots.
 - `src/gigalens_research/pixelized_source/`: pixelized (mesh / grid) source
   models on the scene API: frozen source domains, lstsq and correlated-field
-  profiles, and the regularized-evidence likelihood term.
+  profiles, and quadratic coefficient priors declared through gigalens'
+  `LightProfile.linear_prior` hook (gigalens branch `linear-prior`, held out of
+  `linusu-dev-merge` until after the next release).
 - `experiments/`: runnable scripts and notebooks for specific research
   questions.
 - `data/`: local input data used by experiments.

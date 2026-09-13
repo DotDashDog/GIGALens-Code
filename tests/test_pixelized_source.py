@@ -1,5 +1,6 @@
 """Tests for gigalens_research.pixelized_source (frozen domains, scene-API profiles,
-regularized evidence term, correlated field).
+gigalens linear_prior hook, correlated field). Requires the gigalens branch
+``linear-prior`` (LightProfile.linear_prior + the parameterless-component fix).
 
 Ground truths used: scipy's point location for the triangle mesh, exact reproduction
 of linear functions by both interpolants, an independent float64 numpy evaluation of
@@ -30,7 +31,6 @@ from gigalens_research.pixelized_source import (
     GraphLaplacian,
     MeshSource,
     RegularGridDomain,
-    RegularizedImageData,
     TriangleMeshDomain,
     adaptive_delaunay_domain,
 )
@@ -186,20 +186,24 @@ def _z(model, **leaf_values):
 
 
 def _mesh_model(domain, regularizer=None, free_theta_E=False, lam_prior=None):
-    """``regularizer=None`` means a flat-prior basis: GraphLaplacian with lam FIXED tiny."""
-    if regularizer is None:
-        regularizer = GraphLaplacian(domain, kind="gradient", ridge_scale=1e-6)
-        lam_prior = 1e-12
-    priors = {"lam": lam_prior if lam_prior is not None else tfd.LogNormal(F(np.log(1e-2)), F(2.0))}
+    """``regularizer=None`` is a flat-prior (plain lstsq) basis with no parameters."""
+    priors = {}
+    if regularizer is not None:
+        priors["lam"] = lam_prior if lam_prior is not None else tfd.LogNormal(F(np.log(1e-2)), F(2.0))
     src = Component(MeshSource(domain, regularizer), priors, name="mesh")
     model = LensModel([Plane(mass=[_mass_component(free_theta_E)]), Plane(light=[src])])
     return model, src
 
 
-def test_mesh_source_requires_a_regularizer_hyperparameter():
+def test_mesh_source_declares_a_linear_prior_only_with_a_regularizer():
     dom = RegularGridDomain.centered(center=(0.0, 0.0), half_size=1.0, n=4)
-    with pytest.raises(ValueError, match="not addressable"):
-        MeshSource(dom, None)
+    flat = MeshSource(dom)
+    assert flat.params == [] and flat.has_linear_prior is False and flat.linear_prior() is None
+    reg = MeshSource(dom, GraphLaplacian(dom, kind="gradient", ridge_scale=1e-6))
+    assert reg.params == ["lam"] and reg.has_linear_prior is True
+    H, ld = reg.linear_prior(lam=jnp.asarray([0.5, 2.0]))
+    assert H.shape == (2, 16, 16) and ld.shape == (2,)
+    np.testing.assert_allclose(np.asarray(H[1]), 4 * np.asarray(H[0]), rtol=1e-12)
 
 
 def test_mesh_source_basis_partition_of_unity_through_scene_simulator():
@@ -244,17 +248,18 @@ def test_regularized_term_matches_independent_numpy_evidence():
     dom = RegularGridDomain.centered(center=(0.0, 0.0), half_size=0.8, n=8)
     reg = GraphLaplacian(dom, kind="gradient", ridge_scale=1e-6)
     model, src = _mesh_model(dom, reg)
-    data = RegularizedImageData(img, cfg, error_map=err, sees=[src])
+    data = ImageData(img, cfg, error_map=err, sees=[src])
     prob = ProbModel(model, data, mode="lstsq")
     term = prob.terms[0]
     z = jnp.asarray([np.log(3e-3)])  # lam's unconstrained coordinate (LogNormal -> log)
     params = model.constrained(z)
-    got = {k: float(np.asarray(v).reshape(-1)[0]) for k, v in term.evidence_terms(params).items()
-           if k != "coeffs"}
+    got_full = term.evidence_terms(params)
+    got = {k: float(np.asarray(v).reshape(-1)[0]) for k, v in got_full.items()
+           if k in ("chi2", "sHs", "logdetA", "logdetH", "log_like")}
     ref = _independent_evidence(term, model, params, img, err, reg)
     for k in ("chi2", "sHs", "logdetA", "logdetH", "log_like"):
         np.testing.assert_allclose(got[k], ref[k], rtol=1e-9, err_msg=k)
-    np.testing.assert_allclose(np.asarray(term.coefficients(params))[0], ref["coeffs"], rtol=1e-8)
+    np.testing.assert_allclose(np.asarray(got_full["coeffs"])[0], ref["coeffs"], rtol=1e-8)
     # and the ProbModel surface is wired to it
     ll, red = prob.log_like(z)
     np.testing.assert_allclose(float(ll), ref["log_like"], rtol=1e-9)
@@ -268,7 +273,7 @@ def test_regularized_term_batched_matches_unbatched():
     dom = RegularGridDomain.centered(center=(0.0, 0.0), half_size=0.8, n=6)
     reg = GraphLaplacian(dom, kind="curvature", ridge_scale=1e-6)
     model, src = _mesh_model(dom, reg, free_theta_E=True)
-    prob = ProbModel(model, RegularizedImageData(img, cfg, error_map=err, sees=[src]))
+    prob = ProbModel(model, ImageData(img, cfg, error_map=err, sees=[src]))
     zs = jnp.stack([_z(model, **{"0/mass/lens/theta_E": t, "1/light/mesh/lam": l})
                     for t, l in ((0.9, 1e-2), (1.0, 1e-1), (0.8, 1e-3))])
     ll_b, red_b = prob.log_like(zs)
@@ -284,11 +289,17 @@ def test_regularized_term_weak_prior_limit_is_plain_lstsq():
     dom = RegularGridDomain.centered(center=(0.0, 0.0), half_size=0.8, n=6)
     reg = GraphLaplacian(dom, kind="gradient", ridge_scale=1e-6)
     model, src = _mesh_model(dom, reg)
-    prob = ProbModel(model, RegularizedImageData(img, cfg, error_map=err, sees=[src]))
+    prob = ProbModel(model, ImageData(img, cfg, error_map=err, sees=[src]))
     term = prob.terms[0]
+    assert term.simulator.has_linear_prior
     params = model.constrained(jnp.asarray([np.log(1e-14)]))
     chi2_reg = float(term.evidence_terms(params)["chi2"][0])
-    im = np.asarray(SceneSimulator(model, cfg).lstsq_simulate(params, jnp.asarray(img), jnp.asarray(err)))
+    # Reference: the SAME domain as a flat-prior MeshSource (no regularizer -> the
+    # historical lstsq path in gigalens; also exercises the parameterless-component fix).
+    flat_model, flat_src = _mesh_model(dom, None)
+    flat_sim = SceneSimulator(flat_model, cfg)
+    assert not flat_sim.has_linear_prior
+    im = np.asarray(flat_sim.lstsq_simulate(flat_model.to_params({}), jnp.asarray(img), jnp.asarray(err)))
     chi2_plain = float(np.sum(((im - img) / err) ** 2))
     np.testing.assert_allclose(chi2_reg, chi2_plain, rtol=1e-6)
     # chi2 is non-decreasing in lam
@@ -311,7 +322,7 @@ def test_regularized_prob_model_gradients_and_evidence_optimal_lambda():
     dom = RegularGridDomain.centered(center=(0.0, 0.0), half_size=0.8, n=16)
     reg = GraphLaplacian(dom, kind="gradient", ridge_scale=1e-6)
     model, src = _mesh_model(dom, reg, free_theta_E=True)
-    prob = ProbModel(model, RegularizedImageData(img, cfg, error_map=err, sees=[src]))
+    prob = ProbModel(model, ImageData(img, cfg, error_map=err, sees=[src]))
     z = _z(model, **{"0/mass/lens/theta_E": 0.9, "1/light/mesh/lam": 1e-2})
     lp, red = prob.log_prob(z)
     g = jax.grad(lambda zz: prob.log_prob(zz)[0])(z)
@@ -331,7 +342,7 @@ def test_regularized_prob_model_gradients_and_evidence_optimal_lambda():
     # and the bright source vertices are not checkerboarded.
     assert 0.85 < chi2nu[best] < 1.2, rows[best]
     p_best = model.constrained(_z(model, **{"0/mass/lens/theta_E": 0.9, "1/light/mesh/lam": lams[best]}))
-    s = np.asarray(prob.terms[0].component_coefficients(p_best, src))[0]
+    s = np.asarray(prob.terms[0].evidence_terms(p_best)["coeffs"])[0]  # the mesh is the only component
     assert alternating_pattern_score(s, dom.edges) > 0.0
     # And the rendered source peaks near the truth centre.
     src_img, ext = dom.render(s, half_size=0.8, npix=81)
@@ -340,15 +351,13 @@ def test_regularized_prob_model_gradients_and_evidence_optimal_lambda():
     assert abs(xs[ix] - SRC_TRUTH["center_x"]) < 0.12 and abs(xs[iy] - SRC_TRUTH["center_y"]) < 0.12
 
 
-def test_regularized_data_refuses_when_nothing_is_regularized():
+def test_plain_image_data_marginalizes_iff_the_mesh_declares_a_prior():
     cfg, img, err, *_ = _mock()
-    src = Component(SersicEllipse(use_lstsq=True),
-                    {k: v for k, v in SRC_TRUTH.items() if k != "Ie"}, name="sersic")
-    model = LensModel([Plane(mass=[_mass_component(free_theta_E=True)]), Plane(light=[src])])
-    with pytest.raises(ValueError, match="none of the seen light components"):
-        ProbModel(model, RegularizedImageData(img, cfg, error_map=err, sees=[src]))
-    with pytest.raises(ValueError, match="no meaning in mode"):
-        ProbModel(model, RegularizedImageData(img, cfg, error_map=err, sees=[src]), mode="forward")
+    dom = RegularGridDomain.centered(center=(0.0, 0.0), half_size=0.8, n=4)
+    reg_model, reg_src = _mesh_model(dom, GraphLaplacian(dom, kind="gradient", ridge_scale=1e-6))
+    assert ProbModel(reg_model, ImageData(img, cfg, error_map=err, sees=[reg_src])).terms[0].simulator.has_linear_prior
+    flat_model, flat_src = _mesh_model(dom, None, free_theta_E=True)
+    assert not ProbModel(flat_model, ImageData(img, cfg, error_map=err, sees=[flat_src])).terms[0].simulator.has_linear_prior
 
 
 # ====================================================================== correlated field
