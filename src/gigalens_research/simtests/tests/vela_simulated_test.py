@@ -150,6 +150,48 @@ def test_calibrate_amp():
         vs.calibrate_amp(ratio=0.5, lens_flux=0.0, source_flux_unit_amp=1.0)
 
 
+def test_stdpsf_filename_by_detector():
+    assert vs._stdpsf_filename("ACSWFC", "f814w", "SM4") == "STDPSF_ACSWFC_F814W_SM4.fits"
+    assert vs._stdpsf_filename("WFC3IR", "f140w", None) == "STDPSF_WFC3IR_F140W.fits"
+    with pytest.raises(ValueError):  # ACS library is split by era
+        vs._stdpsf_filename("ACSWFC", "f814w", None)
+    with pytest.raises(ValueError):  # WFC3 libraries are not
+        vs._stdpsf_filename("WFC3IR", "f140w", "SM4")
+    assert vs._stdpsf_detector("f140w") == "WFC3IR" and vs._stdpsf_detector("f814w") == "ACSWFC"
+
+
+def test_calibration_new_modes_resolve_and_hand_checks():
+    c = vs._resolve_calibration({"calibration": {"unlensed_ab_mag": 24.0}})
+    assert c["mode"] == "unlensed_ab_mag" and c["unlensed_ab_mag"] == {"dist": "Fixed", "value": 24.0}
+    c = vs._resolve_calibration({"calibration": {"unlensed_ab_mag": {"dist": "Normal", "loc": 24.0, "scale": 0.5}}})
+    assert c["unlensed_ab_mag"]["dist"] == "Normal"
+    with pytest.raises(ValueError):  # dist typo guard applies here too
+        vs._resolve_calibration({"calibration": {"unlensed_ab_mag": {"dist": "Nrmal", "loc": 24.0, "scale": 0.5}}})
+    with pytest.raises(ValueError):  # peak_sb needs n_brightest_pix
+        vs._resolve_calibration({"calibration": {"peak_sb": {"sb_mag_arcsec2": 21.0}}})
+    with pytest.raises(ValueError):  # exactly one mode
+        vs._resolve_calibration({"calibration": {"peak_sb": {"sb_mag_arcsec2": 21.0, "n_brightest_pix": 7},
+                                                 "unlensed_ab_mag": 24.0}})
+    c = vs._resolve_calibration({"calibration": {"peak_sb": {"sb_mag_arcsec2": 21.0, "n_brightest_pix": 7}}})
+    assert c["mode"] == "peak_sb" and c["peak_sb"]["n_brightest_pix"] == 7
+    assert c["peak_sb"]["sb_mag_arcsec2"] == {"dist": "Fixed", "value": 21.0}
+
+    zp = vs.ab_zeropoint_from_photfnu(9.52e-8)          # WFC3/IR F140W PHOTFNU
+    assert abs(zp - 26.45) < 0.01
+    amp = vs.calibrate_amp_unlensed_mag(ab_mag=24.0, zeropoint_ab=26.45, unlensed_flux_unit_amp=2.0)
+    assert np.isclose(amp, 10 ** (-0.4 * (24.0 - 26.45)) / 2.0)   # 9.55 cps / 2 cps
+    img = np.zeros((10, 10))
+    img.flat[:3] = [5.0, 3.0, 1.0]
+    assert np.isclose(vs.peak_surface_brightness(img, 2, 0.5), 4.0 / 0.25)
+    assert np.isclose(vs.peak_surface_brightness(img, 3, 1.0), 3.0)
+    with pytest.raises(ValueError):
+        vs.peak_surface_brightness(img, 0, 1.0)
+    amp = vs.calibrate_amp_peak_sb(sb_mag_arcsec2=21.0, zeropoint_ab=26.45, peak_sb_unit_amp=100.0)
+    assert np.isclose(amp, 10 ** (-0.4 * (21.0 - 26.45)) / 100.0)
+    with pytest.raises(ValueError):
+        vs.calibrate_amp_peak_sb(sb_mag_arcsec2=21.0, zeropoint_ab=26.45, peak_sb_unit_amp=0.0)
+
+
 def test_calibration_and_cutoff_blocks_are_strict():
     with pytest.raises(ValueError):
         vs._resolve_calibration({})
@@ -213,6 +255,7 @@ def test_end_to_end_synthetic_source():
         extra = {
             "scale_factor": "a0.400", "vela_ids": ["99"], "n_reps": 2,
             "num_pix": 48, "supersample": 2, "source_root": src_root, "datadir": tmp,
+            "delta_pix": 0.065,   # override the synthetic mock's 0.05" TPIX (drizzle scale)
             "source_crop_radius_arcsec": 1.0, "source_recenter": True,
             "psf": {"kind": "gaussian", "fwhm_arcsec": 0.1, "size_pix": 11},
             "noise": {"kind": "explicit", "background_rms": 0.005, "exp_time": 2000},
@@ -228,7 +271,9 @@ def test_end_to_end_synthetic_source():
         man = load_manifest(ds)
         assert man["n_systems"] == 2
         ex = man["extra"]
-        assert ex["generator_version"] == 2 and ex["psf"]["kind"] == "gaussian"
+        assert ex["generator_version"] == 3 and ex["psf"]["kind"] == "gaussian"
+        assert ex["delta_pix"] == 0.065 and ex["delta_pix_source"] == "config"
+        assert ex["mock_instrument_pixel_arcsec"] == 0.05
         assert ex["truth_prior"]["lens_mass"]["0"]["theta_E"]["median"] == 0.6
         assert ex["source_preprocessing"]["per_source"]["vela99"]["recenter"] is True
         for sid in man["system_ids"]:
@@ -237,6 +282,13 @@ def test_end_to_end_synthetic_source():
             assert m["flux_outside_frac"] <= 0.05 and m["border_sb_sigma"] <= 3.0
             sysobj = System.load(ds, sid)
             assert sysobj.observed_image.shape == (48, 48) and sysobj.psf.shape == (11, 11)
+            assert float(sysobj.delta_pix) == 0.065
+            assert m["calibration_mode"] == "ratio" and m["calibration_target"] is None
+            assert np.isfinite(m["lens_ab_mag_cutout"]) and np.isfinite(m["peak_sb_mag_arcsec2"])
+            assert m["peak_sb_n_pix"] == 7
+            # lensed-source and lens magnitudes must reproduce the 0.5 flux ratio
+            assert np.isclose(m["source_ab_mag_lensed_cutout"] - m["lens_ab_mag_cutout"],
+                              -2.5 * np.log10(0.5), atol=1e-6)
             assert float(sysobj.truth_x[2][0]["amp"]) == pytest.approx(m["amp"])
             gen = json.load(open(os.path.join(ds, "systems", sid, "generation.json")))
             assert gen["metrics"]["n_redraws"] == len(gen["rejections"])
@@ -244,3 +296,36 @@ def test_end_to_end_synthetic_source():
             lens_only = np.load(os.path.join(ds, "systems", sid, "lens_light_only.npy"))
             src = noiseless - lens_only
             assert np.isclose(src.sum() / lens_only.sum(), 0.5, atol=1e-3)
+
+
+@pytest.mark.slow
+def test_end_to_end_peak_sb_mode():
+    """peak_sb calibration: the realised peak SB equals the sampled target exactly."""
+    from gigalens_research.simtests.system import load_manifest
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src_root = os.path.join(tmp, "sources")
+        _write_synthetic_source(src_root, "vela99_cam12_a0.400_f814w")
+        extra = {
+            "scale_factor": "a0.400", "vela_ids": ["99"], "n_reps": 2,
+            "num_pix": 48, "supersample": 2, "source_root": src_root, "datadir": tmp,
+            "psf": {"kind": "gaussian", "fwhm_arcsec": 0.1, "size_pix": 11},
+            "noise": {"kind": "explicit", "background_rms": 0.005, "exp_time": 2000},
+            "calibration": {"peak_sb": {"sb_mag_arcsec2": {"dist": "Normal", "loc": 21.0, "scale": 0.5},
+                                        "n_brightest_pix": 5}},
+            "cutoff": None,
+            "truth_prior": {"lens_mass": {"0": {"theta_E": {"dist": "LogNormal", "median": 0.6, "sigma": 0.1}}}},
+        }
+        ds = os.path.join(tmp, "dataset")
+        vs.generate_vela_simulated(_Spec(extra), ds, seed=3)
+        ex = load_manifest(ds)["extra"]
+        assert ex["calibration"]["mode"] == "peak_sb"
+        targets = []
+        for sid, m in ex["per_system"].items():
+            assert m["peak_sb_n_pix"] == 5
+            assert abs(m["peak_sb_mag_arcsec2"] - m["calibration_target"]) < 1e-6
+            zp = m["zeropoint_ab"]
+            # unlensed magnitude is consistent with the stored unlensed flux
+            assert np.isclose(m["source_ab_mag_unlensed"], zp - 2.5 * np.log10(m["source_flux_unlensed_cps"]))
+            targets.append(m["calibration_target"])
+        assert targets[0] != targets[1]   # sampled per system, not shared

@@ -36,6 +36,11 @@ Source selection / geometry
   n_reps              truth+noise realisations per source (default 1).
   num_pix, supersample     output grid (default 200 px, supersample 4). Inference
                       reads these back from meta.json so it always matches.
+  delta_pix           output pixel scale (arcsec). Absent/null -> the mock's own
+                      instrument pixel (TPIX header: 0.03" for the ACS mocks, 0.06"
+                      for the WFC3/IR mocks). Set it to simulate a different
+                      drizzle scale (0.065" as in DESI Strong Lens Foundry V).
+                      The value and its provenance are recorded in the manifest.
   transpose_image     transpose the source before lensing (default False).
   source_variant      IMAGE_PRISTINE (default, with dust) | IMAGE_PRISTINE_NONSCATTER.
   source_crop_radius_arcsec   null (default: no crop) or a radius: source surface
@@ -50,14 +55,16 @@ psf: (REQUIRED block)
   kind: gaussian      fwhm_arcsec (REQUIRED), size_pix (optional, odd).
   kind: stdpsf        STScI empirical effective PSF (Anderson & King "STDPSF"
                       library, 4x oversampled, native detector pixels). Keys:
-                      era ("SM4" | "SM3"; REQUIRED), chip_xy ([x, y] detector
+                      era (ACS/WFC only: "SM4" | "SM3"; the WFC3/IR and WFC3/UVIS
+                      libraries hold one file per filter, so era must be absent or
+                      null there), chip_xy ([x, y] detector
                       position used to pick the nearest grid PSF; REQUIRED),
                       size_pix (odd kernel size at delta_pix; REQUIRED),
                       subsamples (fine samples per output pixel when resampling;
                       default 6), url_base (default: STScI HST1PASS library),
                       file (optional local FITS path; skips the download).
                       APPROXIMATION (recorded): the ePSF already includes the
-                      native (0.05") pixel response and is NOT deconvolved before
+                      native (0.05" ACS, 0.13" WFC3/IR) pixel response and is NOT deconvolved before
                       resampling to delta_pix, so the kernel is marginally broader
                       than a true delta_pix-pixel PSF. Drizzle broadening of real
                       0.03" mosaics is not modelled either.
@@ -85,6 +92,23 @@ calibration: (REQUIRED block; exactly one of)
                       inside the cutout (``measure_in: cutout``, default) or on the
                       cutoff canvas (``measure_in: canvas``).
   source_flux_scale: s            fixed multiplicative source amplitude (old knob).
+  unlensed_ab_mag: m | {dist...} set the amplitude so the UNLENSED total source
+                      magnitude equals m (AB, in the mock's filter; the zeropoint
+                      is derived from PHOTFNU). A number is Fixed; a distribution
+                      spec (LogNormal / Normal / TruncatedNormal / Uniform / Fixed,
+                      as in truth_prior) is sampled once per system from the
+                      system's own key. This is the "photometry + magnification"
+                      route: m = m_arcs + 2.5 log10(mu).
+  peak_sb: {sb_mag_arcsec2: v | {dist...}, n_brightest_pix: N}
+                      set the amplitude so the mean surface brightness of the N
+                      brightest pixels of the PSF-convolved lensed source (inside
+                      the cutout, noiseless) equals v (AB mag / arcsec^2). This is
+                      what an isophotal magnitude of the brightest image measures
+                      (Paper I of DESI Strong Lens Foundry: contour areas of
+                      5-33 drizzled pixels), so it needs no magnification.
+  Every mode records lens_ab_mag_cutout, source_ab_mag_lensed_cutout,
+  source_ab_mag_unlensed, peak_sb_mag_arcsec2 (+ peak_sb_n_pix) and the sampled
+  calibration_target per system, so the modes can be compared on one footing.
 
 cutoff: (REQUIRED block, or ``cutoff: null`` to disable explicitly)
   canvas_factor       render the lensed source on canvas_factor x num_pix to
@@ -670,7 +694,21 @@ def _stdpsf_detector(filt: str) -> str:
         else _STDPSF_DETECTOR["wfc3_uvis"]
 
 
-def _ensure_stdpsf_file(filt: str, era: str, datadir: str, url_base: str,
+def _stdpsf_filename(det: str, filt: str, era: Optional[str]) -> str:
+    """Library file name. Only the ACS/WFC library is split by era (SM3 / SM4);
+    the WFC3/IR and WFC3/UVIS libraries hold a single file per filter."""
+    if det == "ACSWFC":
+        if not era:
+            raise ValueError("[vela_simulated] psf.era ('SM4' post-2009 | 'SM3') is required "
+                             "for the ACS/WFC STDPSF library.")
+        return f"STDPSF_{det}_{filt.upper()}_{str(era).upper()}.fits"
+    if era:
+        raise ValueError(f"[vela_simulated] the {det} STDPSF library has one file per filter; "
+                         f"set psf.era: null (got {era!r}).")
+    return f"STDPSF_{det}_{filt.upper()}.fits"
+
+
+def _ensure_stdpsf_file(filt: str, era: Optional[str], datadir: str, url_base: str,
                         file_override: Optional[str]) -> Tuple[str, str]:
     det = _stdpsf_detector(filt)
     if file_override:
@@ -678,7 +716,7 @@ def _ensure_stdpsf_file(filt: str, era: str, datadir: str, url_base: str,
         if not os.path.isfile(path):
             raise FileNotFoundError(f"[vela_simulated] psf.file {path!r} not found.")
         return path, det
-    fname = f"STDPSF_{det}_{filt.upper()}_{era.upper()}.fits"
+    fname = _stdpsf_filename(det, filt, era)
     pdir = os.path.join(datadir, "psf")
     path = os.path.join(pdir, fname)
     if not os.path.isfile(path):
@@ -704,7 +742,7 @@ def build_psf(psf_spec: Any, delta_pix: float, filt: str, datadir: str) -> Tuple
         meta.update({"fwhm_arcsec_requested": fwhm})
 
     elif kind == "stdpsf":
-        era = str(_require(psf_spec, "era", "STDPSF era: 'SM4' (post-2009) or 'SM3'.", "psf"))
+        era = psf_spec.get("era")  # physics-default-ok: None is the only valid value for the WFC3 libraries; ACS raises without it (_stdpsf_filename)
         chip_xy = _require(psf_spec, "chip_xy", "detector [x, y] used to pick the nearest grid PSF.", "psf")
         size_pix = int(_require(psf_spec, "size_pix", "odd kernel size at delta_pix.", "psf"))
         subsamples = int(psf_spec.get("subsamples", 6))  # physics-default-ok: resampling quadrature only
@@ -726,7 +764,8 @@ def build_psf(psf_spec: Any, delta_pix: float, filt: str, datadir: str) -> Tuple
         kernel = resample_oversampled_psf(epsf, spacing, delta_pix, size_pix, subsamples)
         fine_fwhm = measure_fwhm(epsf, spacing)
         meta.update({
-            "file": os.path.basename(path), "detector": det, "era": era.upper(),
+            "file": os.path.basename(path), "detector": det,
+            "era": (str(era).upper() if era else None),  # physics-default-ok: WFC3 libraries carry no era; recorded as null
             "grid_xy_used": [float(xy[i, 0]), float(xy[i, 1])], "chip_xy_requested": list(chip_xy),
             "native_pixel_arcsec": native, "oversampling": _STDPSF_OVERSAMPLING,
             "subsamples": subsamples, "size_pix": size_pix,
@@ -848,28 +887,91 @@ def calibrate_amp(*, ratio: float, lens_flux: float, source_flux_unit_amp: float
     return float(ratio) * lens_flux / source_flux_unit_amp
 
 
+def ab_zeropoint_from_photfnu(photfnu_Jy: float) -> float:
+    """AB magnitude of 1 cps, from the mock's PHOTFNU (Jy per cps)."""
+    if photfnu_Jy <= 0:
+        raise ValueError(f"[vela_simulated] PHOTFNU must be > 0, got {photfnu_Jy}.")
+    return float(-2.5 * np.log10(photfnu_Jy / 3631.0))
+
+
+def calibrate_amp_unlensed_mag(*, ab_mag: float, zeropoint_ab: float,
+                               unlensed_flux_unit_amp: float) -> float:
+    """Source amplitude giving an UNLENSED total magnitude ``ab_mag`` (flux at amp=1 in cps)."""
+    if unlensed_flux_unit_amp <= 0:
+        raise ValueError(f"[vela_simulated] cannot calibrate: unlensed flux(amp=1)={unlensed_flux_unit_amp}.")
+    return float(10.0 ** (-0.4 * (ab_mag - zeropoint_ab)) / unlensed_flux_unit_amp)
+
+
+def peak_surface_brightness(img: np.ndarray, n_brightest_pix: int, delta_pix: float) -> float:
+    """Mean of the ``n_brightest_pix`` brightest pixels of ``img`` (cps/pixel) in cps/arcsec^2."""
+    n = int(n_brightest_pix)
+    flat = np.asarray(img, dtype=np.float64).ravel()
+    if n < 1 or n > flat.size:
+        raise ValueError(f"[vela_simulated] n_brightest_pix={n} must be in [1, {flat.size}].")
+    top = np.partition(flat, flat.size - n)[flat.size - n:]
+    return float(top.mean() / float(delta_pix) ** 2)
+
+
+def calibrate_amp_peak_sb(*, sb_mag_arcsec2: float, zeropoint_ab: float,
+                          peak_sb_unit_amp: float) -> float:
+    """Source amplitude giving a peak surface brightness ``sb_mag_arcsec2`` (AB mag/arcsec^2)."""
+    if peak_sb_unit_amp <= 0:
+        raise ValueError(f"[vela_simulated] cannot calibrate: peak SB(amp=1)={peak_sb_unit_amp}.")
+    return float(10.0 ** (-0.4 * (sb_mag_arcsec2 - zeropoint_ab)) / peak_sb_unit_amp)
+
+
+_CALIB_KEYS = ("source_to_lens_flux_ratio", "source_flux_scale", "unlensed_ab_mag", "peak_sb")
+
+
+def _as_dist_spec(v: Any, where: str) -> Dict[str, Any]:
+    """A bare number means Fixed(value); otherwise a validated {dist: ...} spec."""
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return {"dist": "Fixed", "value": float(v)}
+    _validate_dist_spec(v, where)
+    return dict(v)
+
+
 def _resolve_calibration(extra: Dict[str, Any]) -> Dict[str, Any]:
     spec = extra.get("calibration")  # physics-default-ok: legacy source_flux_scale handled below, else raise
     if spec is None and extra.get("source_flux_scale") is not None:  # physics-default-ok: raise path
         spec = {"source_flux_scale": extra["source_flux_scale"]}
     if not isinstance(spec, dict):
-        raise ValueError("[vela_simulated] dataset.calibration block is required: "
-                         "{source_to_lens_flux_ratio: r} or {source_flux_scale: s}.")
-    has_ratio = spec.get("source_to_lens_flux_ratio") is not None  # physics-default-ok: presence test
-    has_scale = spec.get("source_flux_scale") is not None  # physics-default-ok: presence test
-    if has_ratio == has_scale:
-        raise ValueError("[vela_simulated] calibration: set exactly one of "
-                         "source_to_lens_flux_ratio / source_flux_scale.")
+        raise ValueError("[vela_simulated] dataset.calibration block is required: exactly one of "
+                         f"{_CALIB_KEYS}.")
+    present = [k for k in _CALIB_KEYS if spec.get(k) is not None]  # physics-default-ok: presence test
+    if len(present) != 1:
+        raise ValueError(f"[vela_simulated] calibration: set exactly one of {_CALIB_KEYS}; got {present}.")
     measure_in = str(spec.get("measure_in", "cutout")).lower()  # physics-default-ok: documented default (cutout = what the fit sees)
     if measure_in not in ("cutout", "canvas"):
         raise ValueError("[vela_simulated] calibration.measure_in must be cutout | canvas.")
-    out = {"measure_in": measure_in}
-    if has_ratio:
+    out: Dict[str, Any] = {"measure_in": measure_in}
+    key = present[0]
+    if key == "source_to_lens_flux_ratio":
         out["mode"] = "ratio"
-        out["source_to_lens_flux_ratio"] = float(spec["source_to_lens_flux_ratio"])
-    else:
+        out[key] = float(spec[key])
+    elif key == "source_flux_scale":
         out["mode"] = "scale"
-        out["source_flux_scale"] = float(spec["source_flux_scale"])
+        out[key] = float(spec[key])
+    elif key == "unlensed_ab_mag":
+        out["mode"] = "unlensed_ab_mag"
+        out[key] = _as_dist_spec(spec[key], "calibration.unlensed_ab_mag")
+    else:
+        ps = spec[key]
+        if not isinstance(ps, dict):
+            raise ValueError("[vela_simulated] calibration.peak_sb must be a mapping "
+                             "{sb_mag_arcsec2: v | {dist...}, n_brightest_pix: N}.")
+        out["mode"] = "peak_sb"
+        out[key] = {
+            "sb_mag_arcsec2": _as_dist_spec(
+                _require(ps, "sb_mag_arcsec2", "target peak surface brightness (AB mag/arcsec^2) "
+                         "of the PSF-convolved lensed source, or a {dist: ...} spec.", "calibration.peak_sb"),
+                "calibration.peak_sb.sb_mag_arcsec2"),
+            "n_brightest_pix": int(_require(ps, "n_brightest_pix",
+                                            "number of brightest cutout pixels averaged for the peak SB.",
+                                            "calibration.peak_sb")),
+        }
+        if out[key]["n_brightest_pix"] < 1:
+            raise ValueError("[vela_simulated] calibration.peak_sb.n_brightest_pix must be >= 1.")
     return out
 
 
@@ -1007,24 +1109,31 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
     noise_meta: Optional[Dict[str, Any]] = None
     source_info: Dict[str, Any] = {}
     sys_index = 0
+    delta_pix = delta_pix_source = mock_pix = None  # set per source (identical for every source of a campaign)
 
     for sim in vela_ids:
         source_dir = ensure_pristine_source(
             sim, cam, scale_factor, filt, source_root=source_root, datadir=datadir,
             version=version, source_variant=source_variant,
             allow_unverified_sources=allow_unverified)
-        sb_raw, src_scale, delta_pix, src_meta = _load_pristine_source(source_dir, transpose_image)
+        sb_raw, src_scale, mock_pix, src_meta = _load_pristine_source(source_dir, transpose_image)
+        if extra.get("delta_pix") is not None:  # physics-default-ok: None -> the mock's own instrument pixel (TPIX); provenance recorded
+            delta_pix, delta_pix_source = float(extra["delta_pix"]), "config"
+        else:
+            delta_pix, delta_pix_source = float(mock_pix), "mock TPIX header"
         sb, pre_info = preprocess_source(sb_raw, src_scale, crop_radius_arcsec=crop_radius,
                                          recenter=recenter)
         source_info[_normalize_sim(sim)] = pre_info
         unlensed_flux_cps = float(sb.sum()) * src_scale ** 2  # at amp = 1
         photfnu = float(src_meta["photfnu_Jy"])
+        zp_ab = ab_zeropoint_from_photfnu(photfnu)
 
         # PSF / noise are per delta_pix (same for every source of a campaign; built once).
         if psf_meta is None:
             psf, psf_meta = build_psf(psf_spec, delta_pix, filt, datadir)
             background_rms, exp_time, noise_meta = resolve_noise(extra, delta_pix, photfnu)
-            print(f"[vela_simulated] PSF {psf_meta['kind']}: {psf_meta['size_pix']} px, "
+            print(f"[vela_simulated] delta_pix={delta_pix} ({delta_pix_source}; mock TPIX {mock_pix}), "
+                  f"zeropoint {zp_ab:.3f} AB; PSF {psf_meta['kind']}: {psf_meta['size_pix']} px, "
                   f"FWHM {psf_meta['fwhm_arcsec_measured']:.3f}\"; noise {noise_meta['kind']}: "
                   f"background_rms={background_rms:.4g} cps/px, exp_time={exp_time:g} s")
 
@@ -1051,6 +1160,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
             rejections: List[Dict[str, float]] = []
             while True:
                 truth_key, noise_key = random.split(random.fold_in(sys_key, attempt))
+                calib_key = random.fold_in(noise_key, 7919)  # independent stream; keeps v2 truth/noise draws unchanged
                 truth = _sample_to_legacy(prior.sample(seed=truth_key))
 
                 lens_only = _render(sim_cut, model, _with(truth, 2, 0, amp=0.0))
@@ -1065,6 +1175,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
                     metrics["lens_flux_canvas"] = float(lens_canvas.sum())
                     metrics["source_flux_canvas_unit_amp"] = float(src_canvas_unit.sum())
 
+                target = None  # sampled calibration target (unlensed_ab_mag / peak_sb modes)
                 if calib["mode"] == "ratio":
                     if calib["measure_in"] == "canvas":
                         if sim_canvas is None:
@@ -1075,10 +1186,33 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
                     else:
                         amp = calibrate_amp(ratio=calib["source_to_lens_flux_ratio"],
                                             lens_flux=lens_flux_cut, source_flux_unit_amp=src_flux_cut_unit)
-                else:
+                elif calib["mode"] == "scale":
                     amp = calib["source_flux_scale"]
+                elif calib["mode"] == "unlensed_ab_mag":
+                    target = float(np.asarray(_make_dist(calib["unlensed_ab_mag"], "calibration.unlensed_ab_mag")
+                                              .sample(seed=calib_key)))
+                    amp = calibrate_amp_unlensed_mag(ab_mag=target, zeropoint_ab=zp_ab,
+                                                     unlensed_flux_unit_amp=unlensed_flux_cps)
+                elif calib["mode"] == "peak_sb":
+                    ps = calib["peak_sb"]
+                    target = float(np.asarray(_make_dist(ps["sb_mag_arcsec2"], "calibration.peak_sb.sb_mag_arcsec2")
+                                              .sample(seed=calib_key)))
+                    amp = calibrate_amp_peak_sb(
+                        sb_mag_arcsec2=target, zeropoint_ab=zp_ab,
+                        peak_sb_unit_amp=peak_surface_brightness(src_unit, ps["n_brightest_pix"], delta_pix))
+                else:
+                    raise ValueError(f"[vela_simulated] unknown calibration mode {calib['mode']!r}.")
+                n_peak = calib["peak_sb"]["n_brightest_pix"] if calib["mode"] == "peak_sb" else 7
+                peak_unit = peak_surface_brightness(src_unit, n_peak, delta_pix)
 
                 metrics.update({
+                    "zeropoint_ab": zp_ab,
+                    "calibration_mode": calib["mode"],
+                    "calibration_target": target,
+                    "lens_ab_mag_cutout": zp_ab - 2.5 * np.log10(lens_flux_cut),
+                    "source_ab_mag_lensed_cutout": zp_ab - 2.5 * np.log10(amp * src_flux_cut_unit),
+                    "peak_sb_n_pix": n_peak,
+                    "peak_sb_mag_arcsec2": zp_ab - 2.5 * np.log10(amp * peak_unit),
                     "theta_E": truth[0][0]["theta_E"],
                     "amp": amp,
                     "lens_flux_cutout": lens_flux_cut,
@@ -1158,6 +1292,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
             sys_index += 1
             print(f"[vela_simulated] {system_id}: theta_E={truth[0][0]['theta_E']:.2f} "
                   f"amp={amp:.3g} ratio={metrics['source_to_lens_ratio_cutout']:.3f} "
+                  f"lensAB={metrics['lens_ab_mag_cutout']:.2f} srcAB(unl)={metrics['source_ab_mag_unlensed']:.2f} "
+                  f"peakSB={metrics['peak_sb_mag_arcsec2']:.2f} "
                   f"mu={metrics['magnification_cutout']:.1f} outside="
                   f"{metrics.get('flux_outside_frac', float('nan')):.3%} "
                   f"border={metrics['border_sb_sigma']:.2f}sigma redraws={len(rejections)}")
@@ -1170,11 +1306,13 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
         system_ids=system_ids,
         dataset_hash=dataset_hash,
         extra={
-            "generator_version": 2,
+            "generator_version": 3,
             "scale_factor": scale_factor,
             "source_variant": source_variant,
             "cam": cam, "filter": filt, "version": version, "n_reps": n_reps,
             "num_pix": num_pix, "supersample": supersample, "transpose_image": transpose_image,
+            "delta_pix": delta_pix, "delta_pix_source": delta_pix_source,
+            "mock_instrument_pixel_arcsec": mock_pix,
             "likelihood_precision": likelihood_precision, "conv_precision": conv_precision,
             "source_preprocessing": {"crop_radius_arcsec": crop_radius, "recenter": recenter,
                                      "per_source": source_info},

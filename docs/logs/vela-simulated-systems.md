@@ -72,7 +72,7 @@ mimic that selection, sample a brightness distribution, or reject compact/dim so
 population-design decision, parked until the user has talked to the group.
 
 **Display standard (user, 2026-09-13):** `inferno` colormap with a square-root stretch floored
-at 0 (`PowerNorm(gamma=0.5, vmin=0)`) for every image of these systems; `plot_dataset.py` follows it.
+at 0 (`PowerNorm(gamma=0.5, vmin=0)`) for every image of these systems; `experiments/vela_plot_dataset.py` (moved from `vela_revised_v2/plot_dataset.py`) follows it.
 
 ## Design checkpoint — v2 review set generation (UNCERTIFIED, awaiting grader)
 
@@ -147,3 +147,150 @@ different vela22 truth because the seed fold index follows list position.)
 | v2 generator reproduces the requested flux ratio to 1e-6 | proposed | end-to-end test on a synthetic source (`vela_simulated_test.py`, 18 tests pass) + 2 real systems (ratio 0.500) |
 | reaching source/lens = 0.5 by scaling the source requires 25–35x (unlensed AB ~20–22) for compact, low-mu sources | proposed | 3 of 12 review-set systems (vela04, vela10, vela23) + vela22 in the 2-system test |
 | with crop 1.5" + theta_E LogNormal(1.1, 0.2) + cut-off, all 12 review systems keep ≥ 99.9% of lensed flux inside the 6" cutout with ≤ 2 redraws | proposed | 12-system review set, seed 0 |
+
+## Group decisions (2026-09-14) → v3 configuration `experiments/vela_f140w_v3/`
+
+Decisions relayed by the user after the group meeting (verbatim intent):
+WFC3/IR **F140W**; drizzle to **0.065"/px** to match DESI Strong Lens Foundry V;
+**HST PSF from Jay Anderson** (STDPSF library); **exposure 1200 s**; use the
+**Foundry V photometry + magnifications to get the unlensed brightness**;
+**120×120 px**; **θ_E LogNormal(median 1.5", σ 0.25)** (corrected from 1.25 mid-turn).
+
+### What the papers actually contain (checked in the arXiv LaTeX sources)
+
+* Foundry I (arXiv:2502.03455) `hst-observations.tex`: 3 × 399.23 s = **1197.7 s**,
+  no CR-split, native 0.13" drizzled to **0.065"**. `photometry-single-arc.tex`
+  Table 1: **F140W isophotal magnitude of the brightest source image** and the
+  contour area, for all 51 systems. Contour areas are 0.02–0.14 arcsec² =
+  **5–33 drizzled pixels**, i.e. the brightest few pixels of one image, not the
+  arc flux. Aperture photometry of lenses and arcs was done ("preliminary",
+  commented out) but never published.
+* Foundry V (arXiv:2512.07823): **no photometry table**. Per system: mass +
+  light parameters and **magnifications per image and total** (three methods;
+  I use method 3 = median lenstronomy). Empirical PSF from field stars via
+  `photutils.EPSFBuilder`, 27–33 px; cutouts 64–120 px.
+
+### Derived numbers (Foundry I Table 1 × Foundry V magnifications), F140W AB
+
+| system | z_d | z_s | θ_E | m_iso (brightest img) | contour px | peak SB [mag/"²] | μ(img) | μ(tot) | m_unlensed via μ(img) | via μ(tot) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| J154.6972−01.3590 | 0.388 | 1.430 | 2.90 | 23.24 | 7 | 19.42 | 80.8 | 100.8 | 28.01 | 28.25 |
+| J165.4754−06.0423 | 0.483 | 1.675 | 2.63 | 23.87 | 33 | 21.73 | 57.1 | 170.0 | 28.26 | 29.45 |
+| J094.5639+50.3059 | 0.552 | 3.333 | 2.29 | 24.88 | 5 | 20.69 | 11.7 | 14.7 | 27.55 | 27.80 |
+| J234.4783+14.7232 | 0.731 | 2.478 | 1.55 | 25.12 | 6 | 21.13 | 34.7 | 62.3 | 28.97 | 29.61 |
+| J257.4348+31.9046 | 0.746 | 2.120 | 1.99 | 24.13 | 9 | 20.58 | 20.4 | 26.2 | 27.40 | 27.68 |
+| J238.5690+04.7276 | 0.777 | 1.721 | 1.48 | 24.24 | 32 | 22.07 | 8.1 | 21.5 | 26.51 | 27.57 |
+| J246.0062+01.4836 | 1.092 | 2.369 | 2.70 | 24.97 | 19 | 22.23 | 6.2 | 8.7 | 26.95 | 27.32 |
+
+peak SB: mean **21.12**, sd 0.99, median contour **9 px**. m_unlensed via μ(img): mean **27.67**, sd 0.83.
+
+**Interpretation (UNCERTIFIED, but arithmetic):** because the isophotal
+magnitude covers only the brightest 5–33 px of one image, "m_iso + 2.5 log μ"
+is a **lower limit on the source brightness** (the true arcs carry far more
+flux than the contour). At the v3 noise level (1σ per 0.065" px = 24.8
+mag/"²) a 27.7-mag source magnified ×10–30 gives arcs of total 24–25 mag
+spread over hundreds of pixels — invisible. The real arcs are bright (their
+peak pixels are 19.4–22.2 mag/"², i.e. 10–100σ per pixel). So the
+magnification route cannot be executed from the published numbers; what the
+published photometry *does* pin down is the **peak surface brightness of the
+arcs**, which lensing conserves. Hence two calibration modes were added:
+
+* `calibration: {peak_sb: {sb_mag_arcsec2, n_brightest_pix}}` — mean SB of the
+  N brightest pixels of the PSF-convolved lensed source (noiseless, in the
+  cutout) set to the target. **Used for the v3 review set** with
+  Normal(21.1, 1.0) and N = 9.
+* `calibration: {unlensed_ab_mag: m | {dist}}` — the group's route, for when
+  real arc photometry is available (the Foundry team has the mosaics). A
+  comparison set was generated with Normal(27.7, 0.85) to show what the
+  published lower limits imply (`campaign_unlensed_mag.yaml`).
+
+Both modes record `lens_ab_mag_cutout`, `source_ab_mag_lensed_cutout`,
+`source_ab_mag_unlensed`, `peak_sb_mag_arcsec2` (+ `peak_sb_n_pix`), and the
+sampled `calibration_target` per system, so any mode can be judged against the
+Foundry numbers.
+
+### Other v3 choices (generator_version 3)
+
+* `delta_pix: 0.065` overrides the mock's TPIX (the WFC3/IR VELA mocks are
+  0.06"); provenance recorded (`delta_pix_source`).
+* PSF `STDPSF_WFC3IR_F140W.fits` (3×3 grid, 101² at 4× over 0.13" px; no era
+  suffix in the WFC3 libraries — `era: null`), chip centre [507, 507], 33 px.
+  Approximation as before: native 0.13" pixel response kept; no drizzle term.
+* Noise: 1197.7 s, 3 ramps × 15 e⁻ effective read noise (ETC default;
+  ASSUMPTION), dark 0.048 e⁻/s (IHB 5.7), sky **1.2 e⁻/s per native px =
+  21.8 mag/"²** (ASSUMPTION: "typical" broad-band IR total; IHB 7.9 quotes
+  0.3–1.0 for zodi alone) → background_rms **0.0196 cps per 0.065" px**.
+  Sensitivity: σ ∝ √(sky t + dark t + 3 RN²) = √(1466 + 57 + 675) e⁻; halving
+  the sky lowers σ by 17 %.
+* Lens light `Ie`: **falsified prediction, corrected.** I first assumed Ie is
+  cps per output pixel (the simulator average-pools) and set LogNormal(100, 0.3)
+  expecting ≈18.9 AB; the first v3 run gave lens light **17.3–17.6 AB** in all
+  12 systems (5× the v2 flux). Direct probe (`ie_probe.py`, one Sérsic R_e 1.6",
+  n 4, Ie 20, PSF 0.1"): sum = 812 cps at 0.03"/200 px, 887 at 0.065"/120 px,
+  1053 at 0.065"/260 px, 991 at 0.03"/400 px → the integrated flux is
+  independent of delta_pix (differences are field of view); Ie acts as a surface
+  brightness per arcsec². Regenerated with **LogNormal(30, 0.3)** → ≈18.7 AB in
+  F140W for the baseline R_e/n prior (ASSUMPTION: LRG lens at z≈0.5–0.8; v2 used
+  20 → ≈18.4 AB in F814W). The lens brightness is a group decision.
+* Cut-off thresholds unchanged (1 % outside, 1σ border, canvas ×2 = 15.6").
+* $HOME is at 99 % of its 40 GiB quota; the F140W tarballs (~0.5 GB per sim)
+  and extracted sources live on `$PSCRATCH/gigalens/vela_{downloads,sources_pristine}`
+  (`datadir` / `source_root` keys).
+
+### Design checkpoint — v3 review set (UNCERTIFIED)
+
+Cause hypothesis: with peak-SB calibration the arcs should look like the
+Foundry cutouts (bright, ~30σ peak pixels) and the source/lens flux ratio will
+*vary* (it is no longer imposed). Prediction: ratio spread ~0.1–1 across the 12
+sources; unlensed source AB ≈ 23–25 (VELA F140W unlensed ≈ 22.9 for vela02 at
+amp = 1, so amps ≈ 0.2–1 for compact sources). Falsifier: if amps land ≫ 10
+again, the peak-SB target is too bright for these sources (or N too small).
+Structural-vs-tuning: the calibration mode is structural; every number is
+tuning and YAML-only.
+
+### v3 review set results (2026-09-14, 12 systems, CPU, seed 0, Ie median 30) — UNCERTIFIED
+
+Figures: `experiments/vela_f140w_v3/dataset_{grid,gallery}.png`; comparison set in
+`experiments/vela_f140w_v3/unlensed_mag/`. Datasets on
+`$PSCRATCH/gigalens/simtests_results/vela_f140w_v3{,_unlensed_mag}/dataset`.
+PSF: resampled ePSF FWHM 0.172", EE(<0.25") 0.80, 33 px. Noise: σ_bkg 0.0196 cps/px, ZP 26.453.
+
+| system | θ_E | amp | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 1.09 | 0.336 | 15.0 | 0.00% | 0.00σ | 0 | 22.93 | 19.98 | 18.80 | 20.52 |
+| vela03 | 1.21 | 0.94 | 0.055 | 4.3 | 0.00% | 0.00σ | 0 | 22.60 | 21.03 | 17.88 | 21.08 |
+| vela04 | 1.65 | 1.03 | 0.077 | 13.9 | 0.02% | 0.04σ | 0 | 24.21 | 21.35 | 18.58 | 20.92 |
+| vela07 | 1.95 | 0.54 | 0.353 | 6.2 | 0.02% | 0.09σ | 1 | 21.70 | 19.73 | 18.60 | 20.75 |
+| vela08 | 1.42 | 1.04 | 0.220 | 6.6 | 0.00% | 0.00σ | 0 | 22.50 | 20.45 | 18.80 | 21.04 |
+| vela09 | 1.54 | 1.65 | 1.534 | 7.2 | 0.00% | 0.02σ | 1 | 20.85 | 18.72 | 19.18 | 19.48 |
+| vela10 | 1.05 | 2.68 | 0.167 | 6.3 | 0.00% | 0.00σ | 0 | 22.14 | 20.15 | 18.21 | 19.97 |
+| vela21 | 1.51 | 0.59 | 0.412 | 8.5 | 0.00% | 0.02σ | 1 | 21.99 | 19.66 | 18.70 | 20.55 |
+| vela22 | 1.45 | 0.19 | 0.076 | 7.8 | 0.00% | 0.00σ | 0 | 23.72 | 21.50 | 18.70 | 21.82 |
+| vela23 | 1.18 | 2.05 | 0.140 | 4.1 | 0.00% | 0.00σ | 0 | 22.28 | 20.75 | 18.61 | 20.39 |
+| vela25 | 1.64 | 1.56 | 0.925 | 10.3 | 0.00% | 0.02σ | 1 | 21.53 | 18.99 | 18.91 | 21.48 |
+| vela26 | 1.79 | 0.23 | 0.153 | 14.0 | 0.01% | 0.04σ | 0 | 23.78 | 20.91 | 18.87 | 21.78 |
+
+Checkpoint verdict: prediction held — amps 0.19–2.68 (median 1.03; the VELA
+galaxies at their native F140W brightness), ratio spread 0.05–1.53 (median
+0.19), lens 17.9–19.2 AB (median 18.7). Plots inspected before the table: all
+arcs inside the frame; vela09 (ring + knots, ratio 1.5) and vela25 (bright
+extended ring, 0.9) dominate their lens; vela03/22/26 are the faint end
+(0.05–0.15), visible but low contrast.
+
+**Comparison set** (`campaign_unlensed_mag.yaml`, unlensed AB ~ Normal(27.7,
+0.85), same seeds): amps 0.002–0.05, src/lens 0.001–0.010, arcs 24.2–26.1 AB
+total, peak SB 24.2–27.1 mag/"² vs 24.8 per-pixel noise → **no arc visible in
+any panel** (inspected). Confirms that m_iso + 2.5 log μ from the published
+tables is a lower limit, not a brightness. Note the cut-off check is
+brightness-dependent: with invisible arcs vela07/21/25 accepted draws with
+θ_E 2.1–2.5" that the peak-SB set had rejected (border SB below 1σ trivially).
+
+### Claims register additions
+
+| claim | status | evidence |
+|---|---|---|
+| Foundry V has no arc photometry; Foundry I Table 1 is brightest-image isophotal over 5–33 px | VERIFIED | arXiv LaTeX sources, `photometry-single-arc.tex`, per-system `desi*.tex` |
+| m_iso + 2.5 log μ = 26.5–29.0 AB is a lower limit on source brightness; such sources are invisible at the v3 noise | VERIFIED (simulation) | comparison set, 12/12 panels without arcs |
+| Sérsic `Ie` acts as SB per arcsec²: integrated flux independent of delta_pix | VERIFIED | `ie_probe.py` sums 812/887/1053/991 cps (FOV-limited) |
+| peak-SB calibration reproduces the Foundry peak SB distribution with amps ≈ 1 | VERIFIED (by construction) + plots | table above |
+| sky 21.8 mag/"², RN 3×15 e⁻, lens 18.7 AB | ASSUMPTIONS for the group | — |

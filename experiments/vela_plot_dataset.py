@@ -11,13 +11,13 @@ Two figures:
   cut-off numbers from generation.json in the titles;
 * compact grid of the observed images only (for slides / the design page).
 
-Usage (pure numpy/json/matplotlib; no JAX)::
+Usage (numpy/json/matplotlib + the generator's preprocess_source; no JAX)::
 
-    python experiments/vela_revised_v2/plot_dataset.py [DATASET_DIR] [OUT_DIR]
+    python experiments/vela_plot_dataset.py DATASET_DIR OUT_DIR
 
-DATASET_DIR defaults to the campaign's resolved output (.../vela_revised_v2/dataset);
-OUT_DIR defaults to this experiment directory. Writes dataset_gallery.png and
-dataset_grid.png.
+Works for any vela_simulated dataset (any filter / pixel scale / calibration
+mode). Writes OUT_DIR/dataset_gallery.png and OUT_DIR/dataset_grid.png and
+prints a per-system table.
 """
 import json
 import os
@@ -41,11 +41,6 @@ def show(ax, img, extent, label=None):
     im = ax.imshow(np.clip(img, 0.0, None), origin="lower", extent=extent, cmap=CMAP,
                    norm=sqrt_norm(img))
     return im
-
-
-def _default_dataset_dir():
-    from gigalens_research.paths import resolve_out_dir
-    return os.path.join(resolve_out_dir("simtests_results/vela_revised_v2"), "dataset")
 
 
 def load_source_sb(source_dir, amp, pre):
@@ -95,11 +90,24 @@ def suptitle(man):
     ex = man["extra"]
     psf = ex.get("psf", {})
     noise = ex.get("noise", {})
-    return (f"{man.get('generator')} v{ex.get('generator_version')} | z=1.5 ({ex['scale_factor']}) | "
+    cal = ex.get("calibration", {})
+    mode = cal.get("mode", "ratio")
+    if mode == "ratio":
+        cal_txt = f"calib ratio {cal.get('source_to_lens_flux_ratio')}"
+    elif mode == "peak_sb":
+        d = cal["peak_sb"]["sb_mag_arcsec2"]
+        cal_txt = (f"calib peak SB {d.get('value', d.get('loc', d.get('median')))} mag/arcsec2 "
+                   f"({d['dist']}) over {cal['peak_sb']['n_brightest_pix']} px")
+    elif mode == "unlensed_ab_mag":
+        d = cal["unlensed_ab_mag"]
+        cal_txt = f"calib unlensed AB {d.get('value', d.get('loc', d.get('median')))} ({d['dist']})"
+    else:
+        cal_txt = f"calib {mode}"
+    return (f"{man.get('generator')} v{ex.get('generator_version')} | {ex.get('filter', '?').upper()} "
+            f"{ex.get('delta_pix', float('nan')):.3f}\"/px {ex.get('num_pix')}px | z=1.5 ({ex['scale_factor']}) | "
             f"PSF {psf.get('kind')} FWHM {psf.get('fwhm_arcsec_measured', float('nan')):.3f}\" | "
             f"noise {noise.get('kind')} bkg_rms={noise.get('background_rms', float('nan')):.4f} "
-            f"exp={noise.get('exp_time')}s | ratio target "
-            f"{ex.get('calibration', {}).get('source_to_lens_flux_ratio')} | "
+            f"exp={noise.get('exp_time')}s | {cal_txt} | "
             f"crop {ex.get('source_preprocessing', {}).get('crop_radius_arcsec')}\" | "
             f"inferno, sqrt stretch floored at 0")
 
@@ -115,12 +123,14 @@ def make_gallery(man, systems, out_png):
         ax = axs[i, 0]
         im = show(ax, s["img"], ext)
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03).set_label("cps / pixel", fontsize=7)
-        ax.set_title(f"{s['sid']}\nobserved  theta_E={m['theta_E']:.2f}\"", fontsize=9)
+        ax.set_title(f"{s['sid']}\nobserved  theta_E={m['theta_E']:.2f}\"  "
+                     f"lens AB={m.get('lens_ab_mag_cutout', float('nan')):.2f}", fontsize=9)
 
         ax = axs[i, 1]
         im = show(ax, s["src_only"], ext)
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03).set_label("cps / pixel", fontsize=7)
-        ax.set_title(f"lensed source only (noiseless)\n"
+        ax.set_title(f"lensed source only (noiseless)  AB={m.get('source_ab_mag_lensed_cutout', float('nan')):.2f}  "
+                     f"peak SB={m.get('peak_sb_mag_arcsec2', float('nan')):.2f}/{m.get('peak_sb_n_pix', '?')}px\n"
                      f"src/lens={m['source_to_lens_ratio_cutout']:.2f}  mu={m['magnification_cutout']:.1f}  "
                      f"outside={100 * m.get('flux_outside_frac', float('nan')):.2f}%  "
                      f"border={m['border_sb_sigma']:.2f}sig  redraws={m['n_redraws']}", fontsize=8)
@@ -136,7 +146,8 @@ def make_gallery(man, systems, out_png):
         for a in axs[i]:
             a.set_xlabel("arcsec", fontsize=7)
             a.tick_params(labelsize=6)
-    fig.suptitle(suptitle(man), fontsize=11)
+    parts = suptitle(man).split(" | ")
+    fig.suptitle(" | ".join(parts[:5]) + "\n" + " | ".join(parts[5:]), fontsize=11)
     fig.tight_layout(rect=[0, 0, 1, 0.985])
     fig.savefig(out_png, dpi=100)
     plt.close(fig)
@@ -156,13 +167,16 @@ def make_grid(man, systems, out_png, ncol=4):
         ext = [-s["fov"] / 2, s["fov"] / 2, -s["fov"] / 2, s["fov"] / 2]
         show(ax, s["img"], ext)
         short = s["sid"].split("_")[0]
-        ax.set_title(f"{short}  theta_E={m['theta_E']:.2f}\"  amp={m['amp']:.1f}  "
-                     f"mu={m['magnification_cutout']:.1f}  redraws={m['n_redraws']}", fontsize=9)
-        ax.set_xticks([-3, 0, 3])
-        ax.set_yticks([-3, 0, 3])
+        ax.set_title(f"{short}  θE={m['theta_E']:.2f}\"  src/lens={m['source_to_lens_ratio_cutout']:.2f}\n"
+                     f"src AB={m['source_ab_mag_unlensed']:.1f}  μ={m['magnification_cutout']:.1f}  "
+                     f"redraws={m['n_redraws']}", fontsize=8)
+        t = float(np.floor(s["fov"] / 2))
+        ax.set_xticks([-t, 0, t])
+        ax.set_yticks([-t, 0, t])
         ax.tick_params(labelsize=7)
-    fig.suptitle("observed images, " + suptitle(man).split(" | ", 1)[1], fontsize=10)
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    parts = suptitle(man).split(" | ")
+    fig.suptitle("observed images | " + " | ".join(parts[1:5]) + "\n" + " | ".join(parts[5:]), fontsize=10)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
     fig.savefig(out_png, dpi=100)
     plt.close(fig)
     print("wrote", out_png)
@@ -170,18 +184,20 @@ def make_grid(man, systems, out_png, ncol=4):
 
 def print_table(systems):
     print(f"{'system':<28}{'thE':>6}{'amp':>7}{'ratio':>7}{'mu':>6}{'outside%':>10}{'border':>8}"
-          f"{'redraw':>7}{'srcAB':>7}{'Flens':>7}")
+          f"{'redraw':>7}{'srcAB':>7}{'arcAB':>7}{'lensAB':>7}{'peakSB':>8}")
     for s in systems:
         m = s["m"]
         print(f"{s['sid']:<28}{m['theta_E']:>6.2f}{m['amp']:>7.2f}{m['source_to_lens_ratio_cutout']:>7.3f}"
               f"{m['magnification_cutout']:>6.1f}{100 * m.get('flux_outside_frac', float('nan')):>10.2f}"
               f"{m['border_sb_sigma']:>8.2f}{m['n_redraws']:>7d}{m['source_ab_mag_unlensed']:>7.2f}"
-              f"{m['lens_flux_cutout']:>7.0f}")
+              f"{m.get('source_ab_mag_lensed_cutout', float('nan')):>7.2f}"
+              f"{m.get('lens_ab_mag_cutout', float('nan')):>7.2f}{m.get('peak_sb_mag_arcsec2', float('nan')):>8.2f}")
 
 
 if __name__ == "__main__":
-    ds = sys.argv[1] if len(sys.argv) > 1 else _default_dataset_dir()
-    out_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.dirname(os.path.abspath(__file__))
+    if len(sys.argv) != 3:
+        sys.exit("usage: vela_plot_dataset.py DATASET_DIR OUT_DIR")
+    ds, out_dir = sys.argv[1], sys.argv[2]
     man, systems = load_dataset(ds)
     make_gallery(man, systems, os.path.join(out_dir, "dataset_gallery.png"))
     make_grid(man, systems, os.path.join(out_dir, "dataset_grid.png"))
