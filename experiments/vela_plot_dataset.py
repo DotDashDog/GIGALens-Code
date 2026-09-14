@@ -6,9 +6,11 @@ stretch floored at 0 (``PowerNorm(gamma=0.5, vmin=0)``), for every panel.
 Two figures:
 
 * full gallery (one row per system): observed image, noiseless lensed source
-  only (shows where the arcs sit relative to the cutout edge), and the true
-  (unlensed, cropped) source at its calibrated amplitude, with the calibration /
-  cut-off numbers from generation.json in the titles;
+  only (shows where the arcs sit relative to the cutout edge), the lensed source
+  only with an independent realisation of the same noise model (so edge / crop
+  artefacts can be judged against their SNR), and the true (unlensed, cropped)
+  source at its calibrated amplitude, with the calibration / cut-off numbers
+  from generation.json in the titles;
 * compact grid of the observed images only (for slides / the design page).
 
 Usage (numpy/json/matplotlib + the generator's preprocess_source; no JAX)::
@@ -68,6 +70,14 @@ def crop_source(sb, sscale, win=1.6):
     return sb[y0:y1, x0:x1], win
 
 
+def add_noise(img, background_rms, exp_time, seed):
+    """Same model as simtests.generate._add_noise (Poisson var I/exp_time with gain
+    1 e-/count, plus Gaussian background_rms), independent realisation."""
+    rng = np.random.default_rng(seed)
+    var = np.clip(img, 0.0, None) / exp_time + background_rms ** 2
+    return img + rng.normal(0.0, np.sqrt(var))
+
+
 def load_dataset(dataset_dir):
     man = json.load(open(os.path.join(dataset_dir, "manifest.json")))
     systems = []
@@ -77,10 +87,13 @@ def load_dataset(dataset_dir):
         gen = json.load(open(os.path.join(sd, "generation.json")))
         noiseless = np.load(os.path.join(sd, "noiseless_image.npy"))
         lens_only = np.load(os.path.join(sd, "lens_light_only.npy"))
+        src_only = noiseless - lens_only
         systems.append(dict(
             sid=sid, meta=meta, m=gen["metrics"],
             img=np.load(os.path.join(sd, "observed_image.npy")),
-            src_only=noiseless - lens_only,
+            src_only=src_only,
+            src_noisy=add_noise(src_only, float(meta["background_rms"]), float(meta["exp_time"]),
+                                seed=abs(hash(sid)) % (2 ** 32)),
             fov=meta["num_pix"] * meta["delta_pix"],
         ))
     return man, systems
@@ -114,8 +127,8 @@ def suptitle(man):
 
 def make_gallery(man, systems, out_png):
     n = len(systems)
-    fig, axs = plt.subplots(n, 3, figsize=(15, 4.4 * n),
-                            gridspec_kw={"width_ratios": [4, 4, 3]}, squeeze=False)
+    fig, axs = plt.subplots(n, 4, figsize=(19, 4.4 * n),
+                            gridspec_kw={"width_ratios": [4, 4, 4, 3]}, squeeze=False)
     for i, s in enumerate(systems):
         m = s["m"]
         ext = [-s["fov"] / 2, s["fov"] / 2, -s["fov"] / 2, s["fov"] / 2]
@@ -136,6 +149,12 @@ def make_gallery(man, systems, out_png):
                      f"border={m['border_sb_sigma']:.2f}sig  redraws={m['n_redraws']}", fontsize=8)
 
         ax = axs[i, 2]
+        im = show(ax, s["src_noisy"], ext)
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03).set_label("cps / pixel", fontsize=7)
+        ax.set_title(f"lensed source only + noise (independent realisation)\n"
+                     f"sigma_bkg={s['meta']['background_rms']:.4f} cps/px  exp={s['meta']['exp_time']:g} s", fontsize=8)
+
+        ax = axs[i, 3]
         sb, sscale = load_source_sb(s["meta"]["truth_assets"]["vela_source_dir"], float(m["amp"]),
                                     man["extra"].get("source_preprocessing", {}))
         crop, win = crop_source(sb, sscale)

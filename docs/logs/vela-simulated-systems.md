@@ -294,3 +294,53 @@ brightness-dependent: with invisible arcs vela07/21/25 accepted draws with
 | Sérsic `Ie` acts as SB per arcsec²: integrated flux independent of delta_pix | VERIFIED | `ie_probe.py` sums 812/887/1053/991 cps (FOV-limited) |
 | peak-SB calibration reproduces the Foundry peak SB distribution with amps ≈ 1 | VERIFIED (by construction) + plots | table above |
 | sky 21.8 mag/"², RN 3×15 e⁻, lens 18.7 AB | ASSUMPTIONS for the group | — |
+
+## Source-plane boundary artefacts and the lens brightness check (2026-09-14, user question)
+
+User: the 1.5" circular crop is visible in the lensed images; removing it would
+move the edge to the VELA cutout boundary; proposes rejecting sources with
+significant flux near the source-plane boundary. Peak-SB calibration approved.
+
+**Measured (`edge_sb.py`, v3 amps; 1σ per 0.065" px = 4.64 cps/"² = 24.79 mag/"²;
+lensing conserves SB so a source-plane SB in σ units is its image-plane
+visibility before PSF blur):**
+
+| source | amp | VELA cutout | flux > 1.5" | SB at 1.5" mean / max | SB at cutout edge mean / max | flux in outer 0.3" |
+|---|---|---|---|---|---|---|
+| vela02 | 1.09 | 5.8" | 6.8% | 0.05σ / 39σ | 0.00σ / 0.96σ | 0.05% |
+| vela03 | 0.94 | 5.8" | 9.4% | 0.06σ / 83σ | 0.02σ / 78σ | 1.98% |
+| vela04 | 1.03 | 5.8" | 5.7% | 0.01σ / 1.6σ | 0.00σ / 1.8σ | 1.81% |
+| vela07 | 0.54 | 11.6" | 38.5% | 1.40σ / 117σ | 0.00σ / 1.3σ | 0.26% |
+| vela08 | 1.04 | 5.8" | 4.3% | 0.05σ / 5.3σ | 0.00σ / 1.6σ | 0.06% |
+| vela09 | 1.65 | 5.8" | 17.7% | 0.88σ / 115σ | 0.12σ / 21σ | 2.03% |
+| vela10 | 2.68 | 5.8" | 15.6% | 0.03σ / 5.5σ | 0.08σ / 11σ | 10.9% |
+| vela21 | 0.59 | 11.6" | 16.7% | 0.63σ / 13σ | 0.00σ / 2.0σ | 0.19% |
+| vela22 | 0.19 | 5.8" | 2.6% | 0.01σ / 0.28σ | 0.00σ / 0.22σ | 0.34% |
+| vela23 | 2.05 | 5.8" | 1.1% | 0.02σ / 1.5σ | 0.00σ / 0.92σ | 0.14% |
+| vela25 | 1.56 | 5.8" | 12.6% | 0.51σ / 91σ | 0.02σ / 79σ | 0.92% |
+| vela26 | 0.23 | 11.6" | 2.8% | 0.01σ / 0.30σ | 0.00σ / 0.06σ | 0.03% |
+
+Reading: the crop circle's *mean* SB is below the noise everywhere, but it
+cuts through compact clumps/companions (max 13–117σ) in six sources — the
+visible artefact. At the VELA frame edge four sources (03, 09, 10, 25) have
+bright objects touching the boundary; eight are ≤ 2σ there. So (i) a
+"boundary SB below noise" criterion (the user's proposal, made quantitative)
+would reject 03/09/10/25 without any crop; (ii) a hard circle at a fixed
+radius is the wrong tool for the others because it is the max, not the mean,
+that matters; a smooth taper still slices clumps. Recommendation given to the
+user: measure boundary SB in σ units (recorded), reject above a threshold,
+and where cropping is needed use a *segmentation-based* mask (keep the
+connected component of the main galaxy above an SB threshold, dilated and
+tapered) instead of a circle, so no edge crosses a clump. Not implemented
+(assessment only). Gallery now has a 4th column: lensed source only with an
+independent realisation of the same noise model (`add_noise` in the plot script).
+
+**Lens brightness vs Foundry V fits (`foundry_lens_mag.py`, same
+`SersicEllipse` profile, 0.065"/px, Gaussian 0.17" PSF; only J234 and J246
+publish I_e):** J234 (z_d 0.731): 19.25 AB in 120 px (19.49 in 64 px, 18.92
+total; comps 20.34 + 19.74). J246 (z_d 1.092): 19.04 AB in 120 px (19.29 in
+64 px, 18.67 total). Ours: 17.9–19.2, median 18.7 in 120 px → ~0.5 mag
+brighter than the two highest-z_d Foundry lenses; lower-z_d lenses would be
+brighter. Caveats: conventions (I_e per arcsec², ε definition) assumed
+identical to the paper's GIGA-Lens version; two systems only. Ie median 20
+would put ours at ≈19.1.
