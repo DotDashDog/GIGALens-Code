@@ -250,6 +250,9 @@ tuning and YAML-only.
 
 ### v3 review set results (2026-09-14, 12 systems, CPU, seed 0, Ie median 30) — UNCERTIFIED
 
+> Lens column superseded: Ie median lowered to 20 later the same day (see the
+> boundary-treatments section below); every other column is unchanged.
+
 Figures: `experiments/vela_f140w_v3/dataset_{grid,gallery}.png`; comparison set in
 `experiments/vela_f140w_v3/unlensed_mag/`. Datasets on
 `$PSCRATCH/gigalens/simtests_results/vela_f140w_v3{,_unlensed_mag}/dataset`.
@@ -344,3 +347,85 @@ brighter than the two highest-z_d Foundry lenses; lower-z_d lenses would be
 brighter. Caveats: conventions (I_e per arcsec², ε definition) assumed
 identical to the paper's GIGA-Lens version; two systems only. Ie median 20
 would put ours at ≈19.1.
+
+## Ie retune and source-boundary treatments in the image plane (2026-09-14, user follow-up)
+
+User: lower the Ie median to 20 (yes); is rejecting on the σ of objects touching
+the boundary the best way? In vela21, where the circle is most visible, everything
+near the boundary is below 2σ.
+
+**Ie retune.** `campaign.yaml` and `campaign_unlensed_mag.yaml`: Ie LogNormal
+median 30 → 20 (comment updated). Both sets regenerated with `--force` (30 s
+each, sources cached). Prediction: lens light −0.44 mag, everything else
+unchanged (Ie has its own key in the joint prior; calibration is lens-independent).
+Held: θ_E, amps, peak SB, redraws identical; lens AB now 18.32–19.62
+(median 19.14; was 17.9–19.2, median 18.7); src/lens 0.08–2.30
+(median 0.29). Per system: vela02 19.24, vela03 18.32, vela04 19.02, vela07 19.04, vela08 19.24, vela09 19.62, vela10 18.65, vela21 19.14, vela22 19.14, vela23 19.05, vela25 19.35, vela26 19.31. Figures re-rendered
+(`dataset_{grid,gallery}.png` in both dirs).
+
+**Boundary treatments (`experiments/vela_f140w_v3/boundary_treatments.py`,
+`boundary_edges.py`, `boundary_fig.py` → `boundary_treatments.png`).**
+Hypothesis: the circle in vela21 is visible not because any pixel is significant
+but because a ~1σ edge is coherent over thousands of pixels; predicted per-pixel
+peak 1–3σ and integrated S/N of the removed light 20–50; falsifier: integrated
+S/N < 5 (then the visibility would be a display effect of the noiseless column).
+Method: each system re-lensed through its own truth (same amp, PSF) with three
+sources — hard 1.5" crop (as the set), raised-cosine taper 1 inside 1.2" / 0
+beyond 1.8" (½ at 1.5"), uncropped VELA frame — plus the lensed outer 0.15" band
+of the VELA frame. Removed light = full − treated, in units of the per-pixel
+noise σ = sqrt(σ_bkg² + (lens + source)/t). The hard-crop render reproduces
+`noiseless − lens_light_only` to ≤ 1e-6 (geometry certified). Edge statistic:
+high-pass (img − G(2 px)) S/N over the lensed image of the 1.4–1.6" ring.
+
+| source | flux removed (hard) | hard peak/px | hard S/N | taper peak/px | taper S/N | frame-edge peak/px | frame-edge S/N | edge S/N hard / taper / none | src S/N |
+|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 6.8% | 2.74σ | 13.4 | 2.36σ | 12.0 | 0.00σ | 0.0 | 1.6 / 1.3 / 3.3 | 360 |
+| vela03 | 9.3% | 4.68σ | 14.5 | 4.68σ | 14.4 | 0.31σ | 1.4 | 1.2 / 1.1 / 1.2 | 187 |
+| vela04 | 5.7% | 0.12σ | 0.6 | 0.11σ | 0.6 | 0.00σ | 0.0 | 0.1 / 0.1 / 0.2 | 157 |
+| vela07 | 38.6% | 9.15σ | 56.4 | 8.84σ | 54.9 | 0.00σ | 0.0 | 14.4 / 11.9 / 18.4 | 338 |
+| vela08 | 4.3% | 0.97σ | 4.8 | 0.97σ | 4.8 | 0.00σ | 0.0 | 2.9 / 2.9 / 3.0 | 254 |
+| vela09 | 17.9% | 4.06σ | 47.2 | 3.46σ | 45.1 | 0.28σ | 3.2 | 14.5 / 14.3 / 15.6 | 844 |
+| vela10 | 15.5% | 11.35σ | 41.2 | 11.35σ | 41.2 | 2.04σ | 7.5 | 1.6 / 1.6 / 1.6 | 369 |
+| vela21 | 16.8% | 1.40σ | 16.2 | 1.15σ | 16.2 | 0.00σ | 0.0 | 5.2 / 4.2 / 5.1 | 396 |
+| vela22 | 2.6% | 0.01σ | 0.3 | 0.01σ | 0.3 | 0.00σ | 0.0 | 0.3 / 0.3 / 0.3 | 120 |
+| vela23 | 1.1% | 0.05σ | 0.5 | 0.05σ | 0.5 | 0.00σ | 0.0 | 5.4 / 5.4 / 5.4 | 258 |
+| vela25 | 12.6% | 1.01σ | 19.5 | 0.86σ | 19.1 | 0.09σ | 0.2 | 4.4 / 3.5 / 3.9 | 564 |
+| vela26 | 2.8% | 0.04σ | 0.4 | 0.05σ | 0.5 | 0.00σ | 0.0 | 1.0 / 1.0 / 1.0 | 139 |
+
+Result: hypothesis held in direction, magnitude at the low end (vela21: peak
+1.40σ/px, S/N 16.2; vela25: 1.01σ/px, S/N 19.5; vela07 9σ/px, S/N 56). The
+user is right that nothing at vela21's boundary exceeds 2σ per pixel, and that
+is exactly why a per-pixel criterion cannot be the right one. Plots (figure):
+hard crop → sharp outer ring edge in vela21/25/07 and a cut companion in
+vela09; taper → soft outskirt, indistinguishable by eye from the uncropped
+frame; uncropped → same, plus companions (vela02 blob, vela09 second galaxy).
+The taper removes the same light (S/N within 10% of the hard crop) and only
+removes the discontinuity. The high-pass edge statistic FAILED to discriminate
+(hard ≈ taper ≈ none, e.g. vela21 5.2/4.2/5.1): after the 0.17" PSF a ~1σ step
+has no high-pass power above the real structure. So the evidence for the taper
+is the figure, not a number — recorded as such.
+
+Conclusions: (i) rejection by boundary σ (per pixel) is not the right
+criterion; the integrated S/N of the light a boundary removes is what predicts
+visibility. (ii) By that criterion no rejection is needed for the crop at all:
+replace the hard edge with the taper. (iii) The VELA frame edge does not bite
+here: with the taper at zero by 1.8" no source reaches its frame (half-width
+≥ 2.9"); even uncropped only vela10 (S/N 7.5) and vela09 (3.2) lens frame-edge
+light into the cutout. (iv) Segmentation masks are no longer recommended: a
+faded clump is a smooth object; the earlier "max SB on the circle" numbers
+were per source pixel and overstated the per-image-pixel contrast.
+
+Implemented (opt-in, default unchanged): `source_crop_taper_arcsec` (width w;
+weight 1 inside r−w/2, ½ at r, 0 beyond r+w/2; `crop_weight()`), recorded in the
+manifest; `test_preprocess_source_taper`. The review set is still the hard crop;
+adopting the taper is `source_crop_taper_arcsec: 0.6` in the YAML plus a
+regeneration.
+
+Claims register additions:
+
+| claim | status | evidence |
+|---|---|---|
+| Ie median 20 → lens 18.3–19.6 AB (median 19.1), all other draws unchanged | VERIFIED | regenerated manifests, per-system list above |
+| vela21's crop edge is < 2σ per pixel everywhere but S/N 16 integrated; per-pixel boundary σ does not predict visibility | VERIFIED (simulation) | table above, figure |
+| a raised-cosine taper 1.2–1.8" removes the visible edge | VERIFIED by inspection only (edge statistic non-discriminating) | `boundary_treatments.png` |
+| frame-edge light is negligible in the cutout for this set (≤ S/N 7.5 uncropped, 0 with taper) | VERIFIED (simulation) | table above |

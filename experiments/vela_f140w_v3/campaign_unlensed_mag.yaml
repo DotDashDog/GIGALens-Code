@@ -106,9 +106,11 @@ dataset:
         # Ie is a surface brightness (cps per arcsec^2): the integrated lens flux
         # does not depend on delta_pix (verified: a first v3 run with median 100
         # gave lens light 17.3-17.6 AB, 5x the v2 flux at the same R_e/n prior).
-        # Median 30 -> ~18.7 AB in F140W for the baseline R_e / n prior
-        # (ASSUMPTION: LRG lens at z~0.5-0.8; v2 used 20 -> ~18.4 AB in F814W).
-        Ie: {dist: LogNormal, median: 30.0, sigma: 0.3}
+        # Median 20 -> ~19.1 AB in F140W for the baseline R_e / n prior, chosen
+        # (2026-09-14) to match the two Foundry V lenses with published I_e
+        # (J234 / J246 render to 19.25 / 19.04 AB in the same 120 px cutout);
+        # median 30 gave 18.7 AB (0.5 mag brighter than those two).
+        Ie: {dist: LogNormal, median: 20.0, sigma: 0.3}
 
 inference:
   builder: epl_shear_sersic_shapelets

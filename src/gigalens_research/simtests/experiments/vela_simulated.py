@@ -46,6 +46,12 @@ Source selection / geometry
   source_crop_radius_arcsec   null (default: no crop) or a radius: source surface
                       brightness beyond this distance from the flux centroid is
                       zeroed (removes companions / faint outskirts). Recorded.
+  source_crop_taper_arcsec    null (default: hard edge) or a width w: the crop is a
+                      raised-cosine weight, 1 inside r - w/2, 0 beyond r + w/2, 1/2 at
+                      the crop radius. A hard edge lenses into a coherent ring edge
+                      that is visible even at < 2 sigma per pixel (measured on the v3
+                      set: 17% of the flux removed at 1.4 sigma/px peak sums to
+                      S/N 16); the taper removes the discontinuity, not the flux.
   source_recenter     False (default) | True: shift the source image (integer
                       source pixels) so its flux centroid sits at (0, 0). Recorded.
   source_root / datadir / allow_unverified_sources / likelihood_precision /
@@ -579,24 +585,43 @@ def _flux_centroid(img: np.ndarray) -> Tuple[float, float]:
     return float((yy * img).sum() / tot), float((xx * img).sum() / tot)
 
 
+def crop_weight(r_arcsec: np.ndarray, crop_radius_arcsec: float,
+                taper_arcsec: Optional[float]) -> np.ndarray:
+    """Crop weight as a function of distance from the centroid: a hard step at the
+    crop radius (``taper_arcsec`` None) or a raised cosine that is 1 inside
+    ``r - w/2``, 1/2 at ``r`` and 0 beyond ``r + w/2``."""
+    r0 = float(crop_radius_arcsec)
+    if taper_arcsec is None:
+        return (r_arcsec <= r0).astype(np.float64)
+    w = float(taper_arcsec)
+    if w <= 0:
+        raise ValueError(f"[vela_simulated] source_crop_taper_arcsec must be > 0, got {w}.")
+    a, b = r0 - w / 2, r0 + w / 2
+    t = np.clip((r_arcsec - a) / (b - a), 0.0, 1.0)
+    return 0.5 * (1.0 + np.cos(np.pi * t))
+
+
 def preprocess_source(sb: np.ndarray, src_scale: float, *,
                       crop_radius_arcsec: Optional[float],
-                      recenter: bool) -> Tuple[np.ndarray, Dict[str, Any]]:
-    """Optional crop (zero beyond a radius from the flux centroid) and recentering.
+                      recenter: bool,
+                      crop_taper_arcsec: Optional[float] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """Optional crop (hard or tapered, about the flux centroid) and recentering.
 
-    Both are recorded so the truth source is reproducible from the manifest.
+    Everything is recorded so the truth source is reproducible from the manifest.
     """
     img = np.array(sb, dtype=np.float64, copy=True)
-    info: Dict[str, Any] = {"crop_radius_arcsec": crop_radius_arcsec, "recenter": bool(recenter)}
+    info: Dict[str, Any] = {"crop_radius_arcsec": crop_radius_arcsec, "recenter": bool(recenter),
+                            "crop_taper_arcsec": crop_taper_arcsec}
     total0 = float(img.sum())
     cy, cx = _flux_centroid(img)
     if crop_radius_arcsec is not None:
-        r_pix = float(crop_radius_arcsec) / src_scale
         yy, xx = np.indices(img.shape)
-        mask = np.hypot(yy - cy, xx - cx) > r_pix
-        img[mask] = 0.0
+        r = np.hypot(yy - cy, xx - cx) * src_scale
+        img *= crop_weight(r, crop_radius_arcsec, crop_taper_arcsec)
         info["crop_flux_removed_frac"] = 1.0 - float(img.sum()) / total0
         cy, cx = _flux_centroid(img)
+    elif crop_taper_arcsec is not None:
+        raise ValueError("[vela_simulated] source_crop_taper_arcsec needs source_crop_radius_arcsec.")
     if recenter:
         n = img.shape[0]
         c = (n - 1) / 2.0
@@ -1093,6 +1118,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
                          f"{_PRISTINE_VARIANTS}.")
     crop_radius = extra.get("source_crop_radius_arcsec")  # physics-default-ok: None = no crop, recorded in manifest
     crop_radius = None if crop_radius is None else float(crop_radius)
+    crop_taper = extra.get("source_crop_taper_arcsec")  # physics-default-ok: None = hard edge (v2/v3 behaviour), recorded in manifest
+    crop_taper = None if crop_taper is None else float(crop_taper)
     recenter = bool(extra.get("source_recenter", False))
     allow_unverified = bool(extra.get("allow_unverified_sources", False))
     likelihood_precision = extra.get("likelihood_precision", "float64")  # physics-default-ok: gigalens default, persisted
@@ -1122,7 +1149,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
         else:
             delta_pix, delta_pix_source = float(mock_pix), "mock TPIX header"
         sb, pre_info = preprocess_source(sb_raw, src_scale, crop_radius_arcsec=crop_radius,
-                                         recenter=recenter)
+                                         recenter=recenter, crop_taper_arcsec=crop_taper)
         source_info[_normalize_sim(sim)] = pre_info
         unlensed_flux_cps = float(sb.sum()) * src_scale ** 2  # at amp = 1
         photfnu = float(src_meta["photfnu_Jy"])
@@ -1314,7 +1341,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
             "delta_pix": delta_pix, "delta_pix_source": delta_pix_source,
             "mock_instrument_pixel_arcsec": mock_pix,
             "likelihood_precision": likelihood_precision, "conv_precision": conv_precision,
-            "source_preprocessing": {"crop_radius_arcsec": crop_radius, "recenter": recenter,
+            "source_preprocessing": {"crop_radius_arcsec": crop_radius, "crop_taper_arcsec": crop_taper,
+                                     "recenter": recenter,
                                      "per_source": source_info},
             "psf": psf_meta,
             "noise": noise_meta,

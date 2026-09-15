@@ -220,6 +220,26 @@ def test_preprocess_source_crop_and_recenter():
     assert np.array_equal(out2, img) and "crop_flux_removed_frac" not in info2
 
 
+def test_preprocess_source_taper():
+    r = np.linspace(0.0, 3.0, 301)
+    w = vs.crop_weight(r, 1.5, 0.6)
+    assert np.all(w[r <= 1.2] == 1.0) and np.all(w[r >= 1.8] == 0.0)
+    assert np.isclose(w[np.argmin(np.abs(r - 1.5))], 0.5) and np.all(np.diff(w) <= 1e-12)
+    assert np.array_equal(vs.crop_weight(r, 1.5, None), (r <= 1.5).astype(float))
+    n = 201
+    img = np.zeros((n, n)); img[100, 100] = 10.0; img[100, 150] = 1.0   # companion at 0.5"
+    hard, ih = vs.preprocess_source(img, 0.01, crop_radius_arcsec=0.5, recenter=False)
+    soft, isoft = vs.preprocess_source(img, 0.01, crop_radius_arcsec=0.5, recenter=False,
+                                       crop_taper_arcsec=0.2)
+    # centroid sits at x=104.5; the companion is 0.455" out: kept by the hard crop, half-weighted by the taper
+    assert hard[100, 150] == 1.0 and 0.0 < soft[100, 150] < 1.0
+    assert isoft["crop_taper_arcsec"] == 0.2 and ih["crop_taper_arcsec"] is None
+    with pytest.raises(ValueError, match="needs source_crop_radius"):
+        vs.preprocess_source(img, 0.01, crop_radius_arcsec=None, recenter=False, crop_taper_arcsec=0.2)
+    with pytest.raises(ValueError, match="must be > 0"):
+        vs.preprocess_source(img, 0.01, crop_radius_arcsec=0.5, recenter=False, crop_taper_arcsec=0.0)
+
+
 # ---------------------------------------------------------------------------
 # End-to-end on a synthetic "pristine" source (CPU, no download)
 # ---------------------------------------------------------------------------
