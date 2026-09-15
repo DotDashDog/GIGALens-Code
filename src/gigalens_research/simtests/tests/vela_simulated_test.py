@@ -274,7 +274,8 @@ def test_end_to_end_synthetic_source():
         _write_synthetic_source(src_root, "vela99_cam12_a0.400_f814w")
         extra = {
             "scale_factor": "a0.400", "vela_ids": ["99"], "n_reps": 2,
-            "num_pix": 48, "supersample": 2, "source_root": src_root, "datadir": tmp,
+            "num_pix": 48, "supersample": 2, "inference_supersample": 1,
+            "source_root": src_root, "datadir": tmp,
             "delta_pix": 0.065,   # override the synthetic mock's 0.05" TPIX (drizzle scale)
             "source_crop_radius_arcsec": 1.0, "source_recenter": True,
             "psf": {"kind": "gaussian", "fwhm_arcsec": 0.1, "size_pix": 11},
@@ -294,6 +295,9 @@ def test_end_to_end_synthetic_source():
         assert ex["generator_version"] == 3 and ex["psf"]["kind"] == "gaussian"
         assert ex["delta_pix"] == 0.065 and ex["delta_pix_source"] == "config"
         assert ex["mock_instrument_pixel_arcsec"] == 0.05
+        # the truth is rendered at `supersample`; the fitter reads `inference_supersample`
+        assert ex["supersample"] == 2 and ex["inference_supersample"] == 1
+        assert System.load(ds, man["system_ids"][0]).supersample == 1
         assert ex["truth_prior"]["lens_mass"]["0"]["theta_E"]["median"] == 0.6
         assert ex["source_preprocessing"]["per_source"]["vela99"]["recenter"] is True
         for sid in man["system_ids"]:

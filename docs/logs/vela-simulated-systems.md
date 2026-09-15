@@ -546,3 +546,132 @@ visible arcs.
 New page "Vela F140W Lens Set" (configuration + basis tags + open questions,
 no iteration history) replaces the design-review page as the group-facing
 document; the old page stays as the record of the iterations.
+
+## Config refinement: DESI-238 noise, supersample 32, tabled questions (2026-09-15, user answers)
+
+User answers to the five open questions of the "Vela F140W Lens Set" page, plus
+one new request (supersample 32 on the simulation "to be absolutely sure there
+are no finite-resolution artifacts in my observed data"):
+
+1. Sky / read noise: take them from the DESI-238 (Foundry V) data on disk; no
+   drizzle modelling now, note it as a possible extension.
+2. Lens light: no redshift dependence (the lens redshift is not set anywhere;
+   it is implicit in theta_E). Keep the single LogNormal.
+3. Sources / n_reps: tabled. First modelling passes use one or two simple
+   systems picked by eye from the review set to work out each source method.
+4. Per-system brightness draw: keep. Log the possibility that source structure
+   and overall brightness are correlated in real arcs (the independent draw
+   ignores it); tabled.
+5. Cut-off thresholds / selection against large theta_E: fine for now; no
+   change to the redraw procedure.
+
+### DESI-238 noise (measured; `data/desi238/cutout238b.npy`)
+
+There is no FITS file for DESI-238 anywhere under $HOME or $PSCRATCH (searched
+by name and by extension); the data on disk are the 120 x 120 float32 cutout
+`data/desi238/cutout238b.npy`, `psf94.npy` (27 px), and the notebook
+`experiments/real_systems/desi238/MCLMC_238.ipynb`, which records
+`background_rms = 0.007616` (photutils.background) and `exp_time = 1197.699`
+(header). User confirmed "it might just be a numpy cutout".
+
+| quantity | value | how |
+|---|---|---|
+| background rms, clipped, lens-light gradient removed (9 px median filter) | 0.0070 cps/px | r > 35/45/55 px, 3-sigma clipped; `tmp/cut238_noise.py` |
+| photutils value used by the real-data fit | 0.0076 cps/px | notebook |
+| noise autocorrelation lag (0,1) / (1,0) / (1,1) / (0,2) / (0,3) | 0.60 / 0.52 / 0.30 / 0.10 / -0.02 | residual after the median filter, r > 45 px, clipped mask |
+| white-noise-equivalent sigma (sum of the ACF over lags ~ 4.8) | ~0.017 cps/px | 0.0076 x sqrt(4.8) |
+| physical estimate (sky 21.8 + 3 x 15 e- RN + dark, `kind: instrument`) | 0.0196 cps/px | previous config |
+| total flux in the 7.8" cutout | 18.5 AB | ZP 26.453 |
+
+So the earlier sky/read-noise assumption was not far from the total variance;
+the factor 2.6 between it and the per-pixel rms is the drizzle correlation.
+Decision (user directive "reference the DESI-238 data"): `noise: {kind:
+explicit, background_rms: 0.0076, exp_time: 1197.7}` in both YAMLs — the number
+the real-data fit uses, so simulated and real per-pixel S/N match as the fitter
+sees them. Caveat, UNCERTIFIED as to its size for inference: white noise at
+0.0076 carries ~4.8x more information per area than the correlated real noise;
+the drizzle extension (generate at 0.13" and drizzle, or colour the noise to
+the measured ACF) is logged on the page as tabled question 4. The 9 px median
+filter slightly biases the ACF and the clipped rms (0.0070 vs 0.0076); the
+photutils value is used.
+
+### Supersample 32 (probe; `experiments/vela_f140w_v3/supersample_check.{py,png,json}`)
+
+Hypothesis: the VELA pristine sources have 0.0073" pixels, so the supersample-4
+render grid (0.016" sub-pixels) under-samples them. Prediction: |img(4) -
+img(32)| after PSF exceeds 0.1 sigma_238 along the arcs and is negligible in the
+lens light. Falsifier: < 0.1 sigma everywhere -> 32 is insurance only.
+Structural (a grid that cannot resolve the source), not fine-tuning.
+
+vela02 and vela22 rendered with their stored truths at 4/8/16/32 on the 120 px
+frame (the 4x render reproduces the stored noiseless image to 5e-7):
+
+| system | (4 − 32) max / rms / N > 0.1σ | (8 − 32) max | (16 − 32) max | 32x: time, peak RSS |
+|---|---|---|---|---|
+| vela02 (clumpy) | 0.74σ / 0.050σ / 525 px | 0.29σ | 0.06σ | 5–8 s, 3.5 GB |
+| vela22 (smooth) | 0.18σ / 0.008σ / 17 px | 0.51σ (one pixel at the lens centre) | 0.07σ | 5–9 s, 4.6 GB |
+
+Plot inspected first: the vela02 residual is a speckle pattern that traces the
+clumpy arcs (source-pixel aliasing, as predicted); vela22's arcs are fine at 4
+but the 8x grid puts 0.5 sigma in the central lens pixel — the Sersic cusp
+sampled at different sub-grid positions, the second finite-resolution effect.
+Both are < 0.08 sigma at 16 vs 32. Prediction held for the clumpy source; the
+cusp effect was not predicted. Flux differences are < 3e-4.
+
+Implementation: `supersample` is now the truth render only; new
+`inference_supersample` (default: same as `supersample`, so older configs are
+unchanged) is what `System.supersample`/meta.json carry for the fitter. Both
+YAMLs: `supersample: 32`, `inference_supersample: 4`, `cutoff.canvas_supersample:
+8` (numerics of the check). Test `test_end_to_end_synthetic_source` asserts the
+split. 22 tests pass; silent-defaults lint clean.
+
+### Regenerated review set (2026-09-15, noise 0.0076, supersample 32) — UNCERTIFIED
+
+Both sets regenerated (`--force`; ~10 min each on the login node CPU, ~5 GB).
+Comparison set (unlensed-mag route): 11 systems, 0 redraws, still no visible
+arcs. Main set: 11 systems, 14 redraws (vela07 11, vela09 2, vela03 1); outside
+≤ 6.7% (vela07), border ≤ 0.97σ (vela09). Plots inspected first
+(`dataset_{grid,gallery}.png`): arcs sharper at the lower noise, no
+source-plane edge, all arcs inside the frame; vela07 is a lens with an
+invisible source (see below).
+
+| system | θ_E | amp | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 1.63 | 0.542 | 10.0 | 0.04% | 0.25σ | 0 | 22.41 | 19.91 | 19.24 | 20.52 |
+| vela03 | 1.61 | 0.50 | 0.177 | 9.6 | 0.05% | 0.14σ | 1 | 23.19 | 20.73 | 18.85 | 21.72 |
+| vela04 | 1.65 | 1.14 | 0.099 | 10.1 | 1.01% | 0.16σ | 0 | 24.03 | 21.53 | 19.02 | 20.92 |
+| vela07 | 1.71 | 0.02 | 0.024 | 4.5 | 6.69% | 0.25σ | 11 | 24.79 | 23.15 | 19.10 | 24.19 |
+| vela08 | 1.42 | 1.09 | 0.323 | 5.9 | 0.00% | 0.01σ | 0 | 22.40 | 20.47 | 19.24 | 21.04 |
+| vela09 | 1.68 | 0.42 | 0.416 | 5.9 | 1.91% | 0.97σ | 2 | 22.12 | 20.20 | 19.25 | 20.83 |
+| vela21 | 1.05 | 1.06 | 0.505 | 5.0 | 0.18% | 0.21σ | 0 | 21.15 | 19.39 | 18.65 | 19.97 |
+| vela22 | 2.22 | 0.20 | 0.343 | 22.2 | 0.27% | 0.21σ | 0 | 23.61 | 20.25 | 19.09 | 21.46 |
+| vela23 | 1.45 | 0.54 | 0.120 | 8.2 | 0.01% | 0.01σ | 0 | 23.72 | 21.44 | 19.14 | 21.82 |
+| vela25 | 1.18 | 5.02 | 1.219 | 3.2 | 0.02% | 0.40σ | 0 | 20.12 | 18.84 | 19.05 | 20.39 |
+| vela26 | 2.13 | 0.76 | 0.689 | 13.7 | 0.15% | 0.07σ | 0 | 22.45 | 19.61 | 19.20 | 20.36 |
+
+Same seeds as the previous set, so the systems with 0 redraws have the same
+truths; only the border rule changed (σ_bkg 0.0196 -> 0.0076 makes "border <
+1σ" 2.6x stricter), which is why vela03/07/09 moved.
+
+**Finding — the border rule now selects on brightness, not only on θ_E.**
+vela07's 11 rejections were all on the border rule (1.4σ–25σ at θ_E
+1.31–2.47); the accepted draw has θ_E 1.71, the same as rejected attempt 2
+(5.0σ), and passes at 0.25σ only because its peak-SB target landed at 24.19
+mag/□", a 3.1σ tail of Normal(21.1, 1.0) (20x fainter = 3.3 mag, matching the
+5.0σ -> 0.25σ ratio). For an extended source the loop therefore keeps waiting
+for a faint draw. vela07 is a lens-only image at src/lens 0.02. UNCERTIFIED as
+a general statement (one source, n=1 rep); the rejection records do not store
+the peak-SB target (a diagnostic-only generator change if wanted). Not acted
+on: the user has tabled the cut-off procedure and will start with one or two
+simple systems; the page's tabled question 3 now carries this. Options when it
+is revisited: a larger frame for extended sources, a border rule in absolute
+SB rather than σ, or dropping vela07 after all.
+
+Claims register additions:
+
+| claim | status | evidence |
+|---|---|---|
+| DESI-238 per-pixel background rms 0.0070–0.0076 cps/px; lag-1 noise autocorrelation 0.5–0.6 | MEASURED (one cutout) | `tmp/cut238_noise.py`, notebook value |
+| supersample 4 leaves up to 0.74 σ_238 of source-pixel aliasing on clumpy arcs; 16 vs 32 < 0.08σ | MEASURED (vela02, vela22) | `supersample_check.{png,json}` |
+| regenerated set: no edges, all arcs inside, 14 redraws / 11 systems | VERIFIED by inspection / MEASURED | `dataset_grid.png`, generation.json |
+| border rule at σ 0.0076 selects faint draws for extended sources (vela07 accepted at a 3.1σ-faint target) | UNCERTIFIED (n=1) | vela07 generation.json rejections |

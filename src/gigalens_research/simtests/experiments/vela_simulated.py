@@ -34,8 +34,15 @@ Source selection / geometry
   vela_ids            list of sim IDs (default: the 12 standard).
   cam / filter / version   camera "12", HST filter "f814w", HLSP version "v3".
   n_reps              truth+noise realisations per source (default 1).
-  num_pix, supersample     output grid (default 200 px, supersample 4). Inference
-                      reads these back from meta.json so it always matches.
+  num_pix, supersample     output grid (default 200 px, supersample 4). ``supersample``
+                      is the TRUTH render (source + lens light + PSF). The VELA
+                      pristine sources have 0.007" pixels, so 4 sub-pixels per
+                      0.065" output pixel under-samples them (measured: up to 0.7
+                      sigma_bkg speckle on clumpy arcs; the lens Sersic cusp is
+                      the other offender); 32 leaves < 0.1 sigma everywhere.
+  inference_supersample  the ``supersample`` written to meta.json for the fitter
+                      (default: same as ``supersample``). Set it lower than the
+                      truth render so the likelihood does not inherit a 32x grid.
   delta_pix           output pixel scale (arcsec). Absent/null -> the mock's own
                       instrument pixel (TPIX header: 0.03" for the ACS mocks, 0.06"
                       for the WFC3/IR mocks). Set it to simulate a different
@@ -1109,6 +1116,10 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
     n_reps = int(extra.get("n_reps", 1))
     num_pix = int(extra.get("num_pix", 200))  # physics-default-ok: documented structural default, persisted to meta.json
     supersample = int(extra.get("supersample", 4))  # physics-default-ok: documented structural default, persisted to meta.json
+    inference_supersample = extra.get("inference_supersample")  # physics-default-ok: None = same grid as the truth render (v2/v3 behaviour), persisted
+    inference_supersample = supersample if inference_supersample is None else int(inference_supersample)
+    if inference_supersample < 1:
+        raise ValueError("[vela_simulated] inference_supersample must be >= 1.")
     transpose_image = bool(extra.get("transpose_image", False))
     source_root = os.path.expanduser(str(extra.get("source_root", _DEFAULT_SOURCE_ROOT)))
     datadir = os.path.expanduser(str(extra.get("datadir", _DEFAULT_DATADIR)))
@@ -1290,7 +1301,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
                 truth_x=truth,
                 delta_pix=delta_pix,
                 num_pix=num_pix,
-                supersample=supersample,
+                supersample=inference_supersample,
                 psf=np.asarray(psf),
                 noise_kind="forward",
                 background_rms=background_rms,
@@ -1337,7 +1348,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
             "scale_factor": scale_factor,
             "source_variant": source_variant,
             "cam": cam, "filter": filt, "version": version, "n_reps": n_reps,
-            "num_pix": num_pix, "supersample": supersample, "transpose_image": transpose_image,
+            "num_pix": num_pix, "supersample": supersample,
+            "inference_supersample": inference_supersample, "transpose_image": transpose_image,
             "delta_pix": delta_pix, "delta_pix_source": delta_pix_source,
             "mock_instrument_pixel_arcsec": mock_pix,
             "likelihood_precision": likelihood_precision, "conv_precision": conv_precision,
