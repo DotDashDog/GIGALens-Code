@@ -34,10 +34,7 @@ dataset:
   # Same review list as v2 (12 sources incl. the double-nucleus vela09).
   # vela10 dropped (2026-09-15): a companion cut by the VELA frame edge (7 sigma per
   # image pixel, 2.5% of the flux in the outer 0.15") would enter the cutout truncated.
-  # vela07 excluded from the no-crop set: 12% of its flux lies beyond 3" from its
-  # centroid (11.6" frame), so > 1% always lands outside the 7.8" cutout at any
-  # theta_E (51/51 draws rejected). It is not dropped: see campaign_vela07_nocrop.yaml.
-  vela_ids: ["02", "03", "04", "08", "09", "21", "22", "23", "25", "26"]
+  vela_ids: ["02", "03", "04", "07", "08", "09", "21", "22", "23", "25", "26"]
   cam: "12"
   filter: "f140w"                 # WFC3/IR; the HLSP tarballs are ~500 MB per sim
   version: "v3"
@@ -101,7 +98,11 @@ dataset:
   # ---- Cut-off guarantee ---------------------------------------------------
   cutoff:
     canvas_factor: 2              # measure on a 15.6" canvas
-    max_flux_outside: 0.01
+    # 10% (2026-09-15): with uncropped sources the light that lands outside the
+    # frame is far companions / outer clumps, not the arcs (vela07 has 12% of its
+    # flux beyond 3" and cannot pass 1% at any theta_E); the border rule below
+    # is what guards against visibly truncated arcs. Losing clumps is accepted.
+    max_flux_outside: 0.10
     max_border_sb_sigma: 1.0
     border_width_pix: 3
     max_redraws: 50

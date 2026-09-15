@@ -514,3 +514,35 @@ Claims register additions:
 | uncropped sources show no source-plane edge in the lensed images (10 sources) | VERIFIED by inspection | `dataset_gallery.png` |
 | vela07 cannot satisfy outside <= 1% uncropped at any theta_E in the prior | VERIFIED (51/51 rejected; 12% of flux beyond 3") | generation log, radial table above |
 | no-crop redraw rate: 8 redraws / 10 systems (vela21 7) | MEASURED (n=1 rep) | generation.json |
+
+
+### vela07 admitted, outside limit 10% for the set (2026-09-15, user decision)
+
+User: keep vela07 ("we're just really losing clumps"); seeds need not match;
+wants one clean artifact with the current configuration and the open questions.
+Config: `max_flux_outside: 0.10` in both YAMLs (border rule < 1σ unchanged),
+vela07 back in `vela_ids`; `campaign_vela07_nocrop.yaml` and its figures
+removed. Both sets regenerated (`--force`), 11 systems, 5 redraws total
+(vela07 4, vela09 1); outside ≤ 4.2% (vela07), border ≤ 0.63σ (vela03). vela07
+drew a faint peak-SB target (22.20 mag/□", amp 0.08) → low-contrast ring; that
+is the per-system draw working as designed. Plots inspected: no edges, all arcs
+inside. Comparison set (unlensed-mag route) regenerated alongside, still no
+visible arcs.
+
+| system | θ_E | amp | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 1.63 | 0.540 | 10.0 | 0.04% | 0.10σ | 0 | 22.41 | 19.91 | 19.24 | 20.52 |
+| vela03 | 1.21 | 0.94 | 0.088 | 4.1 | 0.26% | 0.63σ | 0 | 22.49 | 20.96 | 18.32 | 21.08 |
+| vela04 | 1.65 | 1.14 | 0.099 | 10.1 | 1.00% | 0.06σ | 0 | 24.03 | 21.53 | 19.02 | 20.92 |
+| vela07 | 1.33 | 0.08 | 0.126 | 5.9 | 4.21% | 0.57σ | 4 | 23.21 | 21.28 | 19.03 | 22.20 |
+| vela08 | 1.42 | 1.07 | 0.319 | 5.9 | 0.00% | 0.00σ | 0 | 22.42 | 20.48 | 19.24 | 21.04 |
+| vela09 | 1.54 | 1.76 | 1.924 | 4.6 | 0.22% | 0.51σ | 1 | 20.57 | 18.91 | 19.62 | 19.48 |
+| vela21 | 1.05 | 1.06 | 0.505 | 5.0 | 0.18% | 0.08σ | 0 | 21.15 | 19.39 | 18.65 | 19.97 |
+| vela22 | 2.22 | 0.20 | 0.344 | 22.2 | 0.27% | 0.08σ | 0 | 23.61 | 20.25 | 19.09 | 21.46 |
+| vela23 | 1.45 | 0.54 | 0.120 | 8.2 | 0.01% | 0.01σ | 0 | 23.72 | 21.44 | 19.14 | 21.82 |
+| vela25 | 1.18 | 4.87 | 1.183 | 3.3 | 0.02% | 0.27σ | 0 | 20.15 | 18.87 | 19.05 | 20.39 |
+| vela26 | 2.13 | 0.76 | 0.689 | 13.7 | 0.15% | 0.03σ | 0 | 22.45 | 19.61 | 19.20 | 20.36 |
+
+New page "Vela F140W Lens Set" (configuration + basis tags + open questions,
+no iteration history) replaces the design-review page as the group-facing
+document; the old page stays as the record of the iterations.
