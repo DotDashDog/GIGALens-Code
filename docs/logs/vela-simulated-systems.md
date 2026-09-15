@@ -429,3 +429,35 @@ Claims register additions:
 | vela21's crop edge is < 2σ per pixel everywhere but S/N 16 integrated; per-pixel boundary σ does not predict visibility | VERIFIED (simulation) | table above, figure |
 | a raised-cosine taper 1.2–1.8" removes the visible edge | VERIFIED by inspection only (edge statistic non-discriminating) | `boundary_treatments.png` |
 | frame-edge light is negligible in the cutout for this set (≤ S/N 7.5 uncropped, 0 with taper) | VERIFIED (simulation) | table above |
+
+### No crop at all? (2026-09-15, user question; `experiments/vela_f140w_v3/nocrop_check.py`)
+
+User: the VELA frame boundary itself cuts off little; could it replace the taper?
+Measured on the 12 sources (v3 amps) and the current truths, uncropped source
+through the 2× canvas with the existing cut-off thresholds (outside ≤ 1%, border < 1σ):
+
+| src | frame | flux in outer 0.15" / 0.3" | max SB at frame edge per 0.065" px | uncropped: outside / border / passes cut-off |
+|---|---|---|---|---|
+| vela02 | 5.8" | 0.02% / 0.05% | 0.0σ | 0.04% / 0.07σ / yes |
+| vela03 | 5.8" | 0.79% / 1.98% | 1.4σ | 0.26% / 0.64σ / yes |
+| vela04 | 5.8" | 0.71% / 1.81% | 0.3σ | 1.00% / 0.06σ / marginal |
+| vela07 | 11.6" | 0.10% / 0.26% | 0.3σ | 4.80% / 2.86σ / **NO** |
+| vela08 | 5.8" | 0.02% / 0.06% | 0.0σ | 0.00% / 0.00σ / yes |
+| vela09 | 5.8" | 0.92% / 2.03% | 1.0σ | 0.22% / 0.50σ / yes |
+| vela10 | 5.8" | 2.52% / 10.86% | 7.4σ | 0.03% / 0.06σ / yes (truncated companion enters the cutout at S/N 7.5) |
+| vela21 | 11.6" | 0.15% / 0.19% | 0.9σ | 0.41% / 0.91σ / marginal |
+| vela22 | 5.8" | 0.19% / 0.34% | 0.1σ | 0.04% / 0.01σ / yes |
+| vela23 | 5.8" | 0.05% / 0.14% | 0.0σ | 0.01% / 0.06σ / yes |
+| vela25 | 5.8" | 0.41% / 0.92% | 1.4σ | 0.52% / 0.96σ / marginal |
+| vela26 | 11.6" | 0.02% / 0.03% | 0.0σ | 0.27% / 0.04σ / yes |
+
+Correction to the 2026-09-14 edge table: its "max SB at the cutout edge" (up
+to 79σ) was per 0.0073" source pixel; binned to the 0.065" image pixel the
+frame-edge contrast is ≤ 1.4σ for every source except vela10 (7.4σ, a
+companion cut by the frame). So the user is right that the VELA boundary cuts
+off little: ≤ 1% of the flux in the outer 0.15" for 11/12. Without any crop the
+cut-off check becomes the only thing keeping arcs inside the 120 px frame:
+vela07 fails for its current truth (4.8% outside, 2.9σ border; its 11.6" frame
+holds outskirts that lens beyond 3.9"), and vela04/21/25 sit at the thresholds
+→ higher redraw rate, i.e. a selection toward smaller θ_E for the extended
+sources, which the 1.5" taper avoids. Assessment only; nothing changed.
