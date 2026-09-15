@@ -461,3 +461,56 @@ vela07 fails for its current truth (4.8% outside, 2.9σ border; its 11.6" frame
 holds outskirts that lens beyond 3.9"), and vela04/21/25 sit at the thresholds
 → higher redraw rate, i.e. a selection toward smaller θ_E for the extended
 sources, which the 1.5" taper avoids. Assessment only; nothing changed.
+
+
+## No-crop review set (2026-09-15, user decision) — UNCERTIFIED
+
+User: keeping arcs inside the 120 px frame is not a reason to modify the source
+morphology (that is what the systems test); keep VELA sources as delivered;
+drop vela10; a higher redraw rate is fine; show what happens with no crop.
+
+Config: `source_crop_radius_arcsec: null`, vela10 removed, everything else as
+before (both YAMLs). Prediction: no visible edges; redraw rate up for the
+extended sources; vela07 impossible at outside <= 1% (12% of its flux beyond 3").
+Result: vela07 rejected 51/51 (last: theta_E 1.32, 4.3% outside, 1.3 sigma border) ->
+excluded from the main YAML and run alone in `campaign_vela07_nocrop.yaml`
+(max_flux_outside 0.10, border rule unchanged): accepted on draw 2 with
+4.8% outside / 0.68 sigma border (first draw theta_E 1.39, 5.9%, 1.6 sigma);
+a full clumpy Einstein ring, theta_E 1.54, src/lens 0.58, mu 3.5.
+Main set, 10 sources, 8 redraws total (vela21: 7 — its rejections were 0.2–8.7%
+outside / 0.7–4.2 sigma border at theta_E 1.54–2.74; vela08: 1):
+
+| system | θ_E | amp | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 1.63 | 0.540 | 10.0 | 0.04% | 0.10σ | 0 | 22.41 | 19.91 | 19.24 | 20.52 |
+| vela03 | 1.21 | 0.94 | 0.088 | 4.1 | 0.26% | 0.63σ | 0 | 22.49 | 20.96 | 18.32 | 21.08 |
+| vela04 | 1.65 | 1.14 | 0.099 | 10.1 | 1.00% | 0.06σ | 0 | 24.03 | 21.53 | 19.02 | 20.92 |
+| vela08 | 1.95 | 1.32 | 0.471 | 8.6 | 0.18% | 0.56σ | 1 | 22.19 | 19.85 | 19.04 | 20.75 |
+| vela09 | 1.42 | 0.39 | 0.447 | 6.8 | 0.02% | 0.08σ | 0 | 22.20 | 20.12 | 19.24 | 21.04 |
+| vela21 | 1.45 | 0.59 | 0.225 | 3.4 | 0.30% | 0.32σ | 7 | 21.78 | 20.44 | 18.82 | 21.04 |
+| vela22 | 1.05 | 1.15 | 0.362 | 6.2 | 0.01% | 0.02σ | 0 | 21.73 | 19.75 | 18.65 | 19.97 |
+| vela23 | 2.22 | 0.50 | 0.384 | 29.2 | 0.08% | 0.02σ | 0 | 23.79 | 20.13 | 19.09 | 21.46 |
+| vela25 | 1.45 | 1.23 | 0.540 | 5.4 | 0.12% | 0.16σ | 0 | 21.64 | 19.81 | 19.14 | 21.82 |
+| vela26 | 1.18 | 1.55 | 0.298 | 3.4 | 0.16% | 0.02σ | 0 | 21.68 | 20.37 | 19.05 | 20.39 |
+
+Plots inspected before the table (`dataset_{grid,gallery}.png`,
+`vela07_nocrop/`): no source-plane edge anywhere; vela02's companion lenses to
+a separate blob, vela09's second nucleus is a knot on the ring, vela25/26 show
+broad diffuse haloes; all arcs inside the frame (border <= 0.63 sigma, outside <=
+1.0%). Caveats: (i) removing sources shifts `seed_fold_index`, so the lens draws
+differ from the 12-source set (vela23 now theta_E 2.22", mu 29 — a giant ring);
+folding by source id would make sets comparable and is a small generator
+change if wanted. (ii) vela03's galaxy sits (1.1, 1.7)" off its VELA frame
+centre; recentering brings the frame edge to ~1.2" on one side — no edge is
+visible (border 0.63 sigma, the highest of the set), but it is the source to watch
+with other lens draws. (iii) The `source_crop_taper_arcsec` knob stays
+available but unused. Gallery source panel now shows the 5.8" half-frame and
+its title no longer says "cropped".
+
+Claims register additions:
+
+| claim | status | evidence |
+|---|---|---|
+| uncropped sources show no source-plane edge in the lensed images (10 sources) | VERIFIED by inspection | `dataset_gallery.png` |
+| vela07 cannot satisfy outside <= 1% uncropped at any theta_E in the prior | VERIFIED (51/51 rejected; 12% of flux beyond 3") | generation log, radial table above |
+| no-crop redraw rate: 8 redraws / 10 systems (vela21 7) | MEASURED (n=1 rep) | generation.json |

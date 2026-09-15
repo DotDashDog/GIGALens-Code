@@ -78,7 +78,7 @@ python -m gigalens_research.simtests status campaign.yaml
 | `hundred_sersic_v1` | `experiments/hundred_systems_GL2/campaign.yaml` | Convergence test: 100 EPL+Shear+Sérsic systems, MAP→SVI→HMC |
 | `shapelets_systematics_v1` | `experiments/shapelets_systematics/campaign.yaml` | Systematics: Vela sources, shapelet inference, sweep over `n_max` |
 | `vela_revised_v2` | `experiments/vela_revised_v2/campaign.yaml` | Fresh Vela systems simulated by the `vela_simulated` generator (scene API): YAML-tunable truth prior, STScI ePSF, instrument-derived noise, source-to-lens flux calibration, cut-off rejection |
-| `vela_f140w_v3` | `experiments/vela_f140w_v3/campaign.yaml` | Same generator at the DESI Strong Lens Foundry V setup (group decisions 2026-09-14): WFC3/IR F140W, 0.065"/px, 120 px, STDPSF WFC3IR, 1197.7 s, θ_E LogNormal(1.5, 0.25), source calibrated to the Foundry peak surface brightness (`peak_sb`); `campaign_unlensed_mag.yaml` = the magnification route |
+| `vela_f140w_v3` | `experiments/vela_f140w_v3/campaign.yaml` | Same generator at the DESI Strong Lens Foundry V setup (group decisions 2026-09-14): WFC3/IR F140W, 0.065"/px, 120 px, STDPSF WFC3IR, 1197.7 s, θ_E LogNormal(1.5, 0.25), source calibrated to the Foundry peak surface brightness (`peak_sb`); `campaign_unlensed_mag.yaml` = the magnification route No source crop (2026-09-15): VELA morphology as delivered; vela10 dropped; vela07 in `campaign_vela07_nocrop.yaml` (10% outside-flux limit). |
 
 ## Extending the framework
 

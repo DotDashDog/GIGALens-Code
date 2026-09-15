@@ -8,7 +8,7 @@ Two figures:
 * full gallery (one row per system): observed image, noiseless lensed source
   only (shows where the arcs sit relative to the cutout edge), the lensed source
   only with an independent realisation of the same noise model (so edge / crop
-  artefacts can be judged against their SNR), and the true (unlensed, cropped)
+  artefacts can be judged against their SNR), and the true (unlensed, preprocessed)
   source at its calibrated amplitude, with the calibration / cut-off numbers
   from generation.json in the titles;
 * compact grid of the observed images only (for slides / the design page).
@@ -54,6 +54,7 @@ def load_source_sb(source_dir, amp, pre):
     s = float(m["source_pixel_scale_arcsec"])
     sb = np.asarray(img / (s ** 2) * 1e-9 / float(m["photfnu_Jy"]))
     sb, _info = preprocess_source(sb, s, crop_radius_arcsec=pre.get("crop_radius_arcsec"),
+                                  crop_taper_arcsec=pre.get("crop_taper_arcsec"),
                                   recenter=bool(pre.get("recenter", False)))
     return sb * amp, s
 
@@ -157,10 +158,11 @@ def make_gallery(man, systems, out_png):
         ax = axs[i, 3]
         sb, sscale = load_source_sb(s["meta"]["truth_assets"]["vela_source_dir"], float(m["amp"]),
                                     man["extra"].get("source_preprocessing", {}))
-        crop, win = crop_source(sb, sscale)
+        crop_r = man["extra"].get("source_preprocessing", {}).get("crop_radius_arcsec")
+        crop, win = crop_source(sb, sscale, win=(crop_r + 0.1) if crop_r else 2.9)  # no crop: show the 5.8" half-frame
         im = show(ax, crop, [-win, win, -win, win])
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03).set_label("cps / arcsec$^2$", fontsize=6)
-        ax.set_title(f"true source (as lensed: cropped, recentered) x amp={m['amp']:.2f}\n"
+        ax.set_title(f"true source (as lensed, recentered) x amp={m['amp']:.2f}\n"
                      f"unlensed AB={m['source_ab_mag_unlensed']:.2f}", fontsize=8)
         for a in axs[i]:
             a.set_xlabel("arcsec", fontsize=7)
