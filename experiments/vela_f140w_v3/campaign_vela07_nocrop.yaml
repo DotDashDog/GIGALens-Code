@@ -1,0 +1,153 @@
+# Vela simulated-system campaign, v3: WFC3/IR F140W at the DESI Strong Lens
+# Foundry V observing setup (group decisions of 2026-09-14).
+#
+# Generator: `vela_simulated` (src/gigalens_research/simtests/experiments/vela_simulated.py,
+# generator_version 3). Same pipeline as v2 (lens the PRISTINE Vela source,
+# calibrate the source amplitude, reject cut-off arcs, convolve with the
+# empirical PSF, add instrument noise); what changed is the instrument:
+#
+#   camera / filter      WFC3/IR F140W (VELA HLSP has f140w mocks; PHOTFNU -> ZP 26.45)
+#   pixel scale          0.065" drizzled (native 0.13"), as in Foundry I / V
+#   PSF                  Jay Anderson's STDPSF library, WFC3IR F140W
+#   exposure             1197.7 s = 3 x 399.23 s (Foundry I), no CR-split
+#   cutout               120 x 120 px = 7.8"
+#   theta_E prior        LogNormal(median 1.5", sigma 0.25)
+#   source brightness    calibrated to the peak surface brightness of the arcs in
+#                        the published Foundry photometry (see `calibration:`);
+#                        `campaign_unlensed_mag.yaml` is the magnification route.
+#
+# Values marked ASSUMPTION are not fixed by the papers; the group should confirm.
+
+name: vela_f140w_v3_vela07_nocrop
+seed: 0
+# Relative -> $PSCRATCH/gigalens/simtests_results/vela_f140w_v3 (docs/results-storage.md).
+output_dir: simtests_results/vela_f140w_v3_vela07_nocrop
+
+plugins:
+  - gigalens_research.simtests.experiments.vela_simulated
+
+dataset:
+  generator: vela_simulated
+
+  # ---- Source: which Vela galaxies, at which redshift --------------------
+  scale_factor: "a0.400"          # z = 1/a - 1 = 1.5 exactly (HLSP snapshot)
+  # Same review list as v2 (12 sources incl. the double-nucleus vela09).
+  # vela10 dropped (2026-09-15): a companion cut by the VELA frame edge (7 sigma per
+  # image pixel, 2.5% of the flux in the outer 0.15") would enter the cutout truncated.
+  # vela07 excluded from the no-crop set: 12% of its flux lies beyond 3" from its
+  # centroid (11.6" frame), so > 1% always lands outside the 7.8" cutout at any
+  # theta_E (51/51 draws rejected). It is not dropped: see campaign_vela07_nocrop.yaml.
+  vela_ids: ["07"]   # side test: what an uncropped vela07 looks like with a relaxed outside-flux limit
+  cam: "12"
+  filter: "f140w"                 # WFC3/IR; the HLSP tarballs are ~500 MB per sim
+  version: "v3"
+  n_reps: 1                       # 1 for the review set; raise to 5 for the campaign
+  source_variant: IMAGE_PRISTINE  # with dust radiative transfer
+  # No crop (2026-09-15, user decision): the source morphology is what these systems
+  # test, so it is left as delivered by VELA; the frame edge holds < 1% of the flux
+  # for every kept source (docs/logs/vela-simulated-systems.md, "No crop at all?").
+  # The 1.5" crop used until then lensed into a visible sub-noise edge (S/N 16 in
+  # vela21). Arcs are kept inside the frame by the cut-off redraws alone.
+  source_crop_radius_arcsec: null
+  source_recenter: true
+  transpose_image: false
+  # The per-sim tarballs do not fit in $HOME (40 GiB quota, 99% used): keep the
+  # downloads and the extracted sources on scratch.
+  datadir: /pscratch/sd/l/linusu/gigalens/vela_downloads
+  source_root: /pscratch/sd/l/linusu/gigalens/vela_sources_pristine
+
+  # ---- Image grid ---------------------------------------------------------
+  num_pix: 120                    # 7.8" at 0.065"/px (Foundry V uses 64-120 px cutouts)
+  delta_pix: 0.065                # drizzled scale; overrides the mock's 0.06" TPIX
+  supersample: 4
+  likelihood_precision: float64
+
+  # ---- PSF: STScI empirical WFC3/IR F140W effective PSF (J. Anderson) ------
+  psf:
+    kind: stdpsf
+    era: null                     # the WFC3IR library has one file per filter
+    chip_xy: [507, 507]           # detector centre (1014 x 1014); 3x3 grid, nearest used
+    size_pix: 33                  # 2.1" box at 0.065"/px (Foundry V: 27-33 px empirical PSFs)
+    subsamples: 6
+    # Recorded approximation: the ePSF keeps the native 0.13" pixel response
+    # (it is not deconvolved before resampling to 0.065"); drizzle (pixfrac)
+    # broadening is not modelled. Foundry's own PSF is built from stars in the
+    # drizzled mosaic, so both carry a ~native-pixel box.
+
+  # ---- Noise: WFC3/IR F140W, 3 x 399 s -------------------------------------
+  noise:
+    kind: instrument
+    sky_mag_arcsec2: 21.8         # ASSUMPTION: 1.2 e-/s per native px total (zodi + earthshine),
+                                  # the "typical" broad-band IR background (IHB 7.9: 0.3-1.0 zodi alone)
+    exp_time: 1197.7              # 3 x 399.23 s (Foundry I); also the Poisson-term gain 1 e-/count
+    n_reads: 3                    # three MULTIACCUM ramps, each with an effective read noise
+    read_noise_e: 15.0            # ASSUMPTION: ETC default effective RN per ramp (12 e- for a 16-read
+                                  # SPARS ramp, 20-22 e- CDS)
+    dark_e_per_s: 0.048           # IHB 5.7 (per native pixel)
+    native_pixel_arcsec: 0.13
+    zeropoint_ab: null            # null -> from the mock's PHOTFNU (26.45 for F140W)
+    # -> background_rms ~ 0.0196 cps per 0.065" px.
+
+  # ---- Source brightness: from the Foundry photometry ------------------------
+  # Foundry V publishes NO arc photometry; Foundry I Table 1 gives the F140W
+  # isophotal magnitude of the BRIGHTEST IMAGE over a small contour (5-33
+  # drizzled px). For the seven Foundry V systems that is a peak surface
+  # brightness of 19.4-22.2 AB mag/arcsec^2 (mean 21.1, sd 1.0, contours 5-33 px, median 9); lensing
+  # conserves surface brightness, so this calibrates the source without a
+  # magnification. See docs/logs/vela-simulated-systems.md for the table.
+  calibration:
+    peak_sb:
+      sb_mag_arcsec2: {dist: Normal, loc: 21.1, scale: 1.0}
+      n_brightest_pix: 9          # median Foundry V contour area 0.038 arcsec^2 = 9 px at 0.065"
+    measure_in: cutout
+
+  # ---- Cut-off guarantee ---------------------------------------------------
+  cutoff:
+    canvas_factor: 2              # measure on a 15.6" canvas
+    max_flux_outside: 0.10   # relaxed for this side test (default 0.01); border rule unchanged
+    max_border_sb_sigma: 1.0
+    border_width_pix: 3
+    max_redraws: 50
+
+  # ---- Truth prior: overrides on the notebook cell-4 baseline -------------
+  truth_prior:
+    lens_mass:
+      "0":
+        theta_E: {dist: LogNormal, median: 1.5, sigma: 0.25}   # group decision
+    lens_light:
+      "0":
+        # Ie is a surface brightness (cps per arcsec^2): the integrated lens flux
+        # does not depend on delta_pix (verified: a first v3 run with median 100
+        # gave lens light 17.3-17.6 AB, 5x the v2 flux at the same R_e/n prior).
+        # Median 20 -> ~19.1 AB in F140W for the baseline R_e / n prior, chosen
+        # (2026-09-14) to match the two Foundry V lenses with published I_e
+        # (J234 / J246 render to 19.25 / 19.04 AB in the same 120 px cutout);
+        # median 30 gave 18.7 AB (0.5 mag brighter than those two).
+        Ie: {dist: LogNormal, median: 20.0, sigma: 0.3}
+
+inference:
+  builder: epl_shear_sersic_shapelets
+  pipeline: map_bootstrap_mclmc
+  pipeline_kwargs:
+    bootstrap_map_steps: 200
+    bootstrap_map_n_samples: 50
+    n_chains: 8
+    num_burnin_steps: 4000
+    num_results: 4000
+    desired_energy_variance: 5.0e-4
+
+sweep:
+  axis: n_max
+  values: [10, 15, 20, 30]
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - mass_zscores
+  - all_zscores
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1
