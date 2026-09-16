@@ -741,3 +741,39 @@ Claims register additions:
 | supersample 32 converges the VELA source render (|32−64| ≤ 0.008σ on vela02) | MEASURED | `supersample_check_64.json` |
 | lens-cusp error after PSF at 32: 0.06–0.48σ (current set), 0.5–0.7σ (n=6, R_e 1"); 64: ≤ 0.04σ / 0.16–0.23σ; 128: ≤ 0.07σ all | MEASURED vs exact reference (self-check ≤ 0.004σ) | `cusp_ladder.json` |
 | below 32 the cusp error is erratic in s (sample placement), not monotone | MEASURED | `cusp_ladder.png` |
+
+### Correction: the cusp error against the TOTAL noise (2026-09-15, user question)
+
+User: does "in units of the DESI-238 noise" include the Poisson component? It
+did not — the ladder above is in units of the background rms alone (0.0076
+cps/px). At the lens centre the pixels are 3.8–6.0 cps/px, so the Poisson term
+(sqrt(img/exp_time) = 0.057–0.071) makes the total per-pixel σ 7.5–9.3x the
+background rms there. Re-run of `cusp_ladder.py` with σ_tot² = bkg² +
+noiseless/exp_time per pixel (stored noiseless image for the real systems; a
+full-frame ss=32 lens render + PSF for the synthetic ones). Max |error| after
+PSF in units of σ_tot:
+
+| lens | n | s=4 | 16 | 32 | 64 | 128 |
+|---|---|---|---|---|---|---|
+| vela08 | 5.78 | 0.70 | 0.64 | 0.051 | 0.005 | 0.004 |
+| vela09 | 5.30 | 0.22 | 0.078 | 0.026 | 0.003 | 0.002 |
+| vela23 | 4.26 | 0.089 | 0.27 | 0.010 | 0.002 | 0.000 |
+| vela22 | 3.97 | 0.026 | 0.018 | 0.007 | 0.000 | 0.000 |
+| n=6, R_e 1", corner | 6 | 1.5 | 0.20 | 0.066 | 0.021 | 0.006 |
+| n=6, R_e 1", pixel centre | 6 | 2.0 | 0.26 | 0.088 | 0.028 | 0.009 |
+
+Conclusion (supersedes the reading above): **32 is adequate**. Against the
+noise the pixel actually carries, the lens-centre error at 32 is ≤ 0.05σ for
+the current lenses and ≤ 0.09σ for an n=6, R_e=1" lens anywhere in the prior;
+the χ² damage (Σ(err/σ_tot)²) at 32 is < 0.01 for every case. 64 is ≤ 0.03σ.
+The exact-central-patch route stays a possible refinement, not a need. The
+background-only numbers remain the right ones for the ARCS (their pixels are
+near the background), and there 32 was already converged (0.008σ).
+Inference-side note: at the fitter's ss=4 the lens-centre model error is
+0.7σ_tot (vela08) to 2σ_tot (n=6) — a reason to raise `inference_supersample`
+or use the adaptive simulator when modelling high-n lenses; not a truth-data
+issue.
+
+| claim | status | evidence |
+|---|---|---|
+| lens-cusp error at supersample 32, against total per-pixel noise: ≤ 0.05σ (current lenses), ≤ 0.09σ (n=6, R_e 1"); χ² damage < 0.01 | MEASURED vs exact reference | `cusp_ladder.json` (`postpsf_max_sigma_total`, `postpsf_chi2`) |
