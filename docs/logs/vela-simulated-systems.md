@@ -675,3 +675,14 @@ Claims register additions:
 | supersample 4 leaves up to 0.74 σ_238 of source-pixel aliasing on clumpy arcs; 16 vs 32 < 0.08σ | MEASURED (vela02, vela22) | `supersample_check.{png,json}` |
 | regenerated set: no edges, all arcs inside, 14 redraws / 11 systems | VERIFIED by inspection / MEASURED | `dataset_grid.png`, generation.json |
 | border rule at σ 0.0076 selects faint draws for extended sources (vela07 accepted at a 3.1σ-faint target) | UNCERTIFIED (n=1) | vela07 generation.json rejections |
+
+### vela07 dropped (2026-09-15, user decision)
+
+User: "Let's just drop vela07 for now" — no regeneration needed yet, log it.
+Both YAMLs: `vela_ids` without "07" (10 sources) with the reason in a comment.
+The datasets on scratch (`vela_f140w_v3{,_unlensed_mag}/dataset`) still hold
+the 11-system set generated at 16:00 (vela07 included) until the next
+`generate --force`; because seeds fold by list index, that regeneration will
+change the lens draws for every source after vela04 (user: acceptable). A
+stale `vela10_cam12_a0.400_rep00` directory from the 12-source run also sits in
+the main dataset's `systems/` folder outside the manifest (not removed).

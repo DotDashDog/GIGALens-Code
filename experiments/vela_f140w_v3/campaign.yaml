@@ -37,7 +37,11 @@ dataset:
   # Same review list as v2 (12 sources incl. the double-nucleus vela09).
   # vela10 dropped (2026-09-15): a companion cut by the VELA frame edge (7 sigma per
   # image pixel, 2.5% of the flux in the outer 0.15") would enter the cutout truncated.
-  vela_ids: ["02", "03", "04", "07", "08", "09", "21", "22", "23", "25", "26"]
+  # vela07 dropped (2026-09-15, user decision): its far clumps put 5-12% of the flux
+  # outside the frame and, with the border rule measured against the real sigma,
+  # it only passed the cut-off at a 3-sigma-faint brightness target (lens-only image).
+  # Removing it shifts seed_fold_index for the sources after it (user: acceptable).
+  vela_ids: ["02", "03", "04", "08", "09", "21", "22", "23", "25", "26"]
   cam: "12"
   filter: "f140w"                 # WFC3/IR; the HLSP tarballs are ~500 MB per sim
   version: "v3"
