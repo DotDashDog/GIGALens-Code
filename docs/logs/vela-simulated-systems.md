@@ -686,3 +686,58 @@ the 11-system set generated at 16:00 (vela07 included) until the next
 change the lens draws for every source after vela04 (user: acceptable). A
 stale `vela10_cam12_a0.400_rep00` directory from the 12-source run also sits in
 the main dataset's `systems/` folder outside the manifest (not removed).
+
+### Is supersample 32 enough? Lens-cusp ladder (2026-09-15, user question)
+
+User: "I'd like to make sure we don't need higher than supersample=32."
+
+Step 1 (`supersample_check_64.{png,json}`, vela02/vela22/vela08 at 16/32/64):
+sources converged (vela02 |32−64| 0.008σ max), but the lens centre is not:
+vela08 (n 5.78) |32−64| 0.44σ in 12 px, |16−64| 6σ; vela22 (n 3.97) 0.05σ. The
+residual is one PSF-shaped spot at the lens centre. Cause: gigalens evaluates
+the pure Sérsic at sub-pixel centres (no core softening); for n≈6 the profile
+has a ~1e-6" spike at the centre and a steep core, so the central pixel's
+midpoint-rule value depends on where the nearest sample lands. The frame
+origin is a pixel corner (LensWCS: pixel centres at (j − 59.5)δ) and lens
+centres are drawn within ±0.01" of it, so the spike sits at the shared corner
+of the four central pixels.
+
+Step 2 (`cusp_ladder.{py,png,json}`): exact per-pixel reference (midpoint at
+4096², self-check vs 2048² ≤ 0.004σ) on the central 8×8 px, with gigalens'
+own `SersicEllipse.light` on the LensWCS sub-grid; error patch convolved with
+the system PSF; σ = 0.0076. Max |error| after PSF, in σ:
+
+| lens | n | R_e | s=4 | 16 | 32 | 64 | 128 | 256 | 512 |
+|---|---|---|---|---|---|---|---|---|---|
+| vela08 | 5.78 | 1.35 | 6.5 | 5.9 | 0.48 | 0.042 | 0.042 | 0.002 | 0.002 |
+| vela09 | 5.30 | 1.36 | 1.6 | 0.68 | 0.23 | 0.030 | 0.022 | 0.002 | 0.003 |
+| vela23 | 4.26 | 1.46 | 0.68 | 2.2 | 0.083 | 0.020 | 0.003 | 0.000 | 0.001 |
+| vela22 | 3.97 | 1.64 | 0.16 | 0.13 | 0.056 | 0.003 | 0.004 | 0.000 | 0.000 |
+| n=6, R_e 1", centre at corner | 6 | 1.0 | 11.6 | 1.5 | 0.51 | 0.16 | 0.050 | 0.015 | 0.004 |
+| n=6, R_e 1", centre at pixel centre | 6 | 1.0 | 16.2 | 2.2 | 0.72 | 0.23 | 0.071 | 0.021 | 0.006 |
+
+Reading: 32 is converged for the VELA sources (0.0073" pixels) but leaves
+0.06–0.5σ at the lens centre for the current set and 0.5–0.7σ for an n=6 lens
+(the prior is n ~ U(1, 6)); 64 brings the current set under 0.05σ but an n=6
+lens only to 0.2σ; 128 → 0.07σ; 256 → 0.02σ. Below 32 the error is erratic
+(vela23 is worse at 16 than at 4): it is the placement of the nearest sample,
+not a smooth quadrature error. Above 64 the n=6 case falls ~3.3× per doubling.
+The fitter's own ss=4 model has 1.6–16σ of central error against the exact
+lens light; that is an inference-side choice (`inference_supersample`) and
+not the subject here, but it is the same cusp.
+
+Cost of brute force (measured, CPU, 120 px, per render): 32 → 5–9 s, 3.5–4.6
+GB; 64 → 22–25 s, 10–18 GB; 128 → ~100 s, ~40–70 GB (extrapolated); 256 is
+impractical. Cheap alternative: keep 32 everywhere and replace the central
+8×8 px of the *unconvolved* lens light by the exact patch (1024² midpoints:
+≤ 0.006σ even for n=6; ~2 s), then add PSF ⊛ (exact − rendered) to the image
+(linear, PSF-convention-consistent for bin-first, and the patch is 50 px from
+any edge). Not implemented — awaiting the user's choice. Config stays at 32.
+
+Claims register additions:
+
+| claim | status | evidence |
+|---|---|---|
+| supersample 32 converges the VELA source render (|32−64| ≤ 0.008σ on vela02) | MEASURED | `supersample_check_64.json` |
+| lens-cusp error after PSF at 32: 0.06–0.48σ (current set), 0.5–0.7σ (n=6, R_e 1"); 64: ≤ 0.04σ / 0.16–0.23σ; 128: ≤ 0.07σ all | MEASURED vs exact reference (self-check ≤ 0.004σ) | `cusp_ladder.json` |
+| below 32 the cusp error is erratic in s (sample placement), not monotone | MEASURED | `cusp_ladder.png` |
