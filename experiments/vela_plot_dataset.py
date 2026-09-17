@@ -56,7 +56,10 @@ def load_source_sb(source_dir, amp, pre):
     sb, _info = preprocess_source(sb, s, crop_radius_arcsec=pre.get("crop_radius_arcsec"),
                                   crop_taper_arcsec=pre.get("crop_taper_arcsec"),
                                   recenter=bool(pre.get("recenter", False)))
-    return sb * amp, s
+    # ImageBasedLight queries its interpolator with (x, y), i.e. axis 0 of the array is
+    # x. imshow puts axis 0 on the vertical, so the array must be transposed to show the
+    # source in the same orientation as the arcs (adversarial review 2026-09-17, finding 7).
+    return sb.T * amp, s
 
 
 def crop_source(sb, sscale, win=1.6):
@@ -162,7 +165,7 @@ def make_gallery(man, systems, out_png):
         crop, win = crop_source(sb, sscale, win=(crop_r + 0.1) if crop_r else 2.9)  # no crop: show the 5.8" half-frame
         im = show(ax, crop, [-win, win, -win, win])
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03).set_label("cps / arcsec$^2$", fontsize=6)
-        ax.set_title(f"true source (as lensed, recentered) x amp={m['amp']:.2f}\n"
+        ax.set_title(f"true source (as lensed, recentered, transposed to image axes) x amp={m['amp']:.2f}\n"
                      f"unlensed AB={m['source_ab_mag_unlensed']:.2f}", fontsize=8)
         for a in axs[i]:
             a.set_xlabel("arcsec", fontsize=7)

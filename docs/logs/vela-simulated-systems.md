@@ -777,3 +777,41 @@ issue.
 | claim | status | evidence |
 |---|---|---|
 | lens-cusp error at supersample 32, against total per-pixel noise: ≤ 0.05σ (current lenses), ≤ 0.09σ (n=6, R_e 1"); χ² damage < 0.01 | MEASURED vs exact reference | `cusp_ladder.json` (`postpsf_max_sigma_total`, `postpsf_chi2`) |
+
+## Adversarial review of the simulation procedure (2026-09-17, Opus subagent, user request)
+
+Brief: an honest referee looking for reasons the set is not a representative or
+good test of *source structure*; tabled questions off-limits unless they hide
+something worse. Full report with scripts, figures and JSON preserved in
+`experiments/vela_f140w_v3/review/adversarial_review.md` (measured [M] /
+inferred [I] / recalled-uncertified [R] are marked there). Ranked findings:
+
+| # | severity | finding | key number |
+|---|---|---|---|
+| 1 | BLOCKING, structural | VELA "pristine" maps are pixel-scale shot-noise / discreteness realisations, not SB fields, and the speckle reaches the truth images at ~the observational noise | 3×3 median removes 4.8–29.3% of source flux; 26–50% of pixels exactly zero; 1-cell smoothing changes the noiseless image by Δχ² 22–6365 (0.08–1.24σ rms on detected px). No NONSCATTER extension exists for F140W. |
+| 2 | serious, structural | the data constrain one compact blob, not clumpy morphology; source models have far more freedom than resolution elements | 10–100 elements above 3σ vs 66–496 shapelet coefficients; 1 peak above 20% of max at PSF/√μ resolution in 6/10 |
+| 3 | serious, structural | one-dimensional design: source size, μ, brightness, S/N locked together by the private lens draw + cut-off loop | ρ(R50, μ) = −0.76, ρ(R50, m_unl) = −0.90, ρ(R50, S/N) = +0.71 |
+| 4 | serious | peak-SB anchor × VELA's flat envelopes → M_AB −21 to −25 and arcs carrying 15–110× the calibration-pixel flux; not fixable by the brightness draw | 3–8 mag brighter than the Foundry lower limits |
+| 5 | serious for a source test | lens light exactly the fitter's Sérsic, exact PSF, white noise | 7–48% (median 27%) of detected arc flux under lens light brighter than the arc |
+| 6 | minor | vela21/26 (and dropped vela07) are 100-kpc-FOV renders at half the resolution (0.125 kpc/px); one suite/snapshot/camera, hand-picked | PIXKPC 0.125 vs 0.0625 |
+| 7 | minor, bookkeeping | gallery "source" panel was the transpose of what was lensed (ImageBasedLight axis 0 = x) | fixed in `vela_plot_dataset.py` this date |
+
+Negative checks (do not re-run): units/ZP ≤ 0.07 mag; peak-SB anchor robust to
+spikes (0.05–0.18 mag); recentred frame-edge truncation coherent S/N 1.9
+(vela25), < 0.1 elsewhere; ss16 ≈ ss32; lens-light S/N profile matches DESI-238.
+
+My own spot check of #1 (`tmp/spot_speckle.py`, plot inspected): vela25's
+brightest pixel (4.58 nJy) has neighbours ≤ 0.045 nJy and sits in the diffuse
+halo; 3×3 median removes 29.3% (vela25) / 16.7% (vela02) of the flux; 26% /
+50% of pixels are exactly zero. Confirmed. #7 confirmed from the
+`ImageBasedLight` docstring ("first axis is x").
+
+Implications I draw (UNCERTIFIED until tested): the "out of the box" source is
+itself a Monte-Carlo realisation at 0.06 kpc, below VELA's physical resolution;
+a 1–2-cell smoothing restores a surface-brightness field rather than altering
+morphology, but it is a change to the source and needs the user's decision.
+The reviewer's falsifier (regenerate from 1-cell-smoothed sources; each
+method's χ² should drop by the Δχ² above; check whether the method ranking
+moves) is cheap. #3 is addressable for the campaign by lensing every source
+through the same 2–3 lens configurations. #2 and #5 bound the claims the set
+can support rather than invalidating it.
