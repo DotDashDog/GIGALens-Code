@@ -1035,3 +1035,57 @@ geometry, not selection.
 |---|---|---|
 | cut-off selection on theta_E vanishes at 180-200 px (acceptance >= 0.97, rho(R50, theta_E) +0.05); 120 px caps theta_E at ~1.9" for the extended sources | MEASURED (supersample 2, 100 draws/source) | `frame_size_scan.json` |
 | without any selection rho(R50, median mu) = -0.88 (median mu 6.0-9.9): the size-magnification relation is geometric and no frame size removes it | MEASURED | `frame_size_scan.json` |
+
+### Decision: 160 px frame with a 2-sigma border rule (2026-09-17, user)
+
+User keeps one private lens draw per system ("I want to test a wide variety of
+lens configurations") and chose 160 px + `max_border_sb_sigma: 2.0` over 200 px
+at 1 sigma (frame-size scan: rho(R50, median theta_E) +0.03, min acceptance
+0.82). Both campaign files updated (num_pix 160, canvas 20.8", comments); NOT
+regenerated yet, pending the brightness-anchor decision below so the set is
+regenerated once.
+
+### Brightness anchors compared on the current sources (2026-09-17, user question)
+
+User: with the private lens draws kept, what are the options for the
+size-brightness correlation (reviewer finding 3, second mechanism)? Measured
+from the two v3 manifests (peak-SB set A and the unlensed-mag set B) plus the
+recorded amplitudes, which give the VELA native photometry (amp = 1):
+
+| source | R50 | A unlensed AB | A peak SB | B unlensed AB (27.7 target) | B peak SB | native unlensed AB | native peak SB at A's lens | native M_AB |
+|---|---|---|---|---|---|---|---|---|
+| vela02 | 0.31 | 22.37 | 20.52 | 27.20 | 25.33 | 22.94 | 21.08 | -22.29 |
+| vela03 | 0.36 | 23.16 | 21.72 | 27.68 | 26.27 | 22.43 | 20.99 | -22.79 |
+| vela04 | 0.17 | 23.97 | 20.92 | 27.55 | 24.46 | 24.18 | 21.13 | -21.05 |
+| vela08 | 0.34 | 24.04 | 22.20 | 26.80 | 25.22 | 22.49 | 20.66 | -22.73 |
+| vela09 | 0.56 | 22.17 | 21.04 | 27.65 | 26.51 | 21.18 | 20.05 | -24.04 |
+| vela21 | 0.72 | 21.63 | 21.04 | 28.50 | 27.42 | 21.21 | 20.61 | -24.01 |
+| vela22 | 0.25 | 21.69 | 19.97 | 26.74 | 25.00 | 21.88 | 20.15 | -23.34 |
+| vela23 | 0.20 | 23.78 | 21.46 | 28.01 | 25.70 | 23.05 | 20.73 | -22.18 |
+| vela25 | 0.61 | 21.61 | 21.82 | 28.32 | 28.53 | 21.87 | 22.08 | -23.35 |
+| vela26 | 0.31 | 21.60 | 20.39 | 27.10 | 25.87 | 22.16 | 20.95 | -23.07 |
+
+Spearman with R50: A unlensed mag -0.48 (the 1-mag target scatter dilutes the
+reviewer's -0.90), A peak SB +0.43 (the draw); B unlensed +0.52, B peak SB
++0.87 (the correlation moves into per-pixel S/N, and at the 27.7 target the
+arcs sit at 24.5-28.5 mag/arcsec^2, i.e. below 1 sigma per pixel: undetectable);
+native unlensed -0.81 (VELA's own size-luminosity relation), native peak SB -0.18.
+
+Key fact [M]: the peak-SB calibration returns amplitudes 0.24-1.68, i.e. the
+VELA galaxies' OWN F140W photometry at z = 1.5 already puts their arcs at
+20.1-22.1 mag/arcsec^2 at these lenses, inside the Foundry band 21.1 +- 1. The
+Foundry anchor was a proxy for a brightness the simulation already has. The
+size-brightness correlation is therefore the simulation's (bigger VELA
+galaxies are more massive, M_AB -21 to -24), not an artefact of the anchor;
+finding 4's "over-luminous" sources are a VELA sample property (massive
+galaxies), not a calibration error.
+
+Options given to the user (no decision yet):
+1. native photometry (`source_flux_scale: 1.0`, existing mode): physical
+   correlation kept and declared, no per-system draw, tabled question 4 closed;
+2. keep peak-SB anchor: per-pixel S/N matched, flux ~ area by construction;
+3. total-flux anchor: kills the flux correlation, creates a per-pixel S/N
+   correlation (+0.87) and pushes both size ends outside the Foundry SB band;
+4. matched lensed flux / arc S/N: same trade as 3, luminosity ~ 1/mu;
+5. brightness as a second factor at the same lens draw (x2 systems): the only
+   design that tests S/N dependence at fixed morphology.

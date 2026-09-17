@@ -12,7 +12,7 @@
 #   exposure             1197.7 s = 3 x 399.23 s (Foundry I / DESI-238 header), no CR-split
 #   noise                white, background_rms 0.0076 cps/px measured on the DESI-238 cutout
 #   truth render         supersample 32 (fitter reads inference_supersample 4)
-#   cutout               120 x 120 px = 7.8"
+#   cutout               160 x 160 px = 10.4" (2026-09-17; was 120 px)
 #   theta_E prior        LogNormal(median 1.5", sigma 0.25)
 #   source brightness    calibrated to the peak surface brightness of the arcs in
 #                        the published Foundry photometry (see `calibration:`);
@@ -71,7 +71,13 @@ dataset:
   source_root: /pscratch/sd/l/linusu/gigalens/vela_sources_pristine
 
   # ---- Image grid ---------------------------------------------------------
-  num_pix: 120                    # 7.8" at 0.065"/px (Foundry V uses 64-120 px cutouts)
+  # 160 px (2026-09-17, user decision after the frame-size scan, finding 3): at
+  # 120 px the border rule capped theta_E near 1.9" for the extended sources
+  # (vela25 lost 81% of its draws), correlating source size with the lens draw.
+  # At 160 px with the 2-sigma border below the accepted theta_E is independent
+  # of source size (rho +0.03, min acceptance 0.82; frame_size_scan.json).
+  # Foundry V uses 64-120 px cutouts; the extra rows are sky.
+  num_pix: 160                    # 10.4" at 0.065"/px
   delta_pix: 0.065                # drizzled scale; overrides the mock's 0.06" TPIX
   # Truth render. The VELA pristine sources have 0.0073" pixels: supersample 4
   # (0.016" sub-pixels) under-samples them and left up to 0.74 sigma_bkg of
@@ -124,14 +130,14 @@ dataset:
 
   # ---- Cut-off guarantee ---------------------------------------------------
   cutoff:
-    canvas_factor: 2              # measure on a 15.6" canvas
-    canvas_supersample: 8         # numerics of the check only (thresholds are 10% / 1 sigma)
+    canvas_factor: 2              # measure on a 20.8" canvas
+    canvas_supersample: 8         # numerics of the check only (thresholds are 10% / 2 sigma)
     # 10% (2026-09-15): with uncropped sources the light that lands outside the
     # frame is far companions / outer clumps, not the arcs (vela07 has 12% of its
     # flux beyond 3" and cannot pass 1% at any theta_E); the border rule below
     # is what guards against visibly truncated arcs. Losing clumps is accepted.
     max_flux_outside: 0.10
-    max_border_sb_sigma: 1.0
+    max_border_sb_sigma: 2.0      # 2 sigma at 160 px (2026-09-17): see num_pix; 1 sigma still selected on theta_E at 160 px (rho -0.32)
     border_width_pix: 3
     max_redraws: 50
 
