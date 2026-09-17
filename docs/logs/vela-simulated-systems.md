@@ -1089,3 +1089,65 @@ Options given to the user (no decision yet):
 4. matched lensed flux / arc S/N: same trade as 3, luminosity ~ 1/mu;
 5. brightness as a second factor at the same lens draw (x2 systems): the only
    design that tests S/N dependence at fixed morphology.
+
+## Regenerated: 160 px, 2-sigma border, native VELA photometry (2026-09-17, user decisions) — UNCERTIFIED
+
+User: "I'm good just keeping the native Vela photometry. Can you regenerate
+everything with these new modifications?" Config: `num_pix: 160`,
+`cutoff.max_border_sb_sigma: 2.0` (canvas 320 px = 20.8"), `calibration:
+{source_flux_scale: 1.0}`; `campaign_unlensed_mag.yaml` marked SUPERSEDED (not
+regenerated). Same seed 0; a draw that the old rule rejected is now accepted
+at attempt 0, so the lenses of vela03/vela08/vela21 differ from the previous
+set (vela08: theta_E 2.47" giant ring). 1 redraw in total (vela21). Grid and
+gallery regenerated and inspected first (no arc near the frame edge; vela21 and
+vela09 now outshine their lens). 23 tests pass.
+
+| system | θ_E | amp | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB (7 px) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 1 | 0.309 | 10.1 | 0.00% | 0.00σ | 0 | 22.94 | 20.43 | 19.15 | 21.06 |
+| vela03 | 1.21 | 1 | 0.084 | 4.1 | 0.00% | 0.00σ | 0 | 22.43 | 20.89 | 18.20 | 21.02 |
+| vela04 | 1.65 | 1 | 0.081 | 10.2 | 0.04% | 0.52σ | 0 | 24.18 | 21.66 | 18.93 | 21.09 |
+| vela08 | 2.47 | 1 | 0.487 | 12.8 | 0.00% | 0.00σ | 0 | 22.49 | 19.73 | 18.95 | 20.91 |
+| vela09 | 1.42 | 1 | 1.070 | 6.8 | 0.00% | 0.00σ | 0 | 21.18 | 19.09 | 19.17 | 20.04 |
+| vela21 | 1.54 | 1 | 1.431 | 6.6 | 0.06% | 0.13σ | 1 | 21.21 | 19.17 | 19.56 | 20.35 |
+| vela22 | 1.05 | 1 | 0.294 | 6.2 | 0.00% | 0.00σ | 0 | 21.88 | 19.90 | 18.57 | 20.14 |
+| vela23 | 2.22 | 1 | 0.706 | 29.4 | 0.01% | 0.10σ | 0 | 23.05 | 19.38 | 19.00 | 20.73 |
+| vela25 | 1.45 | 1 | 0.407 | 5.4 | 0.00% | 0.00σ | 0 | 21.87 | 20.04 | 19.06 | 22.08 |
+| vela26 | 1.18 | 1 | 0.178 | 3.4 | 0.02% | 0.03σ | 0 | 22.16 | 20.84 | 18.96 | 20.93 |
+
+Peak SB is now recorded over the generator's 7-px default for non-peak-SB
+modes (was the 9-px target); 0.05 mag difference, not changed.
+
+### Raw vs smoothed at the new truths (`smoothing_residuals.{png,json}`, re-run)
+
+| system | Δχ² (σ_tot) | max |res| | px > 1σ | px > 3σ |
+|---|---|---|---|---|
+| vela02 | 68 | 0.95σ | 0 | 0 |
+| vela03 | 27 | 0.71σ | 0 | 0 |
+| vela04 | 39 | 2.1σ | 9 | 0 |
+| vela08 | 314 | 3.7σ | 44 | 4 |
+| vela09 | 554 | 3.7σ | 124 | 4 |
+| vela21 | 3070 | 10.5σ | 205 | 72 |
+| vela22 | 26 | 1.6σ | 6 | 0 |
+| vela23 | 202 | 1.7σ | 9 | 0 |
+| vela25 | 72 | 1.2σ | 2 | 0 |
+| vela26 | 58 | 3.5σ | 8 | 1 |
+
+vela21 [M]: the raw-vs-smoothed difference at its nucleus is now 10.5σ over 72
+pixels above 3σ (was 5.8σ / 7 px): the source is 1.5x brighter than under the
+peak-SB draw and its new lens (theta_E 1.54", mu 6.6 vs 3.4) magnifies the
+nucleus more. This is the compact-nucleus caveat of the smoothing decision,
+now at a level the data would see: whether VELA's central cusp is physical or
+a Sunrise sampling artefact is not decidable from the mocks, and the recorded
+truth is the smoothed source. Flagged to the user; a modelling method that
+fits the smoothed truth cannot be judged on the raw one at vela21's centre.
+
+Page (artifact version 7): pills "native VELA photometry", "2 tabled questions"
+(brightness-structure correlation and cut-off thresholds resolved); steps,
+instrument / calibration / cut-off rows, stats, table, choices, files updated.
+README row updated. Memory updated.
+
+| claim | status | evidence |
+|---|---|---|
+| regenerated set: 1 redraw / 10 systems, outside <= 0.06%, border <= 0.52σ (2σ rule), amp = 1, peak SB 20.0–22.1 | MEASURED | generation log, manifest |
+| raw-vs-smoothed Δχ² 26–3070, max 10.5σ at vela21's nucleus | MEASURED | `smoothing_residuals.json` |

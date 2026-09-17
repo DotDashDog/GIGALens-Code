@@ -14,9 +14,9 @@
 #   truth render         supersample 32 (fitter reads inference_supersample 4)
 #   cutout               160 x 160 px = 10.4" (2026-09-17; was 120 px)
 #   theta_E prior        LogNormal(median 1.5", sigma 0.25)
-#   source brightness    calibrated to the peak surface brightness of the arcs in
-#                        the published Foundry photometry (see `calibration:`);
-#                        `campaign_unlensed_mag.yaml` is the magnification route.
+#   source brightness    VELA's own F140W photometry at z = 1.5 (amplitude 1;
+#                        2026-09-17 decision, see `calibration:`). The earlier
+#                        Foundry peak-SB / unlensed-magnitude routes are superseded.
 #
 # No value below is an assumption any more; the remaining open choices are listed
 # in docs/logs/vela-simulated-systems.md.
@@ -118,18 +118,19 @@ dataset:
     background_rms: 0.0076        # cps per 0.065" px (DESI-238)
     exp_time: 1197.7              # s, DESI-238 header (3 x 399.23 s); Poisson-term gain 1 e-/count
 
-  # ---- Source brightness: from the Foundry photometry ------------------------
-  # Foundry V publishes NO arc photometry; Foundry I Table 1 gives the F140W
-  # isophotal magnitude of the BRIGHTEST IMAGE over a small contour (5-33
-  # drizzled px). For the seven Foundry V systems that is a peak surface
-  # brightness of 19.4-22.2 AB mag/arcsec^2 (mean 21.1, sd 1.0, contours 5-33 px, median 9); lensing
-  # conserves surface brightness, so this calibrates the source without a
-  # magnification. See docs/logs/vela-simulated-systems.md for the table.
+  # ---- Source brightness: the simulation's own photometry -------------------
+  # amplitude 1 = the VELA HLSP F140W flux (PHOTFNU-scaled nJy at z = 1.5, distance
+  # modulus 45.22 from the header): unlensed 21.2-24.2 AB, M_AB -21 to -24.
+  # Decision 2026-09-17 (user), after the Foundry peak-SB anchor (Normal(21.1, 1.0)
+  # mag/arcsec^2 over 9 px) returned amplitudes 0.24-1.68 for these lenses: the
+  # native brightness already puts the arcs at 20.1-22.1 mag/arcsec^2, inside the
+  # Foundry band, so no calibration is applied. The size-brightness correlation
+  # (rho(R50, M_AB) = -0.81) is VELA's own size-luminosity relation and is kept
+  # on purpose (reviewer finding 3, second mechanism; tabled question 4).
+  # `campaign_unlensed_mag.yaml` (the magnification route) is superseded and no
+  # longer regenerated.
   calibration:
-    peak_sb:
-      sb_mag_arcsec2: {dist: Normal, loc: 21.1, scale: 1.0}
-      n_brightest_pix: 9          # median Foundry V contour area 0.038 arcsec^2 = 9 px at 0.065"
-    measure_in: cutout
+    source_flux_scale: 1.0
 
   # ---- Cut-off guarantee ---------------------------------------------------
   cutoff:

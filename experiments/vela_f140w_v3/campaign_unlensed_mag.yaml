@@ -1,3 +1,6 @@
+# SUPERSEDED 2026-09-17: the campaign uses VELA's native photometry (amplitude 1,
+# campaign.yaml); this magnification-route calibration is kept for the record of
+# the anchor comparison (docs/logs/vela-simulated-systems.md) and is not regenerated.
 # Vela simulated-system campaign, v3: WFC3/IR F140W at the DESI Strong Lens
 # Foundry V observing setup (group decisions of 2026-09-14).
 #

@@ -119,6 +119,8 @@ def suptitle(man):
     elif mode == "unlensed_ab_mag":
         d = cal["unlensed_ab_mag"]
         cal_txt = f"calib unlensed AB {d.get('value', d.get('loc', d.get('median')))} ({d['dist']})"
+    elif mode == "scale":
+        cal_txt = f"native photometry x {cal.get('source_flux_scale')}"
     else:
         cal_txt = f"calib {mode}"
     return (f"{man.get('generator')} v{ex.get('generator_version')} | {ex.get('filter', '?').upper()} "
