@@ -815,3 +815,34 @@ method's χ² should drop by the Δχ² above; check whether the method ranking
 moves) is cheap. #3 is addressable for the campaign by lensing every source
 through the same 2–3 lens configurations. #2 and #5 bound the claims the set
 can support rather than invalidating it.
+
+### Where the speckle comes from (2026-09-17, user question)
+
+Not added on purpose. The `IMAGE_PRISTINE` extension is the raw output of the
+Sunrise Monte-Carlo radiative-transfer code (header `CODE = 'Sunrise (Jonsson
+06)'`, HLSP Simons et al. 2019; `SKYSIG = 0`; no ray count or run parameters
+survive in the HLSP header — only `HISTORY 't r5i2n5.'`). Measured on the raw
+maps (`tmp/vela_quant.py`, `tmp/vela_pop.py`; image / SBFACTOR):
+
+* Exactly-zero pixels: 25.6% of vela25's map (39% beyond r = 2"), 50% of
+  vela02's, 54% of vela22's — pixels no photon packet reached.
+* The non-zero values are bimodal in log: a population near 1e-6 nJy/px (far
+  below any physical SB) and the galaxy at 1e-3 to 1 nJy/px, separated by a
+  ~3-dex gap (vela25: modes 10^-5.9 / 10^-2.4, gap at 10^-3.3; vela22: 10^-6.7 /
+  10^-2.6). The faint population is 37% (vela25) / 19% (vela22) of the map but
+  holds 3e-4 / 2e-4 of the flux — low-weight scattered packets.
+* 9784 isolated single-pixel spikes (> 20x all eight neighbours) hold 2.5% of
+  vela25's flux; the brightest (4.58 nJy, in the halo) is M_AB = -15.5, ~1e8
+  L_sun(V) — too luminous for one 1e3–1e4 M_sun VELA star particle
+  [R-UNCERTIFIED for the particle mass], so a sampled packet weight rather than
+  a physical cluster.
+
+So the speckle is Monte-Carlo sampling noise (finite photon packets, peel-off
+weights) on top of the discreteness of the emitting star particles; the two
+cannot be separated without the Sunrise run parameters or a second
+realisation (F140W ships no NONSCATTER image). [I]: the VELA team's "observed"
+products convolve this map with the HST PSF at the native 0.06" pixel, where
+~70 source pixels per output pixel and ~500 under the PSF average the speckle
+far below the noise; lensing at mu ~ 5–20 stretches the map so fewer source
+pixels fall under each PSF footprint, and the peak-SB calibration then scales
+it to arc brightness. That is why it surfaces here and not in the HLSP mocks.
