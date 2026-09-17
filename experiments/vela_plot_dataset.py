@@ -55,7 +55,8 @@ def load_source_sb(source_dir, amp, pre):
     sb = np.asarray(img / (s ** 2) * 1e-9 / float(m["photfnu_Jy"]))
     sb, _info = preprocess_source(sb, s, crop_radius_arcsec=pre.get("crop_radius_arcsec"),
                                   crop_taper_arcsec=pre.get("crop_taper_arcsec"),
-                                  recenter=bool(pre.get("recenter", False)))
+                                  recenter=bool(pre.get("recenter", False)),
+                                  smooth_sigma_pix=pre.get("smooth_sigma_pix"))
     # ImageBasedLight queries its interpolator with (x, y), i.e. axis 0 of the array is
     # x. imshow puts axis 0 on the vertical, so the array must be transposed to show the
     # source in the same orientation as the arcs (adversarial review 2026-09-17, finding 7).

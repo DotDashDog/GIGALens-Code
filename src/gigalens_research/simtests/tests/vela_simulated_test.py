@@ -240,6 +240,27 @@ def test_preprocess_source_taper():
         vs.preprocess_source(img, 0.01, crop_radius_arcsec=0.5, recenter=False, crop_taper_arcsec=0.0)
 
 
+def test_preprocess_source_smooth():
+    n = 201
+    rng = np.random.default_rng(3)
+    img = np.zeros((n, n)); img[80:120, 80:120] = 1.0           # a flat 40 px square
+    img[100, 100] += 50.0                                         # one MC-style spike inside it
+    img[20, 180] = 5.0                                            # an isolated spike in the outskirts
+    raw, iraw = vs.preprocess_source(img, 0.01, crop_radius_arcsec=None, recenter=False)
+    sm, ism = vs.preprocess_source(img, 0.01, crop_radius_arcsec=None, recenter=False, smooth_sigma_pix=2.0)
+    assert iraw["smooth_sigma_pix"] is None and "smooth_flux_change_frac" not in iraw
+    assert ism["smooth_sigma_pix"] == 2.0 and np.isclose(ism["smooth_sigma_arcsec"], 0.02)
+    assert np.isclose(sm.sum(), img.sum(), rtol=1e-6) and abs(ism["smooth_flux_change_frac"]) < 1e-6
+    assert sm[100, 100] < 0.1 * raw[100, 100] and sm[20, 180] < 0.1 * raw[20, 180]   # spikes spread
+    assert np.isclose(sm[90, 90], 1.0, atol=1e-6)                                    # flat interior untouched
+    assert sm.sum() > 0 and np.all(sm >= 0)
+    # smoothing happens BEFORE recentring/cropping, and both still work on top of it
+    both, ib = vs.preprocess_source(img, 0.01, crop_radius_arcsec=0.3, recenter=True, smooth_sigma_pix=2.0)
+    assert ib["smooth_sigma_pix"] == 2.0 and "crop_flux_removed_frac" in ib and "recenter_shift_arcsec" in ib
+    with pytest.raises(ValueError, match="must be > 0"):
+        vs.preprocess_source(img, 0.01, crop_radius_arcsec=None, recenter=False, smooth_sigma_pix=0.0)
+
+
 # ---------------------------------------------------------------------------
 # End-to-end on a synthetic "pristine" source (CPU, no download)
 # ---------------------------------------------------------------------------
@@ -277,7 +298,7 @@ def test_end_to_end_synthetic_source():
             "num_pix": 48, "supersample": 2, "inference_supersample": 1,
             "source_root": src_root, "datadir": tmp,
             "delta_pix": 0.065,   # override the synthetic mock's 0.05" TPIX (drizzle scale)
-            "source_crop_radius_arcsec": 1.0, "source_recenter": True,
+            "source_crop_radius_arcsec": 1.0, "source_recenter": True, "source_smooth_sigma_pix": 1.5,
             "psf": {"kind": "gaussian", "fwhm_arcsec": 0.1, "size_pix": 11},
             "noise": {"kind": "explicit", "background_rms": 0.005, "exp_time": 2000},
             "calibration": {"source_to_lens_flux_ratio": 0.5},
@@ -300,6 +321,8 @@ def test_end_to_end_synthetic_source():
         assert System.load(ds, man["system_ids"][0]).supersample == 1
         assert ex["truth_prior"]["lens_mass"]["0"]["theta_E"]["median"] == 0.6
         assert ex["source_preprocessing"]["per_source"]["vela99"]["recenter"] is True
+        assert ex["source_preprocessing"]["smooth_sigma_pix"] == 1.5
+        assert ex["source_preprocessing"]["per_source"]["vela99"]["smooth_sigma_pix"] == 1.5
         for sid in man["system_ids"]:
             m = ex["per_system"][sid]
             assert abs(m["source_to_lens_ratio_cutout"] - 0.5) < 1e-6

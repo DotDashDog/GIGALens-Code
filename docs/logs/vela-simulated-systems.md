@@ -868,3 +868,80 @@ signature (median loss < 0.6%, bright scatter <= 0.10). Recommendation to the
 user: fixed Gaussian sigma = 2 cells (0.125 kpc) as a recorded preprocessing
 knob, adaptive (packet-density-targeted) smoothing as the better follow-up;
 verify with the reviewer's chi^2 test at the modelling stage.
+
+## Source smoothing implemented, sigma = 2 cells (2026-09-17, user decision) — UNCERTIFIED
+
+User: "I like this idea. Implement it with the default 2-cell sigma", plus
+residual images of the sources and normalised residuals of the lenses between
+the smoothed and unsmoothed versions.
+
+Implementation: `preprocess_source(..., smooth_sigma_pix=)` applies a Gaussian
+(scipy, zero-padded) BEFORE crop/recentre; YAML key `source_smooth_sigma_pix`
+(both campaigns: 2.0 = 0.125 kpc = 0.0145"); code default None (raw map, the
+v2/v3 behaviour) with the physics-default-ok annotation; manifest records
+`smooth_sigma_pix` and per source `smooth_sigma_arcsec` and
+`smooth_flux_change_frac` (measured: -1e-5 to -3e-4, frame-edge leakage).
+Test `test_preprocess_source_smooth` (flux preserved, spikes spread, flat
+interior untouched, order before crop/recentre, ValueError on sigma <= 0);
+the end-to-end test asserts the manifest fields. 23 tests pass; lint clean.
+The gallery source panel shows the smoothed (as-lensed) source.
+
+Both sets regenerated (`--force`, 10 sources; the harness killed the first
+launch on a spurious low-memory signal — relaunched with `setsid nohup`, which
+survives it; log this for next time). Main set: 12 redraws (vela21 7, vela08 4,
+vela03 1); outside <= 1.0%; border <= 0.97sigma (vela21). Note: with 10 sources
+the seed folding changed, so lens draws differ from the 11-source set for every
+source after vela04 (vela23 now theta_E 2.22", mu 29).
+
+| system | θ_E | amp | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 1.68 | 0.561 | 10.1 | 0.04% | 0.26σ | 0 | 22.37 | 19.87 | 19.24 | 20.52 |
+| vela03 | 1.61 | 0.51 | 0.181 | 9.6 | 0.05% | 0.15σ | 1 | 23.16 | 20.70 | 18.85 | 21.72 |
+| vela04 | 1.65 | 1.21 | 0.105 | 10.1 | 1.00% | 0.17σ | 0 | 23.97 | 21.46 | 19.02 | 20.92 |
+| vela08 | 1.33 | 0.24 | 0.138 | 13.8 | 0.09% | 0.69σ | 4 | 24.04 | 21.19 | 19.03 | 22.20 |
+| vela09 | 1.42 | 0.40 | 0.463 | 6.8 | 0.02% | 0.20σ | 0 | 22.17 | 20.08 | 19.24 | 21.04 |
+| vela21 | 1.45 | 0.68 | 0.258 | 3.4 | 0.30% | 0.97σ | 7 | 21.63 | 20.29 | 18.82 | 21.04 |
+| vela22 | 1.05 | 1.18 | 0.374 | 6.2 | 0.01% | 0.04σ | 0 | 21.69 | 19.72 | 18.65 | 19.97 |
+| vela23 | 2.22 | 0.51 | 0.391 | 29.4 | 0.09% | 0.04σ | 0 | 23.78 | 20.11 | 19.09 | 21.46 |
+| vela25 | 1.45 | 1.27 | 0.555 | 5.4 | 0.12% | 0.47σ | 0 | 21.61 | 19.78 | 19.14 | 21.82 |
+| vela26 | 1.18 | 1.67 | 0.322 | 3.4 | 0.16% | 0.05σ | 0 | 21.60 | 19.76 | 19.05 | 20.39 |
+
+### Raw vs smoothed at the same truth (`smoothing_residuals.{py,png,json}`)
+
+For each system the noiseless image was re-rendered at the stored truth from
+the smoothed source (reproduces `noiseless_image.npy` to <= 1.3e-6) and from
+the raw source; residual normalised by sigma_tot^2 = bkg^2 + image/exp_time.
+Plot inspected first: source residuals are pixel-scale speckle in the bright
+regions plus isolated packet spikes; lensed residuals are sub-sigma speckle
+along the arcs, with the largest values on the images of compact nuclei
+(vela21, vela26), where the smoothing broadens a numerically sharp cusp.
+
+| system | Δχ² (raw vs smoothed, whole frame) | max |res| | px > 1σ | px > 3σ |
+|---|---|---|---|---|
+| vela02 | 151 | 1.3σ | 12 | 0 |
+| vela03 | 65 | 0.9σ | 0 | 0 |
+| vela04 | 51 | 2.4σ | 10 | 0 |
+| vela08 | 27 | 1.5σ | 4 | 0 |
+| vela09 | 177 | 2.2σ | 43 | 0 |
+| vela21 | 243 | 5.8σ | 28 | 7 |
+| vela22 | 33 | 1.8σ | 7 | 0 |
+| vela23 | 82 | 1.1σ | 2 | 0 |
+| vela25 | 103 | 1.4σ | 8 | 0 |
+| vela26 | 113 | 4.7σ | 8 | 2 |
+
+Reading: the raw set would have carried a χ² floor of 27–243 per system
+(14400 px) that no smooth model could reach; these are the numbers the
+reviewer's falsifier predicts each method's best-fit χ² should drop by. They
+are far below the reviewer's 22–6365 because those were per sigma_bkg (which
+is 8–9x smaller than sigma_tot at the bright pixels) and at 1-cell smoothing.
+Caveat [I]: at the nuclei of vela21/vela26 part of the 5–6σ difference is
+compact structure at the smoothing scale, not noise; whether VELA's central
+cusps are physical is not decidable from the mocks. Both truths are "the
+simulation" at a stated resolution; the smoothed one is the recorded truth.
+
+Claims register additions:
+
+| claim | status | evidence |
+|---|---|---|
+| 2-cell smoothing changes the source flux by < 0.03% and the lensed noiseless image by Δχ² 27–243 per system (σ_tot), max 5.8σ at a nucleus | MEASURED | `smoothing_residuals.json` |
+| smoothed-set generation: 12 redraws / 10 systems, outside <= 1.0%, border <= 0.97σ | MEASURED | generation log |

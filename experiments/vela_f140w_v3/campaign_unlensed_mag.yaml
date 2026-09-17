@@ -52,6 +52,16 @@ dataset:
   # for every kept source (docs/logs/vela-simulated-systems.md, "No crop at all?").
   # The 1.5" crop used until then lensed into a visible sub-noise edge (S/N 16 in
   # vela21). Arcs are kept inside the frame by the cut-off redraws alone.
+  # Smooth the raw Sunrise map by 2 source cells (0.125 kpc, 0.0145") before
+  # anything else (2026-09-17, user decision after the adversarial review). The
+  # VELA IMAGE_PRISTINE maps are raw Monte-Carlo output: 25-55% of pixels are
+  # exactly zero and a 3x3 median removes 5-30% of the flux (single-pixel packet
+  # weights). 2 cells removes that sampling noise (median loss < 0.6%) and is at
+  # or below the tangential source-plane resolution of every system in the set
+  # (PSF sigma / sqrt(mu) = 2.1 cells at mu = 22). This is resolution matching to
+  # the simulation, not a morphology edit; docs/logs/vela-simulated-systems.md,
+  # "Smoothing scan for the speckle".
+  source_smooth_sigma_pix: 2.0
   source_crop_radius_arcsec: null
   source_recenter: true
   transpose_image: false

@@ -50,6 +50,12 @@ Source selection / geometry
                       The value and its provenance are recorded in the manifest.
   transpose_image     transpose the source before lensing (default False).
   source_variant      IMAGE_PRISTINE (default, with dust) | IMAGE_PRISTINE_NONSCATTER.
+  source_smooth_sigma_pix     null (default: raw map) or a Gaussian sigma in SOURCE
+                      pixels applied before anything else. The VELA pristine maps
+                      are raw Sunrise Monte-Carlo output (exact zeros, single-pixel
+                      packet weights); 2 cells removes that sampling noise and is
+                      at or below the lensed data's source-plane resolution.
+                      Recorded with the flux change in the manifest.
   source_crop_radius_arcsec   null (default: no crop) or a radius: source surface
                       brightness beyond this distance from the flux centroid is
                       zeroed (removes companions / faint outskirts). Recorded.
@@ -611,15 +617,34 @@ def crop_weight(r_arcsec: np.ndarray, crop_radius_arcsec: float,
 def preprocess_source(sb: np.ndarray, src_scale: float, *,
                       crop_radius_arcsec: Optional[float],
                       recenter: bool,
-                      crop_taper_arcsec: Optional[float] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
-    """Optional crop (hard or tapered, about the flux centroid) and recentering.
+                      crop_taper_arcsec: Optional[float] = None,
+                      smooth_sigma_pix: Optional[float] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """Optional smoothing, crop (hard or tapered, about the flux centroid) and recentering.
+
+    ``smooth_sigma_pix``: Gaussian sigma in SOURCE pixels applied first. The VELA
+    ``IMAGE_PRISTINE`` maps are raw Sunrise Monte-Carlo output: 25-55% of their
+    pixels are exactly zero and a 3x3 median removes 5-30% of the flux (isolated
+    single-pixel packet weights). Smoothing at ~2 Sunrise cells removes that
+    sampling noise (median loss < 0.6%, bright-pixel scatter <= 0.10) and stays at or
+    below the tangential source-plane resolution of the lensed data
+    (PSF sigma / sqrt(mu) = 2.1 cells at mu = 22). Zero-padded outside the frame,
+    so the total flux changes only by what leaks over the frame edge (recorded).
 
     Everything is recorded so the truth source is reproducible from the manifest.
     """
     img = np.array(sb, dtype=np.float64, copy=True)
     info: Dict[str, Any] = {"crop_radius_arcsec": crop_radius_arcsec, "recenter": bool(recenter),
-                            "crop_taper_arcsec": crop_taper_arcsec}
+                            "crop_taper_arcsec": crop_taper_arcsec, "smooth_sigma_pix": smooth_sigma_pix}
     total0 = float(img.sum())
+    if smooth_sigma_pix is not None:
+        from scipy.ndimage import gaussian_filter
+        sig = float(smooth_sigma_pix)
+        if sig <= 0:
+            raise ValueError(f"[vela_simulated] source_smooth_sigma_pix must be > 0, got {sig}.")
+        img = gaussian_filter(img, sig, mode="constant", cval=0.0)
+        info["smooth_sigma_arcsec"] = sig * float(src_scale)
+        info["smooth_flux_change_frac"] = float(img.sum()) / total0 - 1.0
+        total0 = float(img.sum())
     cy, cx = _flux_centroid(img)
     if crop_radius_arcsec is not None:
         yy, xx = np.indices(img.shape)
@@ -1127,6 +1152,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
     if source_variant not in _PRISTINE_VARIANTS:
         raise ValueError(f"[vela_simulated] source_variant={source_variant!r} must be one of "
                          f"{_PRISTINE_VARIANTS}.")
+    smooth_sigma = extra.get("source_smooth_sigma_pix")  # physics-default-ok: None = raw Sunrise map (v2/v3 behaviour), recorded in manifest
+    smooth_sigma = None if smooth_sigma is None else float(smooth_sigma)
     crop_radius = extra.get("source_crop_radius_arcsec")  # physics-default-ok: None = no crop, recorded in manifest
     crop_radius = None if crop_radius is None else float(crop_radius)
     crop_taper = extra.get("source_crop_taper_arcsec")  # physics-default-ok: None = hard edge (v2/v3 behaviour), recorded in manifest
@@ -1160,7 +1187,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
         else:
             delta_pix, delta_pix_source = float(mock_pix), "mock TPIX header"
         sb, pre_info = preprocess_source(sb_raw, src_scale, crop_radius_arcsec=crop_radius,
-                                         recenter=recenter, crop_taper_arcsec=crop_taper)
+                                         recenter=recenter, crop_taper_arcsec=crop_taper,
+                                         smooth_sigma_pix=smooth_sigma)
         source_info[_normalize_sim(sim)] = pre_info
         unlensed_flux_cps = float(sb.sum()) * src_scale ** 2  # at amp = 1
         photfnu = float(src_meta["photfnu_Jy"])
@@ -1354,7 +1382,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
             "mock_instrument_pixel_arcsec": mock_pix,
             "likelihood_precision": likelihood_precision, "conv_precision": conv_precision,
             "source_preprocessing": {"crop_radius_arcsec": crop_radius, "crop_taper_arcsec": crop_taper,
-                                     "recenter": recenter,
+                                     "smooth_sigma_pix": smooth_sigma, "recenter": recenter,
                                      "per_source": source_info},
             "psf": psf_meta,
             "noise": noise_meta,
