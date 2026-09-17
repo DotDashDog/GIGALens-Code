@@ -846,3 +846,25 @@ products convolve this map with the HST PSF at the native 0.06" pixel, where
 far below the noise; lensing at mu ~ 5–20 stretches the map so fewer source
 pixels fall under each PSF footprint, and the peak-SB calibration then scales
 it to arc brightness. That is why it surfaces here and not in the HLSP mocks.
+
+### Smoothing scan for the speckle (2026-09-17, `review/smooth_scan.py`)
+
+Gaussian smoothing of the raw source map, MC signature measured as the flux a
+3x3 median removes and the fractional pixel scatter about a 2.5-cell local
+mean in the brightest 0.5% of pixels (which at sigma >= 2 also includes real
+structure, so it is an upper bound on the noise):
+
+| sigma (cells) | vela25 median loss / bright scatter | vela02 | vela22 | sigma in " / kpc |
+|---|---|---|---|---|
+| 0 | 29.3% / 0.47 | 16.7% / 0.46 | 4.8% / 0.08 | 0 |
+| 1 | 4.7% / 0.13 | 2.0% / 0.17 | 0.6% / 0.05 | 0.0073 / 0.062 |
+| 2 | 0.6% / 0.04 | 0.4% / 0.10 | 0.1% / 0.03 | 0.0145 / 0.125 |
+| 3 | 0.1% / 0.02 | 0.2% / 0.07 | 0.1% / 0.02 | 0.0218 / 0.188 |
+
+Tangential source-plane PSF sigma (0.073"/sqrt(mu)) is 5.8 / 4.5 / 3.2 / 2.1
+cells at mu = 3 / 5 / 10 / 22, i.e. sigma = 2 cells is at or below the finest
+tangential resolution any system in the set has, and it removes the MC
+signature (median loss < 0.6%, bright scatter <= 0.10). Recommendation to the
+user: fixed Gaussian sigma = 2 cells (0.125 kpc) as a recorded preprocessing
+knob, adaptive (packet-density-targeted) smoothing as the better follow-up;
+verify with the reviewer's chi^2 test at the modelling stage.
