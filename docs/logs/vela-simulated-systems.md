@@ -982,3 +982,56 @@ would then depend on the lens).
 | claim | status | evidence |
 |---|---|---|
 | vela02's bright points are few-cell clumps (11/228 single-pixel), internally 63% noisy; raw vs 2-cell differ by <= 10% of peak at the data's source-plane resolution | MEASURED | `review/vela02_points.py` |
+
+### Finding 3: how large a frame removes the cut-off selection? (2026-09-17, user question)
+
+User: "How much larger would I have to make the cutouts to effectively remove the
+magnification confound?" Measured with `frame_size_scan.py` (100 prior draws per
+source, lensed source rendered once on a 360 px canvas at supersample 2, the
+campaign's cut-off rule evaluated for frames of 120-320 px from that render;
+plot inspected first: `frame_size_scan.png`, numbers in `frame_size_scan.json`).
+
+Hypothesis: the reviewer's rho(R50, mu) = -0.76 is the border rule rejecting
+large-theta_E draws for extended sources; prediction: acceptance -> 1 and the
+R50-theta_E correlation -> 0 once the frame holds the 1-sigma isophote of the
+largest arcs (~2 x (theta_E,95% + R90) = 2 x (2.3 + 1.9)" = 8.4" -> ~130 px
+half-width would be needed for the worst case... i.e. ~200 px). Falsifier: a
+residual R50-mu correlation among unselected draws would show the confound is
+geometry, not selection.
+
+| frame | min acceptance (source) | max E[redraws] | rho(R50, median theta_E | accepted) | rho(R50, median mu | accepted) |
+|---|---|---|---|---|
+| 120 px 7.8" | 0.19 (vela25) | 4.3 | -0.78 | -0.84 |
+| 140 px 9.1" | 0.49 | 1.0 | -0.73 | -0.88 |
+| 160 px 10.4" | 0.72 | 0.4 | -0.32 | -0.89 |
+| 180 px 11.7" | 0.84 | 0.2 | +0.04 | -0.89 |
+| 200 px 13.0" | 0.97 | 0.03 | +0.05 | -0.88 |
+| 240-320 px | >= 0.98 | 0 | +0.08 | -0.88 |
+| no selection (all draws) | 1 | 0 | -0.01 | -0.88 |
+
+* The border rule is the only rule that rejects (flux-outside fails 6 of 303
+  rejections). At 120 px it caps theta_E at ~1.9" for vela21/vela25 (prior 95%
+  point 2.2-2.3") and costs vela25 81% of its draws; acceptance ordering follows
+  R90, not R50 (vela04, R50 0.17" but R90 0.81", loses 25%).
+* Selection on theta_E is gone at 180-200 px (13"): acceptance >= 0.97 for every
+  source, rho(R50, theta_E) = +0.05. 160 px removes about 60% of it.
+* The magnification correlation does NOT go away: with no selection at all the
+  per-source median flux-weighted magnification is 6.0 (vela21, R50 0.72") to
+  9.9 (vela22, R50 0.25"), rho(R50, median mu) = -0.88. Selection at 120 px only
+  moves the extended sources' medians from 6.0-6.7 to 5.5. So the reviewer's
+  -0.76 is mostly geometry: at a fixed lens an extended source averages over
+  low-magnification sky. No frame size removes it; it is intrinsic to lensing
+  the same prior with sources of different size, and it is what the crossed
+  design makes interpretable rather than removes.
+* Relaxing the border threshold instead of enlarging the frame does not work at
+  120 px (rho stays -0.7 to -0.8 even at 5 sigma: the arcs really reach the
+  edge); at 160 px a 2-sigma border gives rho +0.03 with min acceptance 0.82.
+  So the two equivalent choices are 200 px with the 1-sigma rule, or 160 px with
+  a 2-sigma rule (visible arc-edge truncation in a few systems).
+* Cost of 200 px: 2.8x the pixels for the truth render and for every
+  likelihood evaluation (inference sub-grid 800^2 at supersample 4).
+
+| claim | status | evidence |
+|---|---|---|
+| cut-off selection on theta_E vanishes at 180-200 px (acceptance >= 0.97, rho(R50, theta_E) +0.05); 120 px caps theta_E at ~1.9" for the extended sources | MEASURED (supersample 2, 100 draws/source) | `frame_size_scan.json` |
+| without any selection rho(R50, median mu) = -0.88 (median mu 6.0-9.9): the size-magnification relation is geometric and no frame size removes it | MEASURED | `frame_size_scan.json` |
