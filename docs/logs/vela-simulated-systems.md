@@ -945,3 +945,40 @@ Claims register additions:
 |---|---|---|
 | 2-cell smoothing changes the source flux by < 0.03% and the lensed noiseless image by Δχ² 27–243 per system (σ_tot), max 5.8σ at a nucleus | MEASURED | `smoothing_residuals.json` |
 | smoothed-set generation: 12 redraws / 10 systems, outside <= 1.0%, border <= 0.97σ | MEASURED | generation log |
+
+### Does the 2-cell smoothing over-spread vela02's bright points? (2026-09-17, user question)
+
+User: vela02's scattered bright points became larger diffuse blobs; worried the
+smoothing spreads real structure too far. Measured (`review/vela02_points.py`,
+`vela02_smoothing_check.png`, plot inspected first):
+
+* Local maxima above 5% of the peak within 1.5": 228. Only 11 are single-pixel
+  spikes; the median maximum has its brightest neighbour at 0.66 of its peak
+  and holds 11% of its 5x5 flux, i.e. the bright points are few-cell clumps
+  (0.1-0.3 kpc), not packet spikes. Their 5x5 boxes hold 52% of the galaxy flux.
+* But the pixel-to-pixel fractional scatter inside the brightest 1% of the map
+  is 0.63: the clumps' internal pixel structure is Monte-Carlo noise, so their
+  shapes at the 1-cell scale were never trustworthy (the sigma = 1 panel is
+  still grainy).
+* At vela02's data resolution (tangential PSF sigma / sqrt(mu) = 3.16 cells =
+  0.023"), raw and 2-cell-smoothed maps convolved to that scale differ by at
+  most 10% of the peak (at the nucleus; ~5% at the two bright clumps), rms 1%
+  of the peak over pixels above 5% of the peak. The effective resolution
+  broadening for compact features is sqrt(3.16^2 + 2^2) / 3.16 = 1.18 (18%).
+  In the lensed image the direct measurement is max 1.3 sigma, dchi2 151.
+
+Assessment: the "diffuse blobs" are how few-cell clumps look at sigma = 2 when
+displayed at the native 0.007" pixel; at the resolution the data have, raw and
+smoothed are the same picture to ~10% at the nucleus and less elsewhere. The
+smoothing does broaden real 0.1-0.3 kpc clumps (area roughly doubles for a
+1.5-cell clump), which costs 18% of effective source-plane resolution at
+mu = 10 and would cost ~45% at mu ~ 30 (vela23), where 2 cells exceeds the
+data's 1.9-cell resolution. Config kept at 2 (uniform, flux-conserving, simple);
+alternatives if the high-mu systems are modelled: sigma = 1.5 (bright scatter
+0.13 instead of 0.10), or define the comparison truth at the data resolution.
+Making sigma depend on the lens draw is not recommended (the source truth
+would then depend on the lens).
+
+| claim | status | evidence |
+|---|---|---|
+| vela02's bright points are few-cell clumps (11/228 single-pixel), internally 63% noisy; raw vs 2-cell differ by <= 10% of peak at the data's source-plane resolution | MEASURED | `review/vela02_points.py` |
