@@ -1151,3 +1151,52 @@ README row updated. Memory updated.
 |---|---|---|
 | regenerated set: 1 redraw / 10 systems, outside <= 0.06%, border <= 0.52σ (2σ rule), amp = 1, peak SB 20.0–22.1 | MEASURED | generation log, manifest |
 | raw-vs-smoothed Δχ² 26–3070, max 10.5σ at vela21's nucleus | MEASURED | `smoothing_residuals.json` |
+
+### Are the nuclear cusps real, and does the PSF already do the smoothing's job? (2026-09-17, user)
+
+User: the bullseye residuals at the nuclei of vela21, 02, 04, 08, 22, 26 show the
+2-cell smoothing removing a cusp that is really there; and would the PSF not
+accomplish the same thing as source-plane smoothing?
+
+Measured (`review/cusp_noise.py`): fractional cell-to-cell scatter of the raw
+map about its 8-neighbour mean, binned by local brightness, with the lag-1
+autocorrelation of that high-pass field (white = noise, correlated = structure):
+
+| value / peak | vela21 scatter, corr | vela02 | vela26 | vela25 |
+|---|---|---|---|---|
+| 1e-4 – 1e-3 | 1.12, −0.09 | 3.44, −0.03 | 0.91, −0.08 | 12.3, −0.04 |
+| 1e-3 – 1e-2 | 0.48, −0.11 | 1.56, −0.06 | 0.47, −0.10 | 4.19, −0.05 |
+| 1e-2 – 3e-2 | 0.31, −0.11 | 0.84, −0.05 | 0.24, −0.02 | 1.33, +0.03 |
+| 3e-2 – 0.1 | 0.12, +0.02 | 0.50, −0.05 | 0.10, +0.14 | 0.65, −0.01 |
+| 0.1 – 0.3 | 0.05, +0.10 | 0.27, 0.00 | 0.05 | 0.65 |
+
+The Monte-Carlo noise is a faint-cell phenomenon: white, 50–1200% per cell
+below 1% of the peak, falling to 5–12% (and starting to correlate) above 3% of
+the peak. Nucleus profiles through the brightest cell (raw / peak, cells −4..4):
+vela21 0.14 0.21 0.33 0.79 1 0.56 0.31 0.23 0.17; vela26 0.15 0.25 0.49 0.66 1
+0.34 0.21 0.15 0.11; vela02 0.29 0.27 0.19 0.39 1 0.77 0.52 0.40 0.24 —
+monotonic, resolved over ±4 cells (0.25 kpc), no cell-scale jitter: real
+simulation structure (VELA's force resolution is ~25 pc, the cell is 62.5 pc).
+The 2-cell smoothing lowers those peaks to 0.35 / 0.29 / 0.41 of their value.
+vela25's brightest cell is a single-cell packet spike (neighbours at 0.006):
+the spike class is real noise, but it holds little flux (2.5% in 9784 cells).
+
+Conclusion: the user is right. Uniform smoothing acts where the noise is
+smallest (the cusps) and is a genuine morphology edit there; it is only
+"resolution matching" in the faint outskirts. On the PSF: for the DATA it
+does the same job — the PSF footprint on the source plane is (0.073")²/μ ≈
+10 cells² at μ = 10 (3 at μ = 30), and the measured raw-vs-smoothed lensed
+residuals (which include the cusp broadening) are ≤ 1σ per pixel along the
+arcs of five systems and ≤ 2σ except at nuclei and clumps in the rest; the
+remaining Δχ² floor of 26–550 per 25600 px (0.1–2% of the expected χ²) cancels
+in method comparisons. What source smoothing bought beyond that was a clean
+EVALUATION truth, which can be defined at evaluation time instead (raw source
+convolved to the data's source-plane resolution, or image-plane comparison).
+
+Recommendation given: drop the source smoothing (`source_smooth_sigma_pix:
+null`), keep the raw maps as the truth, let the PSF do the averaging, and
+define the reconstruction-comparison truth at the data's resolution. A
+brightness-adaptive smoothing (only cells below ~1% of the peak) is the
+fallback if the faint-outskirt speckle leaves a measurable floor in the first
+fits (falsifier: best-fit χ² of a flexible source model vs the smooth-model
+floor). Not yet acted on.
