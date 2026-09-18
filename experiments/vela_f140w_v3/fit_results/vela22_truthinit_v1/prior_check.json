@@ -1,0 +1,1974 @@
+{
+ "sersic_free": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0532350782871247,
+    "post_std": 0.0013392172022493468,
+    "prior_std": 0.5601645667157553,
+    "std_ratio": 0.002390756720120976,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 783.3688141435491
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.0202542304486037,
+    "post_std": 0.01164026183358252,
+    "prior_std": 0.43871385711272337,
+    "std_ratio": 0.02653269698429349,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 81.02134727479614
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.028204612984508277,
+    "post_std": 0.004113863169410808,
+    "prior_std": 0.1914045387717258,
+    "std_ratio": 0.021493028304397272,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 111.57402944434048
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.1450946782954037,
+    "post_std": 0.00439661112726409,
+    "prior_std": 0.19174474248608633,
+    "std_ratio": 0.022929500283863705,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 77.66955657641303
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.03904922037553042,
+    "post_std": 0.0018995234915570576,
+    "prior_std": 0.06006409599748835,
+    "std_ratio": 0.03162494099031289,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.06609709465922788,
+    "post_std": 0.0011451659022334857,
+    "prior_std": 0.059646792544698395,
+    "std_ratio": 0.019199119573367097,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.037466753187030556,
+    "post_std": 0.0021998043739347353,
+    "prior_std": 0.10066784122053872,
+    "std_ratio": 0.021852106365482692,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 207.16334859608835
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.02019241486673709,
+    "post_std": 0.0023196753162376296,
+    "prior_std": 0.10031108013856292,
+    "std_ratio": 0.02312481645131712,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3170863735467195,
+    "post_std": 0.008064149757265604,
+    "prior_std": 0.42234138815167904,
+    "std_ratio": 0.01909391308428777,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 160.28115497751614
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.162674157655239,
+    "post_std": 0.029096433793557697,
+    "prior_std": 2.15364464734175,
+    "std_ratio": 0.013510322526732307,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 94.40326792967173
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10302755310498178,
+    "post_std": 0.0011524116779657366,
+    "prior_std": 0.08797023114277847,
+    "std_ratio": 0.013100018756291956,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 81.06240942285307
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.030066340209916234,
+    "post_std": 0.0011066540273535093,
+    "prior_std": 0.08809363131051724,
+    "std_ratio": 0.01256224781395053,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 150.4866614616858
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.008416625079268124,
+    "post_std": 0.0003520717670803627,
+    "prior_std": 0.019930175708252604,
+    "std_ratio": 0.017665261572911185,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.01599259855649434,
+    "post_std": 0.0004180874221813055,
+    "prior_std": 0.019756553363769646,
+    "std_ratio": 0.021161961526549002,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/R_sersic": {
+    "post_mean": 0.23141898326054217,
+    "post_std": 0.0029039463331992344,
+    "prior_std": 0.39810970722883776,
+    "std_ratio": 0.007294336913844742,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 76.65824333419185
+   },
+   "planes/1/light/0/n_sersic": {
+    "post_mean": 1.7075329802811146,
+    "post_std": 0.025233178653029237,
+    "prior_std": 2.1585607855519933,
+    "std_ratio": 0.011689816113552964,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 44.86687465162471
+   },
+   "planes/1/light/0/e1": {
+    "post_mean": -0.06781688883155584,
+    "post_std": 0.003906444819797451,
+    "prior_std": 0.3326284146893263,
+    "std_ratio": 0.011744170513652766,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 177.74500153543406
+   },
+   "planes/1/light/0/e2": {
+    "post_mean": 0.06395971175143496,
+    "post_std": 0.0038072006665882912,
+    "prior_std": 0.3316277033601993,
+    "std_ratio": 0.011480345664768177,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 177.74500153543406
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.23630498288832605,
+    "post_std": 0.0032313562932338178,
+    "prior_std": 0.49493490876858715,
+    "std_ratio": 0.006528851038762913,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": 0.01659209182395134,
+    "post_std": 0.0013535856122985732,
+    "prior_std": 0.4984908272732625,
+    "std_ratio": 0.002715367140660675,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": []
+ },
+ "sersic_truth": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0532350449174643,
+    "post_std": 0.001339196982169309,
+    "prior_std": 0.5601645667157553,
+    "std_ratio": 0.0023907206234428935,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 783.3839327770407
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.0202539870887994,
+    "post_std": 0.011640304247093147,
+    "prior_std": 0.43871385711272337,
+    "std_ratio": 0.02653279366122753,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 81.01804347558226
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.02820447214320302,
+    "post_std": 0.0041139421723079906,
+    "prior_std": 0.1914045387717258,
+    "std_ratio": 0.02149344105791759,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 111.5656055531918
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.14509457058683037,
+    "post_std": 0.004396296800748481,
+    "prior_std": 0.19174474248608633,
+    "std_ratio": 0.022927860987205378,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 77.6793142766855
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.039049248144030574,
+    "post_std": 0.0018994862197156891,
+    "prior_std": 0.06006409599748835,
+    "std_ratio": 0.031624320455853,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.06609707794291898,
+    "post_std": 0.0011451145245724378,
+    "prior_std": 0.059646792544698395,
+    "std_ratio": 0.019198258208340483,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.03746683043912053,
+    "post_std": 0.0021998114070912616,
+    "prior_std": 0.10066784122053872,
+    "std_ratio": 0.021852176230460835,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 207.16315808576826
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.02019245120543055,
+    "post_std": 0.002319630953246146,
+    "prior_std": 0.10031108013856292,
+    "std_ratio": 0.023124374197167105,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3170866389870644,
+    "post_std": 0.008064165121877883,
+    "prior_std": 0.42234138815167904,
+    "std_ratio": 0.019093949463891355,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 160.28303823180633
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.162675020992756,
+    "post_std": 0.02909642512445028,
+    "prior_std": 2.15364464734175,
+    "std_ratio": 0.013510318501412981,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 94.39690655494738
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10302754477988929,
+    "post_std": 0.0011524290289048737,
+    "prior_std": 0.08797023114277847,
+    "std_ratio": 0.01310021599277652,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 81.06171988373013
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.030066327872127294,
+    "post_std": 0.0011066143693237243,
+    "prior_std": 0.08809363131051724,
+    "std_ratio": 0.012561797633509618,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 150.48967272026337
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.008416625260282308,
+    "post_std": 0.0003520688662893815,
+    "prior_std": 0.019930175708252604,
+    "std_ratio": 0.017665116025223918,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.015992592042381876,
+    "post_std": 0.0004180942830680283,
+    "prior_std": 0.019756553363769646,
+    "std_ratio": 0.02116230879798833,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/R_sersic": {
+    "post_mean": 0.23141898246183992,
+    "post_std": 0.002903957090923965,
+    "prior_std": 0.39810970722883776,
+    "std_ratio": 0.007294363935855347,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 76.65766625689562
+   },
+   "planes/1/light/0/n_sersic": {
+    "post_mean": 1.7075331829428673,
+    "post_std": 0.025233400788489752,
+    "prior_std": 2.1585607855519933,
+    "std_ratio": 0.011689919022612558,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 44.8674177283501
+   },
+   "planes/1/light/0/e1": {
+    "post_mean": -0.06781706670932472,
+    "post_std": 0.0039065000254760816,
+    "prior_std": 0.3326284146893263,
+    "std_ratio": 0.011744336481670508,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 177.7519095665093
+   },
+   "planes/1/light/0/e2": {
+    "post_mean": 0.063959673554264,
+    "post_std": 0.0038071269954809343,
+    "prior_std": 0.3316277033601993,
+    "std_ratio": 0.01148012351472881,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 177.7519095665093
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.2363048800058663,
+    "post_std": 0.003231366015590068,
+    "prior_std": 0.49493490876858715,
+    "std_ratio": 0.006528870682469748,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": 0.016592077767453157,
+    "post_std": 0.0013536276444111664,
+    "prior_std": 0.4984908272732625,
+    "std_ratio": 0.0027154514593889113,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": []
+ },
+ "sersic_truth_seed1": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0532319118320943,
+    "post_std": 0.0013389620063019362,
+    "prior_std": 0.5601645667157553,
+    "std_ratio": 0.002390301146950922,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 783.5504346040664
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.020330958208442,
+    "post_std": 0.011698940541776495,
+    "prior_std": 0.43871385711272337,
+    "std_ratio": 0.02666644864780408,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 80.66071237641658
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.028172696956247092,
+    "post_std": 0.004121637251897154,
+    "prior_std": 0.1914045387717258,
+    "std_ratio": 0.021533644282138626,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 111.37650347616746
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.14512944988161325,
+    "post_std": 0.004412616829603256,
+    "prior_std": 0.19174474248608633,
+    "std_ratio": 0.023012974292755124,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 77.32103024182626
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.03903401008290239,
+    "post_std": 0.0019028215820918774,
+    "prior_std": 0.06006409599748835,
+    "std_ratio": 0.031679850507888206,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.06609479271406307,
+    "post_std": 0.001141723818521154,
+    "prior_std": 0.059646792544698395,
+    "std_ratio": 0.01914141179788609,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.03749313103631139,
+    "post_std": 0.0021857845921032138,
+    "prior_std": 0.10066784122053872,
+    "std_ratio": 0.02171283863448201,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 208.45930171721963
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.020183501214371062,
+    "post_std": 0.002329937661972459,
+    "prior_std": 0.10031108013856292,
+    "std_ratio": 0.023227121657488296,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3171938473969698,
+    "post_std": 0.007957484083934622,
+    "prior_std": 0.42234138815167904,
+    "std_ratio": 0.018841355138693592,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 162.49006422426442
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.163163291728496,
+    "post_std": 0.028749122441787366,
+    "prior_std": 2.15364464734175,
+    "std_ratio": 0.01334905574012523,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 95.54585584573513
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10302655218951404,
+    "post_std": 0.001144322253867068,
+    "prior_std": 0.08797023114277847,
+    "std_ratio": 0.013008062375211868,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 81.6541437679832
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.03008077561445534,
+    "post_std": 0.0011122393709458614,
+    "prior_std": 0.08809363131051724,
+    "std_ratio": 0.012625650167892152,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 149.72719521287829
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.008418521775037515,
+    "post_std": 0.00035369550568765826,
+    "prior_std": 0.019930175708252604,
+    "std_ratio": 0.017746732937291742,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.01599219495197758,
+    "post_std": 0.0004158094440148965,
+    "prior_std": 0.019756553363769646,
+    "std_ratio": 0.021046659119066002,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/R_sersic": {
+    "post_mean": 0.231434263824299,
+    "post_std": 0.002927753522865822,
+    "prior_std": 0.39810970722883776,
+    "std_ratio": 0.0073541374895008975,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 76.0371508297693
+   },
+   "planes/1/light/0/n_sersic": {
+    "post_mean": 1.7077165079802274,
+    "post_std": 0.02513987024713276,
+    "prior_std": 2.1585607855519933,
+    "std_ratio": 0.011646588975118402,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 45.06563016273047
+   },
+   "planes/1/light/0/e1": {
+    "post_mean": -0.06782647904716432,
+    "post_std": 0.003898430933732757,
+    "prior_std": 0.3326284146893263,
+    "std_ratio": 0.011720077905472618,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 177.20688201763966
+   },
+   "planes/1/light/0/e2": {
+    "post_mean": 0.06402401459459216,
+    "post_std": 0.003849286234130942,
+    "prior_std": 0.3316277033601993,
+    "std_ratio": 0.011607251731771087,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 177.20688201763966
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.23632312819734216,
+    "post_std": 0.003254377674179675,
+    "prior_std": 0.49493490876858715,
+    "std_ratio": 0.006575364995523682,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": 0.01659750238391571,
+    "post_std": 0.0013600579189664416,
+    "prior_std": 0.4984908272732625,
+    "std_ratio": 0.0027283509435989794,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": []
+ },
+ "sersic_truth_maskcusp": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.053181009092927,
+    "post_std": 0.0013458560554021931,
+    "prior_std": 0.5601645667157553,
+    "std_ratio": 0.0024026083322137757,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 779.451900403555
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.016894875434041,
+    "post_std": 0.012351946489181904,
+    "prior_std": 0.43871385711272337,
+    "std_ratio": 0.02815490390586908,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 76.43554447001428
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.02827446560040116,
+    "post_std": 0.004144510638524706,
+    "prior_std": 0.1914045387717258,
+    "std_ratio": 0.021653147125563,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 110.71309187905781
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.1444992913916707,
+    "post_std": 0.0044387981893479825,
+    "prior_std": 0.19174474248608633,
+    "std_ratio": 0.023149517070435853,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 77.03380186533012
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.039140853016916666,
+    "post_std": 0.0019126468693349064,
+    "prior_std": 0.06006409599748835,
+    "std_ratio": 0.031843430548174505,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.06594993163272739,
+    "post_std": 0.0011566637159812262,
+    "prior_std": 0.059646792544698395,
+    "std_ratio": 0.019391884569726698,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.037298216483742,
+    "post_std": 0.0022305551256694076,
+    "prior_std": 0.10066784122053872,
+    "std_ratio": 0.02215757384508529,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 204.3369073162293
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.020009251317335292,
+    "post_std": 0.002359428025634247,
+    "prior_std": 0.10031108013856292,
+    "std_ratio": 0.023521110752422296,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3208031284838915,
+    "post_std": 0.010073808525888892,
+    "prior_std": 0.42234138815167904,
+    "std_ratio": 0.023852288240031543,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 128.1233006843223
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.185151664590836,
+    "post_std": 0.0654816232576654,
+    "prior_std": 2.15364464734175,
+    "std_ratio": 0.030405026817441574,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 39.78742979990639
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.1033137132819742,
+    "post_std": 0.0012049864431990605,
+    "prior_std": 0.08797023114277847,
+    "std_ratio": 0.013697661442350077,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 77.14505721358691
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.029984905814006924,
+    "post_std": 0.0011256276270977133,
+    "prior_std": 0.08809363131051724,
+    "std_ratio": 0.01277762773939968,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 147.96509351584305
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.008737719917891082,
+    "post_std": 0.0005966579699018399,
+    "prior_std": 0.019930175708252604,
+    "std_ratio": 0.029937416440075755,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.016112687319889664,
+    "post_std": 0.000622825309194678,
+    "prior_std": 0.019756553363769646,
+    "std_ratio": 0.0315249981981594,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/R_sersic": {
+    "post_mean": 0.23145652428790928,
+    "post_std": 0.0030685079711027666,
+    "prior_std": 0.39810970722883776,
+    "std_ratio": 0.007707694425393539,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 72.39049551692035
+   },
+   "planes/1/light/0/n_sersic": {
+    "post_mean": 1.7115055455386639,
+    "post_std": 0.026774794446764217,
+    "prior_std": 2.1585607855519933,
+    "std_ratio": 0.01240400299402145,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 42.26326461056649
+   },
+   "planes/1/light/0/e1": {
+    "post_mean": -0.06754252849072218,
+    "post_std": 0.003968368488570137,
+    "prior_std": 0.3326284146893263,
+    "std_ratio": 0.011930335212872836,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 175.0141887110718
+   },
+   "planes/1/light/0/e2": {
+    "post_mean": 0.0639806212598458,
+    "post_std": 0.003821115753312305,
+    "prior_std": 0.3316277033601993,
+    "std_ratio": 0.01152230562946057,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedDiskNormal",
+    "bound": [
+     "disk",
+     0.8
+    ],
+    "bound_dist_sigma": 175.0141887110718
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.23542687200084328,
+    "post_std": 0.0034096887565009254,
+    "prior_std": 0.49493490876858715,
+    "std_ratio": 0.006889166021819582,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": 0.01645595066777896,
+    "post_std": 0.0013663369205563069,
+    "prior_std": 0.4984908272732625,
+    "std_ratio": 0.002740946965925431,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": []
+ },
+ "shapelets_n5": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0672167632967233,
+    "post_std": 0.0016872238177668428,
+    "prior_std": 0.5697629417873693,
+    "std_ratio": 0.0029612733542724867,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 629.4088820518306
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.046205945849419,
+    "post_std": 0.012585836448688863,
+    "prior_std": 0.4421567747214322,
+    "std_ratio": 0.028464646858839145,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 72.7168246134709
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.06558614174053073,
+    "post_std": 0.005243767062880737,
+    "prior_std": 0.19046906627617927,
+    "std_ratio": 0.027530806788737542,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 79.74446504409357
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.20218985841274262,
+    "post_std": 0.005497015127133198,
+    "prior_std": 0.18938411486432594,
+    "std_ratio": 0.029025745538749325,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 51.09725420019491
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.06559080082541331,
+    "post_std": 0.0021014495582708202,
+    "prior_std": 0.059964278471149074,
+    "std_ratio": 0.035045023668247785,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.06601124258078635,
+    "post_std": 0.00154548769166937,
+    "prior_std": 0.06028059563000655,
+    "std_ratio": 0.025638228612659145,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.01894130024984479,
+    "post_std": 0.0023724079948561163,
+    "prior_std": 0.10081080048573843,
+    "std_ratio": 0.023533272064353242,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 199.68077527917143
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.002082590563011215,
+    "post_std": 0.0028867074403047008,
+    "prior_std": 0.09898698345633246,
+    "std_ratio": 0.029162495305033266,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3119456311732531,
+    "post_std": 0.0073454020039810915,
+    "prior_std": 0.4150431401932462,
+    "std_ratio": 0.017697924125576525,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 175.57028621184543
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 4.9242367575287815,
+    "post_std": 0.02640811608059762,
+    "prior_std": 2.1565504282774035,
+    "std_ratio": 0.012245536081292446,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 113.33820941733616
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10735483893826604,
+    "post_std": 0.0011526996516016243,
+    "prior_std": 0.08724379829935858,
+    "std_ratio": 0.01321239645764138,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 77.21759029740548
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.030573752175271512,
+    "post_std": 0.0011182458526859413,
+    "prior_std": 0.08813337195678604,
+    "std_ratio": 0.012688109258252875,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 148.4795198227331
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.007981235592032317,
+    "post_std": 0.00038389108473542373,
+    "prior_std": 0.020009705573965173,
+    "std_ratio": 0.01918524404651452,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.015833811257383788,
+    "post_std": 0.00043362976656958905,
+    "prior_std": 0.020009597131317936,
+    "std_ratio": 0.021671089313982,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/beta": {
+    "post_mean": 0.14964177048169078,
+    "post_std": 0.0018621662784538394,
+    "prior_std": 0.31489236888884015,
+    "std_ratio": 0.005913659594307923,
+    "frac_outside_prior98": 1.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 77.34979707785196
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.2583781387232244,
+    "post_std": 0.006925380505816929,
+    "prior_std": 0.49684309944463456,
+    "std_ratio": 0.013938767618103259,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": 0.06166348986700177,
+    "post_std": 0.006354188141173006,
+    "prior_std": 0.4965513164156243,
+    "std_ratio": 0.012796639402833467,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": [
+   "planes/1/light/0/beta: in prior tail (100.0% outside central 98%)"
+  ]
+ },
+ "shapelets_n10": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0526905238449573,
+    "post_std": 0.0026181885103637127,
+    "prior_std": 0.5697629417873693,
+    "std_ratio": 0.004595224291264626,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 398.98115070147753
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.105078900140524,
+    "post_std": 0.015898340472202708,
+    "prior_std": 0.4421567747214322,
+    "std_ratio": 0.03595634259413753,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 53.21240643082509
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.07242334499359131,
+    "post_std": 0.007639709137629075,
+    "prior_std": 0.19046906627617927,
+    "std_ratio": 0.040109973167776924,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 52.94754376152806
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.17862709012031555,
+    "post_std": 0.008513606723436417,
+    "prior_std": 0.18938411486432594,
+    "std_ratio": 0.044954175430898906,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 34.64487538306773
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.058243944013025614,
+    "post_std": 0.0031644178924279246,
+    "prior_std": 0.059964278471149074,
+    "std_ratio": 0.05277171631357888,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.060180627067852765,
+    "post_std": 0.0025279350152652208,
+    "prior_std": 0.06028059563000655,
+    "std_ratio": 0.041936131998119505,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.026733821295946838,
+    "post_std": 0.003048986588116187,
+    "prior_std": 0.10081080048573843,
+    "std_ratio": 0.030244642175493122,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 152.11618340108853
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.023148651057260577,
+    "post_std": 0.004123718061527664,
+    "prior_std": 0.09898698345633246,
+    "std_ratio": 0.0416591951541469,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.325163545334339,
+    "post_std": 0.007916016066250538,
+    "prior_std": 0.4150431401932462,
+    "std_ratio": 0.01907275485282036,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 164.4034166535411
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.026999069488048,
+    "post_std": 0.0287901108050268,
+    "prior_std": 2.1565504282774035,
+    "std_ratio": 0.01335007539240508,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 100.12509880701614
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10411092245746403,
+    "post_std": 0.0012506023329683633,
+    "prior_std": 0.08724379829935858,
+    "std_ratio": 0.014334569990604798,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 73.54859444437955
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.032963342267274855,
+    "post_std": 0.0012077866621219133,
+    "prior_std": 0.08813337195678604,
+    "std_ratio": 0.013704078662894241,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 135.24572756641138
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.008004095649649389,
+    "post_std": 0.00037755644706940637,
+    "prior_std": 0.020009705573965173,
+    "std_ratio": 0.01886866579189695,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.016067953657591717,
+    "post_std": 0.00043242649258978637,
+    "prior_std": 0.020009597131317936,
+    "std_ratio": 0.021610954471091067,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/beta": {
+    "post_mean": 0.13216603046655656,
+    "post_std": 0.0020837534602831174,
+    "prior_std": 0.31489236888884015,
+    "std_ratio": 0.006617351406882461,
+    "frac_outside_prior98": 1.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 60.413964321966944
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.261854927752912,
+    "post_std": 0.008419049012885425,
+    "prior_std": 0.49684309944463456,
+    "std_ratio": 0.016945085928125277,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": -0.040698717354796826,
+    "post_std": 0.004510780837699973,
+    "prior_std": 0.4965513164156243,
+    "std_ratio": 0.009084218868376437,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": [
+   "planes/1/light/0/beta: in prior tail (100.0% outside central 98%)"
+  ]
+ },
+ "shapelets_n15": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0464088901519775,
+    "post_std": 0.003144649886741777,
+    "prior_std": 0.5697629417873693,
+    "std_ratio": 0.005519225025195362,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 329.65432208394805
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.1108816766560077,
+    "post_std": 0.018181383737307485,
+    "prior_std": 0.4421567747214322,
+    "std_ratio": 0.041119767414537815,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 45.86674235856181
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.0695746696151793,
+    "post_std": 0.008024439257533066,
+    "prior_std": 0.19046906627617927,
+    "std_ratio": 0.04212988184599837,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 50.36106716944131
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.1535739437930286,
+    "post_std": 0.01014085507216008,
+    "prior_std": 0.18938411486432594,
+    "std_ratio": 0.053546492425856046,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 30.985496200092204
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.053361415422707795,
+    "post_std": 0.0035605988991081663,
+    "prior_std": 0.059964278471149074,
+    "std_ratio": 0.05937866659766941,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.05873958489075303,
+    "post_std": 0.003433518223620024,
+    "prior_std": 0.06028059563000655,
+    "std_ratio": 0.05695892994645333,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.029778513300418852,
+    "post_std": 0.0033521317331285066,
+    "prior_std": 0.10081080048573843,
+    "std_ratio": 0.03325171228654938,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 137.26604673398626
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.03422456185722258,
+    "post_std": 0.005014304198021194,
+    "prior_std": 0.09898698345633246,
+    "std_ratio": 0.05065619764272568,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3288683766037226,
+    "post_std": 0.008331636807676908,
+    "prior_std": 0.4150431401932462,
+    "std_ratio": 0.020074146518353864,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 156.49239017030752
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.0724963112950325,
+    "post_std": 0.031292343355807155,
+    "prior_std": 2.1565504282774035,
+    "std_ratio": 0.014510369405459564,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 90.56935672098518
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10451276819445193,
+    "post_std": 0.0013747376994616583,
+    "prior_std": 0.08724379829935858,
+    "std_ratio": 0.015757426043562863,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 66.35790603513728
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.033458641164749864,
+    "post_std": 0.0013414193142167945,
+    "prior_std": 0.08813337195678604,
+    "std_ratio": 0.015220333506296858,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 121.07297717739922
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.00811462425676873,
+    "post_std": 0.0003765764532779157,
+    "prior_std": 0.020009705573965173,
+    "std_ratio": 0.01881968986929438,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.0161640017115511,
+    "post_std": 0.00043546446858588374,
+    "prior_std": 0.020009597131317936,
+    "std_ratio": 0.021762780416219294,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/beta": {
+    "post_mean": 0.13684976958762854,
+    "post_std": 0.003677169358501791,
+    "prior_std": 0.31489236888884015,
+    "std_ratio": 0.011677543572991014,
+    "frac_outside_prior98": 1.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 34.12970623465101
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.28104526992402973,
+    "post_std": 0.04271199443666427,
+    "prior_std": 0.49684309944463456,
+    "std_ratio": 0.08596676593557853,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": -0.03835598254490906,
+    "post_std": 0.014296568443784779,
+    "prior_std": 0.4965513164156243,
+    "std_ratio": 0.02879172397927597,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": [
+   "planes/1/light/0/beta: in prior tail (100.0% outside central 98%)"
+  ]
+ },
+ "shapelets_n20": {
+  "rows": {
+   "planes/0/mass/0/theta_E": {
+    "post_mean": 1.0467967974990606,
+    "post_std": 0.0033451681153523405,
+    "prior_std": 0.5697629417873693,
+    "std_ratio": 0.005871157757046138,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 309.8219312875727
+   },
+   "planes/0/mass/0/gamma": {
+    "post_mean": 2.1207864600300788,
+    "post_std": 0.02178450404007946,
+    "prior_std": 0.4421567747214322,
+    "std_ratio": 0.04926873291448297,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     1.0,
+     3.0
+    ],
+    "bound_dist_sigma": 37.180232920381194
+   },
+   "planes/0/mass/0/e1": {
+    "post_mean": -0.07229190844893456,
+    "post_std": 0.009272159933156878,
+    "prior_std": 0.19046906627617927,
+    "std_ratio": 0.048680660405571,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 43.05725005896886
+   },
+   "planes/0/mass/0/e2": {
+    "post_mean": -0.1492939992904663,
+    "post_std": 0.011208512731345682,
+    "prior_std": 0.18938411486432594,
+    "std_ratio": 0.05918401730459505,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 28.289939852691
+   },
+   "planes/0/mass/0/center_x": {
+    "post_mean": -0.04665171139379963,
+    "post_std": 0.003986428633479243,
+    "prior_std": 0.059964278471149074,
+    "std_ratio": 0.06648005671238509,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/0/center_y": {
+    "post_mean": -0.06466280619762838,
+    "post_std": 0.0038070159509580293,
+    "prior_std": 0.06028059563000655,
+    "std_ratio": 0.06315491595877609,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/mass/1/gamma1": {
+    "post_mean": 0.029121375991404057,
+    "post_std": 0.00368119852030796,
+    "prior_std": 0.10081080048573843,
+    "std_ratio": 0.03651591399503602,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.5,
+     0.5
+    ],
+    "bound_dist_sigma": 124.88687441643145
+   },
+   "planes/0/mass/1/gamma2": {
+    "post_mean": 0.03681891904724762,
+    "post_std": 0.005555299846436632,
+    "prior_std": 0.09898698345633246,
+    "std_ratio": 0.05612151873369614,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/R_sersic": {
+    "post_mean": 1.3280684209525586,
+    "post_std": 0.008534612537318657,
+    "prior_std": 0.4150431401932462,
+    "std_ratio": 0.020563193824489904,
+    "frac_outside_prior98": 0.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 152.6295727670918
+   },
+   "planes/0/light/0/n_sersic": {
+    "post_mean": 5.086507242405415,
+    "post_std": 0.03273858284761688,
+    "prior_std": 2.1565504282774035,
+    "std_ratio": 0.01518099573204398,
+    "frac_outside_prior98": 0.0,
+    "prior": "Uniform",
+    "bound": [
+     0.5,
+     8.0
+    ],
+    "bound_dist_sigma": 85.97518475621646
+   },
+   "planes/0/light/0/e1": {
+    "post_mean": -0.10447130564842373,
+    "post_std": 0.0014443958198541852,
+    "prior_std": 0.08724379829935858,
+    "std_ratio": 0.016555856668436734,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 62.95330640346415
+   },
+   "planes/0/light/0/e2": {
+    "post_mean": 0.03277748827263713,
+    "post_std": 0.001367254209650373,
+    "prior_std": 0.08813337195678604,
+    "std_ratio": 0.015513467592284695,
+    "frac_outside_prior98": 0.0,
+    "prior": "TruncatedNormal",
+    "bound": [
+     -0.20000000298023224,
+     0.20000000298023224
+    ],
+    "bound_dist_sigma": 119.20415490051121
+   },
+   "planes/0/light/0/center_x": {
+    "post_mean": 0.008087070993357337,
+    "post_std": 0.00036975904996021147,
+    "prior_std": 0.020009705573965173,
+    "std_ratio": 0.01847898504020512,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/0/light/0/center_y": {
+    "post_mean": -0.016301731490786186,
+    "post_std": 0.0004327312412680816,
+    "prior_std": 0.020009597131317936,
+    "std_ratio": 0.02162618459673004,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/beta": {
+    "post_mean": 0.13142961720637977,
+    "post_std": 0.004911699978868101,
+    "prior_std": 0.31489236888884015,
+    "std_ratio": 0.015598027974447282,
+    "frac_outside_prior98": 1.0,
+    "prior": "LogNormal",
+    "bound": [
+     0.0,
+     null
+    ],
+    "bound_dist_sigma": 23.831763787344304
+   },
+   "planes/1/light/0/center_x": {
+    "post_mean": 0.21816151416311041,
+    "post_std": 0.03905588208073043,
+    "prior_std": 0.49684309944463456,
+    "std_ratio": 0.07860807994392323,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   },
+   "planes/1/light/0/center_y": {
+    "post_mean": 0.03658129157369101,
+    "post_std": 0.017228124479883596,
+    "prior_std": 0.4965513164156243,
+    "std_ratio": 0.034695556955211614,
+    "frac_outside_prior98": 0.0,
+    "prior": "Normal",
+    "bound": [
+     null,
+     null
+    ],
+    "bound_dist_sigma": null
+   }
+  },
+  "flags": [
+   "planes/1/light/0/beta: in prior tail (100.0% outside central 98%)"
+  ]
+ }
+}

@@ -315,6 +315,34 @@ with the VELA source at the data's resolution.
 
 ## Log (newest first)
 
+- **2026-09-18 (cusp, all systems; ceiling 16?; prior check) — user questions after DC-3.**
+  `fit_checks/lens_cusp_all_systems.{py,json}`, `fit_results/vela22_truthinit_v1/prior_check.{py,json}`.
+  - *Lens-light cusp on all 10 systems* (lens light only at truth, fits' curvature map with max 8,
+    vs the generator's ss=32): centre-pixel residual −0.46σ (vela22, n 5.2), +0.13 (vela09, n 5.8),
+    −0.07 (vela23), |d| ≤ 0.04 on the other seven; outside the 4-px disk ≤ 0.056σ everywhere;
+    Fisher-projected mass bias (crude source point: truth centre, R 0.2", n 1.5) ≤ 0.054σ on every
+    system (vela22 crude 0.054 vs exact-point 0.069: the crude point is adequate).
+  - *Raising the ceiling to 16 does NOT reliably help*: the midpoint rule's error on a cusp is set
+    by the sub-grid phase relative to the centre, so it oscillates with the factor. Forcing 16 on
+    the r ≤ 4 px disk: vela22 −0.46 → −0.11σ, vela23 −0.07 → +0.01 (better); vela09 +0.13 → +0.68,
+    vela25 +0.005 → +0.28, vela03 −0.01 → +0.12 (WORSE). The curvature driver itself would assign 16
+    to 0 px on eight systems and 25–36 px on vela09/22. Forcing 32 on the disk reproduces the
+    generator's sub-grid exactly (centre residual 0.000 on all ten; max |d| = the 0.012–0.017σ arc
+    floor) for +38–48k points (vela22: 45k → 93k). Mechanism check: an all-16 adaptive map equals
+    uniform 16 to 2e-12σ, so factors 16/32 need only `ALLOWED_FACTORS` extended (gigalens).
+    Recommendation (not implemented): keep max 8 for the map and force 32 within r ≤ 3–4 px of the
+    lens-light peak (data-driven); for real data 32 is also converged (0.035σ from 64 on the n = 5.2
+    cusp). Cost ≈ +30k (r ≤ 3) / +50k (r ≤ 4) points per evaluation.
+  - *Prior domination / bounds, all eight vela22 runs* (20k prior draws vs posterior): Sersic runs —
+    no parameter has posterior/prior width > 0.03, no posterior extreme within 40σ of a hard bound
+    (source n 1.71 from U(0.5, 8): 42–45σ; |e| 0.09 vs e_max 0.8: 175σ). Shapelet runs — β
+    posteriors 0.131–0.150" sit 3.9–4.2 prior-σ (log) BELOW the β prior's median (LogNormal(0.7",
+    0.4); 100% of the posterior outside the prior's central 98%). Not prior-dominated (posterior
+    width 0.6–1.6% of the prior's), but the prior gradient pulls β up by +0.11σ (n5), +0.15 (n10),
+    +0.25 (n15), +0.35σ (n20) — the C-4 (a) confound made concrete. Recommendation: re-centre the
+    β prior (e.g. LogNormal median 0.15–0.2", σ 0.6) before the shapelet runs are used for
+    anything quantitative; the Sersic priors need no change.
+
 - **2026-09-18 (DC-3 run) — Sersic refit with the 49-px lens-cusp disk masked: lens mass unchanged
   (Δmean/σ ≤ 0.27, none toward truth by > 0.13σ). C-5's empirical leg held; the cusp quadrature is
   not the cause of the C-2 bias.** Slurm 58536845 (3.2 min), gigalens linusu-dev-merge + PR #129.
@@ -443,6 +471,13 @@ with the VELA source at the data's resolution.
 ---
 
 ## Open questions
+
+- Lens-cusp quadrature: a factor-32 disk at the lens-light peak (needs `ALLOWED_FACTORS` + 16/32
+  in gigalens and a disk-floor option in `make_image_data`) would zero the fit-vs-generator
+  mismatch on every system; not needed for the mass (≤ 0.07σ) but it removes the lens-light n/R
+  nuisance and the excluded-disk carve-out from the undersampling check. Decide before the campaign.
+- Shapelet β prior LogNormal(0.7", 0.4) is mis-centred for these sources by 4 prior-σ (pull up to
+  0.35σ at n_max 20); re-centre before quantitative use.
 
 - The Vela builders' mixed prior dtypes (float32 lens priors, float64 source priors): harmless per
   the model card, but the project standard is float64 — clean up when the builders are next touched.
