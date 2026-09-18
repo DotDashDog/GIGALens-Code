@@ -16,7 +16,7 @@ with the VELA source at the data's resolution.
 
 - Dataset: `/pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3/dataset` (10 systems,
   160 px, native VELA photometry, raw sources; generator v3, commit 4102524).
-- First fit prepared, **not yet launched**: vela22, single Sersic source, broad truth-agnostic
+- First fit **launched 2026-09-17** (DC-1 approved): vela22, single Sersic source, broad truth-agnostic
   priors, curvature-adaptive quadrature, truth-free MAP → MCLMC on one 4-GPU node. Config
   `experiments/vela_f140w_v3/fit_sersic_vela22.yaml`, launcher `run_vela22_sersic.sh`,
   quadrature checks `fit_checks/`. Design checkpoint DC-1 below awaits approval.
@@ -82,7 +82,8 @@ _No claims yet. C-numbers start when the first fit is graded._
   - **Cost:** one interactive node, 4× A100 80 GB, ≤ 4 h wall requested (`deepsrch_g`). Expected
     use well under an hour: MAP 500 starts × 500 steps on 45k evaluation points is minutes; MCLMC
     8 chains × 10,000 steps, 2 chains per GPU, is minutes to tens of minutes.
-  - **Status:** awaiting approval.
+  - **Status:** approved by the user 2026-09-17 ("I approve DC-1. Go ahead and launch."); launched
+    2026-09-17 via `run_vela22_sersic.sh` (gigalens linusu-dev-merge 09f92b4 = #115 + #128).
 
 ---
 
