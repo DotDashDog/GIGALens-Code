@@ -55,16 +55,17 @@ dataset:
   # for every kept source (docs/logs/vela-simulated-systems.md, "No crop at all?").
   # The 1.5" crop used until then lensed into a visible sub-noise edge (S/N 16 in
   # vela21). Arcs are kept inside the frame by the cut-off redraws alone.
-  # Smooth the raw Sunrise map by 2 source cells (0.125 kpc, 0.0145") before
-  # anything else (2026-09-17, user decision after the adversarial review). The
-  # VELA IMAGE_PRISTINE maps are raw Monte-Carlo output: 25-55% of pixels are
-  # exactly zero and a 3x3 median removes 5-30% of the flux (single-pixel packet
-  # weights). 2 cells removes that sampling noise (median loss < 0.6%) and is at
-  # or below the tangential source-plane resolution of every system in the set
-  # (PSF sigma / sqrt(mu) = 2.1 cells at mu = 22). This is resolution matching to
-  # the simulation, not a morphology edit; docs/logs/vela-simulated-systems.md,
-  # "Smoothing scan for the speckle".
-  source_smooth_sigma_pix: 2.0
+  # No source smoothing (2026-09-17, user decision, reversing the 2-cell Gaussian
+  # of the same day). The raw Sunrise maps carry Monte-Carlo sampling noise, but
+  # it is confined to faint cells (white, 50-1200% per cell below 1% of the peak;
+  # 5-12% at the nuclei), and the nuclear cusps are resolved simulation structure
+  # over +-4 cells that a uniform smoothing cut to 30-40% of their peak. The
+  # instrument PSF averages the speckle in the data ((0.073")^2 / mu ~ 10 cells^2
+  # at mu = 10; raw-vs-smoothed lensed residuals <= 1-2 sigma away from cusps).
+  # The evaluation truth for reconstructions is to be defined at the data's
+  # source-plane resolution at evaluation time. docs/logs/vela-simulated-systems.md,
+  # "Are the nuclear cusps real".
+  source_smooth_sigma_pix: null
   source_crop_radius_arcsec: null
   source_recenter: true
   transpose_image: false

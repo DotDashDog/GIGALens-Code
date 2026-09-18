@@ -1200,3 +1200,51 @@ brightness-adaptive smoothing (only cells below ~1% of the peak) is the
 fallback if the faint-outskirt speckle leaves a measurable floor in the first
 fits (falsifier: best-fit χ² of a flexible source model vs the smooth-model
 floor). Not yet acted on.
+
+## Smoothing removed; set regenerated raw (2026-09-17, user decision) — UNCERTIFIED
+
+User: "Please remove the smoothing." `source_smooth_sigma_pix: null` in both
+campaign files (comment records the reversal and why); README row updated.
+Regenerated with `--force`: identical lens draws (the smoothing never entered
+the draws), 1 redraw (vela21), outside <= 0.06%, border <= 0.54sigma. Only the
+brightness metrics move: peak SB 20.01–22.07 (median 20.82; vela21 20.10 with
+its cusp back, was 20.35), source/lens ratios within 0.02. Grid and gallery
+regenerated and inspected (the source panels show the raw maps with their
+nuclei and cell-scale texture). 23 tests pass (the smoothing knob and its test
+remain in the code, default None).
+
+| system | θ_E | src/lens | μ | outside | border | redraws | src AB unl | arcs AB | lens AB | peak SB (7 px) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| vela02 | 1.39 | 0.308 | 10.0 | 0.00% | 0.00σ | 0 | 22.94 | 20.43 | 19.15 | 21.03 |
+| vela03 | 1.21 | 0.084 | 4.2 | 0.00% | 0.00σ | 0 | 22.43 | 20.89 | 18.20 | 21.00 |
+| vela04 | 1.65 | 0.081 | 10.2 | 0.04% | 0.54σ | 0 | 24.18 | 21.66 | 18.93 | 21.02 |
+| vela08 | 2.47 | 0.488 | 12.8 | 0.00% | 0.00σ | 0 | 22.49 | 19.73 | 18.95 | 20.80 |
+| vela09 | 1.42 | 1.071 | 6.9 | 0.00% | 0.00σ | 0 | 21.18 | 19.09 | 19.17 | 20.01 |
+| vela21 | 1.54 | 1.450 | 6.7 | 0.06% | 0.15σ | 1 | 21.21 | 19.17 | 19.56 | 20.10 |
+| vela22 | 1.05 | 0.294 | 6.2 | 0.00% | 0.00σ | 0 | 21.88 | 19.90 | 18.57 | 20.10 |
+| vela23 | 2.22 | 0.703 | 29.2 | 0.01% | 0.10σ | 0 | 23.05 | 19.38 | 19.00 | 20.72 |
+| vela25 | 1.45 | 0.408 | 5.4 | 0.00% | 0.00σ | 0 | 21.87 | 20.03 | 19.06 | 22.07 |
+| vela26 | 1.18 | 0.177 | 3.4 | 0.02% | 0.03σ | 0 | 22.16 | 20.84 | 18.96 | 20.84 |
+
+Evaluation-truth rule (to apply when reconstructions are scored, not in the
+generator): compare against the raw source convolved to the data's
+source-plane resolution (PSF sigma / sqrt(mu_local)), or compare in the image
+plane. `smoothing_residuals.{py,png,json}` and `vela02_smoothing_check.png` are
+kept as the record of the reversed trial; the page no longer shows them.
+
+Page: artifact version 8 ("sources exactly as simulated"; smoothing row now
+says none and why; residual figure removed; choices list updated).
+
+State of the reviewer's findings after today: 1 (Sunrise MC noise) resolved by
+measurement — faint-cell only, PSF averages it, cusps real; 3 resolved by
+design — 160 px + 2sigma border removes the selection, native photometry
+declares the size-brightness relation as VELA's own; 7 (transpose) fixed. Open:
+2 (resolution-element budget), 4 (now a VELA-sample statement, M_AB -21 to
+-24), 5 (exact PSF / lens light), 6 (vela21/26 half-resolution renders).
+Tabled: sources / n_reps, drizzle-correlated noise.
+
+Next (user): compact context, then model one of the simpler systems.
+Candidates by eye and numbers: vela22 (single compact source, θ_E 1.05",
+src/lens 0.29, μ 6.2, peak SB 20.1: bright double/partial ring, nothing else
+in the frame), vela04 (compact, two images at θ_E 1.65", src/lens 0.08, faint
+companion), vela03 (single faint arc, src/lens 0.08).
