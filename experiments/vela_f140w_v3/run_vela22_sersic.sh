@@ -8,7 +8,7 @@
 #   ACCOUNT=m5362_g WALL=02:00:00 experiments/.../run_vela22_sersic.sh
 set -u
 REPO=/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2
-GL=/global/u1/l/linusu/gigalens/.claude/worktrees/dev-curvature/src   # dev + curvature driver (see fit yaml header)
+GL=/global/u1/l/linusu/gigalens/src   # linusu-dev-merge: curvature driver (PR #115 merged 2026-09-17) + TruncatedDiskNormal (PR #128)
 PY=/global/homes/l/linusu/.conda/envs/gigalens_env/bin/python
 YAML=$REPO/experiments/vela_f140w_v3/fit_sersic_vela22.yaml
 OUT=/pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3

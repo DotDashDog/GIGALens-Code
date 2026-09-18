@@ -11,10 +11,10 @@
 #       --output-dir /pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3 --shard 6/10
 # Results: <output_dir>/runs/vela22_cam12_a0.400_rep00/fitsersic_v1/{map,diag_qz_from_map,mclmc}/
 #
-# gigalens: needs BOTH the curvature driver (PR #115, branch curvature-supersample) and
-# TruncatedDiskNormal (PR #119, on dev). Neither installed branch has both, so the launch
-# script puts the worktree ~/gigalens/.claude/worktrees/dev-curvature (dev + the two
-# curvature commits cherry-picked, 2026-09-17) first on PYTHONPATH.
+# gigalens: needs the curvature driver (PR #115, merged into linusu-dev-merge 2026-09-17 after
+# resolving its MAP.py conflict) and TruncatedDiskNormal (PR #119 on dev; brought onto
+# linusu-dev-merge by PR #128). The launcher uses the installed checkout ~/gigalens/src on
+# linusu-dev-merge.
 
 name: vela_f140w_v3
 seed: 0

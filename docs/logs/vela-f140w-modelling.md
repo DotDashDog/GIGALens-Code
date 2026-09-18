@@ -20,13 +20,15 @@ with the VELA source at the data's resolution.
   priors, curvature-adaptive quadrature, truth-free MAP → MCLMC on one 4-GPU node. Config
   `experiments/vela_f140w_v3/fit_sersic_vela22.yaml`, launcher `run_vela22_sersic.sh`,
   quadrature checks `fit_checks/`. Design checkpoint DC-1 below awaits approval.
-- gigalens: the fit needs the curvature driver (PR #115, branch `curvature-supersample`, open)
-  AND `TruncatedDiskNormal` (PR #119, merged into `dev`). No single installed branch has both;
-  the launcher uses the worktree `~/gigalens/.claude/worktrees/dev-curvature` (= `origin/dev`
-  7745551 + the two curvature commits cherry-picked, 2026-09-17) via PYTHONPATH. The installed
-  checkout (`~/gigalens`, branch `curvature-supersample`) is untouched. Tests on the combined
-  tree: `test_truncated_disk_normal.py` + `test_adaptive_supersample.py` 79 pass; GIGALens-Code
-  `vela_simulated_test.py` 23 pass.
+- gigalens (2026-09-17, user request): PR #115 (curvature driver) merged into `linusu-dev-merge`
+  (merge commit 38152dc) after resolving its one conflict in `inference/MAP.py` (kept PR #116's
+  cross-device progress-bar reduction over linusu-dev-merge's Python-gated callback; tests on
+  the merged tree: batch_contract 8, inference_sharding 8, adaptive_supersample 47, old_api 1
+  pass). `TruncatedDiskNormal` was NOT on linusu-dev-merge (PR #119 went into `dev`): cherry-
+  picked as PR #128 (110 prior tests pass), awaiting the user's merge. The installed checkout
+  `~/gigalens` now sits on `linusu-dev-merge`; the launcher uses `~/gigalens/src`. The
+  interim worktree `~/gigalens/.claude/worktrees/dev-curvature` (dev + curvature) is redundant
+  once #128 lands.
 
 ---
 
@@ -40,8 +42,7 @@ _No claims yet. C-numbers start when the first fit is graded._
 
 - **DC-1 — Run: vela22, single-Sersic source, curvature-adaptive quadrature, MAP → MCLMC
   (8 chains, 5000 + 5000).** Config `experiments/vela_f140w_v3/fit_sersic_vela22.yaml`; code
-  GIGALens-Code branch `worktree-vela-generator-v2` (this commit), gigalens `dev-curvature`
-  66422e3; seed 0; shard 6/10 (= vela22 in manifest order).
+  GIGALens-Code branch `worktree-vela-generator-v2`, gigalens `linusu-dev-merge` (38152dc + PR #128); seed 0; shard 6/10 (= vela22 in manifest order).
   - **Claim type:** two links. (i) *Stochastic-estimator behaviour*: the truth-free pipeline
     (multi-start MAP from prior draws → diagonal qz → MCLMC) converges on this posterior.
     (ii) *Distributional claim*: a single Sersic source is a misspecified model for the vela22
