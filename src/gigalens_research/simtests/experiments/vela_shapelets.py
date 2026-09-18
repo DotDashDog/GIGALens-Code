@@ -142,7 +142,7 @@ def _vela_scene_lens_priors():
     return epl_p, shear_p, lens_light_p
 
 
-def make_image_data(system: Any, adaptive: Any = None, **common):
+def make_image_data(system: Any, adaptive: Any = None, mask_disk: Any = None, **common):
     """The inference dataset for a Vela system: a plain ``ImageData`` on the dataset's
     uniform ``inference_supersample``, or — when ``adaptive`` (dict) is given — an
     ``AdaptiveImageData`` whose factor map is derived from the observed image
@@ -151,11 +151,33 @@ def make_image_data(system: Any, adaptive: Any = None, **common):
     Curvature needs ``psf_sigma`` [native px] explicitly: there is no honest default
     (the flux-moment estimate of a wide empirical kernel over-estimates the core width
     and under-corrects the finest LoG scale). Shared by every Vela builder so one
-    campaign key (``adaptive:``) means the same thing for every source model."""
+    campaign key (``adaptive:``) means the same thing for every source model.
+    ``mask_disk`` (dict, optional): ``{"radius_pix": r, "centre": "peak" | [row, col]}``
+    drops the pixels within ``r`` native px of the centre (``"peak"`` = the brightest
+    observed pixel — data-driven, no truth) from the likelihood (``mask`` False there).
+    Used by the lens-cusp quadrature falsifier (DC-3, 2026-09-18); the excluded pixels are
+    counted in the printout."""
     import dataclasses
+    import numpy as np
     import jax.numpy as jnp
     from gigalens.jax.scene_prob_model import ImageData
     img = jnp.asarray(system.observed_image)
+    if mask_disk:
+        md = dict(mask_disk)
+        r = float(md.pop("radius_pix")); centre = md.pop("centre", "peak")
+        if md:
+            raise ValueError(f"make_image_data: unknown mask_disk keys {sorted(md)}.")
+        obs = np.asarray(system.observed_image)
+        if centre == "peak":
+            row, col = np.unravel_index(int(np.argmax(obs)), obs.shape)
+        else:
+            row, col = float(centre[0]), float(centre[1])
+        yy, xx = np.indices(obs.shape)
+        m = np.hypot(yy - row, xx - col) > r
+        if "mask" in common and common["mask"] is not None:
+            m = m & np.asarray(common["mask"], bool)
+        common["mask"] = jnp.asarray(m)
+        print(f"[{system.system_id}] mask_disk: {int((~m).sum())} px within {r} px of ({row}, {col}) dropped from the likelihood")
     common.setdefault("background_rms", system.background_rms)
     common.setdefault("exp_time", system.exp_time)
     common.setdefault("sees", "all")
@@ -233,7 +255,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         Plane(deflection_ratio=1.0,
               light=[Component(src_profile, source_p)]),
     ])
-    ds = make_image_data(system, kwargs.get("adaptive"))
+    ds = make_image_data(system, kwargs.get("adaptive"), mask_disk=kwargs.get("mask_disk"))
     prob_model = ProbModel(model, ds, mode="lstsq")
     return prob_model
 

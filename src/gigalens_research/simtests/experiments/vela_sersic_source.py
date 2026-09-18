@@ -109,5 +109,5 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
               light=[Component(sersic.SersicEllipse(use_lstsq=True), source_p)]),
     ])
 
-    ds = make_image_data(system, kwargs.get("adaptive"))
+    ds = make_image_data(system, kwargs.get("adaptive"), mask_disk=kwargs.get("mask_disk"))
     return ProbModel(model, ds, mode="lstsq")

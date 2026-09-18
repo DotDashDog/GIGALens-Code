@@ -21,6 +21,12 @@ with the VELA source at the data's resolution.
   χ²/ν 1.005, lens mass biased 3–9σ (C-2); the bias is source-driven — falls with n_max, gone at
   n_max 20 (C-4); n_max 5 is worse than a Sersic. Artifacts `fit_results/vela22_{sersic_v1,truthinit_v1}/`.
   Open: n_max 20 sampling at R-hat 1.010; truth-free starts for the shapelet fits; group page update.
+- 2026-09-18 (user: "rule out quadrature error on the lens-light cusp as the cause"): the cusp
+  residue at the truth is −0.46σ at the centre pixel, 0.25–0.46σ over the central 3×3, ≤ 0.06σ
+  elsewhere (adaptive-8 vs the generator's ss=32); its Fisher linear-response bias on the lens
+  mass is < 0.07σ on every parameter (C-5, UNCERTIFIED). Empirical falsifier prepared as DC-3
+  (refit with the 49-px cusp disk masked, `fit_sersic_truthinit_maskcusp_vela22.yaml`), awaiting
+  approval.
 - gigalens (2026-09-17, user request): PR #115 (curvature driver) merged into `linusu-dev-merge`
   (merge commit 38152dc) after resolving its one conflict in `inference/MAP.py` (kept PR #116's
   cross-device progress-bar reduction over linusu-dev-merge's Python-gated callback; tests on
@@ -115,6 +121,40 @@ with the VELA source at the data's resolution.
   chains were started at the truth for every order, so the shapelet posteriors' agreement with
   truth has not been shown to be reachable from a truth-free start; (e) one system, one realisation.
 - **Proposed by / on:** producer (Claude) · 2026-09-17   ·   **Grader:** _pending_
+
+---
+
+### C-5 — The lens-light cusp quadrature residue cannot produce the C-2 lens-mass bias: its linear-response bias is < 0.07σ on every mass parameter
+- **Status:** `proposed (UNCERTIFIED)` — analytic (Fisher) result; the empirical falsifier is DC-3.
+- **Criterion (pre-registered 2026-09-18, before the numbers):** the cusp is "the cause" only if
+  the bias it induces, E[δθ] = −(JᵀWJ)⁻¹JᵀW·D projected through dθ/dz, reaches the observed
+  z-scores (3–9σ) on the biased mass parameters; it is "ruled out at linear order" if
+  |E[δθ]|/σ_post < 0.3 on all eight, with the Fisher σ within 20% of the MCLMC σ (linearisation
+  valid). Observed (`fit_checks/vela22_cusp_bias.py`, `.json`, `.png`):
+
+  | quantity | value |
+  |---|---|
+  | D = lens light at truth, adaptive-8 − uniform ss=32 (the generator's quadrature; `lens_light_only.npy` reproduced to 1.4e-4σ) | centre px −0.46σ; 3×3 block −0.24…−0.46σ; max outside the r ≤ 4 px disk 0.056σ; Σ(D/σ)² = 1.48 (1.31 in the disk) |
+  | Fisher σ / MCLMC σ (DC-1 posterior), 14 lens parameters | 0.99–1.10 |
+  | predicted bias / σ_post, lens mass (θ_E, γ, e1, e2, cx, cy, γ1, γ2) | −0.023, −0.048, +0.003, +0.069, +0.046, +0.049, −0.020, +0.012 |
+  | observed z (C-2) | +3.6, −6.2, +8.6, +0.9, +3.9, −3.1, +3.3, −4.8 |
+  | predicted bias / σ_post, lens light R, n | +0.22, +0.58 (observed −7.2, −0.2) |
+  | same at the DC-1 posterior mean (lens light + Sersic source), max mismatch | 0.48σ (centre), 0.059σ outside the disk; source column ≤ 0.035σ; predicted mass bias ≤ 0.14σ |
+
+  Criterion met with two orders of magnitude of margin: the quadrature residue is one compact
+  spot whose sign pattern the lens mass cannot absorb (it goes into n_sersic and R of the lens
+  light, and even there at < 0.6σ). The DC-1 "undersampling at the MAP" doubt is closed by the
+  same computation: the fitted model's mismatch to ss=32 is ≤ 0.06σ outside the excluded disk.
+- **Evidence / artifact:** `experiments/vela_f140w_v3/fit_checks/vela22_cusp_bias.{py,json,png}`.
+- **Doubt report:** (a) linear response only — a 0.5σ residual on ~10 px cannot plausibly act
+  non-linearly on parameters whose posteriors are Gaussian to 10% (Fisher = MCLMC), but the
+  refit (DC-3) is the empirical check; (b) the reference is the generator's own ss=32 render,
+  i.e. the mismatch to the DATA, which is the relevant quantity (the exact integral is not: the
+  ss=32 truth is itself 0.035σ from ss=64 at the centre pixel, and both the mock and the fit
+  share the PSF/bin-first convention); (c) the estimate uses the DC-1 posterior σ as the yardstick
+  and the truth-start z0 as the linearisation point; the posterior-mean point gives the same
+  answer (≤ 0.14σ); (d) one system.
+- **Proposed by / on:** producer (Claude) · 2026-09-18   ·   **Grader:** _pending_
 
 ---
 
@@ -224,9 +264,50 @@ with the VELA source at the data's resolution.
     (2026-09-17), taken as approval; launched the same day. **Cleared — all runs complete;
     observed vs predicted in the log entry "DC-2 runs" of 2026-09-17.**
 
+- **DC-3 — Run: vela22 Sersic-source refit with the lens-cusp disk masked (empirical falsifier for C-5)**
+  (user 2026-09-18: "undersampling a small feature can cause bias, and I'd like to rule that out
+  as the cause"). Config `experiments/vela_f140w_v3/fit_sersic_truthinit_maskcusp_vela22.yaml`:
+  identical to the truth-start Sersic run (model, adaptive quadrature, pipeline, seed 0) except
+  that the 49 px within 4 px of the brightest observed pixel (79, 80) are dropped from the
+  likelihood (`mask_disk`, data-driven centre; the check stage's own 4-px exclusion still applies).
+  - **Claim type:** distributional (a posterior shift, or its absence, under a likelihood change).
+  - **Cause hypothesis under test:** H_cusp — the −0.25…−0.46σ quadrature deficit at the lens-light
+    cusp is what the lens mass absorbs. Alternative H_src (C-4): the source misfit is.
+  - **Prediction (from C-5's Fisher numbers):** under H_src the eight mass posterior means move by
+    |Δmean|/σ < 0.3 (0.1 systematic + the statistical wobble of dropping 49 pixels; Fisher widths
+    change ≤ 6%) and every mass z-score stays within 1σ of its C-2 value (e1 still ≈ +8.6);
+    lens-light widths grow (n_sersic ×1.5, centre ×1.5–1.7, R ×1.1 — the cusp pixels carry the
+    n information) and the lens-light R bias (−7.2σ) persists to within its (wider) σ; χ²/ν of the
+    mean model on the kept pixels ≈ 1.005 as before. Under H_cusp: mass |z| collapse toward 0
+    (e1 from 8.6 to < 3) — this is what would falsify C-5 and C-4's attribution.
+  - **Falsifier for C-5:** any mass parameter whose mean moves by > 1σ toward the truth.
+  - **Metric + thresholds:** |Δmean|/σ per parameter (σ = the masked run's posterior σ); R-hat < 1.01,
+    ESS ≫ 8; undersampling check at the start as before.
+  - **Blind spot:** masking 49 px also removes real information on the lens light; a small shift
+    in the lens-light parameters is expected and is not evidence for H_cusp — only mass moves
+    count, and only toward the truth.
+  - **Cost:** one 4-GPU interactive allocation, ≈ 4 min of run time (as the truth-start Sersic run).
+  - **Status:** prepared 2026-09-18 (config + `mask_disk` builder option, CPU smoke-tested:
+    49 px dropped, log-prob finite); **awaiting approval.**
+
 ---
 
 ## Log (newest first)
+
+- **2026-09-18 (cusp quadrature) — lens-light cusp residue measured against the generator's
+  quadrature and projected onto the lens mass: < 0.07σ (C-5, UNCERTIFIED); DC-3 prepared.**
+  `fit_checks/vela22_cusp_bias.py`. The twin non-lstsq model reproduces `lens_light_only.npy`
+  (uniform ss=32) to 1.4e-4σ, so the fit's model and the generator's are the same object; the
+  adaptive-8 render is 0.25–0.46σ LOW over the central 3×3 px (midpoint rule under-integrates an
+  n = 5.2 cusp) and within 0.056σ everywhere else. Fisher linear response (Jacobian of the lstsq
+  model image in z at the truth start, 20 parameters, dθ/dz through the bijector): Fisher σ agrees
+  with the MCLMC σ to 1–10%, and the deficit's projection onto the mass parameters is < 0.07σ
+  (into lens-light n +0.58σ, R +0.22σ). At the DC-1 posterior mean the full-model mismatch is
+  0.48σ at the centre and ≤ 0.06σ outside the disk (source column ≤ 0.035σ), bias ≤ 0.14σ: the
+  open "quadrature not re-checked at the MAP" doubt is closed. Prepared the masked refit
+  (`mask_disk` option in `make_image_data`, both Vela builders; new yaml) as the empirical
+  falsifier, with the prediction "no mass movement, lens-light n width ×1.5" written before the
+  run. Not launched.
 
 - **2026-09-17 (DC-2 runs) — chains started at truth: Sersic (seeds 0, 1) and shapelets n_max 5/10/15/20 (UNCERTIFIED).**
   Slurm 58503699 (Sersic, 3.8 min), 58504118 (four shapelet runs, 26 min: 3.6 / 3.9 / 4.9 / 6.7 min,
