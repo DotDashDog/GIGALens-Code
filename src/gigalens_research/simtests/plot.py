@@ -108,7 +108,14 @@ def _render_panel(panel: str, report: Any, *, out_dir: str, ctx: Any,
     if panel == "source":
         return report.source_panel()
     if panel == "corner":
-        return report.corner()
+        # The persisted simtests truth is the legacy 3-group list; the corner utility
+        # wants a scene-nested or path-keyed dict (2026-09-17: the panel raised
+        # "truth must be a scene-nested dict ... got list" on every simtests run).
+        truth = report.truth_x
+        if isinstance(truth, (list, tuple)):
+            from gigalens_research.inference_utils.params import truth_x_to_scene_params
+            truth = truth_x_to_scene_params(truth, ctx.prob_model.model)
+        return report.corner(truth=truth if truth is not None else False)
     if panel == "z_scores":
         return report.z_score_panel(kind=z_score_kind)
     if panel == "source_comparison":
