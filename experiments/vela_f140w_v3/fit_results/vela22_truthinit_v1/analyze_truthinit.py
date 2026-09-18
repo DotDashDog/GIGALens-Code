@@ -14,7 +14,8 @@ BASE = "/pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3"; SID = "v
 system = System.load(BASE + "/dataset", SID)
 RUNS = [("sersic_free", "experiments/vela_f140w_v3/fit_sersic_vela22.yaml", {"fit": "sersic_v1"}, "fitsersic_v1"),
         ("sersic_truth", "experiments/vela_f140w_v3/fit_sersic_truthinit_vela22.yaml", {"fit": "sersic_truthinit_v1"}, "fitsersic_truthinit_v1"),
-        ("sersic_truth_seed1", "experiments/vela_f140w_v3/fit_sersic_truthinit_seed1_vela22.yaml", {"fit": "sersic_truthinit_seed1"}, "fitsersic_truthinit_seed1")]
+        ("sersic_truth_seed1", "experiments/vela_f140w_v3/fit_sersic_truthinit_seed1_vela22.yaml", {"fit": "sersic_truthinit_seed1"}, "fitsersic_truthinit_seed1"),
+        ("sersic_truth_maskcusp", "experiments/vela_f140w_v3/fit_sersic_truthinit_maskcusp_vela22.yaml", {"fit": "sersic_truthinit_maskcusp"}, "fitsersic_truthinit_maskcusp")]
 RUNS += [(f"shapelets_n{n}", "experiments/vela_f140w_v3/fit_shapelets_truthinit_vela22.yaml", {"fit": "shapelets_truthinit_v1", "n_max": n}, f"fitshapelets_truthinit_v1_n_max{n}") for n in (5, 10, 15, 20)]
 if only: RUNS = [r for r in RUNS if r[0] in only]
 def path_truth(model):
