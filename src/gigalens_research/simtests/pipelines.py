@@ -5,6 +5,8 @@ Registered pipeline builders
 - ``map_svi_hmc``: standard MAP → SVI → HMC pipeline (used for GL2 Sérsic test).
 - ``map_bootstrap_mclmc``: fixed-lens MAP bootstrap → MCLMC (used for Vela
   shapelets systematics test).
+- ``map_mclmc``: truth-free multi-start MAP → diagonal qz → MCLMC (used for the
+  vela_f140w_v3 Sersic-source fits).
 
 Custom stages
 -------------
@@ -31,6 +33,7 @@ import tensorflow_probability.substrates.jax as tfp
 tfd = tfp.distributions
 
 from gigalens_research.inference_utils.pipeline import (
+    BridgeStage,
     InferenceStage,
     MAPStage,
     MCLMCStage,
@@ -110,6 +113,59 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
             map_n_samples=int(kwargs.get("bootstrap_map_n_samples", 100)),
             diag_scale=float(kwargs.get("bootstrap_diag_scale", 1e-6)),
             pin_eps=float(kwargs.get("bootstrap_pin_eps", 1e-6)),
+        ),
+        MCLMCStage(
+            n_chains=int(kwargs.get("n_chains", 8)),
+            num_burnin_steps=int(kwargs.get("num_burnin_steps", 4000)),
+            num_results=int(kwargs.get("num_results", 4000)),
+            desired_energy_variance=float(kwargs.get("desired_energy_variance", 5e-4)),
+            frac_tune1=float(kwargs.get("frac_tune1", 0.2)),
+            frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
+            frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
+            debug=bool(kwargs.get("mclmc_debug", False)),
+        ),
+    ]
+
+
+@register_pipeline_builder("map_mclmc")
+def build_map_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
+    """Truth-free MAP → diagonal-qz bridge → MCLMC.
+
+    Unlike ``map_bootstrap_mclmc`` nothing here reads ``system.truth_x``: the MAP is
+    a multi-start optimisation from prior draws, the chains start from a tight
+    diagonal Gaussian around the MAP optimum in unconstrained space (its scale is
+    also the initial mass-matrix guess that MCLMC's tuning refines), and the
+    sampler runs from there. This is the pipeline for fits that must not use the
+    simulation truth (2026-09-17, vela_f140w_v3 first Sersic-source fit).
+
+    Kwargs consumed:
+
+    ``map_num_steps`` (500), ``map_n_samples`` (500), ``qz_diag_scale`` (1e-2;
+    the std of the diagonal qz around ``z_best``), ``n_chains`` (8),
+    ``num_burnin_steps`` (4000), ``num_results`` (4000),
+    ``desired_energy_variance`` (5e-4), ``frac_tune1`` (0.2), ``frac_tune2`` (0.6),
+    ``frac_tune3`` (0.2), ``mclmc_debug`` (False).
+    """
+    import jax.numpy as jnp
+
+    qz_scale = float(kwargs.get("qz_diag_scale", 1e-2))
+
+    def _diag_qz(z_best):
+        z = jnp.asarray(z_best)
+        return tfd.MultivariateNormalDiag(
+            loc=z, scale_diag=jnp.full(z.shape[-1], qz_scale, dtype=z.dtype))
+
+    return [
+        MAPStage(
+            num_steps=int(kwargs.get("map_num_steps", 500)),
+            n_samples=int(kwargs.get("map_n_samples", 500)),
+        ),
+        BridgeStage(
+            name="diag_qz_from_map",
+            version=f"v1_scale{qz_scale:g}",
+            requires=("z_best",),
+            produces=("qz",),
+            fn=_diag_qz,
         ),
         MCLMCStage(
             n_chains=int(kwargs.get("n_chains", 8)),
