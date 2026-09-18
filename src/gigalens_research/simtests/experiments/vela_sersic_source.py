@@ -70,25 +70,19 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
     ``source_prior`` (dict, optional): overrides for :data:`BROAD_SOURCE_PRIOR`
     keys; unknown keys raise (a typo must not silently keep the default).
 
-    ``adaptive`` (dict, optional): when given, the dataset is an
-    ``AdaptiveImageData`` whose factor map is derived from the observed image with
-    ``driver`` (``"curvature"`` or ``"snr"``) and the remaining keys forwarded as
-    that driver's settings (curvature: ``psf_sigma`` [native px, REQUIRED — there is
-    no honest default; the flux-moment estimate of the STDPSF kernel is 2.5x the core
-    width and under-corrects the finest LoG scale], ``alpha``, ``nsig``, ``dilate``,
-    ``max_factor``, ``floor``, ``demote_scale``). The simulator config's uniform
-    ``supersample`` is then forced to 1: the factor map IS the quadrature. Without
-    ``adaptive`` the dataset's ``inference_supersample`` (meta.json) is used uniformly.
+    ``adaptive`` (dict, optional): curvature/SNR-adaptive quadrature, see
+    :func:`vela_shapelets.make_image_data` (shared by all Vela builders). Without it
+    the dataset's ``inference_supersample`` (meta.json) is used uniformly.
     """
-    import dataclasses
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
     from gigalens.jax.profiles.light import sersic
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
-    from gigalens.jax.scene_prob_model import ImageData, ProbModel
+    from gigalens.jax.scene_prob_model import ProbModel
     from gigalens.jax.utils.grouped_priors import TruncatedDiskNormal
-    from gigalens_research.simtests.experiments.vela_shapelets import _vela_scene_lens_priors
+    from gigalens_research.simtests.experiments.vela_shapelets import (
+        _vela_scene_lens_priors, make_image_data)
     tfd = tfp.distributions
 
     sp = dict(BROAD_SOURCE_PRIOR)
@@ -115,28 +109,5 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
               light=[Component(sersic.SersicEllipse(use_lstsq=True), source_p)]),
     ])
 
-    adaptive = kwargs.get("adaptive")
-    common = dict(background_rms=system.background_rms, exp_time=system.exp_time, sees="all")
-    if adaptive:
-        from gigalens.jax.experimental.adaptive_supersample import AdaptiveImageData
-        a = dict(adaptive)
-        driver = a.pop("driver", None)
-        if driver not in ("curvature", "snr"):
-            raise ValueError(
-                "build_epl_shear_sersic_sersic_source_broad: adaptive.driver must be "
-                f"'curvature' or 'snr'; got {driver!r}.")
-        cfg1 = dataclasses.replace(system.sim_config, supersample=1)
-        if driver == "curvature":
-            if "psf_sigma" not in a:
-                raise ValueError(
-                    "build_epl_shear_sersic_sersic_source_broad: adaptive.psf_sigma "
-                    "[native px] is required for the curvature driver (no honest default).")
-            ds = AdaptiveImageData(jnp.asarray(system.observed_image), cfg1,
-                                   driver="curvature", curvature_kwargs=a, **common)
-        else:
-            ds = AdaptiveImageData(jnp.asarray(system.observed_image), cfg1,
-                                   driver="snr", **a, **common)
-        print(f"[{system.system_id}] adaptive quadrature ({driver}): {ds.adaptive_grid!r}")
-    else:
-        ds = ImageData(jnp.asarray(system.observed_image), system.sim_config, **common)
+    ds = make_image_data(system, kwargs.get("adaptive"))
     return ProbModel(model, ds, mode="lstsq")

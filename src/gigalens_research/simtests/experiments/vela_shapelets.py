@@ -142,6 +142,42 @@ def _vela_scene_lens_priors():
     return epl_p, shear_p, lens_light_p
 
 
+def make_image_data(system: Any, adaptive: Any = None, **common):
+    """The inference dataset for a Vela system: a plain ``ImageData`` on the dataset's
+    uniform ``inference_supersample``, or — when ``adaptive`` (dict) is given — an
+    ``AdaptiveImageData`` whose factor map is derived from the observed image
+    (``driver`` "curvature" or "snr", remaining keys forwarded to that driver) with the
+    config's uniform supersample forced to 1 (the factor map IS the quadrature).
+    Curvature needs ``psf_sigma`` [native px] explicitly: there is no honest default
+    (the flux-moment estimate of a wide empirical kernel over-estimates the core width
+    and under-corrects the finest LoG scale). Shared by every Vela builder so one
+    campaign key (``adaptive:``) means the same thing for every source model."""
+    import dataclasses
+    import jax.numpy as jnp
+    from gigalens.jax.scene_prob_model import ImageData
+    img = jnp.asarray(system.observed_image)
+    common.setdefault("background_rms", system.background_rms)
+    common.setdefault("exp_time", system.exp_time)
+    common.setdefault("sees", "all")
+    if not adaptive:
+        return ImageData(img, system.sim_config, **common)
+    from gigalens.jax.experimental.adaptive_supersample import AdaptiveImageData
+    a = dict(adaptive)
+    driver = a.pop("driver", None)
+    if driver not in ("curvature", "snr"):
+        raise ValueError(f"make_image_data: adaptive.driver must be 'curvature' or 'snr'; got {driver!r}.")
+    cfg1 = dataclasses.replace(system.sim_config, supersample=1)
+    if driver == "curvature":
+        if "psf_sigma" not in a:
+            raise ValueError("make_image_data: adaptive.psf_sigma [native px] is required for the "
+                             "curvature driver (no honest default).")
+        ds = AdaptiveImageData(img, cfg1, driver="curvature", curvature_kwargs=a, **common)
+    else:
+        ds = AdaptiveImageData(img, cfg1, driver="snr", **a, **common)
+    print(f"[{system.system_id}] adaptive quadrature ({driver}): {ds.adaptive_grid!r}")
+    return ds
+
+
 @register_inference_builder("epl_shear_sersic_shapelets")
 def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     """Build the SCENE ``ProbModel`` for the Vela shapelets fit (G1b).
@@ -152,7 +188,9 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     signature unchanged.
 
     Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
-    the source model complexity), ``use_shapelets`` (default True).
+    the source model complexity), ``use_shapelets`` (default True), ``adaptive``
+    (optional dict, see :func:`make_image_data`; default: uniform quadrature at the
+    dataset's ``inference_supersample``).
     """
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
@@ -195,9 +233,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         Plane(deflection_ratio=1.0,
               light=[Component(src_profile, source_p)]),
     ])
-    ds = ImageData(jnp.asarray(system.observed_image), system.sim_config,
-                 background_rms=system.background_rms, exp_time=system.exp_time,
-                 sees="all")
+    ds = make_image_data(system, kwargs.get("adaptive"))
     prob_model = ProbModel(model, ds, mode="lstsq")
     return prob_model
 

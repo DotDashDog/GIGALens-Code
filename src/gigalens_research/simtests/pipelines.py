@@ -98,14 +98,17 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
     ``bootstrap_diag_scale`` (1e-6), ``bootstrap_pin_eps`` (1e-6),
     ``n_chains`` (8), ``num_burnin_steps`` (4000), ``num_results`` (4000),
     ``desired_energy_variance`` (5e-4),
-    ``frac_tune1`` (0.2), ``frac_tune2`` (0.6), ``frac_tune3`` (0.2).
+    ``frac_tune1`` (0.2), ``frac_tune2`` (0.6), ``frac_tune3`` (0.2),
+    ``undersampling_check`` (False; ``True`` or a dict of
+    :class:`UndersamplingCheckStage` kwargs inserts a quadrature certification at the
+    bootstrapped start point that raises before sampling if it fails).
 
     ``bootstrap_diag_scale`` is the variance of the tight diagonal ``qz`` the
     chains are initialised from (``scale = sqrt(diag_scale)``); ``bootstrap_pin_eps``
     is the half-width of the ``Uniform`` used to pin the truth-constrained
     parameters during the bootstrap MAP.
     """
-    return [
+    stages: List[InferenceStage] = [
         PartialTruthBootstrapQzStage(
             system=system,
             free=("source",),
@@ -114,6 +117,12 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
             diag_scale=float(kwargs.get("bootstrap_diag_scale", 1e-6)),
             pin_eps=float(kwargs.get("bootstrap_pin_eps", 1e-6)),
         ),
+    ]
+    uc = kwargs.get("undersampling_check")
+    if uc:
+        uc = dict(uc) if isinstance(uc, dict) else {}
+        stages.append(UndersamplingCheckStage(**uc))
+    stages.append(
         MCLMCStage(
             n_chains=int(kwargs.get("n_chains", 8)),
             num_burnin_steps=int(kwargs.get("num_burnin_steps", 4000)),
@@ -123,8 +132,8 @@ def build_map_bootstrap_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
             frac_tune2=float(kwargs.get("frac_tune2", 0.6)),
             frac_tune3=float(kwargs.get("frac_tune3", 0.2)),
             debug=bool(kwargs.get("mclmc_debug", False)),
-        ),
-    ]
+        ))
+    return stages
 
 
 @register_pipeline_builder("map_mclmc")
@@ -178,6 +187,238 @@ def build_map_mclmc(system: Any, **kwargs) -> List[InferenceStage]:
             debug=bool(kwargs.get("mclmc_debug", False)),
         ),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Custom stage: UndersamplingCheckStage (2026-09-17)
+# ---------------------------------------------------------------------------
+
+
+@register_stage
+class UndersamplingCheckStage(InferenceStage):
+    """Certify the inference quadrature at the sampler's starting point BEFORE
+    sampling (user request 2026-09-17: "check the undersampling for the
+    bootstrapped truth before running sampling").
+
+    Runs :func:`gigalens.jax.analysis.diagnose_undersampling` on the inference
+    ``ProbModel`` at ``qz.mean()`` — the point the chains start from (the truth
+    with the bootstrapped source, or a MAP) — through the likelihood path (lstsq
+    amplitudes re-solved per quadrature), against a converged uniform reference
+    with its own half-supersample self-check. The configured quadrature (uniform
+    or the adaptive grid) is the rung that is gated; the uniform ladder is
+    reported for context.
+
+    Gate (derived 2026-09-17 on vela22, `docs/logs/vela-f140w-modelling.md`):
+    smooth-source renders on the factor-8 adaptive map sit within 0.05 sigma of
+    a ss=32 reference on every pixel except the lens-light centre, whose cusp
+    quadrature is non-monotone (0.5 sigma at factor 8, 0.15 at 16). So the stage
+    FAILS (raises, no sampling) when the configured rung's worst pixel exceeds
+    ``max_delta_sigma`` (default 1.0: a pixel-level bias no known cusp residue
+    reaches) or when more than ``max_frac_above`` of the pixels exceed the
+    per-pixel ``tolerance`` (default 1e-3 = 25 px of 25,600: the known residue
+    is one pixel). ``reference_supersample`` (16) must be even; its self-check
+    is reported and a non-converged reference is a failure too. The stage
+    persists the configured rung's ``delta_over_sigma`` map and the report
+    summary; ``qz`` passes through untouched.
+    """
+
+    name = "undersampling_check"
+    schema_version: int = 1
+    requires = ("qz",)
+    produces = ("undersampling",)
+
+    def __init__(self, *, reference_supersample: int = 16,
+                 supersample_ladder=(1, 2, 4), tolerance: float = 0.1,
+                 max_delta_sigma: float = 1.0, max_frac_above: float = 1e-3,
+                 exclude_cusp_radius_pix: float = 4.0,
+                 reference_self_check_frac: float = 0.5,
+                 name: Optional[str] = None, seed: Optional[int] = None):
+        super().__init__(name=name or "undersampling_check", seed=seed)
+        self.reference_supersample = int(reference_supersample)
+        self.supersample_ladder = tuple(int(s) for s in supersample_ladder)
+        self.tolerance = float(tolerance)
+        self.max_delta_sigma = float(max_delta_sigma)
+        self.max_frac_above = float(max_frac_above)
+        # Pixels within this radius of every LENS-plane light centre (at the start
+        # point) are excluded from the certification statistics and from the reference
+        # self-check: a Sersic cusp there converges non-monotonically under midpoint
+        # quadrature (vela22 lens light, n = 5.2: 0.19 / 0.50 / 0.15 / 0.035 sigma at
+        # ss 4 / 8 / 16 / 32 vs 64), and its wings keep the ss=8-vs-16 self-check above
+        # 0.05 sigma out to ~4 px (measured 2026-09-17, lens light only: max outside
+        # r <= 2 / 3 / 4 / 5 px = 0.108 / 0.068 / 0.042 / 0.015 sigma; the ss=16
+        # reference's own error there, 16 vs 32: 0.035 / 0.021 / 0.013 / 0.005). The
+        # default 4 px excludes 50 of 25,600 pixels. The excluded region's worst
+        # residual is still measured and recorded (``configured_max_in_excluded``).
+        # 0 disables.
+        self.exclude_cusp_radius_pix = float(exclude_cusp_radius_pix)
+        # Reference certification: the module flags a reference "converged" only if its
+        # half-supersample self-check is within tolerance/4 (0.025 sigma), which the
+        # ss=16 reference misses on these data by a hair (0.08 sigma at a smooth start
+        # point) and ss=32 is unaffordable for a 231-basis shapelet stack (48 GB).
+        # Under the midpoint rule's second-order convergence, err(16) ~= self_err / 3,
+        # so self_err <= tolerance * frac (default 0.5 -> 0.05 sigma) bounds the
+        # reference's own error to ~0.017 sigma, well inside the 0.1 gate. Both the
+        # module's verdict and this one are recorded.
+        self.reference_self_check_frac = float(reference_self_check_frac)
+
+    def config_hash_data(self) -> Dict[str, Any]:
+        return {"reference_supersample": self.reference_supersample,
+                "supersample_ladder": list(self.supersample_ladder),
+                "tolerance": self.tolerance, "max_delta_sigma": self.max_delta_sigma,
+                "max_frac_above": self.max_frac_above,
+                "exclude_cusp_radius_pix": self.exclude_cusp_radius_pix,
+                "reference_self_check_frac": self.reference_self_check_frac}
+
+    def _cusp_mask(self, ctx, z0, dataset):
+        """Boolean (H, W) mask, True = certify this pixel; False inside the excluded
+        disks around the lens-plane light centres at ``z0``. Returns (mask, centres)."""
+        import jax.numpy as jnp
+        model = ctx.prob_model.model
+        ny, nx = tuple(int(v) for v in dataset.image.shape[-2:])
+        mask = np.ones((ny, nx), dtype=bool)
+        centres = []
+        if self.exclude_cusp_radius_pix <= 0:
+            return mask, centres
+        lab = ctx.prob_model.labeled_samples(jnp.asarray(z0)[None])
+        lab = {k: float(np.asarray(v).ravel()[0]) for k, v in lab.items()}
+        src_ids = {id(c) for c in model.source_plane_light()}
+        dp = float(dataset.sim_config.delta_pix)
+        yy, xx = np.indices((ny, nx))
+        for i, plane in enumerate(model.planes):
+            for j, comp in enumerate(plane.light):
+                if id(comp) in src_ids:
+                    continue
+                base = f"planes/{model.plane_key(i)}/light/{model.component_key(i, 'light', j)}/"
+                cx, cy = lab.get(base + "center_x"), lab.get(base + "center_y")
+                if cx is None or cy is None:
+                    consts = getattr(model, "constants", {}) or {}
+                    node = (consts.get("planes", {}).get(model.plane_key(i), {})
+                            .get("light", {}).get(model.component_key(i, "light", j), {}))
+                    cx, cy = node.get("center_x"), node.get("center_y")
+                if cx is None or cy is None:
+                    continue
+                col = (nx - 1) / 2.0 + float(cx) / dp
+                row = (ny - 1) / 2.0 + float(cy) / dp
+                mask &= np.hypot(yy - row, xx - col) > self.exclude_cusp_radius_pix
+                centres.append([float(row), float(col)])
+        return mask, centres
+
+    @staticmethod
+    def _masked_copy(ds, mask):
+        """Same observation with ``mask`` ANDed in (ImageData or AdaptiveImageData)."""
+        import jax.numpy as jnp
+        from gigalens.jax.scene_prob_model import ImageData
+        common = dict(error_map=ds.error_map, mask=jnp.asarray(mask) & ds.mask,
+                      sees=getattr(ds, "_sees_spec", None) or getattr(ds, "sees", "all"),
+                      mode=getattr(ds, "mode", None))
+        try:
+            from gigalens.jax.experimental.adaptive_supersample import AdaptiveImageData
+        except ImportError:
+            AdaptiveImageData = ()
+        if AdaptiveImageData and isinstance(ds, AdaptiveImageData):
+            return AdaptiveImageData(ds.image, ds.sim_config, adaptive_grid=ds.adaptive_grid, **common)
+        return ImageData(ds.image, ds.sim_config, **common)
+
+    def run(self, ctx, artifacts, seed):
+        import jax.numpy as jnp
+        from gigalens.jax.analysis import diagnose_undersampling
+        t0 = time.perf_counter()
+        from gigalens.jax.scene_prob_model import ProbModel
+        z0 = jnp.asarray(artifacts["qz"].mean())
+        # Certify on masked copies of the datasets (cusp disks excluded, see __init__);
+        # the model and amplitude mode are the inference ones.
+        masks, centres_all, masked_ds = [], [], []
+        for ds in ctx.prob_model.datasets:
+            m, centres = self._cusp_mask(ctx, z0, ds)
+            masks.append(m); centres_all.append(centres); masked_ds.append(self._masked_copy(ds, m))
+        check_prob = ProbModel(ctx.prob_model.model, masked_ds,
+                               mode=getattr(ctx.prob_model, "mode", "lstsq"))
+        reports = diagnose_undersampling(
+            check_prob, z0, supersample_ladder=self.supersample_ladder,
+            reference_supersample=self.reference_supersample,
+            tolerance=self.tolerance, check_reference=True)
+        arrays: Dict[str, np.ndarray] = {"z0": np.asarray(z0)}
+        meta: Dict[str, Any] = {"wall_time_s": None, "reports": [],
+                                "exclude_cusp_radius_pix": self.exclude_cusp_radius_pix}
+        failures = []
+        for i, rep in enumerate(reports):
+            summary = rep.summary()
+            print(f"[undersampling_check] dataset {i} at the sampler start point "
+                  f"({int((~masks[i]).sum())} px excluded around lens-light centres "
+                  f"{centres_all[i]}, radius {self.exclude_cusp_radius_pix} px):\n{summary}")
+            rung_meta = []
+            for r in rep.rungs:
+                rung_meta.append({
+                    "label": r.label, "supersample": r.supersample,
+                    "convention": r.convention,
+                    "max_abs_delta_over_sigma": float(r.max_abs_delta_over_sigma),
+                    "argmax": [int(v) for v in r.argmax],
+                    "frac_above_tolerance": float(r.frac_above_tolerance),
+                    "delta_chi2": float(np.asarray(r.delta_chi2).ravel()[0]),
+                    "passes": bool(r.passes)})
+            configured = [r for r in rep.rungs if r.supersample is None]
+            if not configured:   # uniform quadrature: the configured supersample is a ladder rung
+                ss = int(ctx.prob_model.datasets[i].sim_config.supersample)
+                configured = [r for r in rep.rungs if r.supersample == ss]
+            r = configured[0]
+            dos = np.asarray(r.delta_over_sigma)[0]
+            arrays[f"delta_over_sigma_{i}"] = dos
+            arrays[f"certified_mask_{i}"] = masks[i]
+            excl = ~masks[i]
+            max_in_excluded = float(np.abs(dos[excl]).max()) if excl.any() else None
+            self_err = getattr(rep, "reference_self_error", None)
+            converged = getattr(rep, "reference_converged", True)
+            meta["reports"].append({
+                "summary": summary, "rungs": rung_meta,
+                "configured_label": r.label,
+                "configured_max_abs_delta_over_sigma": float(r.max_abs_delta_over_sigma),
+                "configured_frac_above_tolerance": float(r.frac_above_tolerance),
+                "configured_argmax_yx": [int(r.argmax[1]), int(r.argmax[2])],
+                "configured_delta_chi2": float(np.asarray(r.delta_chi2).ravel()[0]),
+                "excluded_centres_rowcol": centres_all[i],
+                "excluded_pixels": int(excl.sum()),
+                "configured_max_in_excluded": max_in_excluded,
+                "reference_supersample": self.reference_supersample,
+                "reference_self_error": (None if self_err is None else
+                                         {k: float(v) for k, v in dict(self_err).items()}
+                                         if isinstance(self_err, dict) else float(self_err)),
+                })
+            self_err_max = (max(float(v) for v in dict(self_err).values())
+                            if isinstance(self_err, dict) and self_err else
+                            (None if self_err is None else float(self_err)))
+            ref_ok = (self_err_max is None) or (self_err_max <= self.tolerance * self.reference_self_check_frac)
+            meta["reports"][-1]["reference_self_error_max"] = self_err_max
+            meta["reports"][-1]["reference_converged_module"] = bool(converged) if converged is not None else None
+            meta["reports"][-1]["reference_converged"] = bool(ref_ok)
+            print(f"[undersampling_check] reference ss={self.reference_supersample}: self-check "
+                  f"{self_err_max} sigma vs stage criterion {self.tolerance * self.reference_self_check_frac:.3f} "
+                  f"-> {'OK' if ref_ok else 'FAIL'} (module margin tolerance/4: "
+                  f"{'converged' if converged else 'not converged'}); configured rung worst "
+                  f"{r.max_abs_delta_over_sigma:.3f} sigma, {r.frac_above_tolerance:.2%} px above "
+                  f"{self.tolerance}; excluded-disk worst {max_in_excluded}")
+            if not ref_ok:
+                failures.append(f"dataset {i}: reference ss={self.reference_supersample} self-check "
+                                f"{self_err_max:.3f} sigma > {self.tolerance * self.reference_self_check_frac:.3f}")
+            if r.max_abs_delta_over_sigma > self.max_delta_sigma:
+                failures.append(f"dataset {i}: configured quadrature worst pixel "
+                                f"{r.max_abs_delta_over_sigma:.3f} sigma > {self.max_delta_sigma} at (y,x)={tuple(r.argmax[1:])}")
+            if r.frac_above_tolerance > self.max_frac_above:
+                failures.append(f"dataset {i}: {r.frac_above_tolerance:.2%} of pixels above "
+                                f"{self.tolerance} sigma > {self.max_frac_above:.2%}")
+        meta["wall_time_s"] = time.perf_counter() - t0
+        meta["passed"] = not failures
+        meta["failures"] = failures
+        if failures:
+            raise RuntimeError("UndersamplingCheckStage FAILED at the sampler start point — "
+                               "not sampling on an uncertified quadrature: " + "; ".join(failures))
+        return StageResult(arrays=arrays, metadata=meta)
+
+    def derive_artifacts(self, arrays):
+        return {"undersampling": {k: v for k, v in arrays.items()}}
+
+    @classmethod
+    def to_posterior(cls, arrays, ctx):
+        raise TypeError("UndersamplingCheckStage produces no posterior.")
 
 
 # ---------------------------------------------------------------------------
@@ -341,15 +582,20 @@ class PartialTruthBootstrapQzStage(InferenceStage):
         free_components = self._scene_free_components(model)
         fixed_model = model.fix_to(truth_scene, free=free_components)
 
-        # Scene prob model on the partially-fixed model, same dataset/noise AND amplitude
-        # MODE as the inference model (lstsq vs forward). Hardcoding "lstsq" would render a
-        # forward (sampled-amplitude) model through the lstsq solver and crash; the
-        # bootstrap must mirror the inference mode so gl2 (forward) works too.
-        ds = ImageData(observed_img, sim_config,
-                     background_rms=self.system.background_rms,
-                     exp_time=self.system.exp_time, sees="all")
+        # Scene prob model on the partially-fixed model, on the SAME dataset objects and
+        # amplitude MODE as the inference model (lstsq vs forward). Reusing
+        # ``ctx.prob_model.datasets`` (2026-09-17) keeps the bootstrap on the inference
+        # quadrature — an ``AdaptiveImageData`` builder would otherwise be bootstrapped on
+        # the meta.json uniform supersample. Hardcoding "lstsq" would render a forward
+        # (sampled-amplitude) model through the lstsq solver and crash; the bootstrap
+        # must mirror the inference mode so gl2 (forward) works too.
+        datasets = getattr(ctx.prob_model, "datasets", None)
+        if not datasets:
+            datasets = ImageData(observed_img, sim_config,
+                                 background_rms=self.system.background_rms,
+                                 exp_time=self.system.exp_time, sees="all")
         mode = getattr(ctx.prob_model, "mode", "lstsq")
-        fixed_prob = ProbModel(fixed_model, ds, mode=mode)
+        fixed_prob = ProbModel(fixed_model, datasets, mode=mode)
 
         optimizer = optax.adabelief(1e-2, b1=0.95, b2=0.99)
         map_samples, lps, _ = MAP(

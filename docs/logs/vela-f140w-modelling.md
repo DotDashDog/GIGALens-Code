@@ -122,6 +122,63 @@ with the VELA source at the data's resolution.
     2026-09-17 via `run_vela22_sersic.sh` (gigalens linusu-dev-merge 09f92b4 = #115 + #128).
     **Cleared — run complete; observed vs predicted in the log entry of 2026-09-17 (run).**
 
+- **DC-2 — Runs: vela22 chains started at the TRUTH — Sersic source, and shapelets at n_max 5 / 10 / 15 / 20**
+  (user request 2026-09-17, in place of a dispersed-init check; user also asked for an undersampling
+  check at the bootstrapped truth before sampling). Configs
+  `experiments/vela_f140w_v3/fit_sersic_truthinit_vela22.yaml` (shard 6/10) and
+  `fit_shapelets_truthinit_vela22.yaml` (shards 24–27 of 40); pipeline `map_bootstrap_mclmc`
+  (lens mass + light pinned to truth, source recovered by a 100-start × 300-step fixed-lens MAP,
+  MCLMC 8 × 5000 + 5000 from a 1e-6 diagonal qz at that point) with the new
+  `UndersamplingCheckStage` between bootstrap and sampler; same adaptive quadrature as DC-1.
+  - **Claim type:** (i) stochastic-estimator: the DC-1 posterior (truth-free start) and the
+    truth-start posterior are the SAME distribution (closes the C-1 mode doubt); (ii)
+    distributional: the lens-mass bias of C-2 is a source-model effect, so it shrinks as the
+    shapelet order grows; (iii) quadrature certification at each start point.
+  - **Cause hypothesis:** the C-2 bias arises because a Sersic cannot represent the VELA
+    morphology and the lens absorbs the mismatch; shapelets with more freedom absorb it
+    themselves. If instead the bias persists at n_max 20, it is not source-shape-driven
+    (candidates then: PSF/quadrature, or a degeneracy the data cannot break).
+  - **Prediction:** (i) truth-start Sersic posterior means within 1σ of the DC-1 means for all 20
+    parameters (same mode: |Δmean|/σ < 1, widths equal to 10%); (ii) mass |z| decreasing with
+    n_max: from 3–9 at Sersic to ≲ 3 by n_max 15–20, with θ_E within 2σ by n_max 10; posterior
+    widths growing with n_max (more source freedom → weaker lens constraint), by a factor of
+    order 2 at n_max 20; χ²/ν staying at ~1.00 throughout (the Sersic already fits to 1.005).
+    (iii) undersampling: the configured adaptive rung ≤ 0.5σ worst pixel (the lens-centre residue),
+    < 25 px above 0.1σ, reference self-check converged; the uniform ss=4 rung reported for
+    context (expected to pass for the smooth start points).
+  - **Falsifiers:** (i) any parameter with |Δmean|/σ > 3 between the two Sersic runs → the runs
+    sit in different modes and C-1 is withdrawn; (ii) mass |z| NOT decreasing with n_max (e.g.
+    e1 still > 5σ at n_max 20) → the bias is not source-shape-driven; (iii) the check raising →
+    no sampling on that quadrature, redesign the map.
+  - **Metric + thresholds:** as DC-1 (R-hat < 1.01, ESS ≫ 8, |z| > 3, χ²/ν vs 1.000 ± 0.009); the
+    mode test uses |Δmean|/σ with σ from the posteriors themselves (ESS ~2×10⁴ → the mean is
+    known to ~0.01σ, so 1σ is generous and 3σ decisive).
+  - **Blind spot:** two runs agreeing does not certify the mode is the global one (both could
+    be trapped); the truth-start run only tests that the truth-adjacent mode IS the one the
+    truth-free MAP found. n_max also changes the prior on the source (β LogNormal(0.7", 0.4)),
+    so a bias change with n_max mixes source freedom with the β prior.
+  - **Expected plots:** corner overlays (library) of the two Sersic posteriors coincident; mass
+    z-scores vs n_max falling towards the ±3 band; residual images unchanged in χ² but with the
+    ring excess fading with n_max.
+  - **Cost:** one 4-GPU node, ≤ 4 h requested; expected ~4 min for the Sersic run and 5–15 min
+    per shapelet run (231 basis functions at n_max 20 on 45k points).
+  - **Preparation findings (before launch):** (1) the truth-pinned bootstrap could not render at
+    batch > 1 on ANY simulator: `SceneSimulator._light_fully_fixed` looked the constants tree up
+    by integer index after the tree became name-keyed, so every pinned light component read as
+    free — fixed in gigalens PR #129 (branch `fix-light-fully-fixed-keys`, regression test), used
+    via `GL=` override until merged. (2) `UndersamplingCheckStage` (new, between bootstrap and
+    sampler): `diagnose_undersampling` at qz.mean() through the likelihood path, ss=16 reference;
+    the lens-light cusp and its wings are excluded within 4 px (50 px; measured lens-light-only
+    self-check outside r ≤ 2/3/4/5 px = 0.108/0.068/0.042/0.015σ, reference 16-vs-32 error there
+    0.035/0.021/0.013/0.005σ), reference certified if its ss/2 self-check ≤ 0.05σ (implied own
+    error ~0.017σ; the module's own tolerance/4 margin is unattainable at ss=16 on this cusp);
+    gate: configured rung worst ≤ 1σ and ≤ 0.1% of pixels above 0.1σ; the excluded disk's
+    worst residual is recorded. CPU smoke at n_max 5 (80-step bootstrap): adaptive rung 0.032σ
+    worst, 0 px above 0.1σ, reference self-check 0.032σ, excluded-disk worst 0.31σ → PASS; the
+    same smoke shows uniform ss=4 FAILING the 0.1σ gate for a Sersic start (0.24σ).
+  - **Status:** written before launch; the experiment design is the user's explicit instruction
+    (2026-09-17), taken as approval; launched the same day.
+
 ---
 
 ## Log (newest first)
