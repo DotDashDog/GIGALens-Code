@@ -513,6 +513,15 @@ with the VELA source at the data's resolution.
 - Lens-light cores: for n > 4 lenses a 2% R_e core is a 10σ central-pixel feature in these data
   (`core_visibility.py`); the generator's pure-Sersic cusps are unphysical there. Decide the truth
   recipe (cored for n > 4 / by luminosity) and the fit model (core-Sersic, r_b free) before the campaign.
+  gigalens `CoreSersic` on linusu-dev-merge is WRONG (known-issues #9: 1/(αn) applied as a
+  division, −1 outside the b_n product; verified 2026-09-18, shape error not normalisation).
+  gigalens PR #105 (joon-core-sersic-fix, 2026-08-05) fixes it: reviewed 2026-09-18 — kernel equals
+  the Graham 2003 / lenstronomy form to 2e-16 at three parameter sets incl. n 5.17 / R_b 2% R_e /
+  α 10, R_b → 0 recovers SersicEllipse to 1e-15, I(R_b) identity holds, its lenstronomy parity
+  test passes (8/8 in tests/test_profiles.py). Gaps: one merge conflict (its test lives in
+  tests/test_profiles.py; linusu-dev-merge moved that file to tests/unit/), and no R = 0 guard
+  (value +inf, gradient NaN at the exact centre; the plain Sersic gives a finite value but also a
+  NaN gradient there). Awaiting the user's decision on the conflict/guard and merge.
 
 - The Vela builders' mixed prior dtypes (float32 lens priors, float64 source priors): harmless per
   the model card, but the project standard is float64 — clean up when the builders are next touched.
