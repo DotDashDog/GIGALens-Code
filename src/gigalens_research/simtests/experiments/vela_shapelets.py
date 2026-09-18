@@ -84,7 +84,7 @@ def vela_inference_prior(use_shapelets: bool = True):
     if use_shapelets:
         source_prior = tfd.JointDistributionNamed({
             '0': tfd.JointDistributionNamed(dict(
-                beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+                beta=tfd.LogNormal(jnp.log(SHAPELET_BETA_PRIOR["median_arcsec"]), SHAPELET_BETA_PRIOR["log_sigma"]),
                 center_x=tfd.Normal(0.0, 0.5),
                 center_y=tfd.Normal(0.0, 0.5),
             )),
@@ -200,6 +200,24 @@ def make_image_data(system: Any, adaptive: Any = None, mask_disk: Any = None, **
     return ds
 
 
+# Shapelet scale prior, LogNormal(log median, log_sigma) in arcsec. Re-centred 2026-09-18
+# (user request): the old LogNormal(0.7", 0.4) sat 4 prior-sigma above the beta the vela22
+# fits wanted (0.13-0.15" at every n_max; beta ~ 0.55 R50) and pulled beta up by 0.1-0.35
+# posterior sigma. The 10 kept VELA sources have R50 0.16-0.72" (median 0.33"), so beta is
+# expected in 0.09-0.4"; median 0.2" with log-sigma 0.7 puts the central 98% at 0.04-1.0".
+SHAPELET_BETA_PRIOR = {"median_arcsec": 0.2, "log_sigma": 0.7}
+
+
+def _beta_prior(kwargs):
+    import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
+    bp = {**SHAPELET_BETA_PRIOR, **dict(kwargs.get("beta_prior") or {})}
+    unknown = set(bp) - set(SHAPELET_BETA_PRIOR)
+    if unknown:
+        raise ValueError(f"beta_prior: unknown keys {sorted(unknown)}; allowed {sorted(SHAPELET_BETA_PRIOR)}.")
+    return tfp.distributions.LogNormal(jnp.log(float(bp["median_arcsec"])), float(bp["log_sigma"]))
+
+
 @register_inference_builder("epl_shear_sersic_shapelets")
 def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     """Build the SCENE ``ProbModel`` for the Vela shapelets fit (G1b).
@@ -212,7 +230,9 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
     the source model complexity), ``use_shapelets`` (default True), ``adaptive``
     (optional dict, see :func:`make_image_data`; default: uniform quadrature at the
-    dataset's ``inference_supersample``).
+    dataset's ``inference_supersample``), ``beta_prior`` (optional dict overriding
+    :data:`SHAPELET_BETA_PRIOR`: ``median_arcsec``, ``log_sigma``), ``mask_disk`` (see
+    :func:`make_image_data`).
     """
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
@@ -234,7 +254,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     if use_shapelets:
         src_profile = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
         source_p = dict(
-            beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+            beta=_beta_prior(kwargs),
             center_x=tfd.Normal(0.0, 0.5),
             center_y=tfd.Normal(0.0, 0.5),
         )

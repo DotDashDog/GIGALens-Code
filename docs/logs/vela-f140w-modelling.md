@@ -311,9 +311,41 @@ with the VELA source at the data's resolution.
     the Fisher width ratio under-counts what the cusp pixels carry about n, and the n–R
     degeneracy passes it on to R; direction right, size wrong, no bearing on the mass claim.**
 
+- **DC-4 — Re-run the four shapelet fits under the re-centred β prior** (prepared 2026-09-18, not
+  launched). Same config as DC-2 (truth start, n_max 5/10/15/20, shards 24–27 of 40), only the
+  β prior changed (LogNormal(0.2", 0.7) in place of (0.7", 0.4)). **Prediction:** β posteriors move
+  DOWN by the removed pull (0.1σ at n5 … 0.35σ at n20, i.e. ≤ 0.002"), widths unchanged within 5%;
+  lens-mass posteriors unchanged within 0.3σ at every n_max (β enters the lens only through the
+  source fit, and the pull is a fraction of β's own σ); C-4's ordering (n5 worse than Sersic,
+  bias gone by n20) unchanged. **Falsifier:** any mass parameter moving by > 1σ, or the n_max
+  ordering changing. Cost: one 4-GPU allocation, ~26 min.
+
 ---
 
 ## Log (newest first)
+
+- **2026-09-18 (cores; β prior re-centred).** `fit_checks/core_visibility.{py,json}`: would a
+  depleted lens-light core be visible here? Each truth lens Sersic vs the same profile with a flat
+  core inside r_b = 1 / 2 / 5% R_e (γ = 0, the largest deficit for that break radius), ss=32,
+  binned, PSF-convolved, in units of the per-pixel σ (Poisson + sky). At 2% R_e (0.4–0.8 px,
+  165–305 pc at z = 0.5): central-pixel change 10σ for the n ≈ 5 lenses (vela22, vela09, vela03),
+  4–5σ at n ≈ 4 (vela23, vela25), 2σ at n ≈ 3 (vela02/04/08), < 0.1σ at n ≈ 1.3 (vela21/26);
+  Σ(Δ/σ)² 590 / 114–143 / 22–24 / < 0.1; missing flux 0.8–0.9% / 0.4% / 0.1% / 0. At 1% R_e
+  roughly a third of that (3.4–3.9σ at n ≈ 5). A γ = 0.1–0.3 core-Sersic loses less than the flat
+  core, so these are upper bounds, but a real core in an n > 4 lens is a several-σ feature of the
+  central pixel that a pure Sersic would absorb into n and R (the C-2 lens-light R bias of −7σ
+  shows how sensitive that pair is to the centre). Not a mass issue on this evidence (the DC-3
+  mask showed the mass ignores the disk), but the generator's cusps are unphysical for n > 4.
+  Literature answer in the session report; recommendation: cored truth for n > 4 (or by
+  luminosity), core-Sersic fit model with r_b free (nests r_b → 0) — gigalens' CoreSersic has
+  known numerics issues (release survey, July 2026) to clear first.
+  β prior re-centred (user request): `SHAPELET_BETA_PRIOR = LogNormal(0.2", 0.7)` in
+  `vela_shapelets.py` (both prior sites) with a `beta_prior` kwarg override; recorded in
+  `fit_shapelets_truthinit_vela22.yaml`. Measured R50 of the 10 kept VELA sources 0.16–0.72"
+  (median 0.33"; vela22 0.24" with fitted β 0.13–0.15 ≈ 0.55 R50), so β is expected in
+  0.09–0.4": the new prior's central 98% is 0.04–1.0" and the vela22 β sits at −0.6 prior-σ.
+  The four shapelet runs were made under the OLD prior; C-4's numbers stand with the recorded
+  0.1–0.35σ pull on β until re-run (DC-4 below).
 
 - **2026-09-18 (cusp, all systems; ceiling 16?; prior check) — user questions after DC-3.**
   `fit_checks/lens_cusp_all_systems.{py,json}`, `fit_results/vela22_truthinit_v1/prior_check.{py,json}`.
@@ -476,8 +508,11 @@ with the VELA source at the data's resolution.
   in gigalens and a disk-floor option in `make_image_data`) would zero the fit-vs-generator
   mismatch on every system; not needed for the mass (≤ 0.07σ) but it removes the lens-light n/R
   nuisance and the excluded-disk carve-out from the undersampling check. Decide before the campaign.
-- Shapelet β prior LogNormal(0.7", 0.4) is mis-centred for these sources by 4 prior-σ (pull up to
-  0.35σ at n_max 20); re-centre before quantitative use.
+- Shapelet β prior re-centred 2026-09-18 to LogNormal(0.2", 0.7); the n_max 5–20 runs (C-4) were
+  made under the old prior (β pull 0.1–0.35σ) and should be re-run (DC-4).
+- Lens-light cores: for n > 4 lenses a 2% R_e core is a 10σ central-pixel feature in these data
+  (`core_visibility.py`); the generator's pure-Sersic cusps are unphysical there. Decide the truth
+  recipe (cored for n > 4 / by luminosity) and the fit model (core-Sersic, r_b free) before the campaign.
 
 - The Vela builders' mixed prior dtypes (float32 lens priors, float64 source priors): harmless per
   the model card, but the project standard is float64 — clean up when the builders are next touched.
