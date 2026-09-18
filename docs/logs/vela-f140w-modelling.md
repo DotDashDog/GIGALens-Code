@@ -320,6 +320,43 @@ with the VELA source at the data's resolution.
   bias gone by n20) unchanged. **Falsifier:** any mass parameter moving by > 1σ, or the n_max
   ordering changing. Cost: one 4-GPU allocation, ~26 min.
 
+- **DC-5 — PROPOSAL (2026-09-18, awaiting the user's choice): cored lens light in the truth AND the
+  fit model; how the core depends on n.** User decision: regenerate the set with core-Sersic lens
+  lights in simulation and modelling "to fix every issue I can identify now". Truth n prior is
+  U(1, 6); observed truth n 1.26–5.78.
+  - *Literature constraint:* cores are a luminosity phenomenon (present above M_V ≈ −21.6, slow
+    rotators, n > 4; absent below, where n ≈ 3 ± 1 galaxies have EXTRA central light); R_b 20–500 pc
+    ≈ 0.5–5% R_e, γ ≲ 0.3, α typically 2–10. No published R_b–n relation; the n dependence must be
+    encoded through the luminosity/n correlation, i.e. by hand.
+  - *Option A — hard switch:* core-Sersic for n > 4, pure Sersic below. Rejected: a discontinuity in
+    the truth family at n = 4 and a 50/50 split of the U(1,6) draws with a jump in the central pixel.
+  - *Option B (recommended) — one family, n-dependent core size that becomes invisible at low n:*
+    every lens light is a core-Sersic with
+      log10(R_b/R_e) ~ Normal(μ(n), 0.3 dex),  μ(n) = log10(0.02) − 0.6·max(0, 4.5 − n)
+      (n ≥ 4.5: median 2% R_e; n = 4: 1%; 3: 0.25%; 2: 0.06%; 1: 0.016%),
+      γ ~ U(0, 0.3), α fixed at 5 (transition sharpness is unresolvable at 0.4 px; Trujillo 2004
+      / Dullo & Graham 2014 values cluster at 2–10).
+    Measured visibility of this prescription on the ten current truth lenses (central-pixel change
+    vs the pure Sersic, PSF-convolved; flat core and γ = 0.15 core-Sersic agree within 10%):
+    n 5.2–5.8 (vela22, vela09) 10σ; n 4.1–4.3 (vela03, vela25) 3–4.7σ; n 4.0 (vela23) 1.3σ;
+    n 3.0–3.2 (vela02/04/08) ≤ 0.06σ; n ≤ 1.4 (vela21/26) 0. So the family is continuous, the
+    core is a real feature exactly where the literature puts one, and the low-n lenses are pure
+    Sersics to the data's precision (the "extra light" of coreless galaxies is NOT modelled — a
+    separate, smaller effect: nuclei of 0.1–1% of the light in fainter systems, sub-pixel).
+  - *Fit model (same family, no truth knowledge):* core-Sersic with R_b free, prior
+    log10(R_b/R_e) ~ Normal(log10(0.01), 1.0 dex) [central 95%: 0.01%–100%… cap: TruncatedNormal
+    to (−4, −0.5)], γ ~ U(0, 0.5), α = 5 fixed, n ~ U(0.5, 8) as now. The pure Sersic is the
+    R_b → 0 limit, so low-n lenses simply return an upper bound on R_b; expected cost: n–R_b–γ
+    degeneracy widening n for cored lenses (to measure), one or two extra parameters.
+  - *Consequences:* generator gains a core-Sersic lens-light option (truth_prior spec for R_b as a
+    fraction of R_e, γ, α); needs gigalens PR #105 merged (kernel was wrong until then); the
+    quadrature cusp problem is gone for cored lenses (γ ≤ 0.3 cusps integrate cleanly at factor 8 —
+    to re-verify with `vela22_cusp_conv.py` on the new profile); regeneration of the 10-system set
+    with identical lens draws (seeded) except the new core parameters; re-run of the vela22 fits.
+  - *Falsifier for the design:* after regeneration, a pure-Sersic lens-light fit to a cored n > 4
+    lens must show the central-pixel residual predicted above (≥ 3σ), and the core-Sersic fit must
+    remove it; a low-n lens must give the same mass posterior under both lens-light models.
+
 ---
 
 ## Log (newest first)
