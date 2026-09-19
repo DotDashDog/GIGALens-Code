@@ -1,0 +1,227 @@
+[Fri Sep 18 06:02:44 PM PDT 2026] requesting 1 node x 4 GPU (hbm80g), 04:00:00, account deepsrch_g
+salloc: Pending job allocation 58553379
+salloc: job 58553379 queued and waiting for resources
+salloc: job 58553379 has been allocated resources
+salloc: Granted job allocation 58553379
+salloc: Waiting for resource configuration
+salloc: Nodes nid008328 are ready for job
+jobid=58553379
+jax 0.9.1 devices [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]
+gigalens /global/u1/l/linusu/gigalens/src/gigalens/__init__.py
+[Fri Sep 18 06:03:05 PM PDT 2026] === shard 24/40 of /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/experiments/vela_f140w_v3/fit_shapelets_truthinit_core_vela22.yaml
+[run] campaign='vela_f140w_v3'  shard 24/40  (1 of 40 runs)
+
+[run] 1/1  vela22_cam12_a0.400_rep00/fitshapelets_truthinit_core_v1_n_max5
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/experiments/vela_shapelets.py:296: UserWarning: [plausibility] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+[vela22_cam12_a0.400_rep00] adaptive quadrature (curvature): AdaptiveGrid(shape=(160, 160), n_points=44959, pixels_per_factor={0.25: 3552, 0.5: 6904, 1.0: 13743, 2.0: 165, 4.0: 1052, 8.0: 184})
+  InferenceContext hash: d51e27cb0c8a10dc
+  Pipeline stages: ['bootstrap_map', 'undersampling_check', 'mclmc']
+============================================================================
+MODEL CARD — effective forward model & inference setup
+============================================================================
+  Model      : LensModel(2 planes, 2 mass + 2 light components, 19 free params)
+    plane 0: deflection_ratio=absent  mass=[EPL, SHEAR]  light=[CORE_SERSIC (lstsq)]
+    plane 1: deflection_ratio=1  light=[SHAPELETS (lstsq)]
+  Cosmology  : none (deflection-ratio geometry)
+  Trace      : deflection_ratio  (simulator)
+  Parameters : 19 free  z-order sha1=e3b384b15f0c  dtypes={float32, float64}
+  Amplitudes : lstsq=True n_basis=22 physical_reg=None
+  Likelihood : mode=lstsq  event_size=25600  precision=float64  loss_norm=25600
+  Physicality: 0 error(s), 0 warning(s), 1 soft; 6 check(s) recorded
+    [soft] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+    [info] CORE_SERSIC[plane 0 light 0].*: no physicality domains registered for this profile (pending audit; see PENDING_PHYSICALITY_AUDIT)
+  Dataset 0  : AdaptiveImageData 160x160  event=25600 (0% masked)  mode=inherit (lstsq)
+    sees     : [plane 0 light 0, plane 1 light 0]
+    PSF      : present shape=[33, 33] sum=1.0000 sha1=e70157a13a7c  [bin-first (pool, then convolve the detector-sampled kernel)]
+    noise    : sigma min/med/max = 0.0076/0.00846/0.0857
+    grid     : num_pix=[160, 160] delta_pix=0.065 supersample=1 fov=10.4"x10.4"
+    precision: likelihood=float64 conv=None basis=None remat=False
+    adaptive : n_points=44959 (native 25600)  pixels_per_factor={'0.25': 3552, '0.5': 6904, '1.0': 13743, '2.0': 165, '4.0': 1052, '8.0': 184}
+  Undersample: not run — resolution unverified. Run gigalens.jax.analysis.diagnose_undersampling and pass the report(s) via model_card(..., undersampling=...).
+----------------------------------------------------------------------------
+  [!] info (model) mixed-free-param-dtypes: free parameters mix dtypes ['float32', 'float64']; the flat z promotes to the widest (priors are still evaluated at native dtype).
+============================================================================
+MAP: remat_basis effective for 1/1 simulator(s) (MAP-scoped override, ss<3).
+Final Chi-squared: 1.06268   [non-finite chains: 0/4]
+[pipeline] bootstrap_map: ran (14.8s)
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/pipelines.py:336: UserWarning: diagnose_undersampling (dataset 0): reference NOT converged (self-check {'native': 0.028789346545613975}); raise reference_supersample — the report's numbers are not certified.
+  reports = diagnose_undersampling(
+[undersampling_check] dataset 0 at the sampler start point (0 px excluded around lens-light centres [], radius 0.0 px):
+Undersampling diagnostic — dataset 0 (lstsq (amplitudes re-solved per quadrature)), tolerance 0.1 sigma/pixel
+  reference: uniform supersample=16 (self-check vs 8: native: 0.029 sigma — NOT CONVERGED — raise reference_supersample; numbers below are not certified)
+  supersample=1 [native-kernel PSF (bin-first)]: max |d|/sigma = 4.741 at (y=79, x=80), 3.99% of pixels above tol, delta_chi2 = +170.0 -> FAIL
+  supersample=2 [native-kernel PSF (bin-first)]: max |d|/sigma = 2.122 at (y=79, x=80), 0.27% of pixels above tol, delta_chi2 = +34.4 -> FAIL
+  supersample=4 [native-kernel PSF (bin-first)]: max |d|/sigma = 0.421 at (y=79, x=80), 0.03% of pixels above tol, delta_chi2 = +3.7 -> FAIL
+  configured (AdaptiveSceneSimulator) [native-kernel PSF (bin-first)]: max |d|/sigma = 0.035 at (y=100, x=98), 0.00% of pixels above tol, delta_chi2 = +14.1 -> PASS
+  PSF-convention gap: not computed (pass convention_gap=True; costs one extra reference render).
+  recommendation: none of the tested supersamples reach 0.1 sigma/pixel — test higher rungs, or use the experimental adaptive supersampler on the refined pixels this report localizes.
+[undersampling_check] reference ss=16: self-check 0.028789346545613975 sigma vs stage criterion 0.050 -> OK (module margin tolerance/4: not converged); configured rung worst 0.035 sigma, 0.00% px above 0.1; excluded-disk worst None
+[pipeline] undersampling_check: ran (11.5s)
+Sampling took 165.35097431999748 s
+[pipeline] mclmc: ran (178.0s)
+  Wall time: 204.5s  peak GPU: 0.85 GB
+[Fri Sep 18 06:07:07 PM PDT 2026] === shard 25/40 of /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/experiments/vela_f140w_v3/fit_shapelets_truthinit_core_vela22.yaml
+[run] campaign='vela_f140w_v3'  shard 25/40  (1 of 40 runs)
+
+[run] 1/1  vela22_cam12_a0.400_rep00/fitshapelets_truthinit_core_v1_n_max10
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/experiments/vela_shapelets.py:296: UserWarning: [plausibility] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+[vela22_cam12_a0.400_rep00] adaptive quadrature (curvature): AdaptiveGrid(shape=(160, 160), n_points=44959, pixels_per_factor={0.25: 3552, 0.5: 6904, 1.0: 13743, 2.0: 165, 4.0: 1052, 8.0: 184})
+  InferenceContext hash: 90cb52a23d20150d
+  Pipeline stages: ['bootstrap_map', 'undersampling_check', 'mclmc']
+============================================================================
+MODEL CARD — effective forward model & inference setup
+============================================================================
+  Model      : LensModel(2 planes, 2 mass + 2 light components, 19 free params)
+    plane 0: deflection_ratio=absent  mass=[EPL, SHEAR]  light=[CORE_SERSIC (lstsq)]
+    plane 1: deflection_ratio=1  light=[SHAPELETS (lstsq)]
+  Cosmology  : none (deflection-ratio geometry)
+  Trace      : deflection_ratio  (simulator)
+  Parameters : 19 free  z-order sha1=e3b384b15f0c  dtypes={float32, float64}
+  Amplitudes : lstsq=True n_basis=67 physical_reg=None
+  Likelihood : mode=lstsq  event_size=25600  precision=float64  loss_norm=25600
+  Physicality: 0 error(s), 0 warning(s), 1 soft; 6 check(s) recorded
+    [soft] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+    [info] CORE_SERSIC[plane 0 light 0].*: no physicality domains registered for this profile (pending audit; see PENDING_PHYSICALITY_AUDIT)
+  Dataset 0  : AdaptiveImageData 160x160  event=25600 (0% masked)  mode=inherit (lstsq)
+    sees     : [plane 0 light 0, plane 1 light 0]
+    PSF      : present shape=[33, 33] sum=1.0000 sha1=e70157a13a7c  [bin-first (pool, then convolve the detector-sampled kernel)]
+    noise    : sigma min/med/max = 0.0076/0.00846/0.0857
+    grid     : num_pix=[160, 160] delta_pix=0.065 supersample=1 fov=10.4"x10.4"
+    precision: likelihood=float64 conv=None basis=None remat=False
+    adaptive : n_points=44959 (native 25600)  pixels_per_factor={'0.25': 3552, '0.5': 6904, '1.0': 13743, '2.0': 165, '4.0': 1052, '8.0': 184}
+  Undersample: not run — resolution unverified. Run gigalens.jax.analysis.diagnose_undersampling and pass the report(s) via model_card(..., undersampling=...).
+----------------------------------------------------------------------------
+  [!] info (model) mixed-free-param-dtypes: free parameters mix dtypes ['float32', 'float64']; the flat z promotes to the widest (priors are still evaluated at native dtype).
+  [!] warning (model) lstsq-large-unregularized-basis: 67 linear amplitudes solved by lstsq with NO physical regularization (numerical jitter only). High-order bases can fit noise or place flux in the lensing null space.
+============================================================================
+MAP: remat_basis effective for 1/1 simulator(s) (MAP-scoped override, ss<3).
+Final Chi-squared: 1.00172   [non-finite chains: 0/4]
+[pipeline] bootstrap_map: ran (18.9s)
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/pipelines.py:336: UserWarning: diagnose_undersampling (dataset 0): reference NOT converged (self-check {'native': 0.028398342141424157}); raise reference_supersample — the report's numbers are not certified.
+  reports = diagnose_undersampling(
+[undersampling_check] dataset 0 at the sampler start point (0 px excluded around lens-light centres [], radius 0.0 px):
+Undersampling diagnostic — dataset 0 (lstsq (amplitudes re-solved per quadrature)), tolerance 0.1 sigma/pixel
+  reference: uniform supersample=16 (self-check vs 8: native: 0.028 sigma — NOT CONVERGED — raise reference_supersample; numbers below are not certified)
+  supersample=1 [native-kernel PSF (bin-first)]: max |d|/sigma = 4.634 at (y=79, x=80), 3.75% of pixels above tol, delta_chi2 = +248.9 -> FAIL
+  supersample=2 [native-kernel PSF (bin-first)]: max |d|/sigma = 2.093 at (y=79, x=80), 0.27% of pixels above tol, delta_chi2 = +16.7 -> FAIL
+  supersample=4 [native-kernel PSF (bin-first)]: max |d|/sigma = 0.416 at (y=79, x=80), 0.03% of pixels above tol, delta_chi2 = +0.8 -> FAIL
+  configured (AdaptiveSceneSimulator) [native-kernel PSF (bin-first)]: max |d|/sigma = 0.042 at (y=100, x=98), 0.00% of pixels above tol, delta_chi2 = +4.2 -> PASS
+  PSF-convention gap: not computed (pass convention_gap=True; costs one extra reference render).
+  recommendation: none of the tested supersamples reach 0.1 sigma/pixel — test higher rungs, or use the experimental adaptive supersampler on the refined pixels this report localizes.
+[undersampling_check] reference ss=16: self-check 0.028398342141424157 sigma vs stage criterion 0.050 -> OK (module margin tolerance/4: not converged); configured rung worst 0.042 sigma, 0.00% px above 0.1; excluded-disk worst None
+[pipeline] undersampling_check: ran (10.5s)
+Sampling took 165.8402445029933 s
+[pipeline] mclmc: ran (179.0s)
+  Wall time: 208.5s  peak GPU: 1.63 GB
+[Fri Sep 18 06:11:10 PM PDT 2026] === shard 26/40 of /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/experiments/vela_f140w_v3/fit_shapelets_truthinit_core_vela22.yaml
+[run] campaign='vela_f140w_v3'  shard 26/40  (1 of 40 runs)
+
+[run] 1/1  vela22_cam12_a0.400_rep00/fitshapelets_truthinit_core_v1_n_max15
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/experiments/vela_shapelets.py:296: UserWarning: [plausibility] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+[vela22_cam12_a0.400_rep00] adaptive quadrature (curvature): AdaptiveGrid(shape=(160, 160), n_points=44959, pixels_per_factor={0.25: 3552, 0.5: 6904, 1.0: 13743, 2.0: 165, 4.0: 1052, 8.0: 184})
+  InferenceContext hash: 336a82383c351e4c
+  Pipeline stages: ['bootstrap_map', 'undersampling_check', 'mclmc']
+============================================================================
+MODEL CARD — effective forward model & inference setup
+============================================================================
+  Model      : LensModel(2 planes, 2 mass + 2 light components, 19 free params)
+    plane 0: deflection_ratio=absent  mass=[EPL, SHEAR]  light=[CORE_SERSIC (lstsq)]
+    plane 1: deflection_ratio=1  light=[SHAPELETS (lstsq)]
+  Cosmology  : none (deflection-ratio geometry)
+  Trace      : deflection_ratio  (simulator)
+  Parameters : 19 free  z-order sha1=e3b384b15f0c  dtypes={float32, float64}
+  Amplitudes : lstsq=True n_basis=137 physical_reg=None
+  Likelihood : mode=lstsq  event_size=25600  precision=float64  loss_norm=25600
+  Physicality: 0 error(s), 0 warning(s), 1 soft; 6 check(s) recorded
+    [soft] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+    [info] CORE_SERSIC[plane 0 light 0].*: no physicality domains registered for this profile (pending audit; see PENDING_PHYSICALITY_AUDIT)
+  Dataset 0  : AdaptiveImageData 160x160  event=25600 (0% masked)  mode=inherit (lstsq)
+    sees     : [plane 0 light 0, plane 1 light 0]
+    PSF      : present shape=[33, 33] sum=1.0000 sha1=e70157a13a7c  [bin-first (pool, then convolve the detector-sampled kernel)]
+    noise    : sigma min/med/max = 0.0076/0.00846/0.0857
+    grid     : num_pix=[160, 160] delta_pix=0.065 supersample=1 fov=10.4"x10.4"
+    precision: likelihood=float64 conv=None basis=None remat=False
+    adaptive : n_points=44959 (native 25600)  pixels_per_factor={'0.25': 3552, '0.5': 6904, '1.0': 13743, '2.0': 165, '4.0': 1052, '8.0': 184}
+  Undersample: not run — resolution unverified. Run gigalens.jax.analysis.diagnose_undersampling and pass the report(s) via model_card(..., undersampling=...).
+----------------------------------------------------------------------------
+  [!] info (model) mixed-free-param-dtypes: free parameters mix dtypes ['float32', 'float64']; the flat z promotes to the widest (priors are still evaluated at native dtype).
+  [!] warning (model) lstsq-large-unregularized-basis: 137 linear amplitudes solved by lstsq with NO physical regularization (numerical jitter only). High-order bases can fit noise or place flux in the lensing null space.
+============================================================================
+MAP: remat_basis effective for 1/1 simulator(s) (MAP-scoped override, ss<3).
+Final Chi-squared: 0.99024   [non-finite chains: 0/4]
+[pipeline] bootstrap_map: ran (28.3s)
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/pipelines.py:336: UserWarning: diagnose_undersampling (dataset 0): reference NOT converged (self-check {'native': 0.028274933081235194}); raise reference_supersample — the report's numbers are not certified.
+  reports = diagnose_undersampling(
+[undersampling_check] dataset 0 at the sampler start point (0 px excluded around lens-light centres [], radius 0.0 px):
+Undersampling diagnostic — dataset 0 (lstsq (amplitudes re-solved per quadrature)), tolerance 0.1 sigma/pixel
+  reference: uniform supersample=16 (self-check vs 8: native: 0.028 sigma — NOT CONVERGED — raise reference_supersample; numbers below are not certified)
+  supersample=1 [native-kernel PSF (bin-first)]: max |d|/sigma = 4.592 at (y=79, x=80), 3.51% of pixels above tol, delta_chi2 = +273.0 -> FAIL
+  supersample=2 [native-kernel PSF (bin-first)]: max |d|/sigma = 2.079 at (y=79, x=80), 0.28% of pixels above tol, delta_chi2 = +7.3 -> FAIL
+  supersample=4 [native-kernel PSF (bin-first)]: max |d|/sigma = 0.413 at (y=79, x=80), 0.03% of pixels above tol, delta_chi2 = -0.9 -> FAIL
+  configured (AdaptiveSceneSimulator) [native-kernel PSF (bin-first)]: max |d|/sigma = 0.054 at (y=75, x=99), 0.00% of pixels above tol, delta_chi2 = -1.0 -> PASS
+  PSF-convention gap: not computed (pass convention_gap=True; costs one extra reference render).
+  recommendation: none of the tested supersamples reach 0.1 sigma/pixel — test higher rungs, or use the experimental adaptive supersampler on the refined pixels this report localizes.
+[undersampling_check] reference ss=16: self-check 0.028274933081235194 sigma vs stage criterion 0.050 -> OK (module margin tolerance/4: not converged); configured rung worst 0.054 sigma, 0.00% px above 0.1; excluded-disk worst None
+[pipeline] undersampling_check: ran (11.7s)
+Sampling took 213.8824499459879 s
+[pipeline] mclmc: ran (227.3s)
+  Wall time: 267.4s  peak GPU: 3.35 GB
+[Fri Sep 18 06:16:12 PM PDT 2026] === shard 27/40 of /global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/experiments/vela_f140w_v3/fit_shapelets_truthinit_core_vela22.yaml
+[run] campaign='vela_f140w_v3'  shard 27/40  (1 of 40 runs)
+
+[run] 1/1  vela22_cam12_a0.400_rep00/fitshapelets_truthinit_core_v1_n_max20
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/experiments/vela_shapelets.py:296: UserWarning: [plausibility] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+  model = LensModel([
+[vela22_cam12_a0.400_rep00] adaptive quadrature (curvature): AdaptiveGrid(shape=(160, 160), n_points=44959, pixels_per_factor={0.25: 3552, 0.5: 6904, 1.0: 13743, 2.0: 165, 4.0: 1052, 8.0: 184})
+  InferenceContext hash: 59c5107639fde134
+  Pipeline stages: ['bootstrap_map', 'undersampling_check', 'mclmc']
+============================================================================
+MODEL CARD — effective forward model & inference setup
+============================================================================
+  Model      : LensModel(2 planes, 2 mass + 2 light components, 19 free params)
+    plane 0: deflection_ratio=absent  mass=[EPL, SHEAR]  light=[CORE_SERSIC (lstsq)]
+    plane 1: deflection_ratio=1  light=[SHAPELETS (lstsq)]
+  Cosmology  : none (deflection-ratio geometry)
+  Trace      : deflection_ratio  (simulator)
+  Parameters : 19 free  z-order sha1=e3b384b15f0c  dtypes={float32, float64}
+  Amplitudes : lstsq=True n_basis=232 physical_reg=None
+  Likelihood : mode=lstsq  event_size=25600  precision=float64  loss_norm=25600
+  Physicality: 0 error(s), 0 warning(s), 1 soft; 6 check(s) recorded
+    [soft] SHEAR[plane 0 mass 1].|shear| <= 0.2: prior mass outside plausible region |shear| <= 0.2: estimated mass 0.136 (probe (K=3000000)) exceeds 0.05 — external-shear magnitude sqrt(gamma1^2+gamma2^2)>0.2 is much larger than realistic line-of-sight shear on galaxy/group scales — physically valid (the kernel is exact) but implausible, so a plausibility prompt, not a hard bound. Physically valid but atypical; check this is intended.
+    [info] CORE_SERSIC[plane 0 light 0].*: no physicality domains registered for this profile (pending audit; see PENDING_PHYSICALITY_AUDIT)
+  Dataset 0  : AdaptiveImageData 160x160  event=25600 (0% masked)  mode=inherit (lstsq)
+    sees     : [plane 0 light 0, plane 1 light 0]
+    PSF      : present shape=[33, 33] sum=1.0000 sha1=e70157a13a7c  [bin-first (pool, then convolve the detector-sampled kernel)]
+    noise    : sigma min/med/max = 0.0076/0.00846/0.0857
+    grid     : num_pix=[160, 160] delta_pix=0.065 supersample=1 fov=10.4"x10.4"
+    precision: likelihood=float64 conv=None basis=None remat=False
+    adaptive : n_points=44959 (native 25600)  pixels_per_factor={'0.25': 3552, '0.5': 6904, '1.0': 13743, '2.0': 165, '4.0': 1052, '8.0': 184}
+  Undersample: not run — resolution unverified. Run gigalens.jax.analysis.diagnose_undersampling and pass the report(s) via model_card(..., undersampling=...).
+----------------------------------------------------------------------------
+  [!] info (model) mixed-free-param-dtypes: free parameters mix dtypes ['float32', 'float64']; the flat z promotes to the widest (priors are still evaluated at native dtype).
+  [!] warning (model) lstsq-large-unregularized-basis: 232 linear amplitudes solved by lstsq with NO physical regularization (numerical jitter only). High-order bases can fit noise or place flux in the lensing null space.
+============================================================================
+MAP: remat_basis effective for 1/1 simulator(s) (MAP-scoped override, ss<3).
+Final Chi-squared: 0.98295   [non-finite chains: 0/4]
+[pipeline] bootstrap_map: ran (41.5s)
+/global/u1/l/linusu/GIGALens-Code/.claude/worktrees/vela-generator-v2/src/gigalens_research/simtests/pipelines.py:336: UserWarning: diagnose_undersampling (dataset 0): reference NOT converged (self-check {'native': 0.028040571222015396}); raise reference_supersample — the report's numbers are not certified.
+  reports = diagnose_undersampling(
+[undersampling_check] dataset 0 at the sampler start point (0 px excluded around lens-light centres [], radius 0.0 px):
+Undersampling diagnostic — dataset 0 (lstsq (amplitudes re-solved per quadrature)), tolerance 0.1 sigma/pixel
+  reference: uniform supersample=16 (self-check vs 8: native: 0.028 sigma — NOT CONVERGED — raise reference_supersample; numbers below are not certified)
+  supersample=1 [native-kernel PSF (bin-first)]: max |d|/sigma = 4.531 at (y=79, x=80), 3.05% of pixels above tol, delta_chi2 = +285.6 -> FAIL
+  supersample=2 [native-kernel PSF (bin-first)]: max |d|/sigma = 2.066 at (y=79, x=80), 0.29% of pixels above tol, delta_chi2 = +2.8 -> FAIL
+  supersample=4 [native-kernel PSF (bin-first)]: max |d|/sigma = 0.411 at (y=79, x=80), 0.03% of pixels above tol, delta_chi2 = -1.6 -> FAIL
+  configured (AdaptiveSceneSimulator) [native-kernel PSF (bin-first)]: max |d|/sigma = 0.085 at (y=83, x=72), 0.00% of pixels above tol, delta_chi2 = -1.8 -> PASS
+  PSF-convention gap: not computed (pass convention_gap=True; costs one extra reference render).
+  recommendation: none of the tested supersamples reach 0.1 sigma/pixel — test higher rungs, or use the experimental adaptive supersampler on the refined pixels this report localizes.
+[undersampling_check] reference ss=16: self-check 0.028040571222015396 sigma vs stage criterion 0.050 -> OK (module margin tolerance/4: not converged); configured rung worst 0.085 sigma, 0.00% px above 0.1; excluded-disk worst None
+[pipeline] undersampling_check: ran (12.7s)
+Sampling took 335.1085639450175 s
+[pipeline] mclmc: ran (349.2s)
+  Wall time: 403.5s  peak GPU: 5.67 GB
+[Fri Sep 18 06:23:32 PM PDT 2026] run exited with 0
+[Fri Sep 18 06:23:32 PM PDT 2026] releasing allocation 58553379

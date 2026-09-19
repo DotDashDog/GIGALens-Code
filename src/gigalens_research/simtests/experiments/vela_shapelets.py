@@ -84,7 +84,7 @@ def vela_inference_prior(use_shapelets: bool = True):
     if use_shapelets:
         source_prior = tfd.JointDistributionNamed({
             '0': tfd.JointDistributionNamed(dict(
-                beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+                beta=tfd.LogNormal(jnp.log(SHAPELET_BETA_PRIOR["median_arcsec"]), SHAPELET_BETA_PRIOR["log_sigma"]),
                 center_x=tfd.Normal(0.0, 0.5),
                 center_y=tfd.Normal(0.0, 0.5),
             )),
@@ -112,13 +112,27 @@ def vela_inference_prior(use_shapelets: bool = True):
 # ---------------------------------------------------------------------------
 
 
-def _vela_scene_lens_priors():
-    """Shared scene priors for EPL + Shear mass and the Sérsic lens light (per-param
-    dicts; fresh objects). Mirrors ``vela_inference_prior``'s lens/lens-light blocks,
-    which are identical across the vela shapelets/sersiclets builders."""
+# Fit-side lens-light family (user decision 2026-09-18, DC-5): the same core-Sersic family as
+# the generator's truth, with NO truth knowledge — R_b free under a broad log prior (median
+# 1% of the R_e prior median = 0.016", 1 dex), gamma U(0, 0.5), alpha fixed at 5 (as in the
+# truth; unresolvable). The pure Sersic is the R_b -> 0 limit, so low-n lenses return an
+# upper bound on R_b. "sersic" keeps the pre-2026-09-18 model for the recorded runs.
+LENS_LIGHT_PROFILES = ("sersic", "core_sersic")
+CORE_SERSIC_FIT_PRIOR = {"Rb_median_arcsec": 0.016, "Rb_log_sigma": 2.302585, "gamma_high": 0.5, "alpha": 5.0}
+
+
+def _vela_scene_lens_priors(lens_light_profile: str = "sersic"):
+    """Shared scene priors for EPL + Shear mass and the lens light (per-param dicts;
+    fresh objects) and the lens-light PROFILE object. Mirrors ``vela_inference_prior``'s
+    lens/lens-light blocks, which are identical across the vela shapelets/sersiclets
+    builders. ``lens_light_profile``: "sersic" (SersicEllipse) or "core_sersic"
+    (CoreSersic with :data:`CORE_SERSIC_FIT_PRIOR`)."""
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
+    from gigalens.jax.profiles.light import sersic
     tfd = tfp.distributions
+    if lens_light_profile not in LENS_LIGHT_PROFILES:
+        raise ValueError(f"lens_light_profile must be one of {LENS_LIGHT_PROFILES}; got {lens_light_profile!r}.")
     epl_p = dict(
         theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
         gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
@@ -139,7 +153,93 @@ def _vela_scene_lens_priors():
         center_x=tfd.Normal(0.0, 0.02),
         center_y=tfd.Normal(0.0, 0.02),
     )
-    return epl_p, shear_p, lens_light_p
+    if lens_light_profile == "core_sersic":
+        c = CORE_SERSIC_FIT_PRIOR
+        lens_light_p.update(
+            Rb=tfd.LogNormal(jnp.log(c["Rb_median_arcsec"]), c["Rb_log_sigma"]),
+            gamma=tfd.Uniform(0.0, c["gamma_high"]),
+            alpha=float(c["alpha"]),   # constant
+        )
+        profile = sersic.CoreSersic(use_lstsq=True)
+    else:
+        profile = sersic.SersicEllipse(use_lstsq=True)
+    return epl_p, shear_p, lens_light_p, profile
+
+
+def make_image_data(system: Any, adaptive: Any = None, mask_disk: Any = None, **common):
+    """The inference dataset for a Vela system: a plain ``ImageData`` on the dataset's
+    uniform ``inference_supersample``, or — when ``adaptive`` (dict) is given — an
+    ``AdaptiveImageData`` whose factor map is derived from the observed image
+    (``driver`` "curvature" or "snr", remaining keys forwarded to that driver) with the
+    config's uniform supersample forced to 1 (the factor map IS the quadrature).
+    Curvature needs ``psf_sigma`` [native px] explicitly: there is no honest default
+    (the flux-moment estimate of a wide empirical kernel over-estimates the core width
+    and under-corrects the finest LoG scale). Shared by every Vela builder so one
+    campaign key (``adaptive:``) means the same thing for every source model.
+    ``mask_disk`` (dict, optional): ``{"radius_pix": r, "centre": "peak" | [row, col]}``
+    drops the pixels within ``r`` native px of the centre (``"peak"`` = the brightest
+    observed pixel — data-driven, no truth) from the likelihood (``mask`` False there).
+    Used by the lens-cusp quadrature falsifier (DC-3, 2026-09-18); the excluded pixels are
+    counted in the printout."""
+    import dataclasses
+    import numpy as np
+    import jax.numpy as jnp
+    from gigalens.jax.scene_prob_model import ImageData
+    img = jnp.asarray(system.observed_image)
+    if mask_disk:
+        md = dict(mask_disk)
+        r = float(md.pop("radius_pix")); centre = md.pop("centre", "peak")
+        if md:
+            raise ValueError(f"make_image_data: unknown mask_disk keys {sorted(md)}.")
+        obs = np.asarray(system.observed_image)
+        if centre == "peak":
+            row, col = np.unravel_index(int(np.argmax(obs)), obs.shape)
+        else:
+            row, col = float(centre[0]), float(centre[1])
+        yy, xx = np.indices(obs.shape)
+        m = np.hypot(yy - row, xx - col) > r
+        if "mask" in common and common["mask"] is not None:
+            m = m & np.asarray(common["mask"], bool)
+        common["mask"] = jnp.asarray(m)
+        print(f"[{system.system_id}] mask_disk: {int((~m).sum())} px within {r} px of ({row}, {col}) dropped from the likelihood")
+    common.setdefault("background_rms", system.background_rms)
+    common.setdefault("exp_time", system.exp_time)
+    common.setdefault("sees", "all")
+    if not adaptive:
+        return ImageData(img, system.sim_config, **common)
+    from gigalens.jax.experimental.adaptive_supersample import AdaptiveImageData
+    a = dict(adaptive)
+    driver = a.pop("driver", None)
+    if driver not in ("curvature", "snr"):
+        raise ValueError(f"make_image_data: adaptive.driver must be 'curvature' or 'snr'; got {driver!r}.")
+    cfg1 = dataclasses.replace(system.sim_config, supersample=1)
+    if driver == "curvature":
+        if "psf_sigma" not in a:
+            raise ValueError("make_image_data: adaptive.psf_sigma [native px] is required for the "
+                             "curvature driver (no honest default).")
+        ds = AdaptiveImageData(img, cfg1, driver="curvature", curvature_kwargs=a, **common)
+    else:
+        ds = AdaptiveImageData(img, cfg1, driver="snr", **a, **common)
+    print(f"[{system.system_id}] adaptive quadrature ({driver}): {ds.adaptive_grid!r}")
+    return ds
+
+
+# Shapelet scale prior, LogNormal(log median, log_sigma) in arcsec. Re-centred 2026-09-18
+# (user request): the old LogNormal(0.7", 0.4) sat 4 prior-sigma above the beta the vela22
+# fits wanted (0.13-0.15" at every n_max; beta ~ 0.55 R50) and pulled beta up by 0.1-0.35
+# posterior sigma. The 10 kept VELA sources have R50 0.16-0.72" (median 0.33"), so beta is
+# expected in 0.09-0.4"; median 0.2" with log-sigma 0.7 puts the central 98% at 0.04-1.0".
+SHAPELET_BETA_PRIOR = {"median_arcsec": 0.2, "log_sigma": 0.7}
+
+
+def _beta_prior(kwargs):
+    import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
+    bp = {**SHAPELET_BETA_PRIOR, **dict(kwargs.get("beta_prior") or {})}
+    unknown = set(bp) - set(SHAPELET_BETA_PRIOR)
+    if unknown:
+        raise ValueError(f"beta_prior: unknown keys {sorted(unknown)}; allowed {sorted(SHAPELET_BETA_PRIOR)}.")
+    return tfp.distributions.LogNormal(jnp.log(float(bp["median_arcsec"])), float(bp["log_sigma"]))
 
 
 @register_inference_builder("epl_shear_sersic_shapelets")
@@ -152,7 +252,11 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
     signature unchanged.
 
     Kwargs: ``n_max`` (REQUIRED when ``use_shapelets=True``; no default — it sets
-    the source model complexity), ``use_shapelets`` (default True).
+    the source model complexity), ``use_shapelets`` (default True), ``adaptive``
+    (optional dict, see :func:`make_image_data`; default: uniform quadrature at the
+    dataset's ``inference_supersample``), ``beta_prior`` (optional dict overriding
+    :data:`SHAPELET_BETA_PRIOR`: ``median_arcsec``, ``log_sigma``), ``mask_disk`` (see
+    :func:`make_image_data`).
     """
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
@@ -170,11 +274,11 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         )
     n_max = int(kwargs["n_max"]) if use_shapelets else None  # physics-default-ok: n_max unused when use_shapelets=False; required-check above
 
-    epl_p, shear_p, lens_light_p = _vela_scene_lens_priors()
+    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(kwargs.get("lens_light_profile", "sersic"))
     if use_shapelets:
         src_profile = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
         source_p = dict(
-            beta=tfd.LogNormal(jnp.log(0.7), 0.4),
+            beta=_beta_prior(kwargs),
             center_x=tfd.Normal(0.0, 0.5),
             center_y=tfd.Normal(0.0, 0.5),
         )
@@ -191,13 +295,11 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
 
     model = LensModel([
         Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
-              light=[Component(sersic.SersicEllipse(use_lstsq=True), lens_light_p)]),
+              light=[Component(lens_light_profile, lens_light_p)]),
         Plane(deflection_ratio=1.0,
               light=[Component(src_profile, source_p)]),
     ])
-    ds = ImageData(jnp.asarray(system.observed_image), system.sim_config,
-                 background_rms=system.background_rms, exp_time=system.exp_time,
-                 sees="all")
+    ds = make_image_data(system, kwargs.get("adaptive"), mask_disk=kwargs.get("mask_disk"))
     prob_model = ProbModel(model, ds, mode="lstsq")
     return prob_model
 

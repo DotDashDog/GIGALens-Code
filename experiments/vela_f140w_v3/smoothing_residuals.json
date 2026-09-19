@@ -1,0 +1,92 @@
+{
+ "vela02_cam12_a0.400_rep00": {
+  "render_check_max_abs": 3.4978955021358615e-07,
+  "delta_chi2": 67.64147620783945,
+  "max_abs_nres": 0.9477334622111033,
+  "rms_nres_detected": 0.10764688386150527,
+  "n_pix_gt_1sig": 0,
+  "n_pix_gt_3sig": 0,
+  "source_flux_change_frac": -6.116548116330556e-06
+ },
+ "vela03_cam12_a0.400_rep00": {
+  "render_check_max_abs": 8.432230327315438e-07,
+  "delta_chi2": 26.541567140668,
+  "max_abs_nres": 0.7129444902817437,
+  "rms_nres_detected": 0.04376378549397836,
+  "n_pix_gt_1sig": 0,
+  "n_pix_gt_3sig": 0,
+  "source_flux_change_frac": -0.00014746116373309803
+ },
+ "vela04_cam12_a0.400_rep00": {
+  "render_check_max_abs": 4.169423535316241e-07,
+  "delta_chi2": 39.15301087882504,
+  "max_abs_nres": 2.1123670939071726,
+  "rms_nres_detected": 0.07609248398848724,
+  "n_pix_gt_1sig": 9,
+  "n_pix_gt_3sig": 0,
+  "source_flux_change_frac": -0.00020004696100439645
+ },
+ "vela08_cam12_a0.400_rep00": {
+  "render_check_max_abs": 3.681597120497315e-07,
+  "delta_chi2": 314.47664024254965,
+  "max_abs_nres": 3.6847123705687572,
+  "rms_nres_detected": 0.19416130764402054,
+  "n_pix_gt_1sig": 44,
+  "n_pix_gt_3sig": 4,
+  "source_flux_change_frac": -3.3272848819487777e-06
+ },
+ "vela09_cam12_a0.400_rep00": {
+  "render_check_max_abs": 9.306712573931009e-07,
+  "delta_chi2": 554.2432531914686,
+  "max_abs_nres": 3.701642940070641,
+  "rms_nres_detected": 0.30425053999904345,
+  "n_pix_gt_1sig": 124,
+  "n_pix_gt_3sig": 4,
+  "source_flux_change_frac": -0.0002365075322706689
+ },
+ "vela21_cam12_a0.400_rep00": {
+  "render_check_max_abs": 2.1098511404638032e-07,
+  "delta_chi2": 3069.7664010618073,
+  "max_abs_nres": 10.452767136775737,
+  "rms_nres_detected": 0.6683461494097055,
+  "n_pix_gt_1sig": 205,
+  "n_pix_gt_3sig": 72,
+  "source_flux_change_frac": 1.432526034017556e-05
+ },
+ "vela22_cam12_a0.400_rep00": {
+  "render_check_max_abs": 1.3495600050816847e-06,
+  "delta_chi2": 26.429720719785976,
+  "max_abs_nres": 1.5923003456519107,
+  "rms_nres_detected": 0.059570138679690736,
+  "n_pix_gt_1sig": 6,
+  "n_pix_gt_3sig": 0,
+  "source_flux_change_frac": -8.188252942009644e-05
+ },
+ "vela23_cam12_a0.400_rep00": {
+  "render_check_max_abs": 5.68325283278881e-07,
+  "delta_chi2": 202.00831768549213,
+  "max_abs_nres": 1.6841005339074213,
+  "rms_nres_detected": 0.16213668343157206,
+  "n_pix_gt_1sig": 9,
+  "n_pix_gt_3sig": 0,
+  "source_flux_change_frac": -1.137208902879383e-05
+ },
+ "vela25_cam12_a0.400_rep00": {
+  "render_check_max_abs": 6.999089103842948e-07,
+  "delta_chi2": 72.03627643267427,
+  "max_abs_nres": 1.177453720341938,
+  "rms_nres_detected": 0.10682599777608301,
+  "n_pix_gt_1sig": 2,
+  "n_pix_gt_3sig": 0,
+  "source_flux_change_frac": -5.1225673879828904e-05
+ },
+ "vela26_cam12_a0.400_rep00": {
+  "render_check_max_abs": 1.2268072968613097e-07,
+  "delta_chi2": 57.75001710684086,
+  "max_abs_nres": 3.4859434406644234,
+  "rms_nres_detected": 0.08416397060711488,
+  "n_pix_gt_1sig": 8,
+  "n_pix_gt_3sig": 1,
+  "source_flux_change_frac": -1.6066696963856764e-05
+ }
+}

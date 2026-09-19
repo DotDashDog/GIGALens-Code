@@ -1,0 +1,36 @@
+{
+  "campaign": "vela_f140w_v3",
+  "system_id": "vela22_cam12_a0.400_rep00",
+  "sweep_name": "fitsersic_truthinit_v1",
+  "sweep": {
+    "fit": "sersic_truthinit_v1"
+  },
+  "ctx_hash": "c547b154f02c8dab",
+  "status": "ok",
+  "wall_time_s": 229.24,
+  "peak_gpu_bytes": 471229696,
+  "metrics": {
+    "max_rhat": 1.0002715739177168,
+    "min_ess": 21511.06960358349,
+    "nan_rate": 0.0,
+    "mass_zscores": {
+      "planes/0/mass/0/theta_E": -3.6092370725852767,
+      "planes/0/mass/0/gamma": 6.232411849884253,
+      "planes/0/mass/0/e1": -8.695822478918556,
+      "planes/0/mass/0/e2": -0.9187027874782421,
+      "planes/0/mass/0/center_x": -3.940838392500628,
+      "planes/0/mass/0/center_y": 3.1366594848618594,
+      "planes/0/mass/1/gamma1": -3.323136381222724,
+      "planes/0/mass/1/gamma2": 4.832680788336159
+    }
+  },
+  "system_meta": {
+    "num_pix": 160,
+    "supersample": 4,
+    "background_rms": 0.0076,
+    "exp_time": 1197.7,
+    "n_params": 20,
+    "n_chains": 8,
+    "n_results": 5000
+  }
+}

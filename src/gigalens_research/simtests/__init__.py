@@ -41,13 +41,13 @@ _os.environ.setdefault("JAX_ENABLE_X64", "1")
 
 
 def _check_runtime_jax() -> None:
-    """Fail loud if running outside the canonical JAX-2026 Shifter container.
+    """Fail loud if running on the stale login-node JAX.
 
-    The login-node default ``python`` is an old kernel (JAX 0.4.7); the project's
-    pinned runtime is the Shifter image ``docker:ghcr.io/nvidia/jax:jax-2026-04-13``
-    (JAX >= 0.10-dev2026). Running under the old stack silently changes precision,
-    RNG and API behaviour and invalidates generated datasets. See docs/env_setup.md
-    and .cursor/rules/gigalens-runtime-environment.mdc.
+    The login-node default ``python`` is an old kernel (JAX 0.4.7). Running under
+    the old stack silently changes precision, RNG and API behaviour and
+    invalidates generated datasets. The canonical runtime is now the native
+    ``gigalens_env`` conda env (JAX 0.9.1; docs/env_setup.md, 2026-07-14
+    consolidation note); the older Shifter container (JAX 0.10-dev) also passes.
 
     Escape hatch: set ``GIGALENS_ALLOW_LEGACY_JAX=1`` to deliberately use the
     legacy runtime (e.g. reproducing pre-upgrade behaviour).
@@ -58,7 +58,7 @@ def _check_runtime_jax() -> None:
         import jax as _jax
     except ImportError:
         return  # non-JAX tooling (e.g. config parsing) may import this package
-    _MIN = (0, 10)  # jax >= 0.10.0.dev20260505 (see docs/env_setup.md)
+    _MIN = (0, 9)  # gigalens_env ships JAX 0.9.1; the container ships 0.10-dev (docs/env_setup.md)
     try:
         _parts = tuple(int(p) for p in _jax.__version__.split(".")[:2])
     except (ValueError, AttributeError):
@@ -66,13 +66,11 @@ def _check_runtime_jax() -> None:
     if _parts < _MIN:
         raise RuntimeError(
             f"gigalens_research.simtests requires JAX >= {_MIN[0]}.{_MIN[1]} "
-            f"(canonical Shifter image jax-2026-04-13) but found JAX "
+            f"(canonical native env `gigalens_env`, JAX 0.9.1) but found JAX "
             f"{_jax.__version__}. You are almost certainly running the login-node "
-            f"default python instead of the container. Launch inside:\n"
-            f"  shifter --module=gpu,nccl-plugin "
-            f"--image=docker:ghcr.io/nvidia/jax:jax-2026-04-13 bash -lc '...'\n"
-            f"with PYTHONPATH per docs/env_setup.md. Set GIGALENS_ALLOW_LEGACY_JAX=1 "
-            f"to override deliberately."
+            f"default python. Activate the env per docs/env_setup.md, e.g.\n"
+            f"  conda activate gigalens_env\n"
+            f"Set GIGALENS_ALLOW_LEGACY_JAX=1 to override deliberately."
         )
 
 

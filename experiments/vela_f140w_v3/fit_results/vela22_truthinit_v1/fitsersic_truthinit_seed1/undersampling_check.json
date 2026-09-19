@@ -1,0 +1,123 @@
+{
+  "arrays": [
+    "certified_mask_0",
+    "delta_over_sigma_0",
+    "z0"
+  ],
+  "class": "UndersamplingCheckStage",
+  "config": {
+    "exclude_cusp_radius_pix": 4.0,
+    "max_delta_sigma": 1.0,
+    "max_frac_above": 0.001,
+    "reference_self_check_frac": 0.5,
+    "reference_supersample": 16,
+    "supersample_ladder": [
+      1,
+      2,
+      4
+    ],
+    "tolerance": 0.1
+  },
+  "diagnostics": [],
+  "diagnostics_config": {},
+  "input_hash": "84eaa0c3ccfbea9b",
+  "metadata": {
+    "exclude_cusp_radius_pix": 4.0,
+    "failures": [],
+    "passed": true,
+    "reports": [
+      {
+        "configured_argmax_yx": [
+          64,
+          86
+        ],
+        "configured_delta_chi2": -1.9843850123761513,
+        "configured_frac_above_tolerance": 0.0,
+        "configured_label": "configured (AdaptiveSceneSimulator)",
+        "configured_max_abs_delta_over_sigma": 0.027332730835436116,
+        "configured_max_in_excluded": 0.3082175303611081,
+        "excluded_centres_rowcol": [
+          [
+            79.25026636940007,
+            79.62366969951547
+          ]
+        ],
+        "excluded_pixels": 50,
+        "reference_converged": true,
+        "reference_converged_module": false,
+        "reference_self_error": {
+          "native": 0.033368029090521036
+        },
+        "reference_self_error_max": 0.033368029090521036,
+        "reference_supersample": 16,
+        "rungs": [
+          {
+            "argmax": [
+              0,
+              87,
+              99
+            ],
+            "convention": "native",
+            "delta_chi2": 173.3806507664267,
+            "frac_above_tolerance": 0.010293542074363992,
+            "label": "supersample=1",
+            "max_abs_delta_over_sigma": 3.030178792534083,
+            "passes": false,
+            "supersample": 1
+          },
+          {
+            "argmax": [
+              0,
+              76,
+              82
+            ],
+            "convention": "native",
+            "delta_chi2": 10.802967180006817,
+            "frac_above_tolerance": 0.00019569471624266145,
+            "label": "supersample=2",
+            "max_abs_delta_over_sigma": 0.13726472124814176,
+            "passes": false,
+            "supersample": 2
+          },
+          {
+            "argmax": [
+              0,
+              81,
+              76
+            ],
+            "convention": "native",
+            "delta_chi2": 1.9154175324802054,
+            "frac_above_tolerance": 0.0,
+            "label": "supersample=4",
+            "max_abs_delta_over_sigma": 0.048477876754930024,
+            "passes": true,
+            "supersample": 4
+          },
+          {
+            "argmax": [
+              0,
+              64,
+              86
+            ],
+            "convention": "native",
+            "delta_chi2": -1.9843850123761513,
+            "frac_above_tolerance": 0.0,
+            "label": "configured (AdaptiveSceneSimulator)",
+            "max_abs_delta_over_sigma": 0.027332730835436116,
+            "passes": true,
+            "supersample": null
+          }
+        ],
+        "summary": "Undersampling diagnostic \u2014 dataset 0 (lstsq (amplitudes re-solved per quadrature)), tolerance 0.1 sigma/pixel\n  reference: uniform supersample=16 (self-check vs 8: native: 0.033 sigma \u2014 NOT CONVERGED \u2014 raise reference_supersample; numbers below are not certified)\n  supersample=1 [native-kernel PSF (bin-first)]: max |d|/sigma = 3.030 at (y=87, x=99), 1.03% of pixels above tol, delta_chi2 = +173.4 -> FAIL\n  supersample=2 [native-kernel PSF (bin-first)]: max |d|/sigma = 0.137 at (y=76, x=82), 0.02% of pixels above tol, delta_chi2 = +10.8 -> FAIL\n  supersample=4 [native-kernel PSF (bin-first)]: max |d|/sigma = 0.048 at (y=81, x=76), 0.00% of pixels above tol, delta_chi2 = +1.9 -> PASS\n  configured (AdaptiveSceneSimulator) [native-kernel PSF (bin-first)]: max |d|/sigma = 0.027 at (y=64, x=86), 0.00% of pixels above tol, delta_chi2 = -2.0 -> PASS\n  PSF-convention gap: not computed (pass convention_gap=True; costs one extra reference render).\n  recommendation: none of the tested supersamples reach 0.1 sigma/pixel \u2014 test higher rungs, or use the experimental adaptive supersampler on the refined pixels this report localizes."
+      }
+    ],
+    "wall_time_s": 9.043896286006202
+  },
+  "schema_version": 1,
+  "seed": 1,
+  "stage": "undersampling_check",
+  "timestamp": "2026-09-18T04:44:14.809079+00:00",
+  "upstream_hashes": {
+    "qz": "8d7e7a81007f9384"
+  }
+}

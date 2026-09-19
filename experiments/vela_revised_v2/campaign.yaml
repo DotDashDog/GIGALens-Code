@@ -1,0 +1,126 @@
+# Revised Vela simulated-system campaign, v2 (scene-API generator + calibration).
+#
+# Generation is performed by the `vela_simulated` generator
+# (src/gigalens_research/simtests/experiments/vela_simulated.py), which draws a
+# lens truth, lenses the PRISTINE (pre-PSF) Vela source, CALIBRATES the source
+# amplitude to a lens-to-source flux ratio, REJECTS draws whose arcs leave the
+# cutout, convolves with the instrument PSF and adds instrument-derived noise.
+# Every science choice is recorded in the dataset manifest.
+#
+# Every value below is a PROPOSAL to be reviewed by the group. Comments give the
+# derivation / measured basis (docs/logs/vela-simulated-systems.md has the full
+# record, including the numbers measured on the v1 test set).
+
+name: vela_revised_v2
+seed: 0
+# Relative -> $PSCRATCH/gigalens/simtests_results/vela_revised_v2 (docs/results-storage.md).
+output_dir: simtests_results/vela_revised_v2
+
+plugins:
+  - gigalens_research.simtests.experiments.vela_simulated
+
+dataset:
+  generator: vela_simulated
+
+  # ---- Source: which Vela galaxies, at which redshift --------------------
+  scale_factor: "a0.400"          # z = 1/a - 1 = 1.5 exactly (HLSP snapshot)
+  # The v1 list (12 sources). vela09 is a double galaxy at z=1.5 and is kept in
+  # the review set deliberately so the group can judge it by eye
+  # (candidate_sources.png in vela_revised_v1); vela13 / vela20 were rejected
+  # as candidates for the same reason.
+  vela_ids: ["02", "03", "04", "07", "08", "09", "10", "21", "22", "23", "25", "26"]
+  cam: "12"
+  filter: "f814w"
+  version: "v3"
+  n_reps: 1                       # 1 for the review set; raise to 5 for the campaign
+  source_variant: IMAGE_PRISTINE  # with dust radiative transfer (observationally realistic)
+  # Zero the source beyond this radius from its flux centroid: removes companions
+  # and faint clumpy outskirts that otherwise produce arcs at 2-3" (the main
+  # cause of cut-off arcs in v1). null disables. Fraction removed is recorded.
+  source_crop_radius_arcsec: 1.5
+  # Shift the source so its flux centroid is at (0,0); the source-plane offset
+  # prior below is then an offset from the galaxy, not from the Vela camera frame.
+  source_recenter: true
+  transpose_image: false
+
+  # ---- Image grid ---------------------------------------------------------
+  num_pix: 200                    # 6.0" at 0.03"/px
+  supersample: 4                  # inference reads this back from meta.json
+  likelihood_precision: float64
+
+  # ---- PSF: STScI empirical ACS/WFC F814W effective PSF ------------------
+  psf:
+    kind: stdpsf                  # gaussian | stdpsf | file
+    era: SM4                      # post-2009 (SM4) optics
+    chip_xy: [2048, 1024]         # WFC1 chip centre; nearest library grid point is used
+    size_pix: 33                  # 0.99" box at 0.03"/px; ePSF EE(<0.5") = 0.997
+    subsamples: 6                 # resampling quadrature per output pixel
+    # measured on the library PSF: FWHM 0.081" native; v1 used a 0.13" Gaussian
+    # (VELA header APROXPSF). NOTE the recorded approximation: the ePSF keeps the
+    # native 0.05" pixel response and drizzle broadening is not modelled.
+
+  # ---- Noise: ACS/WFC F814W, ~2 orbits ------------------------------------
+  noise:
+    kind: instrument              # explicit | instrument
+    sky_mag_arcsec2: 22.3         # typical F814W sky (zodi+earthshine), AB/arcsec^2
+    exp_time: 2400                # total exposure (s); also the Poisson-term gain 1 e-/count
+    n_reads: 4                    # dithered sub-exposures
+    read_noise_e: 4.5             # WFC post-SM4
+    dark_e_per_s: 0.0075          # per native pixel
+    native_pixel_arcsec: 0.05     # WFC native; output is 0.03" (CANDELS-like drizzle)
+    zeropoint_ab: null            # null -> derived from the mock's PHOTFNU (25.94 for F814W)
+    # -> background_rms ~ 0.0041 cps per 0.03" px (v1 used 0.005 at 2000 s).
+
+  # ---- Source brightness: calibrated, not guessed -------------------------
+  calibration:
+    source_to_lens_flux_ratio: 0.5   # lensed source / lens light, inside the cutout
+    measure_in: cutout               # cutout (what the fit sees) | canvas
+    # v1 measured 0.05-0.13 at amp=1; reaching 0.5 scales the sources 4-10x
+    # (recorded per system as source_ab_mag_unlensed).
+
+  # ---- Cut-off guarantee: reject draws whose arcs leave the image ---------
+  cutoff:
+    canvas_factor: 2              # measure on a 12" canvas
+    max_flux_outside: 0.01        # <= 1% of the lensed-source flux outside the cutout
+    max_border_sb_sigma: 1.0      # noiseless lensed-source SB in the outer 3 px < 1 sigma_bkg
+    border_width_pix: 3
+    max_redraws: 50               # fail loud beyond this
+    # v1 (no check): vela07 13.6%, vela22 20.6% outside; border up to 4.8 sigma.
+
+  # ---- Truth prior: overrides on the notebook cell-4 baseline -------------
+  # Baseline (recorded in the manifest): theta_E LogNormal(1.25, 0.25),
+  # gamma TruncN(2, 0.25, [1,3]), e1/e2 N(0, 0.1), centers N(0, 0.03);
+  # shear N(0, 0.05); lens light R_sersic LogNormal(1.6, 0.15), n U(1,6),
+  # e TruncN(0, 0.05, +-0.15), centers N(0, 0.01), Ie LogNormal(20, 0.3)
+  # [-> ~18.4 AB total, SLACS-like]; source offset N(0, 0.25").
+  truth_prior:
+    lens_mass:
+      "0":
+        theta_E: {dist: LogNormal, median: 1.1, sigma: 0.2}   # v1: 1.25/0.25 -> theta_E up to 2.85 hit the edge
+
+inference:
+  builder: epl_shear_sersic_shapelets
+  pipeline: map_bootstrap_mclmc
+  pipeline_kwargs:
+    bootstrap_map_steps: 200
+    bootstrap_map_n_samples: 50
+    n_chains: 8
+    num_burnin_steps: 4000
+    num_results: 4000
+    desired_energy_variance: 5.0e-4
+
+sweep:
+  axis: n_max
+  values: [10, 15, 20, 30]
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - mass_zscores
+  - all_zscores
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1
