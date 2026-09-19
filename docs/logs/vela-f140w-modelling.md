@@ -113,6 +113,8 @@ with the VELA source at the data's resolution.
   0.23" source's structure; χ²/ν 1.04, θ_E 11σ high); and at n_max 20 the sampler degrades
   (R-hat 1.010, ESS 587 — at the 1.01 line, not below it).
 - **Evidence / artifact:** `fit_results/vela22_truthinit_v1/{mass_z_vs_model.png,overlay_mass_shapelets_nmax.png,corner_mass_shapelets_n*.png,residual_shapelets_n*.png,summary.json}`; run dirs `runs/vela22_cam12_a0.400_rep00/fitshapelets_truthinit_v1_n_max{5,10,15,20}/`.
+  Reproduced 2026-09-18 on the cored set with the core-Sérsic lens model and the re-centred β prior
+  (`fit_results/vela22_core_v1/`): mass z-scores within 0.2σ of these at every order.
 - **Doubt report:** (a) n_max changes the source prior too (β LogNormal(0.7", 0.4); posterior β
   0.13–0.15" at every order), so "more freedom" and "different prior" are not separated; (b)
   n_max 20's R-hat 1.010 / ESS 587 means its widths are the least certain of the set (its z-scores
@@ -363,6 +365,41 @@ with the VELA source at the data's resolution.
 ---
 
 ## Log (newest first)
+
+- **2026-09-18 (cored set, truth start, all five source models) — C-2/C-4 reproduced with the
+  core-Sérsic lens model and the re-centred β prior; the core parameters are the poorly sampled
+  ones; n_max 20 fails the R-hat line on the lens-light centre (UNCERTIFIED).** Slurm 58553177
+  (Sersic, 3.3 min) + 58553379 (shapelets 3.0 / 3.0 / 3.8 / 5.8 min, peak 0.85–1.63 GB). All five
+  starts certified with NO cusp exclusion (adaptive rung 0.026 / 0.035 / 0.042 / 0.054 / 0.085σ,
+  reference self-check 0.028–0.029σ). `fit_results/vela22_core_v1/` (`analyze_core.py`,
+  `per_param_diagnostics.json`, corners, residuals, `mass_z_vs_model.png`).
+
+  | source | χ²/ν | ring χ²/n | max mass \|z\| | θ_E z | β | R-hat / min ESS (all) | mass R-hat / ESS | worst parameter |
+  |---|---|---|---|---|---|---|---|---|
+  | Sersic | 1.0047 | 1.26 | 8.5 (e1) | +3.4 | – | 1.0078 / 1,938 | 1.006 / 2,462 | R_b (tail excursions) |
+  | n_max 5 | 1.040 | 1.79 | 11.1 (θ_E); e2 −9.6, γ2 −10 | +11.1 | 0.149 | 1.0018 / 6,128 | 1.001 / 6,128 | – |
+  | n_max 10 | 0.998 | 1.22 | 3.7 (cx) | +1.7 | 0.132 | 1.0016 / 5,311 | 1.002 / 5,311 | – |
+  | n_max 15 | 0.989 | 1.12 | 1.8 (cx) | −0.6 | 0.135 | 1.0022 / 4,659 | 1.002 / 5,574 | – |
+  | n_max 20 | 0.982 | 1.00 | 1.5 (γ) | −0.5 | 0.129 | **1.0199 / 401** | 1.003 / 5,444 | lens-light centre_x |
+
+  - Lens mass: the same numbers as on the pure-Sérsic set to 0.2σ at every order (C-2, C-4 stand
+    unchanged; the core and the β prior changed nothing for the mass, as C-5 and the β-pull
+    estimate predicted). β 0.13–0.15" as before (the old prior's pull was ≤ 0.35σ).
+  - Core parameters: with the Sersic source R_b = 0.21 ± 0.08 px (truth 0.11, +1.1σ; 3.7% of
+    draws below 0.02 px); with every shapelet source R_b sits at the resolution floor (median
+    0.02–0.03 px, 42–49% of draws below 0.02 px — the data prefer "no core" once the source is
+    flexible; the truth core is 0.11 px). γ is prior-flat (std 0.144–0.145 on U(0, 0.5)) in all five.
+    Sampling cost of the two: ESS 21,500 → 1,900 (Sersic), 20,000 → 6,100 (n5), 20,000 → 5,300 (n10),
+    6,500 → 4,700 (n15), 587 → 401 (n20). Mass parameters themselves: R-hat ≤ 1.006, ESS ≥ 2,462
+    in every run.
+  - n_max 20: R-hat 1.020 / ESS 401 on the lens-light centre_x (mass parameters 1.003 / 5,444):
+    above the 1.01 line — the lens-light centre against 231 free amplitudes is the slow direction,
+    now slower with R_b and γ in the model. Its mass z-scores (all ≤ 1.5) are consistent with
+    n_max 15's but its widths are not certified.
+  - Recommendation (not applied): bound R_b below at ~0.01 px (LogNormal σ 0.7 or a truncation) and
+    fix γ (unidentified at these R_b) — removes the flat directions the sampler is paying for
+    without changing anything the data can see; re-run n_max 20 with more burn-in before using
+    its widths.
 
 - **2026-09-18 (cored set, Sersic source, truth start) — core-Sérsic lens model samples, mass posterior
   unchanged, sampling efficiency down 10× (UNCERTIFIED).** Slurm 58553177 (3.3 min); undersampling
