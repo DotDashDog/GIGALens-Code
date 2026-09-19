@@ -117,7 +117,9 @@ def vela_inference_prior(use_shapelets: bool = True):
 # 1% of the R_e prior median = 0.016", 1 dex), gamma U(0, 0.5), alpha fixed at 5 (as in the
 # truth; unresolvable). The pure Sersic is the R_b -> 0 limit, so low-n lenses return an
 # upper bound on R_b. "sersic" keeps the pre-2026-09-18 model for the recorded runs.
-LENS_LIGHT_PROFILES = ("sersic", "core_sersic")
+LENS_LIGHT_PROFILES = ("sersic", "core_sersic", "core_sersic_tied")
+# "core_sersic_tied" (2026-09-19, C-6): TiedCoreSersic — R_b = rule(R_e, n), gamma 0, alpha 5, no free core
+# parameters (the same rule renders the truth); see tied_core_sersic.py.
 CORE_SERSIC_FIT_PRIOR = {"Rb_median_arcsec": 0.016, "Rb_log_sigma": 2.302585, "gamma_high": 0.5, "alpha": 5.0}
 
 
@@ -155,7 +157,8 @@ def _vela_scene_lens_priors(lens_light_profile: str = "sersic", core_sersic_prio
     if unknown:
         raise KeyError(f"core_sersic_prior: unknown keys {sorted(unknown)}; allowed: {list(CORE_SERSIC_PRIOR_OVERRIDES)}.")
     if ov and lens_light_profile != "core_sersic":
-        raise ValueError("core_sersic_prior given but lens_light_profile is not 'core_sersic'.")
+        raise ValueError("core_sersic_prior given but lens_light_profile is not 'core_sersic' "
+                         "(the tied profile has no core prior to override).")
     epl_p = dict(
         theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
         gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
@@ -209,6 +212,9 @@ def _vela_scene_lens_priors(lens_light_profile: str = "sersic", core_sersic_prio
             alpha=float(c["alpha"]),   # constant
         )
         profile = sersic.CoreSersic(use_lstsq=True)
+    elif lens_light_profile == "core_sersic_tied":
+        from gigalens_research.simtests.experiments.tied_core_sersic import TiedCoreSersic
+        profile = TiedCoreSersic(use_lstsq=True)   # params = those of SersicEllipse; core from the rule
     else:
         profile = sersic.SersicEllipse(use_lstsq=True)
     return epl_p, shear_p, lens_light_p, profile

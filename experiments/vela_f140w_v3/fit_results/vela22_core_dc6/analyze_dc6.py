@@ -12,11 +12,14 @@ from gigalens_research.inference_utils.pipeline import InferenceContext, posteri
 from gigalens_research.plotting import plot_corner_overlay
 OUT = sys.argv[1]; os.makedirs(OUT, exist_ok=True)
 BASE = "/pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3"; SID = "vela22_cam12_a0.400_rep00"
-system = System.load(BASE + "/dataset", SID); DP = system.delta_pix
+system_scatter = System.load(BASE + "/dataset_20260918_core_scatter", SID); system_tied = System.load(BASE + "/dataset", SID)
+system = system_scatter; DP = system.delta_pix
 RUNS = [
     ("baseline", "experiments/vela_f140w_v3/fit_sersic_truthinit_core_vela22.yaml", {"fit": "sersic_truthinit_core_v1"}, "fitsersic_truthinit_core_v1"),
     ("dc6", "experiments/vela_f140w_v3/fit_sersic_truthinit_core_rbfloor_vela22.yaml", {"fit": "sersic_truthinit_core_v2_rbfloor_gfix"}, "fitsersic_truthinit_core_v2_rbfloor_gfix"),
     ("rbfix", "experiments/vela_f140w_v3/fit_sersic_truthinit_core_rbfix_vela22.yaml", {"fit": "sersic_truthinit_core_v2_rbfix_gfix"}, "fitsersic_truthinit_core_v2_rbfix_gfix"),
+    # tied-core SET (regenerated 2026-09-19; vela22's core is 0.41 px there, not 0.11): the fit has no core params
+    ("tied", "experiments/vela_f140w_v3/fit_sersic_truthinit_tied_vela22.yaml", {"fit": "sersic_truthinit_tied_v1"}, "fitsersic_truthinit_tied_v1"),
 ]
 RUNS = [r for r in RUNS if os.path.exists(f"{BASE}/runs/{SID}/{r[3]}/mclmc/arrays.npz")]
 # the old-set pure-Sersic lens fit: same yaml family but the dataset differs; only its run.json numbers are used
@@ -33,6 +36,7 @@ def path_truth(model):
     return out
 for label, yaml_path, sp, rdir in RUNS:
     run_dir = f"{BASE}/runs/{SID}/{rdir}"
+    system = system_tied if label == "tied" else system_scatter
     spec = _load_campaign(yaml_path); kw = spec.effective_pipeline_kwargs(sp)
     prob = get_inference_builder(spec.inference.builder)(system, **kw); ctx = InferenceContext.from_prob_model(prob)
     post[label] = posterior_from_disk(run_dir, "mclmc", ctx)
@@ -81,12 +85,12 @@ json.dump(res, open(OUT + "/dc6_comparison.json", "w"), indent=1)
 # figure: ESS per parameter + Rb / n / R_e traces (chain 0) + Rb histograms
 fig, ax = plt.subplots(2, 2, figsize=(14, 9))
 names = list(res["dc6"]["ess"]); short = [n.replace("planes/0/mass/0/", "m:").replace("planes/0/mass/1/", "sh:").replace("planes/0/light/0/", "ll:").replace("planes/1/light/0/", "src:") for n in names]
-x = np.arange(len(names)); labs = {"baseline": "baseline (R_b free tail, γ free)", "dc6": "DC-6 (R_b ≥ 0.01 px, γ fixed)", "rbfix": "ablation (R_b and γ fixed at truth)"}
+x = np.arange(len(names)); labs = {"baseline": "baseline (R_b free tail, γ free)", "dc6": "DC-6 (R_b ≥ 0.01 px, γ fixed)", "rbfix": "ablation (R_b and γ fixed at truth)", "tied": "tied-core set: R_b = rule(R_e, n), γ = 0"}
 present = [r[0] for r in RUNS]; w = 0.8 / len(present)
 for j, lbl in enumerate(present): ax[0, 0].bar(x + (j - (len(present) - 1) / 2) * w, [res[lbl]["ess"].get(n, 0) for n in names], w, label=labs[lbl])
 ax[0, 0].axhline(old["metrics"]["min_ess"], ls="--", c="k", lw=0.8, label="old set, pure-Sersic lens: min ESS")
 ax[0, 0].set_xticks(x); ax[0, 0].set_xticklabels(short, rotation=90, fontsize=7); ax[0, 0].set_ylabel("ESS (8 x 5000)"); ax[0, 0].legend(fontsize=8); ax[0, 0].set_title("ESS per parameter")
-for lbl, c in (("baseline", "C0"), ("dc6", "C1"), ("rbfix", "C2")):
+for lbl, c in (("baseline", "C0"), ("dc6", "C1"), ("rbfix", "C2"), ("tied", "C3")):
     if lbl not in lab: continue
     if "planes/0/light/0/Rb" in lab[lbl]:
         rb = lab[lbl]["planes/0/light/0/Rb"] / DP
@@ -98,6 +102,7 @@ ax[1, 1].axhline(truthd["dc6"]["planes/0/light/0/n_sersic"], c="r", lw=0.8); ax[
 fig.tight_layout(); fig.savefig(OUT + "/dc6_ess_traces.png", dpi=110); plt.close(fig)
 ov = {"baseline core-Sersic fit": post["baseline"], "DC-6: R_b >= 0.01 px, gamma fixed": post["dc6"]}
 if "rbfix" in post: ov["ablation: R_b, gamma fixed at truth"] = post["rbfix"]
+if "tied" in post: ov["tied-core set: R_b = rule(R_e, n), gamma 0"] = post["tied"]
 fig = plot_corner_overlay(ov, kind="mass", truth=truthd["dc6"]); fig.suptitle("vela22 Sersic source, lens mass: baseline vs DC-6 variants", y=1.0)
 fig.savefig(OUT + "/overlay_mass_dc6.png", dpi=90); plt.close(fig)
 print("wrote", OUT)

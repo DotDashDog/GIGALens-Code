@@ -24,7 +24,8 @@ fit = _load_campaign("experiments/vela_f140w_v3/fit_sersic_vela22.yaml"); curv =
 man = json.load(open(DS + "/manifest.json")); sids = man["system_ids"] if isinstance(man, dict) and "system_ids" in man else [s if isinstance(s, str) else s["system_id"] for s in (man["systems"] if isinstance(man, dict) else man)]
 ONLY = sys.argv[2].split(",") if len(sys.argv) > 2 else None   # one system per process on GPU: the ss=64 simulators exhaust device memory across systems
 if ONLY: sids = [x for x in sids if any(x.startswith(o) for o in ONLY)]
-JS = f"{HERE}/core_lens_undersampling.json"; out = json.load(open(JS)) if (ONLY and os.path.exists(JS)) else {}
+JS = sys.argv[3] if len(sys.argv) > 3 else f"{HERE}/core_lens_undersampling.json"   # argv[3]: output JSON (2026-09-19: tied-core set -> tied_core_lens_undersampling.json)
+out = json.load(open(JS)) if (ONLY and os.path.exists(JS)) else {}
 print("lens light only at truth, d/sigma vs uniform ss=64. 'a8' = the fits' curvature map (max 8).")
 print(f"{'system':8s} {'n':>4s} {'Rb/Re':>6s} {'Rb px':>5s} {'gam':>4s} | centre px: {'u4':>6s} {'u8':>6s} {'u16':>6s} {'u32':>6s} {'a8':>6s} | worst px: {'a8':>6s} {'a8 vs u32':>9s} {'u32':>6s} | pure-Sersic same lens: a8 centre, worst")
 for sid in sids:

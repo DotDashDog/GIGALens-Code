@@ -1249,6 +1249,75 @@ src/lens 0.29, μ 6.2, peak SB 20.1: bright double/partial ring, nothing else
 in the frame), vela04 (compact, two images at θ_E 1.65", src/lens 0.08, faint
 companion), vela03 (single faint arc, src/lens 0.08).
 
+## Tied core-Sérsic lens light; set regenerated (2026-09-19, user decision after C-6) — UNCERTIFIED
+
+User (after C-6 in docs/logs/vela-f140w-modelling.md: the free break radius costs MCLMC 10× on every
+parameter through a hockey-stick R_b–n valley; a prior floor and fixed γ do nothing, fixing R_b
+restores the pure-Sérsic efficiency; the lens mass never moves): "implement the fixed core as
+described in both modeling and simulation". Recommendation adopted: R_b tied to (R_e, n) by the
+DC-5 option-B MEDIAN rule without its 0.3 dex scatter, the hinge at n = 4.5 replaced by a softplus
+of width 0.25 in n (the hinge's slope jump would inject an energy error into MCLMC for any lens whose
+n posterior straddles 4.5), γ = 0 (any γ > 0 is an integrable but real central singularity,
+I ∝ R^−γ, that the data cannot constrain — γ was prior-flat in every fit), α = 5:
+
+    R_b = R_e · 10^f(n),  f(n) = log10(0.02) − 0.6 · 0.25 · ln(1 + exp((4.5 − n) / 0.25))
+
+(2% of R_e for n ≥ 4.5, 1% at n = 4, 0.25% at 3, 0.06% at 2; the softplus is ≤ 0.1 dex below the
+hinge, at the knee). The SAME rule renders the truth and the fit model, so the core is a shared
+modelling convention like α; the price is a truth family without core scatter, and "wrong core rule
+in the fit" becomes a separate misspecification test (the free-R_b `core_sersic` fit family is kept
+for it).
+
+Code: `src/gigalens_research/simtests/experiments/tied_core_sersic.py` (`TIED_CORE_RULE`,
+`tied_core_radius`, `TiedCoreSersic` — a `CoreSersic` subclass whose free params are exactly
+SersicEllipse's six; renders identically to `CoreSersic` at the rule's (R_b, 0, 5) to 1e-12, and the
+rule's gradient in n is continuous through the knee: `vela_simulated_test.py::
+test_tied_core_sersic_rule_is_deterministic_smooth_and_renders_as_core_sersic`, 25 tests pass).
+Generator: `lens_light_profile: core_sersic_tied` (campaign.yaml) → truth block `Rb` dist
+`CoreRadiusTied` (deterministic from the drawn n, R_e; no random stream consumed), `gamma` Fixed 0,
+`alpha` Fixed 5; the truth model still renders an explicit `CoreSersic`. Fit builders:
+`lens_light_profile: core_sersic_tied` → `TiedCoreSersic`; the `core_sersic_prior` overrides
+(floor / fixed γ / fixed R_b, from DC-6) apply only to the free-R_b family.
+
+Regenerated (`dataset/`; the 18 September scattered-core set kept as
+`dataset_20260918_core_scatter/`, the 17 September pure-Sérsic set as `dataset_20260917_sersic_lens/`):
+`fit_checks/regen_draw_check.py OLD NEW` (core keys excluded from the comparison — they change by
+design) — every shared truth parameter identical (max |Δ| = 0), redraw counts identical (vela21: 1),
+the noise realisation identical except within the lens-centre PSF footprint (vela21/26 identical
+everywhere: sub-0.02 px cores). Lens flux moves by ≤ 1.2% (vela25 +1.2%, vela22 −0.8%, vela09 −0.8%);
+lens AB and source ÷ lens ratios move in the third decimal. Grid and gallery regenerated.
+
+| system | n | R_e ["] | R_b/R_e | R_b px | R_b px (18 Sept draw) | lens flux 18 → 19 Sept |
+|---|---|---|---|---|---|---|
+| vela02 | 3.16 | 1.549 | 0.31% | 0.07 | 0.06 | 831.8 → 831.7 |
+| vela03 | 4.14 | 2.505 | 1.14% | 0.44 | 0.48 | 2001.5 → 2001.3 |
+| vela04 | 3.03 | 1.566 | 0.26% | 0.06 | 0.13 | 1020.5 → 1020.5 |
+| vela08 | 2.97 | 1.823 | 0.24% | 0.07 | 0.02 | 1007.3 → 1007.3 |
+| vela09 | 5.78 | 1.345 | 2.00% | 0.41 | 0.22 | 817.8 → 811.1 |
+| vela21 | 1.26 | 1.582 | 0.02% | 0.01 | 0.01 | 573.4 → 573.4 |
+| vela22 | 5.17 | 1.375 | 1.95% | 0.41 | 0.11 | 1419.7 → 1408.3 |
+| vela23 | 3.97 | 1.639 | 0.93% | 0.23 | 0.34 | 958.1 → 959.0 |
+| vela25 | 4.26 | 1.457 | 1.28% | 0.29 | 0.90 | 894.0 → 904.4 |
+| vela26 | 1.37 | 1.826 | 0.03% | 0.01 | 0.01 | 991.7 → 991.7 |
+
+γ = 0 on every system (was 0.04–0.24). Two systems now carry a 2% core (vela09, vela22: n > 5, a
+10σ central-pixel feature per `core_visibility.py`), three a 1% core (vela03/23/25), the n ≤ 3.2
+lenses ≤ 0.3% (sub-resolution, ≤ 0.07 px).
+
+Quadrature of the flat cores (`fit_checks/run_core_lens_undersampling.sh` → `core_lens_undersampling.py
+dataset SID tied_core_lens_undersampling.json`, Slurm 58588309, one GPU process per system, lens light
+only at truth vs uniform ss=64, per-pixel σ): the generator's ss=32 truth render is within 0.0015σ of
+64 at every pixel of every system (scattered cores: 0.004σ; pure-Sérsic cusps: 0.035σ); the fitter's
+curvature map (max 8) is within 0.031σ of 64 everywhere, worst at the vela22 centre (+0.031; scattered
+cores: 0.052 at vela09, pure Sérsic: −0.50 at vela22); uniform ss=8 ≤ 0.031σ; uniform ss=4 is still
+inadequate at the centres of the n > 5 lenses (+0.13σ vela22, +0.11 vela09, +0.10 vela02; was +0.44).
+Nothing is excluded from the fits' undersampling gate (`exclude_cusp_radius_pix: 0.0`).
+
+vela22 Sersic-source refit on the tied set (docs/logs/vela-f140w-modelling.md, 2026-09-19): R-hat
+1.0003 / min ESS 21,566 (the pure-Sérsic level), mass posterior within 0.14σ of the free-core run.
+Page: artifact version 10 (tied core in the pill, the lens-draw step, the prior table, the review-set
+line, the choices list and the files table; per-system lens AB / ratio / peak SB refreshed).
+
 ## Core-Sérsic lens light; set regenerated (2026-09-18, user decision, DC-5 option B) — UNCERTIFIED
 
 User: "re-generate the set with cored sersic profiles for the lens light (both in simulation

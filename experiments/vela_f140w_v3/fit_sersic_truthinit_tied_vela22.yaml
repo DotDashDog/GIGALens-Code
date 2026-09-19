@@ -1,33 +1,19 @@
-# Vela simulated-system campaign, v3: WFC3/IR F140W at the DESI Strong Lens
-# Foundry V observing setup (group decisions of 2026-09-14).
+# vela22 on the TIED-core set (regenerated 2026-09-19): TiedCoreSersic lens light in the fit — the same
+# rule as the truth (R_b = R_e 10^f(n), gamma 0, alpha 5), no free core parameters. Truth start, Sersic
+# source with the broad prior; same pipeline / quadrature / MCLMC as fit_sersic_truthinit_core_vela22.yaml.
+# Prediction (C-6 ablation): R-hat <= 1.001, min ESS ~ 21,000, mass posterior within 0.3 sigma of the
+# cored runs, lens-light n width ~0.4x the free-R_b run's.
 #
-# Generator: `vela_simulated` (src/gigalens_research/simtests/experiments/vela_simulated.py,
-# generator_version 3). Same pipeline as v2 (lens the PRISTINE Vela source,
-# calibrate the source amplitude, reject cut-off arcs, convolve with the
-# empirical PSF, add instrument noise); what changed is the instrument:
-#
-#   camera / filter      WFC3/IR F140W (VELA HLSP has f140w mocks; PHOTFNU -> ZP 26.45)
-#   pixel scale          0.065" drizzled (native 0.13"), as in Foundry I / V
-#   PSF                  Jay Anderson's STDPSF library, WFC3IR F140W
-#   exposure             1197.7 s = 3 x 399.23 s (Foundry I / DESI-238 header), no CR-split
-#   noise                white, background_rms 0.0076 cps/px measured on the DESI-238 cutout
-#   truth render         supersample 32 (fitter reads inference_supersample 4)
-#   cutout               160 x 160 px = 10.4" (2026-09-17; was 120 px)
-#   theta_E prior        LogNormal(median 1.5", sigma 0.25)
-#   source brightness    VELA's own F140W photometry at z = 1.5 (amplitude 1;
-#                        2026-09-17 decision, see `calibration:`). The earlier
-#                        Foundry peak-SB / unlensed-magnitude routes are superseded.
-#
-# No value below is an assumption any more; the remaining open choices are listed
-# in docs/logs/vela-simulated-systems.md.
+#   SHARDS=6/10 YAML=experiments/vela_f140w_v3/fit_sersic_truthinit_tied_vela22.yaml experiments/vela_f140w_v3/run_vela22.sh
+# Results: <output_dir>/runs/vela22_cam12_a0.400_rep00/fitsersic_truthinit_tied_v1/
 
 name: vela_f140w_v3
 seed: 0
-# Relative -> $PSCRATCH/gigalens/simtests_results/vela_f140w_v3 (docs/results-storage.md).
-output_dir: simtests_results/vela_f140w_v3
+output_dir: /pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3
 
 plugins:
   - gigalens_research.simtests.experiments.vela_simulated
+  - gigalens_research.simtests.experiments.vela_sersic_source
 
 dataset:
   generator: vela_simulated
@@ -146,24 +132,7 @@ dataset:
     border_width_pix: 3
     max_redraws: 50
 
-  # ---- Lens light: TIED core-Sersic (2026-09-19, user decision after C-6) -----------
-  # Core-Sersic family (Graham+03 / Trujillo+04; gigalens PR #105) with NO free core parameters:
-  #   R_b = R_e * 10^f(n),  f(n) = log10(0.02) - 0.6 * 0.25 * ln(1 + exp((4.5 - n) / 0.25))
-  #   gamma = 0 (flat core), alpha = 5.
-  # f(n) is the DC-5 option-B median rule (2% of R_e for n >= 4.5, 1% at n = 4, 0.25% at 3,
-  # 0.06% at 2 - depleted cores are a property of luminous high-n ellipticals, R_b 0.5-5% R_e:
-  # Dullo & Graham 2014, Kormendy+09) with its hinge smoothed by a softplus of width 0.25 in n
-  # so the likelihood gradient in n is continuous, and WITHOUT the 0.3 dex scatter of the
-  # 18 September set: the same rule renders the truth and the fit model (TiedCoreSersic), so
-  # the core is a shared modelling convention like alpha. Why (docs/logs/vela-f140w-modelling.md,
-  # C-6): with R_b free the fit posterior has a hockey-stick R_b-n valley with a "no core" shelf
-  # (6% of the posterior at delta chi2 ~ 7) that cost MCLMC 10x in ESS on every parameter; a
-  # prior floor and fixed gamma did not help, fixing R_b restored the pure-Sersic efficiency,
-  # and the lens mass never moved. gamma = 0 because gamma > 0 is an integrable but real central
-  # singularity (I ~ R^-gamma) the data cannot constrain (gamma was prior-flat in every fit).
-  # The scattered-core set of 18 September is kept as dataset_20260918_core_scatter/.
-  # "core_sersic" (scattered R_b, gamma U(0, 0.3)) and "sersic" remain available.
-  lens_light_profile: core_sersic_tied
+  lens_light_profile: core_sersic_tied   # as campaign.yaml (2026-09-19)
 
   # ---- Truth prior: overrides on the notebook cell-4 baseline -------------
   truth_prior:
@@ -182,26 +151,56 @@ dataset:
         Ie: {dist: LogNormal, median: 20.0, sigma: 0.3}
 
 inference:
-  builder: epl_shear_sersic_shapelets
+  builder: epl_shear_sersic_sersic_source_broad
   pipeline: map_bootstrap_mclmc
   pipeline_kwargs:
-    bootstrap_map_steps: 200
-    bootstrap_map_n_samples: 50
+    # --- model: broad source prior (builder defaults = BROAD_SOURCE_PRIOR; listed for the record)
+    source_prior:
+      R_median_arcsec: 0.3      # LogNormal median; 2 sigma range 0.06"-1.5"
+      R_log_sigma: 0.8
+      n_low: 0.5
+      n_high: 8.0
+      e_max: 0.8                # TruncatedDiskNormal: |e| < 0.8 (q > 0.11)
+      e_scale: 0.4              # per-component ellipticity sigma before truncation
+      center_sigma_arcsec: 0.5
+    # --- quadrature: curvature-adaptive factor map from the observed image
+    adaptive:
+      driver: curvature
+      psf_sigma: 1.126          # native px: STDPSF F140W FWHM 0.1723" / 0.065" / 2.3548 (core width, NOT the flux moment 2.83)
+      alpha: 0.05
+      nsig: 4.0                 # 3.0 leaks isolated factor-2 sky spots (gate ~ promotion threshold at defaults)
+      dilate: 2
+      max_factor: 8.0           # 4 leaves n>=4, R<=0.2" Sersic sources 2-6 sigma wrong at the source-centre image (checked 2026-09-17)
+      floor: 0.25
+    # --- pipeline: lens (mass + light) pinned at TRUTH, source bootstrapped by a short MAP,
+    #     chains start from a tight diagonal qz at that point (user request 2026-09-17:
+    #     "start the sampling at the truth" in place of a dispersed-init check of C-1)
+    # --- lens light: TIED core-Sersic (C-6): R_b = rule(R_e, n), gamma 0, alpha 5 — no core parameters
+    lens_light_profile: core_sersic_tied
+    bootstrap_map_steps: 300
+    bootstrap_map_n_samples: 100
+    bootstrap_diag_scale: 1.0e-6
+    undersampling_check:        # certify the quadrature at the start point before sampling (user request 2026-09-17)
+      reference_supersample: 16
+      supersample_ladder: [1, 2, 4]
+      tolerance: 0.1
+      max_delta_sigma: 1.0      # worst pixel; the lens-centre cusp residue is ~0.5 sigma at factor 8
+      max_frac_above: 1.0e-3    # <= 25 of 25,600 px above 0.1 sigma
+      exclude_cusp_radius_pix: 0.0   # flat-cored lens light: nothing excluded (fit_checks/tied_core_lens_undersampling.json)
+      reference_self_check_frac: 0.5 # reference certified if its ss/2 self-check <= 0.05 sigma (implied reference error ~0.017)
     n_chains: 8
-    num_burnin_steps: 4000
-    num_results: 4000
+    num_burnin_steps: 5000
+    num_results: 5000
     desired_energy_variance: 5.0e-4
 
 sweep:
-  axis: n_max
-  values: [10, 15, 20, 30]
+  - {fit: sersic_truthinit_tied_v1}
 
 metrics:
   - max_rhat
   - min_ess
   - nan_rate
   - mass_zscores
-  - all_zscores
   - wall_time
   - peak_gpu_bytes
 

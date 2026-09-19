@@ -412,3 +412,53 @@ def test_core_sersic_profile_extends_spec_and_preserves_other_draws():
     from gigalens_research.simulations.image_based_light import ImageBasedLight
     model = vs._build_truth_scene_model(cored, ImageBasedLight(np.ones((16, 16)), 0.05))
     assert isinstance(model.planes[0].light[0].profile, CoreSersic)
+
+
+def test_tied_core_sersic_rule_is_deterministic_smooth_and_renders_as_core_sersic():
+    """core_sersic_tied: R_b is a deterministic function of the drawn (R_e, n), gamma 0 and alpha 5
+    are constants, every other draw is unchanged; the softplus knee has a continuous gradient; the
+    fit-side TiedCoreSersic renders exactly what CoreSersic renders at the rule's (R_b, gamma, alpha)."""
+    import jax, jax.numpy as jnp
+    from jax import random
+    from gigalens.jax.profiles.light import sersic
+    from gigalens_research.simtests.experiments import vela_simulated as V
+    from gigalens_research.simtests.experiments.tied_core_sersic import (
+        TIED_CORE_RULE, TiedCoreSersic, tied_core_log10_frac, tied_core_radius)
+    from gigalens_research.simulations.image_based_light import ImageBasedLight
+
+    spec_t = V.resolve_truth_prior_spec(None, "core_sersic_tied")
+    spec_p = V.resolve_truth_prior_spec(None, "sersic")
+    assert spec_t["lens_light"]["0"]["Rb"]["dist"] == "CoreRadiusTied"
+    assert spec_t["lens_light"]["0"]["gamma"] == {"dist": "Fixed", "value": 0.0}
+    key = random.PRNGKey(3)
+    tp = V._sample_to_legacy(V.build_truth_prior(spec_p).sample(seed=key))
+    tt = V._sample_to_legacy(V.build_truth_prior(spec_t).sample(seed=key))
+    tt = V._draw_core_params(tt, spec_t, random.fold_in(key, 31337))
+    for g in range(3):
+        for c in range(len(tp[g])):
+            for k, v in tp[g][c].items():
+                assert float(tt[g][c][k]) == float(v), (g, c, k)
+    ll = tt[1][0]
+    assert ll["gamma"] == 0.0 and ll["alpha"] == 5.0
+    assert np.isclose(ll["Rb"], tied_core_radius(ll["R_sersic"], ll["n_sersic"]))
+    # the rule: 2% at high n, 1% at n=4 within the softplus tolerance, monotone, smooth at the knee
+    assert np.isclose(tied_core_log10_frac(8.0), np.log10(0.02), atol=1e-6)
+    assert abs(tied_core_log10_frac(4.0) - np.log10(0.01)) < 0.03
+    assert abs(tied_core_log10_frac(4.5) - np.log10(0.02)) < 0.11   # softplus knee: <= 0.1 dex below the hinge
+    n_grid = np.linspace(1.0, 6.0, 501); f = tied_core_log10_frac(n_grid); assert np.all(np.diff(f) >= 0)
+    g = jax.grad(lambda n: tied_core_log10_frac(n, None, jnp))
+    d = np.array([float(g(x)) for x in (4.3, 4.45, 4.5, 4.55, 4.7)])
+    assert np.all(np.isfinite(d)) and np.all(np.diff(d) <= 0) and np.max(np.abs(np.diff(d))) < 0.2  # no slope jump
+    # render identity, float64
+    jax.config.update("jax_enable_x64", True)
+    x, y = jnp.meshgrid(jnp.linspace(-2, 2, 33), jnp.linspace(-2, 2, 33))
+    args = dict(R_sersic=1.3, n_sersic=5.1, e1=-0.1, e2=0.03, center_x=0.01, center_y=-0.02)
+    tied = TiedCoreSersic(use_lstsq=False); ref = sersic.CoreSersic(use_lstsq=False)
+    a = tied.light(x, y, Ie=1.0, **args)
+    b = ref.light(x, y, Rb=tied_core_radius(args["R_sersic"], args["n_sersic"]), alpha=TIED_CORE_RULE["alpha"],
+                  gamma=TIED_CORE_RULE["gamma"], Ie=1.0, **args)
+    assert tied.params == ["R_sersic", "n_sersic", "e1", "e2", "center_x", "center_y", "Ie"]
+    assert np.allclose(np.asarray(a), np.asarray(b), rtol=1e-12, atol=0)
+    # truth model carries the explicit CoreSersic; the fit builder accepts the tied profile name
+    model = V._build_truth_scene_model(spec_t, ImageBasedLight(np.ones((16, 16)), 0.05))
+    assert type(model.planes[0].light[0].profile).__name__ == "CoreSersic"

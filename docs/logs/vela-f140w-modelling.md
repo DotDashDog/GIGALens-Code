@@ -22,8 +22,13 @@ with the VELA source at the data's resolution.
   n_max 20 (C-4); n_max 5 is worse than a Sersic. Artifacts `fit_results/vela22_{sersic_v1,truthinit_v1}/`.
   Open: n_max 20 sampling at R-hat 1.010; truth-free starts for the shapelet fits; group page update.
 - 2026-09-19: the cored fits' 10× ESS loss is R_b's posterior geometry (C-6): a floor at 0.01 px and
-  fixed γ do nothing (ESS 851), fixing R_b restores 21,500. Decision pending (user): fix both core
-  parameters in truth and fit, pay the cost, or reparametrise the core by its central deficit.
+  fixed γ do nothing (ESS 851), fixing R_b restores 21,500. User decision: TIE the core — R_b =
+  R_e·10^f(n) (option-B median rule, softplus knee width 0.25 in n, no scatter), γ = 0, α = 5, the
+  same rule in truth and fit (`tied_core_sersic.py`, `lens_light_profile: core_sersic_tied`). Set
+  regenerated (`dataset/`; the scattered-core set kept as `dataset_20260918_core_scatter/`), all
+  shared draws identical. vela22 Sersic-source refit: R-hat 1.0003 / ESS 21,566, mass unchanged.
+  Open: shapelet refits on the tied set; the "wrong core rule in the fit" misspecification test
+  (use `lens_light_profile: core_sersic` with R_b free against the tied truth).
 - 2026-09-18 (user: "rule out quadrature error on the lens-light cusp as the cause"): the cusp
   residue at the truth is −0.46σ at the centre pixel, 0.25–0.46σ over the central 3×3, ≤ 0.06σ
   elsewhere (adaptive-8 vs the generator's ss=32); its Fisher linear-response bias on the lens
@@ -451,6 +456,22 @@ held).** 2026-09-19, vela22 cored set, Sersic source, truth start, 8 × 5000 + 5
     a constant.
 
 ## Log (newest first)
+
+- **2026-09-19 (tied-core set, vela22, Sersic source, truth start) — the tied core-Sérsic lens model
+  (R_b = rule(R_e, n), γ 0, α 5; no core parameters) samples at the pure-Sérsic efficiency, as C-6
+  predicted: R-hat 1.0003 / min ESS 21,566 / 114 ESS/s (prediction: ≤ 1.001 / ~21,000); mass posterior
+  within 0.14σ of the free-core baseline (UNCERTIFIED).** Slurm 58588313 (188 s). Set regenerated the
+  same day with the tied rule (docs/logs/vela-simulated-systems.md, "Tied core"); vela22's core is now
+  0.41 px (1.95% R_e, the rule at n 5.17) instead of the drawn 0.11 px. Undersampling gate at the
+  start: adaptive rung 0.037σ worst pixel, reference self-check 0.024σ (converged), nothing excluded.
+  Mass z: θ_E −3.6, γ +6.2, e1 −8.8, γ2 +4.9 — C-2 unchanged (the fourfold larger core moved no mass
+  parameter by more than 0.14σ of the baseline, consistent with C-5 and the C-6 invariance). Lens-light
+  n narrows to 0.54× the free-R_b width and R_e to 0.87× (means −1.2σ / −0.5σ in baseline units: the
+  R_b–n–R_e valley collapsed onto the rule); source and lens-light centres within 0.5σ. Config
+  `fit_sersic_truthinit_tied_vela22.yaml` (`lens_light_profile: core_sersic_tied` →
+  `TiedCoreSersic`, params = those of SersicEllipse); records in `fit_results/vela22_core_dc6/`
+  (`fitsersic_truthinit_tied_v1/`, `dc6_comparison.json`, `dc6_ess_traces.png`, `overlay_mass_dc6.png`).
+  Not yet re-run on the tied set: the shapelet fits (n_max 5–20) and the truth-free start.
 
 - **2026-09-19 (DC-6 + ablation, vela22 cored set, Sersic source) — the R_b floor and fixed γ do NOT
   recover the sampling efficiency (min ESS 851, global ESS ~2,200 unchanged); fixing R_b as well does

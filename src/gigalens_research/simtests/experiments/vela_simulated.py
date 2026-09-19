@@ -288,11 +288,21 @@ CORE_SERSIC_LENS_LIGHT_DEFAULTS: Dict[str, Dict[str, Any]] = {
     "gamma": {"dist": "Uniform", "low": 0.0, "high": 0.3},
     "alpha": {"dist": "Fixed", "value": 5.0},   # transition sharpness, unresolvable at 0.4 px
 }
-_LENS_LIGHT_PROFILES = ("sersic", "core_sersic")
+# Tied core (2026-09-19, user decision after C-6): the same family with NO free core parameters —
+# R_b = R_e * 10**f(n) (the option-B median rule with a softplus knee, no scatter), gamma 0, alpha 5.
+# The rule lives in tied_core_sersic.py and is shared with the fit-side TiedCoreSersic profile.
+TIED_CORE_SERSIC_LENS_LIGHT_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    "Rb": {"dist": "CoreRadiusTied", "ceiling_frac": 0.02, "n_knee": 4.5,
+           "slope_dex_per_n": 0.6, "knee_width": 0.25},
+    "gamma": {"dist": "Fixed", "value": 0.0},   # flat core: no central singularity
+    "alpha": {"dist": "Fixed", "value": 5.0},
+}
+_LENS_LIGHT_PROFILES = ("sersic", "core_sersic", "core_sersic_tied")
 
 _DIST_KEYS = {
     "LogNormal": {"median", "sigma"},
     "CoreRadiusFraction": {"ceiling_frac", "n_knee", "slope_dex_per_n", "scatter_dex"},
+    "CoreRadiusTied": {"ceiling_frac", "n_knee", "slope_dex_per_n", "knee_width"},
     "Normal": {"loc", "scale"},
     "TruncatedNormal": {"loc", "scale", "low", "high"},
     "Uniform": {"low", "high"},
@@ -317,6 +327,8 @@ def resolve_truth_prior_spec(overrides: Optional[Dict[str, Any]],
     spec = copy.deepcopy(TRUTH_PRIOR_BASELINE)
     if lens_light_profile == "core_sersic":
         spec["lens_light"]["0"].update(copy.deepcopy(CORE_SERSIC_LENS_LIGHT_DEFAULTS))
+    elif lens_light_profile == "core_sersic_tied":
+        spec["lens_light"]["0"].update(copy.deepcopy(TIED_CORE_SERSIC_LENS_LIGHT_DEFAULTS))
     if not overrides:
         return spec
     if not isinstance(overrides, dict):
@@ -377,9 +389,9 @@ def _make_dist(dspec: Dict[str, Any], where: str):
         return tfd.Uniform(f("low"), f("high"))
     if name == "Fixed":
         return tfd.Deterministic(f("value"))
-    if name == "CoreRadiusFraction":
-        raise ValueError(f"[vela_simulated] {where}: CoreRadiusFraction is conditional on "
-                         "n_sersic/R_sersic and is drawn by _draw_core_params, not as a TFP dist.")
+    if name in ("CoreRadiusFraction", "CoreRadiusTied"):
+        raise ValueError(f"[vela_simulated] {where}: {name} is conditional on "
+                         "n_sersic/R_sersic and is set by _draw_core_params, not as a TFP dist.")
     raise AssertionError(name)
 
 
@@ -400,7 +412,12 @@ def _draw_core_params(truth_legacy, spec: Dict[str, Any], key):
     truth = copy.deepcopy(truth_legacy); comp = truth[1][0]
     k_rb, k_gamma = random.split(key)
     d = ll["Rb"]
-    if d["dist"] != "CoreRadiusFraction":
+    if d["dist"] == "CoreRadiusTied":
+        from gigalens_research.simtests.experiments.tied_core_sersic import tied_core_radius
+        # deterministic: the same rule the fit-side TiedCoreSersic evaluates (no random draw)
+        comp["Rb"] = float(tied_core_radius(float(comp["R_sersic"]), float(comp["n_sersic"]),
+                                            {k: d[k] for k in _DIST_KEYS["CoreRadiusTied"]}))
+    elif d["dist"] != "CoreRadiusFraction":
         comp["Rb"] = float(np.asarray(_make_dist(d, "lens_light.0.Rb").sample(seed=k_rb)))
     else:
         mu = _core_rb_log10_median(comp["n_sersic"], d)
@@ -1145,8 +1162,8 @@ def _build_truth_scene_model(prior_spec: Dict[str, Any], light):
         for p, d in prior_spec[group][comp].items():
             if d["dist"] == "Fixed":
                 out[p] = float(d["value"])
-            elif d["dist"] == "CoreRadiusFraction":
-                # structural placeholder only: the truth Rb is drawn by _draw_core_params and
+            elif d["dist"] in ("CoreRadiusFraction", "CoreRadiusTied"):
+                # structural placeholder only: the truth Rb is set by _draw_core_params and
                 # rendered from explicit params; this prior is never sampled.
                 out[p] = tfp.distributions.LogNormal(jnp.log(0.02 * 1.6), 1.0)
             else:
