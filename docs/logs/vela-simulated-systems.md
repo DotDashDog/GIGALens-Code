@@ -1248,3 +1248,59 @@ Candidates by eye and numbers: vela22 (single compact source, θ_E 1.05",
 src/lens 0.29, μ 6.2, peak SB 20.1: bright double/partial ring, nothing else
 in the frame), vela04 (compact, two images at θ_E 1.65", src/lens 0.08, faint
 companion), vela03 (single faint arc, src/lens 0.08).
+
+## Core-Sérsic lens light; set regenerated (2026-09-18, user decision, DC-5 option B) — UNCERTIFIED
+
+User: "re-generate the set with cored sersic profiles for the lens light (both in simulation
+and in modeling) ... fix every issue I can identify now". Basis (docs/logs/vela-f140w-modelling.md,
+DC-5): pure-Sérsic cusps are unphysical for n > 4 (depleted cores, R_b 20–500 pc ≈ 0.5–5% R_e,
+γ ≲ 0.3: Graham+03, Trujillo+04, Dullo & Graham 2014; core/coreless split at M_V ≈ −21.6,
+Kormendy+09), and here a 2% R_e core changes the central pixel of an n ≈ 5 lens by 10σ
+(`fit_checks/core_visibility.py`). The gigalens `CoreSersic` kernel was wrong until PR #105
+(merged 2026-09-18).
+
+Generator: `lens_light_profile: core_sersic` (campaign.yaml). Lens light = `CoreSersic`; the
+truth block gains `Rb` (dist `CoreRadiusFraction`: log10(R_b/R_e) ~ N(μ(n), 0.3 dex),
+μ(n) = log10(0.02) − 0.6·max(0, 4.5 − n)), `gamma` U(0, 0.3), `alpha` Fixed 5. The core
+params are drawn from `fold_in(truth_key, 31337)`, a stream independent of the main truth
+joint, and the main joint skips them, so every other draw is unchanged
+(`vela_simulated_test.py::test_core_sersic_profile_extends_spec_and_preserves_other_draws`;
+24 tests pass). Recorded in meta.json `truth_assets.lens_light_profile` and the manifest.
+
+Regenerated (`dataset/`; the 17 September set kept as `dataset_20260917_sersic_lens/`):
+`fit_checks/regen_draw_check.py` — every shared truth parameter identical to 1e-16 on all
+ten systems, redraw counts identical (vela21: 1), the noise realisation identical except
+within the PSF footprint of the lens centre (≤ 23 px), where the Poisson draw follows the
+changed mean (|Δ| ≤ 1 background rms at the centre pixels). Cores drawn: R_b/R_e 0.04–0.08%
+(n 1.3–3.0), 0.25–0.55% (n 3.0–3.2 and vela22's low draw at n 5.2), 1.1–1.4% (n 4.0–5.8),
+4.0% (vela25, n 4.3, +0.45 dex); γ 0.04–0.24. Lens flux falls by ≤ 1.4% (vela25); source ÷
+lens ratios move in the third decimal. Grid and gallery regenerated (`dataset_{grid,gallery}.png`).
+
+| system | n | R_b/R_e | R_b px | γ | lens flux old → new |
+|---|---|---|---|---|---|
+| vela02 | 3.16 | 0.25% | 0.06 | 0.24 | 831.8 → 831.8 |
+| vela03 | 4.14 | 1.24% | 0.48 | 0.12 | 2005.8 → 2001.5 |
+| vela04 | 3.03 | 0.55% | 0.13 | 0.17 | 1020.5 → 1020.5 |
+| vela08 | 2.97 | 0.08% | 0.02 | 0.13 | 1007.3 → 1007.3 |
+| vela09 | 5.78 | 1.07% | 0.22 | 0.21 | 821.4 → 817.8 |
+| vela21 | 1.26 | 0.05% | 0.01 | 0.22 | 573.4 → 573.4 |
+| vela22 | 5.17 | 0.53% | 0.11 | 0.19 | 1421.2 → 1419.7 |
+| vela23 | 3.97 | 1.36% | 0.34 | 0.04 | 960.2 → 958.1 |
+| vela25 | 4.26 | 4.01% | 0.90 | 0.06 | 906.8 → 894.0 |
+| vela26 | 1.37 | 0.04% | 0.01 | 0.22 | 991.7 → 991.7 |
+
+Quadrature of the cored cusps (`fit_checks/core_lens_undersampling.{py,json}`, lens light only
+at truth vs uniform ss=64, per-pixel σ; one GPU process per system — the ss=64 simulators
+exhaust an A100 across systems and kill a login-node process): the generator's ss=32 truth
+render is within 0.004σ of 64 at every pixel of every system (was 0.035σ at the vela22 cusp);
+the fitter's curvature map (max 8) is within 0.052σ of 64 everywhere (worst: vela09 centre
+0.052, vela22 0.049 on an arc), i.e. the lens centre is no longer a special pixel — the same
+lenses as pure Sérsics gave −0.50σ (vela22), +0.08 (vela09), −0.06 (vela23) at the centre.
+Uniform ss=4 is still inadequate (+0.44σ at vela22's centre, +0.19 at vela03's); ss=8 ≤ 0.05σ.
+The 4-px cusp exclusion in `UndersamplingCheckStage` is therefore no longer needed for cored
+lenses (kept, harmless; to be set to 0 in the new fit configs).
+
+Fit side: `lens_light_profile: core_sersic` in the Vela builders (`_vela_scene_lens_priors`):
+`CoreSersic(use_lstsq=True)` with R_b ~ LogNormal(0.016", 1 dex), γ ~ U(0, 0.5), α = 5
+constant, other lens-light priors unchanged; D = 22 (Sersic source) / n_max-dependent + 2
+(shapelets). Not yet run — the user asked to see the undersampling diagnostics first.

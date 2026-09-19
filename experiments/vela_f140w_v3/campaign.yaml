@@ -146,6 +146,20 @@ dataset:
     border_width_pix: 3
     max_redraws: 50
 
+  # ---- Lens light: core-Sersic (2026-09-18, user decision, DC-5 option B) --
+  # Pure-Sersic cusps are unphysical for n > 4: luminous ellipticals have depleted
+  # cores (R_b 20-500 pc ~ 0.5-5% R_e, gamma <~ 0.3; Graham+03, Trujillo+04,
+  # Dullo & Graham 2014), and at HST resolution a 2% R_e core changes the central
+  # pixel of an n ~ 5 lens by 10 sigma (fit_checks/core_visibility.py). Every lens
+  # light is a core-Sersic; the break radius (fraction of R_e) is log-normal (0.3 dex)
+  # about a median of 2% for n >= 4.5, falling 0.6 dex per unit n below (1% at n = 4,
+  # 0.25% at 3, 0.06% at 2: < 0.06 sigma per pixel, i.e. a pure Sersic to the data's
+  # precision, matching the coreless low-n population); gamma ~ U(0, 0.3); alpha = 5.
+  # Drawn from an independent random stream: all other truth draws are unchanged
+  # from the 2026-09-17 set. Modelled with the same family, R_b free (vela builders,
+  # lens_light_profile: core_sersic). docs/logs/vela-f140w-modelling.md, DC-5.
+  lens_light_profile: core_sersic
+
   # ---- Truth prior: overrides on the notebook cell-4 baseline -------------
   truth_prior:
     lens_mass:

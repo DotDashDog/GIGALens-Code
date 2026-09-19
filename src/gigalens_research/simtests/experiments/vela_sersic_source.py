@@ -94,7 +94,7 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
             f"{sorted(unknown)}; allowed: {sorted(sp)}.")
     sp.update(overrides)
 
-    epl_p, shear_p, lens_light_p = _vela_scene_lens_priors()
+    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(kwargs.get("lens_light_profile", "sersic"))
     source_p = {
         "R_sersic": tfd.LogNormal(jnp.log(float(sp["R_median_arcsec"])), float(sp["R_log_sigma"])),
         "n_sersic": tfd.Uniform(float(sp["n_low"]), float(sp["n_high"])),
@@ -104,7 +104,7 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
     }
     model = LensModel([
         Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
-              light=[Component(sersic.SersicEllipse(use_lstsq=True), lens_light_p)]),
+              light=[Component(lens_light_profile, lens_light_p)]),
         Plane(deflection_ratio=1.0,
               light=[Component(sersic.SersicEllipse(use_lstsq=True), source_p)]),
     ])

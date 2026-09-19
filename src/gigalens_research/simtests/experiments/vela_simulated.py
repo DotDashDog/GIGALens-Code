@@ -273,8 +273,26 @@ TRUTH_PRIOR_BASELINE: Dict[str, Dict[str, Dict[str, Dict[str, Any]]]] = {
     },
 }
 
+# Core-Sersic lens light (option B, user decision 2026-09-18): every lens light is a
+# core-Sersic whose break radius, as a fraction of R_e, is log-normal about an n-dependent
+# median that is CEILING for n >= KNEE and falls by SLOPE dex per unit n below it, so the core
+# is a real feature only where the literature puts depleted cores (luminous, n > 4 galaxies:
+# R_b 20-500 pc ~ 0.5-5% R_e, gamma <~ 0.3; Graham+03, Trujillo+04, Dullo & Graham 2014,
+# Kormendy+09) and sub-resolution (< 0.06 sigma per pixel at n ~ 3, 0 at n <~ 1.5) below.
+# Drawn from a random stream independent of the main truth joint, so switching the profile on
+# leaves every other truth draw unchanged (verified by vela_simulated_test).
+_CORE_PARAMS = ("Rb", "gamma", "alpha")
+CORE_SERSIC_LENS_LIGHT_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    "Rb": {"dist": "CoreRadiusFraction", "ceiling_frac": 0.02, "n_knee": 4.5,
+           "slope_dex_per_n": 0.6, "scatter_dex": 0.3},
+    "gamma": {"dist": "Uniform", "low": 0.0, "high": 0.3},
+    "alpha": {"dist": "Fixed", "value": 5.0},   # transition sharpness, unresolvable at 0.4 px
+}
+_LENS_LIGHT_PROFILES = ("sersic", "core_sersic")
+
 _DIST_KEYS = {
     "LogNormal": {"median", "sigma"},
+    "CoreRadiusFraction": {"ceiling_frac", "n_knee", "slope_dex_per_n", "scatter_dex"},
     "Normal": {"loc", "scale"},
     "TruncatedNormal": {"loc", "scale", "low", "high"},
     "Uniform": {"low", "high"},
@@ -282,14 +300,23 @@ _DIST_KEYS = {
 }
 
 
-def resolve_truth_prior_spec(overrides: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def resolve_truth_prior_spec(overrides: Optional[Dict[str, Any]],
+                             lens_light_profile: str = "sersic") -> Dict[str, Any]:
     """Deep-merge ``overrides`` onto :data:`TRUTH_PRIOR_BASELINE` with a typo guard.
 
     Only existing group / component / parameter keys may be overridden (a new
     parameter cannot be introduced through YAML: the profiles are fixed). Each
     override leaf replaces the whole distribution spec for that parameter.
+    ``lens_light_profile="core_sersic"`` extends the lens-light block with
+    :data:`CORE_SERSIC_LENS_LIGHT_DEFAULTS` (``Rb``, ``gamma``, ``alpha``) before the
+    overrides are applied, so those may be overridden too.
     """
+    if lens_light_profile not in _LENS_LIGHT_PROFILES:
+        raise ValueError(f"[vela_simulated] lens_light_profile must be one of {_LENS_LIGHT_PROFILES}; "
+                         f"got {lens_light_profile!r}.")
     spec = copy.deepcopy(TRUTH_PRIOR_BASELINE)
+    if lens_light_profile == "core_sersic":
+        spec["lens_light"]["0"].update(copy.deepcopy(CORE_SERSIC_LENS_LIGHT_DEFAULTS))
     if not overrides:
         return spec
     if not isinstance(overrides, dict):
@@ -350,7 +377,43 @@ def _make_dist(dspec: Dict[str, Any], where: str):
         return tfd.Uniform(f("low"), f("high"))
     if name == "Fixed":
         return tfd.Deterministic(f("value"))
+    if name == "CoreRadiusFraction":
+        raise ValueError(f"[vela_simulated] {where}: CoreRadiusFraction is conditional on "
+                         "n_sersic/R_sersic and is drawn by _draw_core_params, not as a TFP dist.")
     raise AssertionError(name)
+
+
+def _core_rb_log10_median(n_sersic: float, dspec: Dict[str, Any]) -> float:
+    """log10(R_b / R_e) median: ceiling for n >= knee, falling by ``slope_dex_per_n`` below."""
+    return float(np.log10(float(dspec["ceiling_frac"]))
+                 - float(dspec["slope_dex_per_n"]) * max(0.0, float(dspec["n_knee"]) - float(n_sersic)))
+
+
+def _draw_core_params(truth_legacy, spec: Dict[str, Any], key):
+    """Draw the core-Sersic lens-light params (``Rb`` conditional on the already-drawn
+    ``n_sersic``/``R_sersic``; ``gamma``; fixed ``alpha``) from ``key`` — a stream
+    independent of the main truth joint — and return the completed legacy truth."""
+    from jax import random
+    ll = spec["lens_light"]["0"]
+    if "Rb" not in ll:
+        return truth_legacy
+    truth = copy.deepcopy(truth_legacy); comp = truth[1][0]
+    k_rb, k_gamma = random.split(key)
+    d = ll["Rb"]
+    if d["dist"] != "CoreRadiusFraction":
+        comp["Rb"] = float(np.asarray(_make_dist(d, "lens_light.0.Rb").sample(seed=k_rb)))
+    else:
+        mu = _core_rb_log10_median(comp["n_sersic"], d)
+        z = float(np.asarray(random.normal(k_rb, dtype=jnp_float64())))
+        comp["Rb"] = float(comp["R_sersic"] * 10.0 ** (mu + float(d["scatter_dex"]) * z))
+    comp["gamma"] = float(np.asarray(_make_dist(ll["gamma"], "lens_light.0.gamma").sample(seed=k_gamma)))
+    comp["alpha"] = float(np.asarray(_make_dist(ll["alpha"], "lens_light.0.alpha").sample(seed=k_gamma)))
+    return truth
+
+
+def jnp_float64():
+    import jax.numpy as jnp
+    return jnp.float64
 
 
 def build_truth_prior(spec: Dict[str, Any]):
@@ -363,6 +426,7 @@ def build_truth_prior(spec: Dict[str, Any]):
         for comp, params in spec[group].items():
             comps[comp] = tfd.JointDistributionNamed({
                 p: _make_dist(d, f"truth_prior.{group}.{comp}.{p}") for p, d in params.items()
+                if not (group == "lens_light" and p in _CORE_PARAMS)   # drawn by _draw_core_params
             })
         groups[group] = tfd.JointDistributionNamed(comps)
     return tfd.JointDistributionNamed(groups)
@@ -1073,16 +1137,28 @@ def _build_truth_scene_model(prior_spec: Dict[str, Any], light):
     from gigalens.jax.profiles.mass import epl, shear
     from gigalens.jax.scene import Component, Plane, LensModel
 
+    import jax.numpy as jnp
+    import tensorflow_probability.substrates.jax as tfp
+
     def comp_params(group, comp):
         out = {}
         for p, d in prior_spec[group][comp].items():
-            out[p] = float(d["value"]) if d["dist"] == "Fixed" else _make_dist(d, f"{group}.{comp}.{p}")
+            if d["dist"] == "Fixed":
+                out[p] = float(d["value"])
+            elif d["dist"] == "CoreRadiusFraction":
+                # structural placeholder only: the truth Rb is drawn by _draw_core_params and
+                # rendered from explicit params; this prior is never sampled.
+                out[p] = tfp.distributions.LogNormal(jnp.log(0.02 * 1.6), 1.0)
+            else:
+                out[p] = _make_dist(d, f"{group}.{comp}.{p}")
         return out
 
+    cored = "Rb" in prior_spec["lens_light"]["0"]
+    lens_light_profile = sersic.CoreSersic(use_lstsq=False) if cored else sersic.SersicEllipse(use_lstsq=False)
     planes = [
         Plane(mass=[Component(epl.EPL(50), comp_params("lens_mass", "0")),
                     Component(shear.Shear(), comp_params("lens_mass", "1"))],
-              light=[Component(sersic.SersicEllipse(use_lstsq=False), comp_params("lens_light", "0"))]),
+              light=[Component(lens_light_profile, comp_params("lens_light", "0"))]),
         Plane(deflection_ratio=1.0, light=[Component(light, comp_params("source_light", "0"))]),
     ]
     return LensModel(planes)
@@ -1164,7 +1240,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
     conv_precision = extra.get("conv_precision", None)  # physics-default-ok: None = basis dtype, persisted
     cutoff = _resolve_cutoff(extra, supersample)
     border_width = cutoff["border_width_pix"] if cutoff is not None else 3
-    prior_spec = resolve_truth_prior_spec(extra.get("truth_prior"))  # physics-default-ok: None = baseline, resolved spec recorded
+    lens_light_profile = str(extra.get("lens_light_profile", "sersic"))  # physics-default-ok: v3 sets core_sersic explicitly; recorded in manifest + meta
+    prior_spec = resolve_truth_prior_spec(extra.get("truth_prior"), lens_light_profile)  # physics-default-ok: None = baseline, resolved spec recorded
     prior = build_truth_prior(prior_spec)
     base_key = random.PRNGKey(seed)
 
@@ -1228,6 +1305,8 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
                 truth_key, noise_key = random.split(random.fold_in(sys_key, attempt))
                 calib_key = random.fold_in(noise_key, 7919)  # independent stream; keeps v2 truth/noise draws unchanged
                 truth = _sample_to_legacy(prior.sample(seed=truth_key))
+                # core-Sersic params from their own stream: the main draws stay identical
+                truth = _draw_core_params(truth, prior_spec, random.fold_in(truth_key, 31337))
 
                 lens_only = _render(sim_cut, model, _with(truth, 2, 0, amp=0.0))
                 src_unit = _render(sim_cut, model, _with(_with(truth, 1, 0, Ie=0.0), 2, 0, amp=1.0))
@@ -1337,6 +1416,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
                 likelihood_precision=likelihood_precision,
                 conv_precision=conv_precision,
                 truth_assets={
+                    "lens_light_profile": lens_light_profile,
                     "vela_source_dir": source_dir,
                     "source_redshift": src_meta["redshift"],
                     "source_flux_scale": amp,
@@ -1377,6 +1457,7 @@ def generate_vela_simulated(spec: Any, dataset_dir: str, seed: int) -> None:
             "source_variant": source_variant,
             "cam": cam, "filter": filt, "version": version, "n_reps": n_reps,
             "num_pix": num_pix, "supersample": supersample,
+            "lens_light_profile": lens_light_profile,
             "inference_supersample": inference_supersample, "transpose_image": transpose_image,
             "delta_pix": delta_pix, "delta_pix_source": delta_pix_source,
             "mock_instrument_pixel_arcsec": mock_pix,

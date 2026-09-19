@@ -320,8 +320,11 @@ with the VELA source at the data's resolution.
   bias gone by n20) unchanged. **Falsifier:** any mass parameter moving by > 1σ, or the n_max
   ordering changing. Cost: one 4-GPU allocation, ~26 min.
 
-- **DC-5 — PROPOSAL (2026-09-18, awaiting the user's choice): cored lens light in the truth AND the
-  fit model; how the core depends on n.** User decision: regenerate the set with core-Sersic lens
+- **DC-5 — cored lens light in the truth AND the fit model; how the core depends on n.**
+  **Status: option B approved by the user 2026-09-18 ("Go with option B ... the priors you suggest look
+  good"); IMPLEMENTED and the set REGENERATED the same day (docs/logs/vela-simulated-systems.md,
+  "Core-Sérsic lens light"); undersampling diagnostics of the cored cusps shown to the user before
+  any fit (below); fits not yet re-run.** Original proposal: User decision: regenerate the set with core-Sersic lens
   lights in simulation and modelling "to fix every issue I can identify now". Truth n prior is
   U(1, 6); observed truth n 1.26–5.78.
   - *Literature constraint:* cores are a luminosity phenomenon (present above M_V ≈ −21.6, slow
@@ -360,6 +363,20 @@ with the VELA source at the data's resolution.
 ---
 
 ## Log (newest first)
+
+- **2026-09-18 (DC-5 implemented) — core-Sérsic lens lights in generator and builders; set regenerated
+  with identical lens/source draws; cored-cusp quadrature certified before refitting.** Generator
+  `lens_light_profile: core_sersic` (n-dependent `CoreRadiusFraction` prior, independent random
+  stream; 24 generator tests pass); builders `lens_light_profile: core_sersic` (R_b LogNormal(0.016",
+  1 dex), γ U(0, 0.5), α = 5). Regeneration check: all shared truth parameters identical (1e-16),
+  redraws identical, noise identical outside the PSF footprint of the lens centre. Cored-cusp
+  quadrature (`fit_checks/core_lens_undersampling.py`, vs uniform 64): truth render (32) ≤ 0.004σ;
+  the fits' adaptive-8 map ≤ 0.052σ at every pixel of all ten systems (vela22 centre −0.014σ,
+  was −0.50σ as a pure Sérsic; vela09 +0.052, was +0.081; vela23 +0.019, was −0.062). Uniform 4
+  still fails (0.44σ). Group page updated (artifact v9). The old set is kept at
+  `dataset_20260917_sersic_lens/`; the old runs under `runs/` refer to it. Next: vela22 refits on
+  the cored set (Sersic-source truth-free + truth-start, shapelets under the re-centred β prior)
+  once the user has seen the diagnostics.
 
 - **2026-09-18 (cores; β prior re-centred).** `fit_checks/core_visibility.{py,json}`: would a
   depleted lens-light core be visible here? Each truth lens Sersic vs the same profile with a flat

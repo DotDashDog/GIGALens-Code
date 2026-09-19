@@ -376,3 +376,39 @@ def test_end_to_end_peak_sb_mode():
             assert np.isclose(m["source_ab_mag_unlensed"], zp - 2.5 * np.log10(m["source_flux_unlensed_cps"]))
             targets.append(m["calibration_target"])
         assert targets[0] != targets[1]   # sampled per system, not shared
+
+
+def test_core_sersic_profile_extends_spec_and_preserves_other_draws():
+    """core_sersic adds Rb/gamma/alpha to the lens-light block; the main joint (and so every
+    non-core truth draw) is identical to the sersic profile's for the same key; Rb follows the
+    n-dependent median (2% R_e for n >= 4.5, 0.6 dex per unit n below)."""
+    import jax
+    plain = vs.resolve_truth_prior_spec(None)
+    cored = vs.resolve_truth_prior_spec(None, "core_sersic")
+    assert set(cored["lens_light"]["0"]) - set(plain["lens_light"]["0"]) == {"Rb", "gamma", "alpha"}
+    with pytest.raises(ValueError):
+        vs.resolve_truth_prior_spec(None, "cored")
+    key = jax.random.PRNGKey(3)
+    t_plain = vs._sample_to_legacy(vs.build_truth_prior(plain).sample(seed=key))
+    t_cored = vs._sample_to_legacy(vs.build_truth_prior(cored).sample(seed=key))
+    assert t_plain == t_cored, "the core params must not perturb the main truth draws"
+    t = vs._draw_core_params(t_cored, cored, jax.random.fold_in(key, 31337))
+    ll = t[1][0]
+    assert {"Rb", "gamma", "alpha"} <= set(ll) and ll["alpha"] == 5.0 and 0.0 <= ll["gamma"] <= 0.3
+    assert "Rb" not in t_cored[1][0], "input truth not mutated"
+    d = cored["lens_light"]["0"]["Rb"]
+    assert vs._core_rb_log10_median(5.0, d) == pytest.approx(np.log10(0.02))
+    assert vs._core_rb_log10_median(4.0, d) == pytest.approx(np.log10(0.02) - 0.3)
+    assert vs._core_rb_log10_median(2.0, d) == pytest.approx(np.log10(0.02) - 1.5)
+    # many draws at fixed n: log10(Rb/Re) has the specified median and scatter
+    rbs = []
+    for i in range(400):
+        tt = [[dict(x) for x in g] for g in t_cored]; tt[1][0]["n_sersic"] = 5.5; tt[1][0]["R_sersic"] = 2.0
+        rbs.append(np.log10(vs._draw_core_params(tt, cored, jax.random.PRNGKey(i))[1][0]["Rb"] / 2.0))
+    rbs = np.array(rbs)
+    assert abs(np.median(rbs) - np.log10(0.02)) < 0.05 and abs(rbs.std() - 0.3) < 0.05
+    # the truth scene model carries a CoreSersic and renders finite light with the completed truth
+    from gigalens.jax.profiles.light.sersic import CoreSersic
+    from gigalens_research.simulations.image_based_light import ImageBasedLight
+    model = vs._build_truth_scene_model(cored, ImageBasedLight(np.ones((16, 16)), 0.05))
+    assert isinstance(model.planes[0].light[0].profile, CoreSersic)

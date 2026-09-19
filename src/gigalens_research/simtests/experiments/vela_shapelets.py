@@ -112,13 +112,27 @@ def vela_inference_prior(use_shapelets: bool = True):
 # ---------------------------------------------------------------------------
 
 
-def _vela_scene_lens_priors():
-    """Shared scene priors for EPL + Shear mass and the Sérsic lens light (per-param
-    dicts; fresh objects). Mirrors ``vela_inference_prior``'s lens/lens-light blocks,
-    which are identical across the vela shapelets/sersiclets builders."""
+# Fit-side lens-light family (user decision 2026-09-18, DC-5): the same core-Sersic family as
+# the generator's truth, with NO truth knowledge — R_b free under a broad log prior (median
+# 1% of the R_e prior median = 0.016", 1 dex), gamma U(0, 0.5), alpha fixed at 5 (as in the
+# truth; unresolvable). The pure Sersic is the R_b -> 0 limit, so low-n lenses return an
+# upper bound on R_b. "sersic" keeps the pre-2026-09-18 model for the recorded runs.
+LENS_LIGHT_PROFILES = ("sersic", "core_sersic")
+CORE_SERSIC_FIT_PRIOR = {"Rb_median_arcsec": 0.016, "Rb_log_sigma": 2.302585, "gamma_high": 0.5, "alpha": 5.0}
+
+
+def _vela_scene_lens_priors(lens_light_profile: str = "sersic"):
+    """Shared scene priors for EPL + Shear mass and the lens light (per-param dicts;
+    fresh objects) and the lens-light PROFILE object. Mirrors ``vela_inference_prior``'s
+    lens/lens-light blocks, which are identical across the vela shapelets/sersiclets
+    builders. ``lens_light_profile``: "sersic" (SersicEllipse) or "core_sersic"
+    (CoreSersic with :data:`CORE_SERSIC_FIT_PRIOR`)."""
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
+    from gigalens.jax.profiles.light import sersic
     tfd = tfp.distributions
+    if lens_light_profile not in LENS_LIGHT_PROFILES:
+        raise ValueError(f"lens_light_profile must be one of {LENS_LIGHT_PROFILES}; got {lens_light_profile!r}.")
     epl_p = dict(
         theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
         gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
@@ -139,7 +153,17 @@ def _vela_scene_lens_priors():
         center_x=tfd.Normal(0.0, 0.02),
         center_y=tfd.Normal(0.0, 0.02),
     )
-    return epl_p, shear_p, lens_light_p
+    if lens_light_profile == "core_sersic":
+        c = CORE_SERSIC_FIT_PRIOR
+        lens_light_p.update(
+            Rb=tfd.LogNormal(jnp.log(c["Rb_median_arcsec"]), c["Rb_log_sigma"]),
+            gamma=tfd.Uniform(0.0, c["gamma_high"]),
+            alpha=float(c["alpha"]),   # constant
+        )
+        profile = sersic.CoreSersic(use_lstsq=True)
+    else:
+        profile = sersic.SersicEllipse(use_lstsq=True)
+    return epl_p, shear_p, lens_light_p, profile
 
 
 def make_image_data(system: Any, adaptive: Any = None, mask_disk: Any = None, **common):
@@ -250,7 +274,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         )
     n_max = int(kwargs["n_max"]) if use_shapelets else None  # physics-default-ok: n_max unused when use_shapelets=False; required-check above
 
-    epl_p, shear_p, lens_light_p = _vela_scene_lens_priors()
+    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(kwargs.get("lens_light_profile", "sersic"))
     if use_shapelets:
         src_profile = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
         source_p = dict(
@@ -271,7 +295,7 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
 
     model = LensModel([
         Plane(mass=[Component(epl.EPL(50), epl_p), Component(shear.Shear(), shear_p)],
-              light=[Component(sersic.SersicEllipse(use_lstsq=True), lens_light_p)]),
+              light=[Component(lens_light_profile, lens_light_p)]),
         Plane(deflection_ratio=1.0,
               light=[Component(src_profile, source_p)]),
     ])
