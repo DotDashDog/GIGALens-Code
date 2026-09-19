@@ -121,18 +121,41 @@ LENS_LIGHT_PROFILES = ("sersic", "core_sersic")
 CORE_SERSIC_FIT_PRIOR = {"Rb_median_arcsec": 0.016, "Rb_log_sigma": 2.302585, "gamma_high": 0.5, "alpha": 5.0}
 
 
-def _vela_scene_lens_priors(lens_light_profile: str = "sersic"):
+# Optional overrides of the core-Sersic FIT prior (DC-6, 2026-09-19): the sampler pays for the
+# data-blind part of R_b's prior (below ~0.05 px the likelihood is flat in log R_b) and for the
+# unidentified gamma. ``Rb_low_px`` truncates the R_b LogNormal below at that many native pixels
+# (``Rb_high_arcsec`` is the finite upper truncation the sigmoid chart needs; 2" holds 98% of the
+# untruncated prior and is far above any posterior); ``gamma`` is "free" (U(0, gamma_high)),
+# "truth" (a CONSTANT at the system's truth value — truth knowledge in the fit, testbed only) or
+# a number (a constant; the campaign form once the generator fixes gamma too).
+# ``Rb``: "free" (the LogNormal, truncated or not), "truth" (a constant at the system's truth —
+# ablation only) or a number in arcsec (a constant).
+CORE_SERSIC_PRIOR_OVERRIDES = ("Rb_low_px", "Rb_high_arcsec", "gamma", "Rb")
+
+
+def _vela_scene_lens_priors(lens_light_profile: str = "sersic", core_sersic_prior: Any = None,
+                            delta_pix: Any = None, truth_lens_light: Any = None):
     """Shared scene priors for EPL + Shear mass and the lens light (per-param dicts;
     fresh objects) and the lens-light PROFILE object. Mirrors ``vela_inference_prior``'s
     lens/lens-light blocks, which are identical across the vela shapelets/sersiclets
     builders. ``lens_light_profile``: "sersic" (SersicEllipse) or "core_sersic"
-    (CoreSersic with :data:`CORE_SERSIC_FIT_PRIOR`)."""
+    (CoreSersic with :data:`CORE_SERSIC_FIT_PRIOR`). ``core_sersic_prior`` (dict, keys
+    :data:`CORE_SERSIC_PRIOR_OVERRIDES`) modifies that prior; ``delta_pix`` [arcsec] is needed
+    for ``Rb_low_px`` and ``truth_lens_light`` (the system's lens-light truth dict) for
+    ``gamma: "truth"``."""
     import jax.numpy as jnp
     import tensorflow_probability.substrates.jax as tfp
     from gigalens.jax.profiles.light import sersic
     tfd = tfp.distributions
+    tfb = tfp.bijectors
     if lens_light_profile not in LENS_LIGHT_PROFILES:
         raise ValueError(f"lens_light_profile must be one of {LENS_LIGHT_PROFILES}; got {lens_light_profile!r}.")
+    ov = dict(core_sersic_prior or {})
+    unknown = set(ov) - set(CORE_SERSIC_PRIOR_OVERRIDES)
+    if unknown:
+        raise KeyError(f"core_sersic_prior: unknown keys {sorted(unknown)}; allowed: {list(CORE_SERSIC_PRIOR_OVERRIDES)}.")
+    if ov and lens_light_profile != "core_sersic":
+        raise ValueError("core_sersic_prior given but lens_light_profile is not 'core_sersic'.")
     epl_p = dict(
         theta_E=tfd.LogNormal(jnp.log(1.25), 0.4),
         gamma=tfd.TruncatedNormal(2.0, 0.5, 1.0, 3.0),
@@ -155,9 +178,34 @@ def _vela_scene_lens_priors(lens_light_profile: str = "sersic"):
     )
     if lens_light_profile == "core_sersic":
         c = CORE_SERSIC_FIT_PRIOR
+        mu, sig = jnp.log(c["Rb_median_arcsec"]), c["Rb_log_sigma"]
+        if ov.get("Rb_low_px") is not None:
+            if delta_pix is None:
+                raise ValueError("core_sersic_prior.Rb_low_px needs delta_pix (arcsec per native pixel).")
+            lo = jnp.log(float(ov["Rb_low_px"]) * float(delta_pix))
+            hi = jnp.log(float(ov.get("Rb_high_arcsec", 2.0)))
+            Rb_dist = tfd.TransformedDistribution(tfd.TruncatedNormal(mu, sig, lo, hi), tfb.Exp())
+        else:
+            Rb_dist = tfd.LogNormal(mu, sig)
+        r = ov.get("Rb", "free")
+        if r == "truth":
+            if truth_lens_light is None or "Rb" not in truth_lens_light:
+                raise ValueError("core_sersic_prior.Rb='truth' needs truth_lens_light with an 'Rb' entry.")
+            Rb_dist = float(truth_lens_light["Rb"])       # constant at the truth (ablation only)
+        elif r != "free":
+            Rb_dist = float(r)                            # constant [arcsec]
+        g = ov.get("gamma", "free")
+        if g == "free":
+            gamma_p = tfd.Uniform(0.0, c["gamma_high"])
+        elif g == "truth":
+            if truth_lens_light is None or "gamma" not in truth_lens_light:
+                raise ValueError("core_sersic_prior.gamma='truth' needs truth_lens_light with a 'gamma' entry.")
+            gamma_p = float(truth_lens_light["gamma"])   # constant at the truth (testbed only)
+        else:
+            gamma_p = float(g)                            # constant
         lens_light_p.update(
-            Rb=tfd.LogNormal(jnp.log(c["Rb_median_arcsec"]), c["Rb_log_sigma"]),
-            gamma=tfd.Uniform(0.0, c["gamma_high"]),
+            Rb=Rb_dist,
+            gamma=gamma_p,
             alpha=float(c["alpha"]),   # constant
         )
         profile = sersic.CoreSersic(use_lstsq=True)
@@ -274,7 +322,9 @@ def build_epl_shear_sersic_shapelets(system: Any, **kwargs) -> Any:
         )
     n_max = int(kwargs["n_max"]) if use_shapelets else None  # physics-default-ok: n_max unused when use_shapelets=False; required-check above
 
-    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(kwargs.get("lens_light_profile", "sersic"))
+    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(
+        kwargs.get("lens_light_profile", "sersic"), kwargs.get("core_sersic_prior"),
+        delta_pix=system.delta_pix, truth_lens_light=system.truth_x[1][0])
     if use_shapelets:
         src_profile = shapelets.Shapelets(n_max=n_max, use_lstsq=True, interpolate=False)
         source_p = dict(

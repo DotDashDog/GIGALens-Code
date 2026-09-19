@@ -1,0 +1,212 @@
+# vela22 on the CORED set, Sersic source, truth start — DC-6 ABLATION (2026-09-19): the core-Sersic lens
+# light with BOTH core parameters fixed at the system's truth (R_b 0.113 px, gamma 0.192), i.e. 20 free
+# parameters as in the pure-Sersic-lens fit on the old set (R-hat 1.0003 / min ESS 21,500). If the ESS
+# returns to that level the whole 10x sampling cost of the cored fits is R_b's posterior geometry (the
+# soft one-sided constraint with a "no core" plateau reached through n / R_e); if it does not, the
+# core-Sersic kernel itself slows the integrator. Truth knowledge in the fit: diagnostic only.
+#
+#   SHARDS=6/10 YAML=experiments/vela_f140w_v3/fit_sersic_truthinit_core_rbfix_vela22.yaml experiments/vela_f140w_v3/run_vela22.sh
+# Results: <output_dir>/runs/vela22_cam12_a0.400_rep00/fitsersic_truthinit_core_v2_rbfix_gfix/
+
+name: vela_f140w_v3
+seed: 0
+output_dir: /pscratch/sd/l/linusu/gigalens/simtests_results/vela_f140w_v3
+
+plugins:
+  - gigalens_research.simtests.experiments.vela_simulated
+  - gigalens_research.simtests.experiments.vela_sersic_source
+
+dataset:
+  generator: vela_simulated
+
+  # ---- Source: which Vela galaxies, at which redshift --------------------
+  scale_factor: "a0.400"          # z = 1/a - 1 = 1.5 exactly (HLSP snapshot)
+  # Same review list as v2 (12 sources incl. the double-nucleus vela09).
+  # vela10 dropped (2026-09-15): a companion cut by the VELA frame edge (7 sigma per
+  # image pixel, 2.5% of the flux in the outer 0.15") would enter the cutout truncated.
+  # vela07 dropped (2026-09-15, user decision): its far clumps put 5-12% of the flux
+  # outside the frame and, with the border rule measured against the real sigma,
+  # it only passed the cut-off at a 3-sigma-faint brightness target (lens-only image).
+  # Removing it shifts seed_fold_index for the sources after it (user: acceptable).
+  vela_ids: ["02", "03", "04", "08", "09", "21", "22", "23", "25", "26"]
+  cam: "12"
+  filter: "f140w"                 # WFC3/IR; the HLSP tarballs are ~500 MB per sim
+  version: "v3"
+  n_reps: 1                       # 1 for the review set; raise to 5 for the campaign
+  source_variant: IMAGE_PRISTINE  # with dust radiative transfer
+  # No crop (2026-09-15, user decision): the source morphology is what these systems
+  # test, so it is left as delivered by VELA; the frame edge holds < 1% of the flux
+  # for every kept source (docs/logs/vela-simulated-systems.md, "No crop at all?").
+  # The 1.5" crop used until then lensed into a visible sub-noise edge (S/N 16 in
+  # vela21). Arcs are kept inside the frame by the cut-off redraws alone.
+  # No source smoothing (2026-09-17, user decision, reversing the 2-cell Gaussian
+  # of the same day). The raw Sunrise maps carry Monte-Carlo sampling noise, but
+  # it is confined to faint cells (white, 50-1200% per cell below 1% of the peak;
+  # 5-12% at the nuclei), and the nuclear cusps are resolved simulation structure
+  # over +-4 cells that a uniform smoothing cut to 30-40% of their peak. The
+  # instrument PSF averages the speckle in the data ((0.073")^2 / mu ~ 10 cells^2
+  # at mu = 10; raw-vs-smoothed lensed residuals <= 1-2 sigma away from cusps).
+  # The evaluation truth for reconstructions is to be defined at the data's
+  # source-plane resolution at evaluation time. docs/logs/vela-simulated-systems.md,
+  # "Are the nuclear cusps real".
+  source_smooth_sigma_pix: null
+  source_crop_radius_arcsec: null
+  source_recenter: true
+  transpose_image: false
+  # The per-sim tarballs do not fit in $HOME (40 GiB quota, 99% used): keep the
+  # downloads and the extracted sources on scratch.
+  datadir: /pscratch/sd/l/linusu/gigalens/vela_downloads
+  source_root: /pscratch/sd/l/linusu/gigalens/vela_sources_pristine
+
+  # ---- Image grid ---------------------------------------------------------
+  # 160 px (2026-09-17, user decision after the frame-size scan, finding 3): at
+  # 120 px the border rule capped theta_E near 1.9" for the extended sources
+  # (vela25 lost 81% of its draws), correlating source size with the lens draw.
+  # At 160 px with the 2-sigma border below the accepted theta_E is independent
+  # of source size (rho +0.03, min acceptance 0.82; frame_size_scan.json).
+  # Foundry V uses 64-120 px cutouts; the extra rows are sky.
+  num_pix: 160                    # 10.4" at 0.065"/px
+  delta_pix: 0.065                # drizzled scale; overrides the mock's 0.06" TPIX
+  # Truth render. The VELA pristine sources have 0.0073" pixels: supersample 4
+  # (0.016" sub-pixels) under-samples them and left up to 0.74 sigma_bkg of
+  # speckle on vela02's arcs, and the lens Sersic cusp moved by 0.5 sigma between
+  # sub-grids (experiments/vela_f140w_v3/supersample_check.png, 2026-09-15).
+  # 32 (0.002" sub-pixels) is < 0.1 sigma from 16 everywhere; 5-9 s per render.
+  supersample: 32
+  # What the fitter reads back from meta.json (its own sub-grid, independent of
+  # the truth render).
+  inference_supersample: 4
+  likelihood_precision: float64
+
+  # ---- PSF: STScI empirical WFC3/IR F140W effective PSF (J. Anderson) ------
+  psf:
+    kind: stdpsf
+    era: null                     # the WFC3IR library has one file per filter
+    chip_xy: [507, 507]           # detector centre (1014 x 1014); 3x3 grid, nearest used
+    size_pix: 33                  # 2.1" box at 0.065"/px (Foundry V: 27-33 px empirical PSFs)
+    subsamples: 6
+    # Recorded approximation: the ePSF keeps the native 0.13" pixel response
+    # (it is not deconvolved before resampling to 0.065"); drizzle (pixfrac)
+    # broadening is not modelled. Foundry's own PSF is built from stars in the
+    # drizzled mosaic, so both carry a ~native-pixel box.
+
+  # ---- Noise: measured on the DESI-238 F140W cutout (Foundry V) -------------
+  # background_rms is the per-pixel background sigma of the real drizzled cutout
+  # (data/desi238/cutout238b.npy; photutils.background in
+  # experiments/real_systems/desi238/MCLMC_238.ipynb; re-measured 2026-09-15 as
+  # 0.0070 clipped), i.e. the number the real-data fits use. exp_time from the
+  # header. The noise is added white here; the real cutout's noise is correlated
+  # by drizzle (lag-1 autocorrelation 0.60 / 0.52, lag-2 0.10), and the
+  # white-noise-equivalent sigma summed over the correlation is ~0.017 cps/px,
+  # close to the physical estimate for sky 21.8 mag/arcsec^2 + 3 x 15 e- read
+  # noise + dark (0.0196; `kind: instrument`). Modelling the drizzle correlation
+  # is a possible later extension.
+  noise:
+    kind: explicit
+    background_rms: 0.0076        # cps per 0.065" px (DESI-238)
+    exp_time: 1197.7              # s, DESI-238 header (3 x 399.23 s); Poisson-term gain 1 e-/count
+
+  # ---- Source brightness: the simulation's own photometry -------------------
+  # amplitude 1 = the VELA HLSP F140W flux (PHOTFNU-scaled nJy at z = 1.5, distance
+  # modulus 45.22 from the header): unlensed 21.2-24.2 AB, M_AB -21 to -24.
+  # Decision 2026-09-17 (user), after the Foundry peak-SB anchor (Normal(21.1, 1.0)
+  # mag/arcsec^2 over 9 px) returned amplitudes 0.24-1.68 for these lenses: the
+  # native brightness already puts the arcs at 20.1-22.1 mag/arcsec^2, inside the
+  # Foundry band, so no calibration is applied. The size-brightness correlation
+  # (rho(R50, M_AB) = -0.81) is VELA's own size-luminosity relation and is kept
+  # on purpose (reviewer finding 3, second mechanism; tabled question 4).
+  # `campaign_unlensed_mag.yaml` (the magnification route) is superseded and no
+  # longer regenerated.
+  calibration:
+    source_flux_scale: 1.0
+
+  # ---- Cut-off guarantee ---------------------------------------------------
+  cutoff:
+    canvas_factor: 2              # measure on a 20.8" canvas
+    canvas_supersample: 8         # numerics of the check only (thresholds are 10% / 2 sigma)
+    # 10% (2026-09-15): with uncropped sources the light that lands outside the
+    # frame is far companions / outer clumps, not the arcs (vela07 has 12% of its
+    # flux beyond 3" and cannot pass 1% at any theta_E); the border rule below
+    # is what guards against visibly truncated arcs. Losing clumps is accepted.
+    max_flux_outside: 0.10
+    max_border_sb_sigma: 2.0      # 2 sigma at 160 px (2026-09-17): see num_pix; 1 sigma still selected on theta_E at 160 px (rho -0.32)
+    border_width_pix: 3
+    max_redraws: 50
+
+  lens_light_profile: core_sersic   # as campaign.yaml (2026-09-18)
+
+  # ---- Truth prior: overrides on the notebook cell-4 baseline -------------
+  truth_prior:
+    lens_mass:
+      "0":
+        theta_E: {dist: LogNormal, median: 1.5, sigma: 0.25}   # group decision
+    lens_light:
+      "0":
+        # Ie is a surface brightness (cps per arcsec^2): the integrated lens flux
+        # does not depend on delta_pix (verified: a first v3 run with median 100
+        # gave lens light 17.3-17.6 AB, 5x the v2 flux at the same R_e/n prior).
+        # Median 20 -> ~19.1 AB in F140W for the baseline R_e / n prior, chosen
+        # (2026-09-14) to match the two Foundry V lenses with published I_e
+        # (J234 / J246 render to 19.25 / 19.04 AB in the same 120 px cutout);
+        # median 30 gave 18.7 AB (0.5 mag brighter than those two).
+        Ie: {dist: LogNormal, median: 20.0, sigma: 0.3}
+
+inference:
+  builder: epl_shear_sersic_sersic_source_broad
+  pipeline: map_bootstrap_mclmc
+  pipeline_kwargs:
+    # --- model: broad source prior (builder defaults = BROAD_SOURCE_PRIOR; listed for the record)
+    source_prior:
+      R_median_arcsec: 0.3      # LogNormal median; 2 sigma range 0.06"-1.5"
+      R_log_sigma: 0.8
+      n_low: 0.5
+      n_high: 8.0
+      e_max: 0.8                # TruncatedDiskNormal: |e| < 0.8 (q > 0.11)
+      e_scale: 0.4              # per-component ellipticity sigma before truncation
+      center_sigma_arcsec: 0.5
+    # --- quadrature: curvature-adaptive factor map from the observed image
+    adaptive:
+      driver: curvature
+      psf_sigma: 1.126          # native px: STDPSF F140W FWHM 0.1723" / 0.065" / 2.3548 (core width, NOT the flux moment 2.83)
+      alpha: 0.05
+      nsig: 4.0                 # 3.0 leaks isolated factor-2 sky spots (gate ~ promotion threshold at defaults)
+      dilate: 2
+      max_factor: 8.0           # 4 leaves n>=4, R<=0.2" Sersic sources 2-6 sigma wrong at the source-centre image (checked 2026-09-17)
+      floor: 0.25
+    # --- pipeline: lens (mass + light) pinned at TRUTH, source bootstrapped by a short MAP,
+    #     chains start from a tight diagonal qz at that point (user request 2026-09-17:
+    #     "start the sampling at the truth" in place of a dispersed-init check of C-1)
+    # --- lens light: core-Sersic family (DC-5; R_b LogNormal(0.016", 1 dex), gamma U(0, 0.5), alpha 5)
+    lens_light_profile: core_sersic
+    core_sersic_prior:          # DC-6 ablation: both core parameters constants at the truth
+      Rb: truth
+      gamma: truth
+    bootstrap_map_steps: 300
+    bootstrap_map_n_samples: 100
+    bootstrap_diag_scale: 1.0e-6
+    undersampling_check:        # certify the quadrature at the start point before sampling (user request 2026-09-17)
+      reference_supersample: 16
+      supersample_ladder: [1, 2, 4]
+      tolerance: 0.1
+      max_delta_sigma: 1.0      # worst pixel; the lens-centre cusp residue is ~0.5 sigma at factor 8
+      max_frac_above: 1.0e-3    # <= 25 of 25,600 px above 0.1 sigma
+      exclude_cusp_radius_pix: 0.0   # cored lens light: the centre integrates at factor 8 (<= 0.05 sigma), nothing excluded
+      reference_self_check_frac: 0.5 # reference certified if its ss/2 self-check <= 0.05 sigma (implied reference error ~0.017)
+    n_chains: 8
+    num_burnin_steps: 5000
+    num_results: 5000
+    desired_energy_variance: 5.0e-4
+
+sweep:
+  - {fit: sersic_truthinit_core_v2_rbfix_gfix}
+
+metrics:
+  - max_rhat
+  - min_ess
+  - nan_rate
+  - mass_zscores
+  - wall_time
+  - peak_gpu_bytes
+
+execution:
+  systems_per_task: 1

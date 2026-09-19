@@ -30,6 +30,7 @@ echo "jobid=$JOBID" | tee -a "$LOG"
 
 srun --overlap --jobid="$JOBID" -N1 -n1 --gpus=4 --gpu-bind=none bash -c "
   export PYTHONPATH=$GL:$REPO/src JAX_ENABLE_X64=1 MPLBACKEND=Agg
+  unset JAX_PLATFORMS   # 2026-09-19: an inherited JAX_PLATFORMS=cpu (from a CPU smoke test in the calling shell) ran a whole fit on the node CPU until the wall limit
   cd $REPO
   $PY -c 'import jax, gigalens; print(\"jax\", jax.__version__, \"devices\", jax.devices()); print(\"gigalens\", gigalens.__file__)'
   for S in $SHARDS; do

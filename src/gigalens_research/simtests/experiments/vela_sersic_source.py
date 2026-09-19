@@ -70,6 +70,10 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
     ``source_prior`` (dict, optional): overrides for :data:`BROAD_SOURCE_PRIOR`
     keys; unknown keys raise (a typo must not silently keep the default).
 
+    ``lens_light_profile`` ("sersic" | "core_sersic") and ``core_sersic_prior`` (dict,
+    see :data:`vela_shapelets.CORE_SERSIC_PRIOR_OVERRIDES`): the lens-light family and
+    optional R_b truncation / fixed gamma (DC-6).
+
     ``adaptive`` (dict, optional): curvature/SNR-adaptive quadrature, see
     :func:`vela_shapelets.make_image_data` (shared by all Vela builders). Without it
     the dataset's ``inference_supersample`` (meta.json) is used uniformly.
@@ -94,7 +98,9 @@ def build_epl_shear_sersic_sersic_source_broad(system: Any, **kwargs) -> Any:
             f"{sorted(unknown)}; allowed: {sorted(sp)}.")
     sp.update(overrides)
 
-    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(kwargs.get("lens_light_profile", "sersic"))
+    epl_p, shear_p, lens_light_p, lens_light_profile = _vela_scene_lens_priors(
+        kwargs.get("lens_light_profile", "sersic"), kwargs.get("core_sersic_prior"),
+        delta_pix=system.delta_pix, truth_lens_light=system.truth_x[1][0])
     source_p = {
         "R_sersic": tfd.LogNormal(jnp.log(float(sp["R_median_arcsec"])), float(sp["R_log_sigma"])),
         "n_sersic": tfd.Uniform(float(sp["n_low"]), float(sp["n_high"])),

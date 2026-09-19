@@ -21,6 +21,9 @@ with the VELA source at the data's resolution.
   χ²/ν 1.005, lens mass biased 3–9σ (C-2); the bias is source-driven — falls with n_max, gone at
   n_max 20 (C-4); n_max 5 is worse than a Sersic. Artifacts `fit_results/vela22_{sersic_v1,truthinit_v1}/`.
   Open: n_max 20 sampling at R-hat 1.010; truth-free starts for the shapelet fits; group page update.
+- 2026-09-19: the cored fits' 10× ESS loss is R_b's posterior geometry (C-6): a floor at 0.01 px and
+  fixed γ do nothing (ESS 851), fixing R_b restores 21,500. Decision pending (user): fix both core
+  parameters in truth and fit, pay the cost, or reparametrise the core by its central deficit.
 - 2026-09-18 (user: "rule out quadrature error on the lens-light cusp as the cause"): the cusp
   residue at the truth is −0.46σ at the centre pixel, 0.25–0.46σ over the central 3×3, ≤ 0.06σ
   elsewhere (adaptive-8 vs the generator's ss=32); its Fisher linear-response bias on the lens
@@ -175,6 +178,50 @@ with the VELA source at the data's resolution.
 - **Proposed by / on:** producer (Claude) · 2026-09-18   ·   **Grader:** _pending_
 
 ---
+
+### C-6 — The 10× MCLMC efficiency loss of the core-Sérsic lens fits is R_b's posterior geometry alone (a hockey-stick R_b–n valley with a "no core" shelf), not the prior tail, not γ, not the kernel
+
+**Status: UNCERTIFIED (one system, one seed, three runs; the invariance and ablation legs both
+held).** 2026-09-19, vela22 cored set, Sersic source, truth start, 8 × 5000 + 5000 MCLMC.
+
+| run | free params | max R-hat | min ESS (param) | mean ESS | ESS/s | max mass Δmean/σ vs baseline |
+|---|---|---|---|---|---|---|
+| baseline core-Sérsic fit (`_core_v1`) | 22 | 1.0078 | 1,938 (R_b) | 2,544 | 9.8 | – |
+| DC-6: R_b ≥ 0.01 px, γ fixed at truth (`_v2_rbfloor_gfix`) | 21 | 1.0077 | 851 (R_b) | 2,144 | 4.3 | 0.014 |
+| ablation: R_b and γ fixed at truth (`_v2_rbfix_gfix`) | 20 | 1.0003 | 21,515 (e1) | 21,817 | 112 | 0.24 (γ_mass) |
+| reference: pure-Sérsic lens, old set (`_v1`) | 20 | 1.0003 | 21,511 | – | 94 | – |
+
+- *Evidence for the mechanism* (`fit_results/vela22_core_dc6/`): in the sampler's coordinates z_R_b
+  has σ 0.83 (baseline) / 0.51 (DC-6) while every other coordinate has σ ≤ 0.025 — one direction 30–70×
+  wider than the rest, and bimodal in scale (σ 0.19–0.37 in the bulk R_b > 0.05 px, 0.8–1.1 on the
+  shelf). The conditional χ² profile (all else at the bulk mean) rises by 44 from R_b 0.2 px to no
+  core, but along the valley (n 5.24 → 5.11, R_e 1.324 → 1.312", θ_E unchanged to 3e-4) it rises by
+  only 7: "no core" is a 2.6σ-disfavoured shelf holding 6% of the posterior, reached through n
+  (`rb_valley.png`: n vs log R_b is a hockey stick, tight and steep above 0.1 px, flat below).
+  The truncation at 0.01 px left the shelf (0.01–0.05 px) intact and gave it a hard wall the chain
+  parks against for hundreds of steps (`dc6_ess_traces.png`), which is why R_b's ESS halved;
+  every other parameter's ESS was unchanged (2,200–2,500) because MCLMC's single step size/L is set
+  by that one direction. Fixing γ changed nothing (it was prior-flat; its only structure was the
+  R_b–γ deficit degeneracy at large R_b). Fixing R_b removed the direction and every parameter went
+  back to the pure-Sérsic ESS to within 1%.
+- *Invariance*: DC-6 vs baseline — every parameter mean within 0.035σ (R_b −0.14σ, its width ×0.82),
+  widths within 6%; ablation vs baseline — mass within 0.24σ (widths within 4%); lens-light n narrows
+  ×0.41 and R_e ×0.81 when R_b is known (the R_b–n–R_e valley is what they were paying for), the
+  lens-light R_e z goes −5.3 → −7.4 with that narrowing (the C-5 quadrature nuisance, unchanged in
+  absolute terms).
+- *Doubts*: one system (vela22, n 5.2, R_b 0.11 px — the most core-sensitive case); one seed; ESS
+  measured with rank-normalised arviz on 8 × 5000 draws; the "shelf" interpretation rests on the
+  binned χ² along the samples, not on a profiled likelihood; the shapelet runs (R_b at the floor,
+  ESS 5–6k) are consistent with the mechanism but were not re-run.
+- *What would fix it (not applied; user's call)*: (a) fix R_b in the fit as well as γ — needs a
+  generator rule that makes it a known constant (both core parameters fixed in truth and fit), or
+  accept truth knowledge; (b) keep R_b free and pay: ESS 2,000 per 200 s already clears the
+  certification line, ×4 draws (~13 min/system) gives ESS ~8,000; (c) reparametrise the core by its
+  observable (the central light deficit, a monotone function of R_b, γ, n) so the shelf maps to a
+  Gaussian end — the principled fix, a gigalens profile change; (d) a floor at ~0.05 px would cut the
+  shelf but is prior-dominated there by construction (6% of the posterior). Note that on the
+  shapelet runs R_b sits entirely on the shelf (the data prefer no core once the source is
+  flexible), so (a) or (c) also removes an unconstrained parameter there.
 
 ## Design checkpoints (criteria awaiting approval)
 
@@ -364,7 +411,61 @@ with the VELA source at the data's resolution.
 
 ---
 
+- **DC-6 — Run: vela22 (cored set), Sersic source, truth start, R_b prior truncated below at
+  0.01 px, γ fixed at the truth (0.192).** **Status: RUN 2026-09-19 — falsifier (i) FIRED (min ESS
+  851, global ESS unchanged at ~2,200); invariance held (mass ≤ 0.014σ). The follow-up ablation
+  with R_b ALSO fixed restored ESS 21,515 = the pure-Sérsic level: the whole 10× cost is R_b's
+  posterior geometry (log entry of the day; C-6).** Original pre-registration: User request 2026-09-19 ("try running the sersic fit
+  again with the break radius truncated at 0.01 px and the core log slope fixed at truth ... looking
+  for a significant improvement in sampling efficiency (recovering from the 10x loss)").
+  Config `experiments/vela_f140w_v3/fit_sersic_truthinit_core_rbfloor_vela22.yaml` (sweep
+  `sersic_truthinit_core_v2_rbfloor_gfix`; builder kwarg `core_sersic_prior`: R_b ~
+  LogNormal(0.016", 1 dex) truncated to [0.01 px = 0.00065", 2"] via TruncatedNormal∘Exp, γ a
+  constant at `system.truth_x` — truth knowledge in the fit, testbed only). Baseline to beat:
+  `fitsersic_truthinit_core_v1` (R-hat 1.0078, min ESS 1,938, ESS 1,900–3,200 on ALL 22
+  parameters, wall 198 s); the pure-Sérsic lens fit on the old set had 1.0003 / 21,500.
+  - **Claim type:** stochastic-estimator behaviour (MCLMC efficiency), plus an invariance check
+    (the posterior where the data constrain it must not move). Classification: *fine-tuning* of the
+    prior in a data-blind region (the likelihood is flat in log R_b below ~0.05 px; γ is prior-flat
+    at this R_b), not a structural change — provided the invariance holds.
+  - **Cause hypothesis:** the loss is a global tuning failure, not an R_b-only one: every parameter
+    lost the same factor (mass ESS 21,500 → 2,500), which points at MCLMC's single step size /
+    trajectory length being set by the two flat directions (log R_b over ~2 dex of prior tail, γ
+    over its full U(0, 0.5)) rather than by the 20 informative ones. Cutting the tail to 0.7 dex
+    (0.01–0.05 px) and removing γ should let the adaptation settle on the informative scales.
+  - **Prediction (direction + magnitude):** min ESS ≥ 10,000 over all 21 parameters (≥ 5× the
+    baseline; a full recovery would be ~20,000), max R-hat ≤ 1.002, chain-mean spread ≤ 0.1σ;
+    wall time within ±30% of the baseline (so ESS/s rises by the same factor). Invariance: every
+    lens-mass mean within 0.3σ of the baseline's and widths within 20%; R_b median 0.15–0.25 px
+    with < 1% of draws below 0.02 px; lens-light n and R_e means within 0.5σ (widths may narrow
+    with γ fixed — record the factor).
+  - **Falsifiers:** (i) min ESS < 5,000 → the remaining 0.7-dex plateau (or the R_b–n–R_e banana
+    itself) still sets the tuning; the floor must sit near 0.05 px or the σ must narrow, i.e. the
+    cause is not the prior tail extent (structurally different); (ii) any mass mean moving > 0.5σ
+    → fixing γ or the truncation changed what the data see, and the change is not a free
+    efficiency gain; (iii) the bootstrap/undersampling gates behaving differently from the
+    baseline (they should be identical: same start, same quadrature).
+  - **Untested by this run:** whether truncation alone or γ alone gives the gain (single-lever
+    ablations if the combined run underdelivers); whether the campaign form (γ fixed at the
+    generator's constant, no truth knowledge) behaves the same — it should, since a constant is
+    a constant.
+
 ## Log (newest first)
+
+- **2026-09-19 (DC-6 + ablation, vela22 cored set, Sersic source) — the R_b floor and fixed γ do NOT
+  recover the sampling efficiency (min ESS 851, global ESS ~2,200 unchanged); fixing R_b as well does
+  (ESS 21,515, = the pure-Sérsic level). Mass posterior identical in all three (C-6, UNCERTIFIED).**
+  Slurm 58586310 (DC-6, 200 s) and 58587575 (ablation, 191 s). Builder kwarg `core_sersic_prior`
+  (`Rb_low_px`, `Rb_high_arcsec`, `gamma`, `Rb`; "truth" values are truth knowledge in the fit —
+  testbed/ablation only). Configs `fit_sersic_truthinit_core_{rbfloor,rbfix}_vela22.yaml`; results and
+  diagnostics `fit_results/vela22_core_dc6/` (`analyze_dc6.py`, `dc6_comparison.json`,
+  `z_geometry.json`, `rb_valley_profile.json`, `dc6_ess_traces.png`, `rb_valley.png`,
+  `overlay_mass_dc6.png`). Prediction miss recorded: DC-6 predicted ESS ≥ 10,000 from removing the
+  prior tail and γ; the cause was mis-assigned — the tail was a symptom of the R_b–n valley, which
+  the truncation cannot remove. Process error recorded: the first ablation launch inherited
+  `JAX_PLATFORMS=cpu` from a CPU smoke test in the same shell and ran the whole pipeline on the node
+  CPU until the 1-h wall limit (Slurm 58586453, partial output kept as
+  `..._rbfix_gfix_cpu_partial_20260919`); the launcher now unsets the variable.
 
 - **2026-09-18 (cored set, truth start, all five source models) — C-2/C-4 reproduced with the
   core-Sérsic lens model and the re-centred β prior; the core parameters are the poorly sampled
