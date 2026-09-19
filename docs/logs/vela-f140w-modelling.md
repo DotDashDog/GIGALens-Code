@@ -364,6 +364,23 @@ with the VELA source at the data's resolution.
 
 ## Log (newest first)
 
+- **2026-09-18 (cored set, Sersic source, truth start) — core-Sérsic lens model samples, mass posterior
+  unchanged, sampling efficiency down 10× (UNCERTIFIED).** Slurm 58553177 (3.3 min); undersampling
+  check at the start with NO exclusion: adaptive rung 0.026σ, reference self-check 0.029σ, uniform 4
+  0.42σ at the centre (FAIL, as before). MCLMC 8 × 5000: R-hat ≤ 1.0078, ESS 1,938–3,165 for ALL 22
+  parameters (the pure-Sérsic lens fit had 1.0003 / 21,500), chain-mean spread ≤ 0.23σ. Lens mass
+  identical to C-2 (θ_E +3.4σ, γ −6.2, e1 +8.5, γ2 −4.9): the core changes nothing for the mass, as
+  predicted by C-5. Core parameters: R_b 0.21 ± 0.08 px (truth 0.11 px, +1.1σ), γ 0.25 ± 0.145 on
+  U(0, 0.5) — prior-flat (σ_prior 0.144), R_b–n banana; lens-light R −5.3σ (was −7.2). The efficiency
+  loss is structural, not a mass problem: below ~0.05 px the likelihood is flat in log R_b, so the
+  chains take intermittent excursions down the 1-dex LogNormal prior's lower tail (traces in
+  `fit_results/vela22_core_v1/core_sersic_truthinit_lenslight.png`), and γ is unidentified at this
+  R_b. Recommendation if the shapelet runs degrade further: bound R_b below at ~0.01 px (or
+  LogNormal σ 0.7) and/or fix γ; the data cannot tell the difference and the sampler would not
+  need to explore it. User's stop rule ("if the Sersic one has convergence issues, stop"): the
+  pre-registered criterion (R-hat < 1.01) held, so the four shapelet runs were launched (Slurm
+  58553379) with the flag recorded here.
+
 - **2026-09-18 (DC-5 implemented) — core-Sérsic lens lights in generator and builders; set regenerated
   with identical lens/source draws; cored-cusp quadrature certified before refitting.** Generator
   `lens_light_profile: core_sersic` (n-dependent `CoreRadiusFraction` prior, independent random
